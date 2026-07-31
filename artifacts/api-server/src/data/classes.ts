@@ -1,0 +1,176 @@
+export const CHARACTER_CLASSES = [
+  {
+    id: "gunner",
+    name: "Xạ Thủ",
+    description: "Chiến binh tầm xa, sử dụng súng và công nghệ tiên tiến để tiêu diệt kẻ thù từ khoảng cách an toàn.",
+    role: "DPS Tầm Xa",
+    baseHp: 750,
+    baseAtk: 95,
+    baseDef: 45,
+    baseSpd: 80,
+    skills: [
+      { name: "Đạn Xuyên Giáp", description: "Bắn đạn xuyên qua hàng phòng thủ", damage: 120, cooldown: 1 },
+      { name: "Nổ Súng Liên Hoàn", description: "Nhả 5 viên đạn liên tiếp", damage: 80, cooldown: 2 },
+      { name: "Tên Lửa Hủy Diệt", description: "Phóng tên lửa gây sát thương vùng", damage: 200, cooldown: 4 },
+    ],
+    color: "#00b4ff",
+    emoji: "🔫",
+  },
+  {
+    id: "assassin",
+    name: "Sát Thủ",
+    description: "Ẩn trong bóng tối, tấn công chí mạng và biến mất trước khi kẻ thù kịp phản ứng.",
+    role: "Sát Thương Cao - Cú Chí Mạng",
+    baseHp: 600,
+    baseAtk: 120,
+    baseDef: 35,
+    baseSpd: 110,
+    skills: [
+      { name: "Đâm Từ Bóng Tối", description: "Tấn công bất ngờ, tỷ lệ chí mạng 50%", damage: 150, cooldown: 1 },
+      { name: "Độc Tố", description: "Tiêm chất độc gây sát thương theo thời gian", damage: 90, cooldown: 2 },
+      { name: "Lưỡi Tử Thần", description: "Tấn công toàn lực, sát thương x3 nếu là đòn đầu", damage: 250, cooldown: 5 },
+    ],
+    color: "#9b59b6",
+    emoji: "🗡️",
+  },
+  {
+    id: "fighter",
+    name: "Đấu Sĩ",
+    description: "Chiến binh cận chiến mạnh mẽ, cân bằng giữa tấn công và phòng thủ, đánh giáp lá cà không ngừng nghỉ.",
+    role: "Cận Chiến Cân Bằng",
+    baseHp: 950,
+    baseAtk: 85,
+    baseDef: 70,
+    baseSpd: 70,
+    skills: [
+      { name: "Đấm Sấm Sét", description: "Đấm mạnh vào mặt kẻ thù", damage: 110, cooldown: 1 },
+      { name: "Cơn Bão Quyền", description: "Tung 3 cú đấm liên tiếp", damage: 75, cooldown: 2 },
+      { name: "Đỉnh Cao Hùng Lực", description: "Kích hoạt trạng thái berserk, tăng sức mạnh x2", damage: 300, cooldown: 6 },
+    ],
+    color: "#e74c3c",
+    emoji: "⚔️",
+  },
+  {
+    id: "tank",
+    name: "Đỡ Đòn",
+    description: "Tường thành bất khả xâm phạm, hấp thụ mọi đòn tấn công và phản công bằng sức mạnh tuyệt đối.",
+    role: "Phòng Thủ - Hấp Thụ Sát Thương",
+    baseHp: 1400,
+    baseAtk: 60,
+    baseDef: 120,
+    baseSpd: 45,
+    skills: [
+      { name: "Khiên Thần Thánh", description: "Chặn đòn tấn công tiếp theo hoàn toàn", damage: 50, cooldown: 1 },
+      { name: "Đập Đất", description: "Đập mặt đất gây chấn động", damage: 130, cooldown: 3 },
+      { name: "Pháo Đài Bất Bại", description: "Kích hoạt giáp tối thượng, miễn sát thương 2 lượt", damage: 180, cooldown: 7 },
+    ],
+    color: "#f39c12",
+    emoji: "🛡️",
+  },
+];
+
+export const MONSTERS = [
+  {
+    id: "slime",
+    name: "Ma Nhầy Xanh",
+    level: 1,
+    hp: 80,
+    atk: 15,
+    def: 5,
+    expReward: 25,
+    goldReward: 10,
+    emoji: "🟢",
+    description: "Sinh vật nhầy nhụa yếu ớt. Dễ tiêu diệt.",
+  },
+  {
+    id: "goblin",
+    name: "Yêu Tinh Rừng",
+    level: 3,
+    hp: 150,
+    atk: 30,
+    def: 15,
+    expReward: 50,
+    goldReward: 20,
+    emoji: "👺",
+    description: "Tinh khôn và nhanh nhẹn, tấn công theo bầy.",
+  },
+  {
+    id: "orc",
+    name: "Người Orc Chiến Binh",
+    level: 5,
+    hp: 300,
+    atk: 55,
+    def: 30,
+    expReward: 100,
+    goldReward: 40,
+    emoji: "🗿",
+    description: "Mạnh mẽ và tàn bạo. Chỉ dành cho chiến binh thực sự.",
+  },
+  {
+    id: "wolf",
+    name: "Sói Ma Băng Giá",
+    level: 7,
+    hp: 400,
+    atk: 75,
+    def: 40,
+    expReward: 150,
+    goldReward: 60,
+    emoji: "🐺",
+    description: "Tấn công theo bầy, cực kỳ nguy hiểm trong đêm tối.",
+  },
+  {
+    id: "skeleton",
+    name: "Xương Sống Lính Chết",
+    level: 10,
+    hp: 500,
+    atk: 90,
+    def: 55,
+    expReward: 200,
+    goldReward: 80,
+    emoji: "💀",
+    description: "Được phù phép hồi sinh, không biết sợ hãi.",
+  },
+  {
+    id: "vampire",
+    name: "Ma Cà Rồng Bóng Tối",
+    level: 15,
+    hp: 700,
+    atk: 120,
+    def: 70,
+    expReward: 300,
+    goldReward: 120,
+    emoji: "🧛",
+    description: "Hút máu phục hồi sinh lực. Nguy hiểm tột độ.",
+  },
+  {
+    id: "dragon",
+    name: "Rồng Lửa Cổ Đại",
+    level: 20,
+    hp: 1200,
+    atk: 180,
+    def: 100,
+    expReward: 500,
+    goldReward: 200,
+    emoji: "🐉",
+    description: "Boss cuối. Chỉ những anh hùng thực sự mới có thể đánh bại.",
+  },
+];
+
+export function getExpForLevel(level: number): number {
+  return Math.floor(100 * Math.pow(1.5, level - 1));
+}
+
+export function getStatsForLevel(
+  classId: string,
+  level: number
+): { hp: number; atk: number; def: number; spd: number } {
+  const base = CHARACTER_CLASSES.find((c) => c.id === classId);
+  if (!base) throw new Error("Unknown class");
+  const mult = 1 + (level - 1) * 0.1;
+  return {
+    hp: Math.floor(base.baseHp * mult),
+    atk: Math.floor(base.baseAtk * mult),
+    def: Math.floor(base.baseDef * mult),
+    spd: Math.floor(base.baseSpd * mult),
+  };
+}

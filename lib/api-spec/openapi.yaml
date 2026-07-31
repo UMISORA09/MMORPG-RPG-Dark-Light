@@ -3,20 +3,30 @@ info:
   # Do not change the title, if the title changes, the import paths will be broken
   title: Api
   version: 0.1.0
-  description: API specification
+  description: 2D Mobile MMORPG API
 servers:
   - url: /api
     description: Base API path
 tags:
   - name: health
     description: Health operations
+  - name: auth
+    description: Authentication operations
+  - name: classes
+    description: Character class operations
+  - name: characters
+    description: Character operations
+  - name: battle
+    description: Battle operations
+  - name: leaderboard
+    description: Leaderboard operations
+
 paths:
   /healthz:
     get:
       operationId: healthCheck
       tags: [health]
       summary: Health check
-      description: Returns server health status
       responses:
         "200":
           description: Healthy
@@ -24,6 +34,285 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/HealthStatus"
+
+  /auth/register:
+    post:
+      operationId: register
+      tags: [auth]
+      summary: Register a new account
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/RegisterInput"
+      responses:
+        "201":
+          description: Account created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AuthResponse"
+        "400":
+          description: Bad request
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "409":
+          description: Username already taken
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /auth/login:
+    post:
+      operationId: login
+      tags: [auth]
+      summary: Login to an existing account
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/LoginInput"
+      responses:
+        "200":
+          description: Login successful
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AuthResponse"
+        "401":
+          description: Invalid credentials
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /auth/logout:
+    post:
+      operationId: logout
+      tags: [auth]
+      summary: Logout current session
+      responses:
+        "200":
+          description: Logged out
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SuccessResponse"
+
+  /auth/me:
+    get:
+      operationId: getMe
+      tags: [auth]
+      summary: Get current authenticated user
+      responses:
+        "200":
+          description: Current user
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/User"
+        "401":
+          description: Not authenticated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /classes:
+    get:
+      operationId: getClasses
+      tags: [classes]
+      summary: List all character classes
+      responses:
+        "200":
+          description: List of classes
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/CharacterClass"
+
+  /characters:
+    get:
+      operationId: getCharacters
+      tags: [characters]
+      summary: List current user's characters
+      responses:
+        "200":
+          description: List of characters
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Character"
+        "401":
+          description: Not authenticated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+    post:
+      operationId: createCharacter
+      tags: [characters]
+      summary: Create a new character
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CharacterInput"
+      responses:
+        "201":
+          description: Character created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Character"
+        "400":
+          description: Bad request
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "401":
+          description: Not authenticated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /characters/{characterId}:
+    get:
+      operationId: getCharacter
+      tags: [characters]
+      summary: Get a specific character
+      parameters:
+        - name: characterId
+          in: path
+          required: true
+          schema:
+            type: number
+      responses:
+        "200":
+          description: Character details
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Character"
+        "404":
+          description: Not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /characters/{characterId}/battle:
+    post:
+      operationId: startBattle
+      tags: [battle]
+      summary: Start a battle with a monster
+      parameters:
+        - name: characterId
+          in: path
+          required: true
+          schema:
+            type: number
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/BattleInput"
+      responses:
+        "200":
+          description: Battle result
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/BattleResult"
+        "400":
+          description: Bad request
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "401":
+          description: Not authenticated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "404":
+          description: Character not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /characters/{characterId}/battle-log:
+    get:
+      operationId: getBattleLog
+      tags: [battle]
+      summary: Get recent battle history for a character
+      parameters:
+        - name: characterId
+          in: path
+          required: true
+          schema:
+            type: number
+      responses:
+        "200":
+          description: Recent battles
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/BattleLog"
+        "401":
+          description: Not authenticated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /monsters:
+    get:
+      operationId: getMonsters
+      tags: [battle]
+      summary: List available monsters to fight
+      responses:
+        "200":
+          description: List of monsters
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Monster"
+
+  /leaderboard:
+    get:
+      operationId: getLeaderboard
+      tags: [leaderboard]
+      summary: Get top players by level and experience
+      responses:
+        "200":
+          description: Leaderboard
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/LeaderboardEntry"
+
 components:
   schemas:
     HealthStatus:
@@ -34,3 +323,265 @@ components:
       required:
         - status
 
+    ErrorResponse:
+      type: object
+      properties:
+        error:
+          type: string
+      required:
+        - error
+
+    SuccessResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+      required:
+        - success
+
+    RegisterInput:
+      type: object
+      required: [username, password]
+      properties:
+        username:
+          type: string
+          minLength: 3
+          maxLength: 20
+        password:
+          type: string
+          minLength: 6
+
+    LoginInput:
+      type: object
+      required: [username, password]
+      properties:
+        username:
+          type: string
+        password:
+          type: string
+
+    User:
+      type: object
+      required: [id, username, createdAt]
+      properties:
+        id:
+          type: number
+        username:
+          type: string
+        createdAt:
+          type: string
+          format: date-time
+
+    AuthResponse:
+      type: object
+      required: [user]
+      properties:
+        user:
+          $ref: "#/components/schemas/User"
+
+    CharacterClass:
+      type: object
+      required: [id, name, description, role, baseHp, baseAtk, baseDef, baseSpd, skills]
+      properties:
+        id:
+          type: string
+          description: "gunner | assassin | fighter | tank"
+        name:
+          type: string
+        description:
+          type: string
+        role:
+          type: string
+        baseHp:
+          type: number
+        baseAtk:
+          type: number
+        baseDef:
+          type: number
+        baseSpd:
+          type: number
+        skills:
+          type: array
+          items:
+            $ref: "#/components/schemas/Skill"
+        color:
+          type: string
+        emoji:
+          type: string
+
+    Skill:
+      type: object
+      required: [name, description, damage, cooldown]
+      properties:
+        name:
+          type: string
+        description:
+          type: string
+        damage:
+          type: number
+        cooldown:
+          type: number
+
+    CharacterInput:
+      type: object
+      required: [name, classId]
+      properties:
+        name:
+          type: string
+          minLength: 2
+          maxLength: 20
+        classId:
+          type: string
+
+    Character:
+      type: object
+      required: [id, userId, name, classId, className, level, experience, hp, maxHp, atk, def, spd, gold, kills, deaths, createdAt]
+      properties:
+        id:
+          type: number
+        userId:
+          type: number
+        name:
+          type: string
+        classId:
+          type: string
+        className:
+          type: string
+        level:
+          type: number
+        experience:
+          type: number
+        experienceToNextLevel:
+          type: number
+        hp:
+          type: number
+        maxHp:
+          type: number
+        atk:
+          type: number
+        def:
+          type: number
+        spd:
+          type: number
+        gold:
+          type: number
+        kills:
+          type: number
+        deaths:
+          type: number
+        createdAt:
+          type: string
+          format: date-time
+
+    Monster:
+      type: object
+      required: [id, name, level, hp, atk, def, expReward, goldReward, emoji]
+      properties:
+        id:
+          type: string
+        name:
+          type: string
+        level:
+          type: number
+        hp:
+          type: number
+        atk:
+          type: number
+        def:
+          type: number
+        expReward:
+          type: number
+        goldReward:
+          type: number
+        emoji:
+          type: string
+        description:
+          type: string
+
+    BattleInput:
+      type: object
+      required: [monsterId]
+      properties:
+        monsterId:
+          type: string
+
+    BattleRound:
+      type: object
+      required: [round, playerHp, monsterHp, playerDmg, monsterDmg, playerAction]
+      properties:
+        round:
+          type: number
+        playerHp:
+          type: number
+        monsterHp:
+          type: number
+        playerDmg:
+          type: number
+        monsterDmg:
+          type: number
+        playerAction:
+          type: string
+        isCritical:
+          type: boolean
+
+    BattleResult:
+      type: object
+      required: [victory, rounds, expGained, goldGained, leveledUp, character]
+      properties:
+        victory:
+          type: boolean
+        rounds:
+          type: array
+          items:
+            $ref: "#/components/schemas/BattleRound"
+        expGained:
+          type: number
+        goldGained:
+          type: number
+        leveledUp:
+          type: boolean
+        newLevel:
+          type: ["number", "null"]
+        character:
+          $ref: "#/components/schemas/Character"
+
+    BattleLog:
+      type: object
+      required: [id, characterId, monsterId, monsterName, victory, expGained, goldGained, createdAt]
+      properties:
+        id:
+          type: number
+        characterId:
+          type: number
+        monsterId:
+          type: string
+        monsterName:
+          type: string
+        victory:
+          type: boolean
+        expGained:
+          type: number
+        goldGained:
+          type: number
+        createdAt:
+          type: string
+          format: date-time
+
+    LeaderboardEntry:
+      type: object
+      required: [rank, characterName, className, level, experience, kills, username]
+      properties:
+        rank:
+          type: number
+        characterName:
+          type: string
+        className:
+          type: string
+        level:
+          type: number
+        experience:
+          type: number
+        kills:
+          type: number
+        username:
+          type: string

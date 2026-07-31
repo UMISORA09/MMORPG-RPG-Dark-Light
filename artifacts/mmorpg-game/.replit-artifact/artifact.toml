@@ -1,0 +1,27 @@
+kind = "web"
+previewPath = "/"
+title = "2D Mobile MMORPG"
+version = "1.0.0"
+id = "artifacts/mmorpg-game"
+router = "path"
+
+[[services]]
+name = "web"
+paths = [ "/" ]
+localPort = 25029
+
+[services.development]
+run = "pnpm --filter @workspace/mmorpg-game run dev"
+
+[services.production]
+build = [ "pnpm", "--filter", "@workspace/mmorpg-game", "run", "build" ]
+serve = "static"
+publicDir = "artifacts/mmorpg-game/dist/public"
+
+[[services.production.rewrites]]
+from = "/*"
+to = "/index.html"
+
+[services.env]
+PORT = "25029"
+BASE_PATH = "/"
