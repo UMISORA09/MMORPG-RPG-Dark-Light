@@ -1,9 +1,23 @@
 import { useEffect, useState } from 'react';
-import type { Character, CharacterClass } from '@workspace/api-client-react';
+import {
+  getGetCharacterQueryKey,
+  getGetCharactersQueryKey,
+  getGetInventoryQueryKey,
+  getGetItemsQueryKey,
+  useBuyItem,
+  useEquipItem,
+  useGetInventory,
+  useGetItems,
+  useUnequipItem,
+  type Character,
+  type CharacterClass,
+  type InventoryItem,
+} from '@workspace/api-client-react';
 import {
   Backpack,
-  ChevronRight,
-  LockKeyhole,
+  Coins,
+  Loader2,
+  ShoppingBag,
   Settings,
   Sparkles,
   Swords,
@@ -13,6 +27,8 @@ import {
   Zap,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { useQueryClient } from '@tanstack/react-query';
+import { useToast } from '@/hooks/use-toast';
 
 type MenuTab = 'inventory' | 'skills' | 'settings';
 
@@ -22,40 +38,6 @@ interface GameMenuSheetProps {
   character: Character;
   classInfo?: CharacterClass;
 }
-
-const starterItems: Record<
-  string,
-  { weapon: string; weaponIcon: string; armor: string; armorIcon: string; color: string }
-> = {
-  gunner: {
-    weapon: 'Súng Plasma Mk-I',
-    weaponIcon: '▣',
-    armor: 'Áo Giáp Kỹ Thuật',
-    armorIcon: '◇',
-    color: 'text-secondary',
-  },
-  assassin: {
-    weapon: 'Song Đao Bóng Tối',
-    weaponIcon: '╱',
-    armor: 'Áo Choàng Hư Vô',
-    armorIcon: '◈',
-    color: 'text-primary',
-  },
-  fighter: {
-    weapon: 'Găng Tay Sấm Sét',
-    weaponIcon: '✦',
-    armor: 'Giáp Chiến Binh',
-    armorIcon: '⬟',
-    color: 'text-destructive',
-  },
-  tank: {
-    weapon: 'Khiên Pháo Đài',
-    weaponIcon: '⬢',
-    armor: 'Giáp Thành Đồng',
-    armorIcon: '⬡',
-    color: 'text-accent',
-  },
-};
 
 function SettingRow({
   icon,
@@ -112,6 +94,23 @@ export function GameMenuSheet({
   const [soundEnabled, setSoundEnabled] = useState(true);
   const [vibrationEnabled, setVibrationEnabled] = useState(true);
   const [reducedMotion, setReducedMotion] = useState(false);
+  const queryClient = useQueryClient();
+  const { toast } = useToast();
+  const { data: inventory, isLoading: inventoryLoading } = useGetInventory(character.id, {
+    query: {
+      queryKey: getGetInventoryQueryKey(character.id),
+      enabled: open,
+    },
+  });
+  const { data: shopItems, isLoading: shopLoading } = useGetItems({
+    query: {
+      queryKey: getGetItemsQueryKey(),
+      enabled: open,
+    },
+  });
+  const buyItem = useBuyItem();
+  const equipItem = useEquipItem();
+  const unequipItem = useUnequipItem();
 
   useEffect(() => {
     const savedSound = window.localStorage.getItem('mmorpg-sound');
@@ -128,7 +127,53 @@ export function GameMenuSheet({
     window.localStorage.setItem('mmorpg-reduced-motion', reducedMotion ? 'on' : 'off');
   }, [reducedMotion]);
 
-  const starter = starterItems[character.classId] ?? starterItems.fighter;
+  const ownedItems = inventory ?? [];
+  const availableShopItems = (shopItems ?? []).filter(
+    (item) =>
+      !ownedItems.some((ownedItem) => ownedItem.id === item.id) &&
+      (item.classId === null || item.classId === character.classId),
+  );
+
+  const refreshInventory = async () => {
+    await Promise.all([
+      queryClient.invalidateQueries({ queryKey: getGetInventoryQueryKey(character.id) }),
+      queryClient.invalidateQueries({ queryKey: getGetCharacterQueryKey(character.id) }),
+      queryClient.invalidateQueries({ queryKey: getGetCharactersQueryKey() }),
+    ]);
+  };
+
+  const getErrorMessage = (error: unknown) =>
+    (error as { message?: string })?.message ?? 'Không thể thực hiện thao tác này';
+
+  const handleBuy = (itemId: string) => {
+    buyItem.mutate(
+      { characterId: character.id, itemId },
+      {
+        onSuccess: async () => {
+          await refreshInventory();
+          toast({ title: 'Đã mua vật phẩm', description: 'Vật phẩm đã được lưu vào túi đồ.' });
+        },
+        onError: (error) => toast({ variant: 'destructive', title: 'Mua vật phẩm thất bại', description: getErrorMessage(error) }),
+      },
+    );
+  };
+
+  const handleEquip = (item: InventoryItem) => {
+    const mutation = item.equipped ? unequipItem : equipItem;
+    mutation.mutate(
+      { characterId: character.id, itemId: item.id },
+      {
+        onSuccess: async () => {
+          await refreshInventory();
+          toast({
+            title: item.equipped ? 'Đã tháo trang bị' : 'Đã trang bị',
+            description: `${item.name} đã cập nhật chỉ số nhân vật.`,
+          });
+        },
+        onError: (error) => toast({ variant: 'destructive', title: 'Cập nhật trang bị thất bại', description: getErrorMessage(error) }),
+      },
+    );
+  };
 
   const toggleSound = () => {
     setSoundEnabled((current) => {
@@ -218,44 +263,114 @@ export function GameMenuSheet({
         </div>
 
         {activeTab === 'inventory' && (
-          <div className="space-y-3">
+          <div className="space-y-4">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm font-bold text-foreground">Trang bị hiện tại</p>
-                <p className="text-xs text-muted-foreground">Đồ khởi đầu của {classInfo?.name ?? character.className}</p>
+                <p className="text-sm font-bold text-foreground">Túi đồ & trang bị</p>
+                <p className="text-xs text-muted-foreground">{classInfo?.name ?? character.className} • chỉ số cập nhật ngay</p>
               </div>
               <span className="rounded-full border border-secondary/30 bg-secondary/10 px-2 py-1 text-[10px] font-mono text-secondary">
-                2 / 20 ô
+                {ownedItems.length} / 20 ô
               </span>
             </div>
-            <div className="grid grid-cols-2 gap-3">
-              <div className="rounded-xl border border-secondary/30 bg-secondary/5 p-3">
-                <div className="mb-3 flex items-center justify-between">
-                  <span className={`flex h-10 w-10 items-center justify-center rounded-lg bg-secondary/15 text-2xl ${starter.color}`}>
-                    {starter.weaponIcon}
-                  </span>
-                  <span className="rounded-full bg-secondary/15 px-2 py-1 text-[10px] font-bold text-secondary">ĐANG DÙNG</span>
-                </div>
-                <p className="text-sm font-bold text-foreground">{starter.weapon}</p>
-                <p className="mt-1 text-xs text-secondary">+{Math.max(8, Math.floor(character.atk * 0.12))} ATK</p>
-                <p className="mt-2 text-[10px] text-muted-foreground">Trang bị vũ khí</p>
+
+            {inventoryLoading ? (
+              <div className="flex items-center justify-center gap-2 rounded-xl border border-border p-6 text-xs text-muted-foreground">
+                <Loader2 className="h-4 w-4 animate-spin" /> Đang tải túi đồ...
               </div>
-              <div className="rounded-xl border border-accent/30 bg-accent/5 p-3">
-                <div className="mb-3 flex items-center justify-between">
-                  <span className={`flex h-10 w-10 items-center justify-center rounded-lg bg-accent/15 text-2xl ${starter.color}`}>
-                    {starter.armorIcon}
-                  </span>
-                  <span className="rounded-full bg-accent/15 px-2 py-1 text-[10px] font-bold text-accent">ĐANG DÙNG</span>
-                </div>
-                <p className="text-sm font-bold text-foreground">{starter.armor}</p>
-                <p className="mt-1 text-xs text-accent">+{Math.max(6, Math.floor(character.def * 0.15))} DEF</p>
-                <p className="mt-2 text-[10px] text-muted-foreground">Trang bị giáp</p>
+            ) : ownedItems.length === 0 ? (
+              <div className="rounded-xl border border-dashed border-border p-5 text-center text-xs text-muted-foreground">
+                Túi đồ đang trống.
               </div>
-            </div>
-            <div className="flex items-center gap-2 rounded-xl border border-dashed border-border p-3 text-xs text-muted-foreground">
-              <LockKeyhole className="h-4 w-4 shrink-0 text-muted-foreground" />
-              Cửa hàng và vật phẩm nâng cấp sẽ mở khi bạn đạt cấp 3.
-              <ChevronRight className="ml-auto h-4 w-4 shrink-0" />
+            ) : (
+              <div className="max-h-[36vh] space-y-2 overflow-y-auto pr-1">
+                {ownedItems.map((item) => (
+                  <div
+                    key={item.ownershipId}
+                    className={`rounded-xl border p-3 ${item.equipped ? 'border-secondary/40 bg-secondary/5' : 'border-border bg-muted/40'}`}
+                    data-testid={`inventory-item-${item.id}`}
+                  >
+                    <div className="flex items-start gap-3">
+                      <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-secondary/15 text-xl text-secondary">
+                        {item.icon ?? '◇'}
+                      </span>
+                      <div className="min-w-0 flex-1">
+                        <div className="flex items-start justify-between gap-2">
+                          <div>
+                            <p className="text-sm font-bold text-foreground">{item.name}</p>
+                            <p className="text-[10px] uppercase tracking-wide text-muted-foreground">{item.type} • {item.rarity}</p>
+                          </div>
+                          {item.equipped && (
+                            <span className="rounded-full bg-secondary/15 px-2 py-1 text-[9px] font-bold text-secondary">ĐANG DÙNG</span>
+                          )}
+                        </div>
+                        <p className="mt-1 text-[11px] text-muted-foreground">{item.description}</p>
+                        <div className="mt-2 flex flex-wrap gap-x-3 gap-y-1 text-[10px] font-mono">
+                          {item.hpBoost !== 0 && <span className="text-destructive">+{item.hpBoost} HP</span>}
+                          {item.atkBoost !== 0 && <span className="text-secondary">+{item.atkBoost} ATK</span>}
+                          {item.defBoost !== 0 && <span className="text-accent">+{item.defBoost} DEF</span>}
+                          {item.spdBoost !== 0 && <span className="text-primary">{item.spdBoost > 0 ? '+' : ''}{item.spdBoost} SPD</span>}
+                        </div>
+                      </div>
+                      <Button
+                        type="button"
+                        size="sm"
+                        variant={item.equipped ? 'outline' : 'default'}
+                        className="shrink-0 text-[10px]"
+                        disabled={equipItem.isPending || unequipItem.isPending}
+                        onClick={() => handleEquip(item)}
+                      >
+                        {item.equipped ? 'Tháo' : 'Trang bị'}
+                      </Button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+
+            <div className="border-t border-border pt-3">
+              <div className="mb-2 flex items-center justify-between">
+                <div>
+                  <p className="text-sm font-bold text-foreground">Cửa hàng</p>
+                  <p className="text-xs text-muted-foreground">Mua đồ phù hợp với chức nghiệp của bạn</p>
+                </div>
+                <ShoppingBag className="h-4 w-4 text-accent" />
+              </div>
+              {shopLoading ? (
+                <div className="flex items-center gap-2 rounded-xl border border-border p-4 text-xs text-muted-foreground">
+                  <Loader2 className="h-4 w-4 animate-spin" /> Đang tải cửa hàng...
+                </div>
+              ) : availableShopItems.length === 0 ? (
+                <p className="rounded-xl border border-dashed border-border p-4 text-center text-xs text-muted-foreground">
+                  Chưa có vật phẩm mới phù hợp.
+                </p>
+              ) : (
+                <div className="max-h-[30vh] space-y-2 overflow-y-auto pr-1">
+                  {availableShopItems.map((item) => {
+                    const locked = character.level < item.requiredLevel;
+                    const cannotAfford = character.gold < item.price;
+                    return (
+                      <div key={item.id} className="flex items-center gap-3 rounded-xl border border-border bg-muted/40 p-3">
+                        <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-accent/15 text-lg text-accent">{item.icon ?? '◇'}</span>
+                        <div className="min-w-0 flex-1">
+                          <p className="text-xs font-bold text-foreground">{item.name}</p>
+                          <p className="text-[10px] text-muted-foreground">Cấp {item.requiredLevel} • +{item.atkBoost} ATK • +{item.defBoost} DEF</p>
+                        </div>
+                        <Button
+                          type="button"
+                          size="sm"
+                          variant="outline"
+                          className="shrink-0 text-[10px]"
+                          disabled={locked || cannotAfford || buyItem.isPending}
+                          onClick={() => handleBuy(item.id)}
+                        >
+                          <Coins className="mr-1 h-3 w-3" /> {item.price}
+                        </Button>
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
             </div>
           </div>
         )}

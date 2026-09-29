@@ -255,6 +255,164 @@ export const GetBattleLogResponse = zod.array(GetBattleLogResponseItem)
 
 
 /**
+ * @summary List items available in the shop
+ */
+export const GetItemsResponseItem = zod.object({
+  "id": zod.string(),
+  "name": zod.string(),
+  "type": zod.string().describe('weapon | armor | accessory'),
+  "description": zod.string(),
+  "rarity": zod.string(),
+  "hpBoost": zod.number(),
+  "atkBoost": zod.number(),
+  "defBoost": zod.number(),
+  "spdBoost": zod.number(),
+  "price": zod.number(),
+  "classId": zod.string().nullable(),
+  "requiredLevel": zod.number(),
+  "icon": zod.string().optional()
+})
+export const GetItemsResponse = zod.array(GetItemsResponseItem)
+
+
+/**
+ * @summary List items owned by a character
+ */
+export const GetInventoryParams = zod.object({
+  "characterId": zod.coerce.number()
+})
+
+export const GetInventoryResponseItem = zod.object({
+  "id": zod.string(),
+  "name": zod.string(),
+  "type": zod.string().describe('weapon | armor | accessory'),
+  "description": zod.string(),
+  "rarity": zod.string(),
+  "hpBoost": zod.number(),
+  "atkBoost": zod.number(),
+  "defBoost": zod.number(),
+  "spdBoost": zod.number(),
+  "price": zod.number(),
+  "classId": zod.string().nullable(),
+  "requiredLevel": zod.number(),
+  "icon": zod.string().optional()
+}).and(zod.object({
+  "ownershipId": zod.number(),
+  "equipped": zod.boolean(),
+  "acquiredAt": zod.coerce.date()
+}))
+export const GetInventoryResponse = zod.array(GetInventoryResponseItem)
+
+
+/**
+ * @summary Buy an item from the shop
+ */
+export const BuyItemParams = zod.object({
+  "characterId": zod.coerce.number(),
+  "itemId": zod.coerce.string()
+})
+
+export const BuyItemResponse = zod.object({
+  "character": zod.object({
+  "id": zod.number(),
+  "userId": zod.number(),
+  "name": zod.string(),
+  "classId": zod.string(),
+  "className": zod.string(),
+  "level": zod.number(),
+  "experience": zod.number(),
+  "experienceToNextLevel": zod.number().optional(),
+  "hp": zod.number(),
+  "maxHp": zod.number(),
+  "atk": zod.number(),
+  "def": zod.number(),
+  "spd": zod.number(),
+  "gold": zod.number(),
+  "kills": zod.number(),
+  "deaths": zod.number(),
+  "createdAt": zod.coerce.date()
+}),
+  "inventoryItem": zod.object({
+  "id": zod.string(),
+  "name": zod.string(),
+  "type": zod.string().describe('weapon | armor | accessory'),
+  "description": zod.string(),
+  "rarity": zod.string(),
+  "hpBoost": zod.number(),
+  "atkBoost": zod.number(),
+  "defBoost": zod.number(),
+  "spdBoost": zod.number(),
+  "price": zod.number(),
+  "classId": zod.string().nullable(),
+  "requiredLevel": zod.number(),
+  "icon": zod.string().optional()
+}).and(zod.object({
+  "ownershipId": zod.number(),
+  "equipped": zod.boolean(),
+  "acquiredAt": zod.coerce.date()
+}))
+})
+
+
+/**
+ * @summary Equip an owned item
+ */
+export const EquipItemParams = zod.object({
+  "characterId": zod.coerce.number(),
+  "itemId": zod.coerce.string()
+})
+
+export const EquipItemResponse = zod.object({
+  "id": zod.number(),
+  "userId": zod.number(),
+  "name": zod.string(),
+  "classId": zod.string(),
+  "className": zod.string(),
+  "level": zod.number(),
+  "experience": zod.number(),
+  "experienceToNextLevel": zod.number().optional(),
+  "hp": zod.number(),
+  "maxHp": zod.number(),
+  "atk": zod.number(),
+  "def": zod.number(),
+  "spd": zod.number(),
+  "gold": zod.number(),
+  "kills": zod.number(),
+  "deaths": zod.number(),
+  "createdAt": zod.coerce.date()
+})
+
+
+/**
+ * @summary Unequip an owned item
+ */
+export const UnequipItemParams = zod.object({
+  "characterId": zod.coerce.number(),
+  "itemId": zod.coerce.string()
+})
+
+export const UnequipItemResponse = zod.object({
+  "id": zod.number(),
+  "userId": zod.number(),
+  "name": zod.string(),
+  "classId": zod.string(),
+  "className": zod.string(),
+  "level": zod.number(),
+  "experience": zod.number(),
+  "experienceToNextLevel": zod.number().optional(),
+  "hp": zod.number(),
+  "maxHp": zod.number(),
+  "atk": zod.number(),
+  "def": zod.number(),
+  "spd": zod.number(),
+  "gold": zod.number(),
+  "kills": zod.number(),
+  "deaths": zod.number(),
+  "createdAt": zod.coerce.date()
+})
+
+
+/**
  * @summary List available monsters to fight
  */
 export const GetMonstersResponseItem = zod.object({

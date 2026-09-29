@@ -93,6 +93,35 @@ export interface Character {
   createdAt: string;
 }
 
+export interface Item {
+  id: string;
+  name: string;
+  /** weapon | armor | accessory */
+  type: string;
+  description: string;
+  rarity: string;
+  hpBoost: number;
+  atkBoost: number;
+  defBoost: number;
+  spdBoost: number;
+  price: number;
+  /** @nullable */
+  classId: string | null;
+  requiredLevel: number;
+  icon?: string;
+}
+
+export type InventoryItem = Item & {
+  ownershipId: number;
+  equipped: boolean;
+  acquiredAt: string;
+};
+
+export interface PurchaseResponse {
+  character: Character;
+  inventoryItem: InventoryItem;
+}
+
 export interface Monster {
   id: string;
   name: string;

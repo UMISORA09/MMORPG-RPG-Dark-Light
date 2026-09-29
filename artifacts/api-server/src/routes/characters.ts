@@ -3,6 +3,11 @@ import { db, charactersTable, battleLogsTable } from "@workspace/db";
 import { eq, desc } from "drizzle-orm";
 import { CreateCharacterBody } from "@workspace/api-zod";
 import { CHARACTER_CLASSES, getStatsForLevel } from "../data/classes";
+import {
+  ensureItemCatalog,
+  ensureStarterInventory,
+  toCharacterResponse,
+} from "../lib/inventory";
 
 const router = Router();
 
@@ -20,10 +25,16 @@ router.get("/characters", requireAuth, async (req, res) => {
     .where(eq(charactersTable.userId, req.session.userId!))
     .orderBy(desc(charactersTable.createdAt));
 
-  const expToNext = characters.map((c) => ({
-    ...c,
-    experienceToNextLevel: getExpForLevel(c.level),
-  }));
+  await ensureItemCatalog();
+  const expToNext = await Promise.all(
+    characters.map(async (character) => {
+      await ensureStarterInventory(character.id, character.classId);
+      return {
+        ...(await toCharacterResponse(character)),
+        experienceToNextLevel: getExpForLevel(character.level),
+      };
+    }),
+  );
 
   return res.status(200).json(expToNext);
 });
@@ -41,6 +52,7 @@ router.post("/characters", requireAuth, async (req, res) => {
   }
 
   const stats = getStatsForLevel(classId, 1);
+  await ensureItemCatalog();
 
   const [character] = await db
     .insert(charactersTable)
@@ -62,8 +74,9 @@ router.post("/characters", requireAuth, async (req, res) => {
     })
     .returning();
 
+  await ensureStarterInventory(character.id, character.classId);
   return res.status(201).json({
-    ...character,
+    ...(await toCharacterResponse(character)),
     experienceToNextLevel: getExpForLevel(1),
   });
 });
@@ -84,8 +97,10 @@ router.get("/characters/:characterId", requireAuth, async (req, res) => {
     return res.status(404).json({ error: "Không tìm thấy nhân vật" });
   }
 
+  await ensureItemCatalog();
+  await ensureStarterInventory(character.id, character.classId);
   return res.status(200).json({
-    ...character,
+    ...(await toCharacterResponse(character)),
     experienceToNextLevel: getExpForLevel(character.level),
   });
 });

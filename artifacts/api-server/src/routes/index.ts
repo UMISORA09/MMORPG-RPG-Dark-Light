@@ -5,6 +5,7 @@ import classesRouter from "./classes";
 import charactersRouter from "./characters";
 import battleRouter from "./battle";
 import leaderboardRouter from "./leaderboard";
+import inventoryRouter from "./inventory";
 
 const router: IRouter = Router();
 
@@ -14,5 +15,6 @@ router.use(classesRouter);
 router.use(charactersRouter);
 router.use(battleRouter);
 router.use(leaderboardRouter);
+router.use(inventoryRouter);
 
 export default router;

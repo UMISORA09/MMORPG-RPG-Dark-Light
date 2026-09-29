@@ -3,6 +3,11 @@ import { db, charactersTable, battleLogsTable } from "@workspace/db";
 import { eq } from "drizzle-orm";
 import { StartBattleBody } from "@workspace/api-zod";
 import { MONSTERS, getExpForLevel, getStatsForLevel } from "../data/classes";
+import {
+  ensureItemCatalog,
+  ensureStarterInventory,
+  toCharacterResponse,
+} from "../lib/inventory";
 
 const router = Router();
 
@@ -102,16 +107,20 @@ router.post("/characters/:characterId/battle", requireAuth, async (req, res) => 
     return res.status(404).json({ error: "Không tìm thấy nhân vật" });
   }
 
+  await ensureItemCatalog();
+  await ensureStarterInventory(character.id, character.classId);
+  const effectiveCharacter = await toCharacterResponse(character);
+
   const monster = MONSTERS.find((m) => m.id === monsterId);
   if (!monster) {
     return res.status(400).json({ error: "Quái vật không tồn tại" });
   }
 
   const { rounds, victory } = simulateBattle(
-    character.atk,
-    character.def,
-    character.maxHp,
-    character.spd,
+    effectiveCharacter.atk,
+    effectiveCharacter.def,
+    effectiveCharacter.maxHp,
+    effectiveCharacter.spd,
     monster.atk,
     monster.def,
     monster.hp,
@@ -177,7 +186,7 @@ router.post("/characters/:characterId/battle", requireAuth, async (req, res) => 
     leveledUp,
     newLevel,
     character: {
-      ...updated,
+      ...(await toCharacterResponse(updated)),
       experienceToNextLevel: getExpForLevel(currentLevel),
     },
   });

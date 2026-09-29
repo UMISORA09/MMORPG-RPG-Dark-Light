@@ -29,9 +29,12 @@ import type {
   CharacterInput,
   ErrorResponse,
   HealthStatus,
+  InventoryItem,
+  Item,
   LeaderboardEntry,
   LoginInput,
   Monster,
+  PurchaseResponse,
   RegisterInput,
   SuccessResponse,
   User
@@ -881,6 +884,379 @@ export function useGetBattleLog<TData = Awaited<ReturnType<typeof getBattleLog>>
 
 
 
+
+export const getGetItemsUrl = () => {
+
+
+
+
+  return `/api/items`
+}
+
+/**
+ * @summary List items available in the shop
+ */
+export const getItems = async ( options?: Parameters<typeof customFetch>[1]): Promise<Item[]> => {
+
+  return customFetch<Item[]>(getGetItemsUrl(),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getGetItemsQueryKey = () => {
+    return [
+    `/api/items`
+    ] as const;
+    }
+
+
+export const getGetItemsQueryOptions = <TData = Awaited<ReturnType<typeof getItems>>, TError = ErrorType<unknown>>( options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getItems>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getGetItemsQueryKey();
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getItems>>> = ({ signal }) => getItems({ signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getItems>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type GetItemsQueryResult = NonNullable<Awaited<ReturnType<typeof getItems>>>
+export type GetItemsQueryError = ErrorType<unknown>
+
+
+/**
+ * @summary List items available in the shop
+ */
+
+export function useGetItems<TData = Awaited<ReturnType<typeof getItems>>, TError = ErrorType<unknown>>(
+  options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getItems>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getGetItemsQueryOptions(options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
+
+export const getGetInventoryUrl = (characterId: number,) => {
+
+
+
+
+  return `/api/characters/${characterId}/inventory`
+}
+
+/**
+ * @summary List items owned by a character
+ */
+export const getInventory = async (characterId: number, options?: Parameters<typeof customFetch>[1]): Promise<InventoryItem[]> => {
+
+  return customFetch<InventoryItem[]>(getGetInventoryUrl(characterId),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getGetInventoryQueryKey = (characterId: number,) => {
+    return [
+    `/api/characters/${characterId}/inventory`
+    ] as const;
+    }
+
+
+export const getGetInventoryQueryOptions = <TData = Awaited<ReturnType<typeof getInventory>>, TError = ErrorType<ErrorResponse>>(characterId: number, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getInventory>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getGetInventoryQueryKey(characterId);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getInventory>>> = ({ signal }) => getInventory(characterId, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, enabled: characterId !== null && characterId !== undefined, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getInventory>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type GetInventoryQueryResult = NonNullable<Awaited<ReturnType<typeof getInventory>>>
+export type GetInventoryQueryError = ErrorType<ErrorResponse>
+
+
+/**
+ * @summary List items owned by a character
+ */
+
+export function useGetInventory<TData = Awaited<ReturnType<typeof getInventory>>, TError = ErrorType<ErrorResponse>>(
+ characterId: number, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getInventory>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getGetInventoryQueryOptions(characterId,options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
+
+export const getBuyItemUrl = (characterId: number,
+    itemId: string,) => {
+
+
+
+
+  return `/api/characters/${characterId}/inventory/${itemId}/buy`
+}
+
+/**
+ * @summary Buy an item from the shop
+ */
+export const buyItem = async (characterId: number,
+    itemId: string, options?: Parameters<typeof customFetch>[1]): Promise<PurchaseResponse> => {
+
+  return customFetch<PurchaseResponse>(getBuyItemUrl(characterId,itemId),
+  {
+    ...options,
+    method: 'POST'
+
+
+  }
+);}
+
+
+
+
+
+export const getBuyItemMutationOptions = <TError = ErrorType<ErrorResponse>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof buyItem>>, TError,{characterId: number;itemId: string}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof buyItem>>, TError,{characterId: number;itemId: string}, TContext> => {
+
+const mutationKey = ['buyItem'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof buyItem>>, {characterId: number;itemId: string}> = (props) => {
+          const {characterId,itemId} = props ?? {};
+
+          return  buyItem(characterId,itemId,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type BuyItemMutationResult = NonNullable<Awaited<ReturnType<typeof buyItem>>>
+
+    export type BuyItemMutationError = ErrorType<ErrorResponse>
+
+    /**
+ * @summary Buy an item from the shop
+ */
+export const useBuyItem = <TError = ErrorType<ErrorResponse>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof buyItem>>, TError,{characterId: number;itemId: string}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof buyItem>>,
+        TError,
+        {characterId: number;itemId: string},
+        TContext
+      > => {
+      return useMutation(getBuyItemMutationOptions(options));
+    }
+
+export const getEquipItemUrl = (characterId: number,
+    itemId: string,) => {
+
+
+
+
+  return `/api/characters/${characterId}/inventory/${itemId}/equip`
+}
+
+/**
+ * @summary Equip an owned item
+ */
+export const equipItem = async (characterId: number,
+    itemId: string, options?: Parameters<typeof customFetch>[1]): Promise<Character> => {
+
+  return customFetch<Character>(getEquipItemUrl(characterId,itemId),
+  {
+    ...options,
+    method: 'POST'
+
+
+  }
+);}
+
+
+
+
+
+export const getEquipItemMutationOptions = <TError = ErrorType<ErrorResponse>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof equipItem>>, TError,{characterId: number;itemId: string}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof equipItem>>, TError,{characterId: number;itemId: string}, TContext> => {
+
+const mutationKey = ['equipItem'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof equipItem>>, {characterId: number;itemId: string}> = (props) => {
+          const {characterId,itemId} = props ?? {};
+
+          return  equipItem(characterId,itemId,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type EquipItemMutationResult = NonNullable<Awaited<ReturnType<typeof equipItem>>>
+
+    export type EquipItemMutationError = ErrorType<ErrorResponse>
+
+    /**
+ * @summary Equip an owned item
+ */
+export const useEquipItem = <TError = ErrorType<ErrorResponse>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof equipItem>>, TError,{characterId: number;itemId: string}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof equipItem>>,
+        TError,
+        {characterId: number;itemId: string},
+        TContext
+      > => {
+      return useMutation(getEquipItemMutationOptions(options));
+    }
+
+export const getUnequipItemUrl = (characterId: number,
+    itemId: string,) => {
+
+
+
+
+  return `/api/characters/${characterId}/inventory/${itemId}/unequip`
+}
+
+/**
+ * @summary Unequip an owned item
+ */
+export const unequipItem = async (characterId: number,
+    itemId: string, options?: Parameters<typeof customFetch>[1]): Promise<Character> => {
+
+  return customFetch<Character>(getUnequipItemUrl(characterId,itemId),
+  {
+    ...options,
+    method: 'POST'
+
+
+  }
+);}
+
+
+
+
+
+export const getUnequipItemMutationOptions = <TError = ErrorType<ErrorResponse>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof unequipItem>>, TError,{characterId: number;itemId: string}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof unequipItem>>, TError,{characterId: number;itemId: string}, TContext> => {
+
+const mutationKey = ['unequipItem'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof unequipItem>>, {characterId: number;itemId: string}> = (props) => {
+          const {characterId,itemId} = props ?? {};
+
+          return  unequipItem(characterId,itemId,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type UnequipItemMutationResult = NonNullable<Awaited<ReturnType<typeof unequipItem>>>
+
+    export type UnequipItemMutationError = ErrorType<ErrorResponse>
+
+    /**
+ * @summary Unequip an owned item
+ */
+export const useUnequipItem = <TError = ErrorType<ErrorResponse>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof unequipItem>>, TError,{characterId: number;itemId: string}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof unequipItem>>,
+        TError,
+        {characterId: number;itemId: string},
+        TContext
+      > => {
+      return useMutation(getUnequipItemMutationOptions(options));
+    }
 
 export const getGetMonstersUrl = () => {
 

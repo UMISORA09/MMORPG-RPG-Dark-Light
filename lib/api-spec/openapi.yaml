@@ -283,6 +283,174 @@ paths:
               schema:
                 $ref: "#/components/schemas/ErrorResponse"
 
+  /items:
+    get:
+      operationId: getItems
+      tags: [inventory]
+      summary: List items available in the shop
+      responses:
+        "200":
+          description: Shop item catalog
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Item"
+
+  /characters/{characterId}/inventory:
+    get:
+      operationId: getInventory
+      tags: [inventory]
+      summary: List items owned by a character
+      parameters:
+        - name: characterId
+          in: path
+          required: true
+          schema:
+            type: number
+      responses:
+        "200":
+          description: Character inventory
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/InventoryItem"
+        "401":
+          description: Not authenticated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "404":
+          description: Character not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /characters/{characterId}/inventory/{itemId}/buy:
+    post:
+      operationId: buyItem
+      tags: [inventory]
+      summary: Buy an item from the shop
+      parameters:
+        - name: characterId
+          in: path
+          required: true
+          schema:
+            type: number
+        - name: itemId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "201":
+          description: Item purchased
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PurchaseResponse"
+        "400":
+          description: Not enough gold or item unavailable
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "401":
+          description: Not authenticated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "404":
+          description: Character or item not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /characters/{characterId}/inventory/{itemId}/equip:
+    post:
+      operationId: equipItem
+      tags: [inventory]
+      summary: Equip an owned item
+      parameters:
+        - name: characterId
+          in: path
+          required: true
+          schema:
+            type: number
+        - name: itemId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Updated character stats
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Character"
+        "400":
+          description: Item cannot be equipped
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "401":
+          description: Not authenticated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "404":
+          description: Character or item not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /characters/{characterId}/inventory/{itemId}/unequip:
+    post:
+      operationId: unequipItem
+      tags: [inventory]
+      summary: Unequip an owned item
+      parameters:
+        - name: characterId
+          in: path
+          required: true
+          schema:
+            type: number
+        - name: itemId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Updated character stats
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Character"
+        "401":
+          description: Not authenticated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "404":
+          description: Character or item not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
   /monsters:
     get:
       operationId: getMonsters
@@ -472,6 +640,61 @@ components:
         createdAt:
           type: string
           format: date-time
+
+    Item:
+      type: object
+      required: [id, name, type, description, rarity, hpBoost, atkBoost, defBoost, spdBoost, price, classId, requiredLevel]
+      properties:
+        id:
+          type: string
+        name:
+          type: string
+        type:
+          type: string
+          description: "weapon | armor | accessory"
+        description:
+          type: string
+        rarity:
+          type: string
+        hpBoost:
+          type: number
+        atkBoost:
+          type: number
+        defBoost:
+          type: number
+        spdBoost:
+          type: number
+        price:
+          type: number
+        classId:
+          type: ["string", "null"]
+        requiredLevel:
+          type: number
+        icon:
+          type: string
+
+    InventoryItem:
+      allOf:
+        - $ref: "#/components/schemas/Item"
+        - type: object
+          required: [ownershipId, equipped, acquiredAt]
+          properties:
+            ownershipId:
+              type: number
+            equipped:
+              type: boolean
+            acquiredAt:
+              type: string
+              format: date-time
+
+    PurchaseResponse:
+      type: object
+      required: [character, inventoryItem]
+      properties:
+        character:
+          $ref: "#/components/schemas/Character"
+        inventoryItem:
+          $ref: "#/components/schemas/InventoryItem"
 
     Monster:
       type: object
