@@ -9,6 +9,8 @@ import {
   getGetCharacterQueryKey,
   useGetMonsters,
   getGetMonstersQueryKey,
+  useGetClasses,
+  getGetClassesQueryKey,
   useStartBattle,
   useGetBattleLog,
   getGetBattleLogQueryKey,
@@ -25,8 +27,9 @@ import { Button } from '@/components/ui/button';
 import { ClassSprite } from '@/components/ClassSprite';
 import { MonsterSprite } from '@/components/MonsterSprite';
 import { BattleModal } from '@/components/BattleModal';
+import { GameMenuSheet } from '@/components/GameMenuSheet';
 import { useToast } from '@/hooks/use-toast';
-import { Swords, User, Trophy, Coins, Heart, Zap, Shield, Gauge, LogOut } from 'lucide-react';
+import { Swords, User, Trophy, Coins, Heart, Zap, Shield, Gauge, LogOut, Settings } from 'lucide-react';
 
 export default function GamePage() {
   const [, setLocation] = useLocation();
@@ -34,6 +37,7 @@ export default function GamePage() {
   const [battleModalOpen, setBattleModalOpen] = useState(false);
   const [battleResult, setBattleResult] = useState<BattleResult | null>(null);
   const [selectedMonster, setSelectedMonster] = useState<{ id: string; name: string; hp: number } | null>(null);
+  const [gameMenuOpen, setGameMenuOpen] = useState(false);
   const { toast } = useToast();
   const queryClient = useQueryClient();
 
@@ -47,6 +51,7 @@ export default function GamePage() {
   );
   
   const { data: monsters, isLoading: monstersLoading } = useGetMonsters({ query: { queryKey: getGetMonstersQueryKey() } });
+  const { data: classes } = useGetClasses({ query: { queryKey: getGetClassesQueryKey() } });
   const { data: battleLog } = useGetBattleLog(
     character?.id || 0,
     { query: { queryKey: getGetBattleLogQueryKey(character?.id || 0), enabled: !!character?.id } }
@@ -420,6 +425,22 @@ export default function GamePage() {
         monsterId={selectedMonster?.id}
         monsterName={selectedMonster?.name}
         monsterMaxHp={selectedMonster?.hp}
+      />
+      <button
+        type="button"
+        onClick={() => setGameMenuOpen(true)}
+        data-testid="button-open-game-menu"
+        aria-label="Mở menu tùy chỉnh"
+        className="menu-gear-button fixed bottom-5 right-5 z-40 flex h-14 w-14 items-center justify-center rounded-2xl border border-secondary/40 bg-card/95 text-secondary shadow-xl backdrop-blur transition-transform hover:scale-105 active:scale-95 sm:right-[calc(50%_-_250px)]"
+      >
+        <Settings className="h-6 w-6" />
+        <span className="absolute right-0 top-0 h-2.5 w-2.5 rounded-full bg-accent shadow-[0_0_10px_hsl(var(--accent))]" />
+      </button>
+      <GameMenuSheet
+        open={gameMenuOpen}
+        onOpenChange={setGameMenuOpen}
+        character={characterDetail}
+        classInfo={classes?.find((item) => item.id === characterDetail.classId)}
       />
     </div>
   );

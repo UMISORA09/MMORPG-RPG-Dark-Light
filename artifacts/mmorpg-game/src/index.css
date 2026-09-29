@@ -558,4 +558,13 @@
     25% { opacity: 1; transform: translateY(0) scale(1); }
     100% { opacity: 0; transform: translateY(-25px) rotate(90deg) scale(0.5); }
   }
+
+  :root.reduced-motion *,
+  :root.reduced-motion *::before,
+  :root.reduced-motion *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    scroll-behavior: auto !important;
+    transition-duration: 0.01ms !important;
+  }
 }
