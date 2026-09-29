@@ -1,0 +1,1 @@
+- [Battle animation state](battle-animation-state.md) — key the combat arena by round so CSS attack and hit animations replay for every simulated turn.

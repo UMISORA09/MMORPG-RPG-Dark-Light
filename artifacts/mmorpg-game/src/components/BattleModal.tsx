@@ -3,15 +3,29 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/u
 import { Progress } from '@/components/ui/progress';
 import { Button } from '@/components/ui/button';
 import type { BattleResult } from '@workspace/api-client-react';
-import { Sparkles, Skull, Coins, TrendingUp } from 'lucide-react';
+import { Sparkles, Skull, Coins, TrendingUp, Zap } from 'lucide-react';
+import { ClassSprite } from '@/components/ClassSprite';
+import { MonsterSprite } from '@/components/MonsterSprite';
 
 interface BattleModalProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   battleResult: BattleResult | null;
+  classId?: string;
+  monsterId?: string;
+  monsterName?: string;
+  monsterMaxHp?: number;
 }
 
-export function BattleModal({ open, onOpenChange, battleResult }: BattleModalProps) {
+export function BattleModal({
+  open,
+  onOpenChange,
+  battleResult,
+  classId = 'fighter',
+  monsterId = 'slime',
+  monsterName = 'Quái vật',
+  monsterMaxHp = 1,
+}: BattleModalProps) {
   const [currentRound, setCurrentRound] = useState(0);
   const [showResult, setShowResult] = useState(false);
 
@@ -35,13 +49,13 @@ export function BattleModal({ open, onOpenChange, battleResult }: BattleModalPro
 
       return () => clearInterval(interval);
     }
+    return undefined;
   }, [open, battleResult]);
 
   if (!battleResult) return null;
 
   const round = battleResult.rounds[currentRound];
   const playerHpPercent = round ? (round.playerHp / battleResult.character.maxHp) * 100 : 0;
-  const monsterMaxHp = battleResult.rounds[0]?.monsterHp || 1;
   const monsterHpPercent = round ? (round.monsterHp / monsterMaxHp) * 100 : 0;
 
   return (
@@ -55,7 +69,38 @@ export function BattleModal({ open, onOpenChange, battleResult }: BattleModalPro
               </DialogTitle>
             </DialogHeader>
 
-            <div className="space-y-6 py-4">
+            <div className="space-y-5 py-4">
+              <div
+                key={`combat-round-${currentRound}`}
+                className={`combat-arena ${round?.isCritical ? 'combat-arena--critical' : ''}`}
+              >
+                <div className="combat-grid" />
+                <div className="combat-fighter">
+                  <div className="combat-nameplate">{battleResult.character.name}</div>
+                  <ClassSprite
+                    className="h-28 w-28 sm:h-32 sm:w-32"
+                    classId={classId}
+                    state={round ? 'attack' : 'idle'}
+                  />
+                </div>
+                <div className="combat-vs">VS</div>
+                <div className="combat-enemy">
+                  <div className="combat-nameplate">{monsterName}</div>
+                  <MonsterSprite
+                    className="h-28 w-28 sm:h-32 sm:w-32"
+                    monsterId={monsterId}
+                    state={round ? 'hit' : 'idle'}
+                  />
+                </div>
+                {round?.isCritical && (
+                  <div className="critical-burst" aria-label="Đòn chí mạng">
+                    <span>CRITICAL</span>
+                    <strong>×1.8</strong>
+                  </div>
+                )}
+                {round && <div className="damage-number">-{round.playerDmg}</div>}
+              </div>
+
               {/* Player HP */}
               <div className="space-y-2">
                 <div className="flex justify-between text-sm">
@@ -81,8 +126,9 @@ export function BattleModal({ open, onOpenChange, battleResult }: BattleModalPro
                     </span>
                   </p>
                   {round.monsterDmg > 0 && (
-                    <p className="text-sm text-foreground">
-                      Quái vật phản công {round.monsterDmg} sát thương
+                    <p className="text-sm text-foreground flex items-center gap-2">
+                      <Zap className="w-3.5 h-3.5 text-destructive" />
+                      {monsterName} phản công {round.monsterDmg} sát thương
                     </p>
                   )}
                 </div>
@@ -126,7 +172,18 @@ export function BattleModal({ open, onOpenChange, battleResult }: BattleModalPro
               </DialogTitle>
             </DialogHeader>
 
-            <div className="py-6 space-y-4">
+            <div className="py-5 space-y-4">
+              {battleResult.victory && (
+                <div className="level-up-sparkles" aria-hidden="true">
+                  {Array.from({ length: 18 }, (_, index) => (
+                    <i
+                      key={index}
+                      className={`spark-${index}`}
+                      style={{ '--spark-index': index } as React.CSSProperties}
+                    />
+                  ))}
+                </div>
+              )}
               {/* Rewards */}
               <div className="bg-muted rounded-xl p-4 space-y-3 border border-border">
                 <div className="flex items-center justify-between">

@@ -23,6 +23,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Progress } from '@/components/ui/progress';
 import { Button } from '@/components/ui/button';
 import { ClassSprite } from '@/components/ClassSprite';
+import { MonsterSprite } from '@/components/MonsterSprite';
 import { BattleModal } from '@/components/BattleModal';
 import { useToast } from '@/hooks/use-toast';
 import { Swords, User, Trophy, Coins, Heart, Zap, Shield, Gauge, LogOut } from 'lucide-react';
@@ -32,6 +33,7 @@ export default function GamePage() {
   const [activeTab, setActiveTab] = useState('battle');
   const [battleModalOpen, setBattleModalOpen] = useState(false);
   const [battleResult, setBattleResult] = useState<BattleResult | null>(null);
+  const [selectedMonster, setSelectedMonster] = useState<{ id: string; name: string; hp: number } | null>(null);
   const { toast } = useToast();
   const queryClient = useQueryClient();
 
@@ -64,6 +66,10 @@ export default function GamePage() {
 
   const handleBattle = (monsterId: string) => {
     if (!character) return;
+    const monster = monsters?.find((entry) => entry.id === monsterId);
+    if (monster) {
+      setSelectedMonster({ id: monster.id, name: monster.name, hp: monster.hp });
+    }
 
     startBattle.mutate(
       { characterId: character.id, data: { monsterId } },
@@ -251,8 +257,8 @@ export default function GamePage() {
                   className="bg-card border border-card-border rounded-xl p-4 hover:border-primary/50 transition-all"
                 >
                   <div className="flex items-center gap-4">
-                    <div className="w-16 h-16 flex items-center justify-center text-4xl bg-muted rounded-lg border border-border">
-                      {monster.emoji}
+                     <div className="w-16 h-16 flex items-center justify-center bg-muted rounded-lg border border-border">
+                       <MonsterSprite monsterId={monster.id} className="w-14 h-14" />
                     </div>
                     <div className="flex-1">
                       <h4 className="font-bold text-foreground mb-1">{monster.name}</h4>
@@ -410,6 +416,10 @@ export default function GamePage() {
         open={battleModalOpen}
         onOpenChange={setBattleModalOpen}
         battleResult={battleResult}
+        classId={characterDetail.classId}
+        monsterId={selectedMonster?.id}
+        monsterName={selectedMonster?.name}
+        monsterMaxHp={selectedMonster?.hp}
       />
     </div>
   );
