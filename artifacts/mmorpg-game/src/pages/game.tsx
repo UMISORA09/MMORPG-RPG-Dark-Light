@@ -29,7 +29,7 @@ import { MonsterSprite } from '@/components/MonsterSprite';
 import { BattleModal } from '@/components/BattleModal';
 import { GameMenuSheet } from '@/components/GameMenuSheet';
 import { useToast } from '@/hooks/use-toast';
-import { Swords, User, Trophy, Coins, Heart, Zap, Shield, Gauge, LogOut, Settings } from 'lucide-react';
+import { Backpack, Swords, User, Trophy, Coins, Heart, Zap, Shield, Gauge, LogOut, Settings, Sparkles } from 'lucide-react';
 
 export default function GamePage() {
   const [, setLocation] = useLocation();
@@ -38,6 +38,8 @@ export default function GamePage() {
   const [battleResult, setBattleResult] = useState<BattleResult | null>(null);
   const [selectedMonster, setSelectedMonster] = useState<{ id: string; name: string; hp: number } | null>(null);
   const [gameMenuOpen, setGameMenuOpen] = useState(false);
+  const [gearMenuOpen, setGearMenuOpen] = useState(false);
+  const [menuInitialTab, setMenuInitialTab] = useState<'inventory' | 'skills' | 'settings'>('inventory');
   const { toast } = useToast();
   const queryClient = useQueryClient();
 
@@ -104,6 +106,12 @@ export default function GamePage() {
         setLocation('/');
       },
     });
+  };
+
+  const openCharacterMenu = (tab: 'inventory' | 'skills' | 'settings') => {
+    setMenuInitialTab(tab);
+    setGearMenuOpen(false);
+    setGameMenuOpen(true);
   };
 
   if (userLoading || charactersLoading || characterLoading || !characterDetail) {
@@ -426,21 +434,79 @@ export default function GamePage() {
         monsterName={selectedMonster?.name}
         monsterMaxHp={selectedMonster?.hp}
       />
-      <button
-        type="button"
-        onClick={() => setGameMenuOpen(true)}
-        data-testid="button-open-game-menu"
-        aria-label="Mở menu tùy chỉnh"
-        className="menu-gear-button fixed bottom-5 right-5 z-40 flex h-14 w-14 items-center justify-center rounded-2xl border border-secondary/40 bg-card/95 text-secondary shadow-xl backdrop-blur transition-transform hover:scale-105 active:scale-95 sm:right-[calc(50%_-_250px)]"
-      >
-        <Settings className="h-6 w-6" />
-        <span className="absolute right-0 top-0 h-2.5 w-2.5 rounded-full bg-accent shadow-[0_0_10px_hsl(var(--accent))]" />
-      </button>
+      {!gameMenuOpen && (
+        <div
+          className="fixed bottom-5 right-5 z-40 h-14 w-14 sm:right-[calc(50%_-_250px)]"
+          onKeyDown={(event) => {
+            if (event.key === 'Escape') setGearMenuOpen(false);
+          }}
+        >
+          <div
+            className={`absolute inset-0 transition-opacity duration-200 ${
+              gearMenuOpen ? 'pointer-events-auto opacity-100' : 'pointer-events-none opacity-0'
+            }`}
+            aria-hidden={!gearMenuOpen}
+          >
+            <button
+              type="button"
+              tabIndex={gearMenuOpen ? 0 : -1}
+              onClick={() => openCharacterMenu('inventory')}
+              aria-label="Mở túi đồ"
+              data-testid="gear-menu-inventory"
+              className={`absolute bottom-0 right-0 flex h-11 w-11 items-center justify-center rounded-xl border border-secondary/40 bg-card text-secondary shadow-lg transition-all duration-300 ${
+                gearMenuOpen ? '-translate-x-[68px] -translate-y-1 rotate-0 scale-100' : 'translate-x-0 translate-y-0 rotate-45 scale-50'
+              }`}
+            >
+              <Backpack className="h-5 w-5" />
+            </button>
+            <button
+              type="button"
+              tabIndex={gearMenuOpen ? 0 : -1}
+              onClick={() => openCharacterMenu('skills')}
+              aria-label="Mở kỹ năng"
+              data-testid="gear-menu-skills"
+              className={`absolute bottom-0 right-0 flex h-11 w-11 items-center justify-center rounded-xl border border-primary/40 bg-card text-primary shadow-lg transition-all duration-300 delay-75 ${
+                gearMenuOpen ? '-translate-x-[52px] -translate-y-[64px] rotate-0 scale-100' : 'translate-x-0 translate-y-0 rotate-45 scale-50'
+              }`}
+            >
+              <Sparkles className="h-5 w-5" />
+            </button>
+            <button
+              type="button"
+              tabIndex={gearMenuOpen ? 0 : -1}
+              onClick={() => openCharacterMenu('settings')}
+              aria-label="Mở cài đặt"
+              data-testid="gear-menu-settings"
+              className={`absolute bottom-0 right-0 flex h-11 w-11 items-center justify-center rounded-xl border border-accent/40 bg-card text-accent shadow-lg transition-all duration-300 delay-150 ${
+                gearMenuOpen ? '-translate-x-1 -translate-y-[80px] rotate-0 scale-100' : 'translate-x-0 translate-y-0 rotate-45 scale-50'
+              }`}
+            >
+              <Settings className="h-5 w-5" />
+            </button>
+          </div>
+          <button
+            type="button"
+            onClick={() => setGearMenuOpen((current) => !current)}
+            data-testid="button-open-game-menu"
+            aria-label={gearMenuOpen ? 'Đóng menu nhanh' : 'Mở menu nhanh'}
+            aria-expanded={gearMenuOpen}
+            className={`menu-gear-button absolute inset-0 flex h-14 w-14 items-center justify-center rounded-2xl border border-secondary/40 bg-card/95 text-secondary shadow-xl backdrop-blur transition-transform duration-500 hover:scale-105 active:scale-95 ${
+              gearMenuOpen ? 'rotate-[180deg]' : 'rotate-0'
+            }`}
+          >
+            <Settings className="h-6 w-6" />
+            {!gearMenuOpen && (
+              <span className="absolute right-0 top-0 h-2.5 w-2.5 rounded-full bg-accent shadow-[0_0_10px_hsl(var(--accent))]" />
+            )}
+          </button>
+        </div>
+      )}
       <GameMenuSheet
         open={gameMenuOpen}
         onOpenChange={setGameMenuOpen}
         character={characterDetail}
         classInfo={classes?.find((item) => item.id === characterDetail.classId)}
+        initialTab={menuInitialTab}
       />
     </div>
   );

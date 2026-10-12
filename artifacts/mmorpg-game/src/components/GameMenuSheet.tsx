@@ -37,6 +37,7 @@ interface GameMenuSheetProps {
   onOpenChange: (open: boolean) => void;
   character: Character;
   classInfo?: CharacterClass;
+  initialTab?: MenuTab;
 }
 
 function SettingRow({
@@ -89,8 +90,9 @@ export function GameMenuSheet({
   onOpenChange,
   character,
   classInfo,
+  initialTab = 'inventory',
 }: GameMenuSheetProps) {
-  const [activeTab, setActiveTab] = useState<MenuTab>('inventory');
+  const [activeTab, setActiveTab] = useState<MenuTab>(initialTab);
   const [soundEnabled, setSoundEnabled] = useState(true);
   const [vibrationEnabled, setVibrationEnabled] = useState(true);
   const [reducedMotion, setReducedMotion] = useState(false);
@@ -111,6 +113,10 @@ export function GameMenuSheet({
   const buyItem = useBuyItem();
   const equipItem = useEquipItem();
   const unequipItem = useUnequipItem();
+
+  useEffect(() => {
+    if (open) setActiveTab(initialTab);
+  }, [open, initialTab]);
 
   useEffect(() => {
     const savedSound = window.localStorage.getItem('mmorpg-sound');

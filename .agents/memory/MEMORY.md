@@ -1,1 +1,2 @@
 - [Battle animation state](battle-animation-state.md) — key the combat arena by round so CSS attack and hit animations replay for every simulated turn.
+- [Drizzle push prompts](drizzle-push-prompts.md) — `push-force` can still require a TTY; verify development schema changes explicitly and use Publish for production.
