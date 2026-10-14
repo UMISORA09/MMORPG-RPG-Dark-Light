@@ -59,20 +59,20 @@ if (isPostgres && pool) {
   sessionStore = new session.MemoryStore();
 }
 
-app.use(
-  session({
-    store: sessionStore,
-    secret: process.env.SESSION_SECRET || "mmorpg-dev-secret-key-beta",
-    resave: false,
-    saveUninitialized: false,
-    cookie: {
-      maxAge: 30 * 24 * 60 * 60 * 1000, // 30 days
-      httpOnly: true,
-      secure: process.env.NODE_ENV === "production" && process.env.VERCEL === "1",
-      sameSite: "lax",
-    },
-  }),
-);
+export const sessionMiddleware = session({
+  store: sessionStore,
+  secret: process.env.SESSION_SECRET || "mmorpg-dev-secret-key-beta",
+  resave: false,
+  saveUninitialized: false,
+  cookie: {
+    maxAge: 30 * 24 * 60 * 60 * 1000, // 30 days
+    httpOnly: true,
+    secure: process.env.NODE_ENV === "production" && process.env.VERCEL === "1",
+    sameSite: "lax",
+  },
+});
+
+app.use(sessionMiddleware);
 
 // Mount API routes
 app.use("/api", router);

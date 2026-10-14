@@ -16,6 +16,7 @@
     "generate:sprites": "pnpm --filter @workspace/scripts run generate:sprites",
     "pipeline:rpg-assets": "pnpm --filter @workspace/scripts run pipeline:rpg-assets",
     "test:encounter": "node ./scripts/test-encounter.mjs",
+    "test:realtime-encounter": "node ./scripts/test-realtime-encounter.mjs",
     "start": "pnpm --filter @workspace/api-server run start"
   },
   "private": true,

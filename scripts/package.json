@@ -13,5 +13,8 @@
   "devDependencies": {
     "@types/node": "catalog:",
     "tsx": "catalog:"
+  },
+  "dependencies": {
+    "ws": "^8.22.0"
   }
 }

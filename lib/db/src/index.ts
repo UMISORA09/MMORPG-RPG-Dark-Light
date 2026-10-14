@@ -16,6 +16,8 @@ interface MemoryStoreData {
   items: any[];
   character_items: any[];
   battle_logs: any[];
+  encounters: any[];
+  reward_grants: any[];
 }
 
 const memoryStore: MemoryStoreData = {
@@ -24,6 +26,8 @@ const memoryStore: MemoryStoreData = {
   items: [...SEED_ITEMS],
   character_items: [],
   battle_logs: [],
+  encounters: [],
+  reward_grants: [],
 };
 
 let autoIncrement = {
@@ -46,8 +50,12 @@ function createMemoryDb() {
     else if (table?.hpBoost || table?.hp_boost || table?.rarity) name = "items";
     else if (table?.itemId || table?.item_id) name = "character_items";
     else if (table?.monsterId || table?.monster_name) name = "battle_logs";
+    else if (table?.clientRequestId || table?.client_request_id || table?.spawnId) name = "encounters";
+    else if (table?.expGranted || table?.exp_granted) name = "reward_grants";
 
     if (name.includes("user_session") || name.includes("session")) return [];
+    if (name.includes("reward_grant")) return memoryStore.reward_grants;
+    if (name.includes("encounter")) return memoryStore.encounters;
     if (name.includes("character_item")) return memoryStore.character_items;
     if (name.includes("character")) return memoryStore.characters;
     if (name.includes("user")) return memoryStore.users;
@@ -68,7 +76,6 @@ function createMemoryDb() {
   const matchesPredicate = (row: any, predicate: any): boolean => {
     if (!predicate) return true;
     if (typeof predicate === "function") return predicate(row);
-    console.log("[MATCH]", { rowId: row.id, pKeys: Object.keys(predicate), left: predicate.left?.name, right: predicate.right?.value !== undefined ? predicate.right.value : predicate.right, chunks: predicate.queryChunks });
 
     // Drizzle BinaryOperator / SQL condition
     if (predicate.left && predicate.right !== undefined) {
@@ -81,17 +88,56 @@ function createMemoryDb() {
     }
 
     if (Array.isArray(predicate.queryChunks)) {
+      // Recursively extract all sub-expressions
+      const subConditions: any[] = [];
+      const extractSubs = (arr: any[]) => {
+        for (const item of arr) {
+          if (!item || typeof item !== "object") continue;
+          if (item.left && item.right !== undefined) {
+            subConditions.push(item);
+          } else if (Array.isArray(item.queryChunks)) {
+            // Check if this sub-chunk is an atomic condition with name & Param
+            let foundName = "";
+            let foundVal: any = undefined;
+            for (const sub of item.queryChunks) {
+              if (sub?.name && typeof sub.name === "string") foundName = sub.name;
+              else if (sub?.constructor?.name === "Param" || (sub?.value !== undefined && !Array.isArray(sub.value) && typeof sub.value !== "object")) {
+                foundVal = sub.value;
+              }
+            }
+            if (foundName && foundVal !== undefined) {
+              subConditions.push({ left: { name: foundName }, right: foundVal });
+            } else {
+              extractSubs(item.queryChunks);
+            }
+          }
+        }
+      };
+      extractSubs(predicate.queryChunks);
+
+      if (subConditions.length > 0) {
+        return subConditions.every((sub) => matchesPredicate(row, sub));
+      }
+
       let colName = "";
       let targetVal: any = undefined;
       for (const chunk of predicate.queryChunks) {
         if (chunk?.name && typeof chunk.name === "string") {
           colName = chunk.name;
-        } else if (chunk?.constructor?.name === "Param" || (chunk?.value !== undefined && !Array.isArray(chunk.value) && typeof chunk.value !== "object")) {
+        } else if (
+          chunk?.constructor?.name === "Param" ||
+          (chunk?.value !== undefined && !Array.isArray(chunk.value) && typeof chunk.value !== "object")
+        ) {
           targetVal = chunk.value;
         }
       }
       if (colName && targetVal !== undefined) {
-        const valInRow = row[colName] !== undefined ? row[colName] : (row[camelCase(colName)] !== undefined ? row[camelCase(colName)] : row[snakeCase(colName)]);
+        const valInRow =
+          row[colName] !== undefined
+            ? row[colName]
+            : row[camelCase(colName)] !== undefined
+            ? row[camelCase(colName)]
+            : row[snakeCase(colName)];
         return valInRow === targetVal || valInRow == targetVal;
       }
     }
@@ -301,12 +347,46 @@ export async function initDatabase() {
         CREATE TABLE IF NOT EXISTS battle_logs (
           id SERIAL PRIMARY KEY,
           character_id INTEGER NOT NULL REFERENCES characters(id) ON DELETE CASCADE,
+          encounter_id UUID,
           monster_id TEXT NOT NULL,
           monster_name TEXT NOT NULL,
           victory BOOLEAN NOT NULL,
           exp_gained INTEGER DEFAULT 0 NOT NULL,
           gold_gained INTEGER DEFAULT 0 NOT NULL,
           created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP NOT NULL
+        );
+
+        CREATE TABLE IF NOT EXISTS encounters (
+          id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+          character_id INTEGER NOT NULL REFERENCES characters(id) ON DELETE CASCADE,
+          user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+          monster_id TEXT NOT NULL,
+          spawn_id TEXT NOT NULL,
+          zone_id TEXT DEFAULT 'WILDERNESS' NOT NULL,
+          status TEXT DEFAULT 'active' NOT NULL,
+          rules_version INTEGER DEFAULT 1 NOT NULL,
+          content_version INTEGER DEFAULT 1 NOT NULL,
+          rng_seed INTEGER DEFAULT 1337 NOT NULL,
+          client_request_id TEXT NOT NULL,
+          started_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP NOT NULL,
+          ended_at TIMESTAMP,
+          expires_at TIMESTAMP NOT NULL,
+          last_seen_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP NOT NULL,
+          final_server_tick INTEGER,
+          final_state_json JSONB,
+          result_json JSONB,
+          log_id INTEGER
+        );
+        CREATE UNIQUE INDEX IF NOT EXISTS idx_encounters_char_active ON encounters (character_id) WHERE status = 'active';
+        CREATE UNIQUE INDEX IF NOT EXISTS idx_encounters_client_req ON encounters (character_id, client_request_id);
+
+        CREATE TABLE IF NOT EXISTS reward_grants (
+          encounter_id UUID PRIMARY KEY REFERENCES encounters(id) ON DELETE CASCADE,
+          character_id INTEGER NOT NULL REFERENCES characters(id) ON DELETE CASCADE,
+          exp_granted INTEGER NOT NULL,
+          gold_granted INTEGER NOT NULL,
+          items_granted JSONB,
+          granted_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP NOT NULL
         );
 
         CREATE TABLE IF NOT EXISTS user_sessions (

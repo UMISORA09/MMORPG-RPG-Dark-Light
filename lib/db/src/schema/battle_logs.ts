@@ -1,4 +1,4 @@
-import { pgTable, serial, integer, text, boolean, timestamp } from "drizzle-orm/pg-core";
+import { pgTable, serial, integer, text, boolean, timestamp, uuid } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod/v4";
 import { charactersTable } from "./characters";
@@ -8,6 +8,7 @@ export const battleLogsTable = pgTable("battle_logs", {
   characterId: integer("character_id")
     .notNull()
     .references(() => charactersTable.id, { onDelete: "cascade" }),
+  encounterId: uuid("encounter_id"),
   monsterId: text("monster_id").notNull(),
   monsterName: text("monster_name").notNull(),
   victory: boolean("victory").notNull(),
