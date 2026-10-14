@@ -84,6 +84,7 @@ export interface GameWorldState {
   playerName: string;
   playerClassId: string;
   playerClassName: string;
+  playerGender: "male" | "female";
   playerColorHex: string;
   isInvincible: boolean;
   invincibleTimer: number;
@@ -215,6 +216,7 @@ export const useGameWorldStore = create<GameWorldState>((set, get) => ({
   playerName: "Hiệp Sĩ",
   playerClassId: "fighter",
   playerClassName: "Chiến Binh",
+  playerGender: "male",
   playerColorHex: "#f97316",
   isInvincible: false,
   invincibleTimer: 0,
@@ -750,6 +752,7 @@ export const useGameWorldStore = create<GameWorldState>((set, get) => ({
         playerName: char.name || s.playerName,
         playerClassId: char.classId || s.playerClassId,
         playerClassName: char.className || blueprint.className || s.playerClassName,
+        playerGender: char.gender || (typeof window !== "undefined" ? localStorage.getItem(`character_gender_${char.id}`) : null) || s.playerGender || "male",
         playerColorHex: blueprint.color || s.playerColorHex,
         playerLevel: char.level || s.playerLevel,
         playerExp: char.experience || s.playerExp,

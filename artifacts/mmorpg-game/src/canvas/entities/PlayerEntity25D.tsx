@@ -54,6 +54,7 @@ export const PlayerEntity25D = memo(function PlayerEntity25D() {
   const playerLevel = useGameWorldStore((s) => s.playerLevel);
   const playerName = useGameWorldStore((s) => s.playerName);
   const playerClassId = useGameWorldStore((s) => s.playerClassId);
+  const playerGender = useGameWorldStore((s) => s.playerGender);
   const playerColorHex = useGameWorldStore((s) => s.playerColorHex);
   const isInvincible = useGameWorldStore((s) => s.isInvincible);
   const characterRenderMode = useGameWorldStore((s) => s.characterRenderMode);
@@ -75,14 +76,24 @@ export const PlayerEntity25D = memo(function PlayerEntity25D() {
   const jumpForce = 9.0;
   const gravity = -22.0;
 
-  // Multi-layer procedural texture from blueprint anatomy
+  // Multi-layer procedural texture from blueprint anatomy & gender identity
   const blueprint = useMemo(() => getCharacterBlueprint(playerClassId), [playerClassId]);
   const customAnatomyTexture = useMemo(() => {
+    const isFemale = playerGender === "female";
+    const silhouette =
+      isFemale && (blueprint.anatomy.silhouette === "colossus_armored" || blueprint.anatomy.silhouette === "muscular_heavy")
+        ? ("tactical_medium" as const)
+        : blueprint.anatomy.silhouette;
+
+    const anatomy = {
+      ...blueprint.anatomy,
+      silhouette,
+    };
     return createMultiLayerCanvasTexture({
-      anatomy: blueprint.anatomy,
+      anatomy,
       frameSize: 128,
     });
-  }, [blueprint]);
+  }, [blueprint, playerGender]);
 
   useFrame((_, delta) => {
     const dt = Math.min(delta, 0.05);

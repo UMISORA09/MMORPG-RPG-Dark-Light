@@ -105,6 +105,8 @@ export const SpriteBillboard25D = memo(function SpriteBillboard25D({
   // Frame timing state
   const frameTimer = useRef(0);
   const currentFrame = useRef(0);
+  const prevState = useRef(state);
+  const prevFacing = useRef(facingLeft);
 
   // UV row mapping for 9-row combat sheet:
   // Row 0: Idle, Row 1: Walk/Run, Row 2: Jump/Fall, Row 3: Attack 1, Row 4: Attack 2,
@@ -138,8 +140,32 @@ export const SpriteBillboard25D = memo(function SpriteBillboard25D({
     }
   }, [state]);
 
+  const applyUV = (col: number, row: number, isFacingLeft: boolean) => {
+    const uStep = 1 / TOTAL_COLS;
+    const vStep = 1 / TOTAL_ROWS;
+    const vOffset = (TOTAL_ROWS - 1 - row) * vStep;
+
+    if (isFacingLeft) {
+      texture.repeat.x = -uStep;
+      texture.offset.x = (col + 1) * uStep;
+    } else {
+      texture.repeat.x = uStep;
+      texture.offset.x = col * uStep;
+    }
+    texture.offset.y = vOffset;
+  };
+
   useFrame((_, delta) => {
-    // Animation frame advancement FPS tuning
+    // 1. Immediately reset animation frame when state changes
+    if (prevState.current !== state || prevFacing.current !== facingLeft) {
+      prevState.current = state;
+      prevFacing.current = facingLeft;
+      currentFrame.current = 0;
+      frameTimer.current = 0;
+      applyUV(0, rowIndex, facingLeft);
+    }
+
+    // 2. Animation frame advancement FPS tuning
     const fps =
       state === "run" || state === "walk"
         ? 12
@@ -148,29 +174,21 @@ export const SpriteBillboard25D = memo(function SpriteBillboard25D({
         : state === "death"
         ? 8
         : 8;
+
     frameTimer.current += delta;
+    const frameInterval = 1 / fps;
 
-    if (frameTimer.current >= 1 / fps) {
-      frameTimer.current = 0;
-      currentFrame.current = (currentFrame.current + 1) % TOTAL_COLS;
+    if (frameTimer.current >= frameInterval) {
+      frameTimer.current -= frameInterval;
 
-      const col = currentFrame.current;
-      const uStep = 1 / TOTAL_COLS;
-      const vStep = 1 / TOTAL_ROWS;
-
-      // In Three.js, UV origin (0, 0) is bottom-left
-      // Row 0 is at top -> vOffset = (TOTAL_ROWS - 1 - rowIndex) * vStep
-      const vOffset = (TOTAL_ROWS - 1 - rowIndex) * vStep;
-
-      if (facingLeft) {
-        texture.repeat.x = -uStep;
-        texture.offset.x = (col + 1) * uStep;
+      // Death clamp at last frame; loop other states
+      if (state === "death") {
+        currentFrame.current = Math.min(currentFrame.current + 1, TOTAL_COLS - 1);
       } else {
-        texture.repeat.x = uStep;
-        texture.offset.x = col * uStep;
+        currentFrame.current = (currentFrame.current + 1) % TOTAL_COLS;
       }
 
-      texture.offset.y = vOffset;
+      applyUV(currentFrame.current, rowIndex, facingLeft);
     }
 
     // Hurt flashing emissive effect

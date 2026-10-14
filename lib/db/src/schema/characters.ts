@@ -21,6 +21,7 @@ export const charactersTable = pgTable("characters", {
   gold: integer("gold").notNull().default(0),
   kills: integer("kills").notNull().default(0),
   deaths: integer("deaths").notNull().default(0),
+  gender: text("gender").notNull().default("male"),
   createdAt: timestamp("created_at").defaultNow().notNull(),
 });
 

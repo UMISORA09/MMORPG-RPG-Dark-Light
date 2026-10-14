@@ -90,6 +90,8 @@ export default function CharacterSelectScreen() {
   const handleSelectCharacter = (char: Character) => {
     if (typeof window !== "undefined") {
       localStorage.setItem("selectedCharacterId", String(char.id));
+      const gender = (char as any).gender || "male";
+      localStorage.setItem(`character_gender_${char.id}`, gender);
     }
     toast({
       title: "⚔️ Xuất Trận!",
@@ -276,9 +278,10 @@ export default function CharacterSelectScreen() {
               const Icon = cfg.icon;
               const isHovered = hoveredCharId === char.id;
               const storedGender =
-                typeof window !== "undefined"
+                (char as any).gender ||
+                (typeof window !== "undefined"
                   ? localStorage.getItem(`character_gender_${char.id}`) || "male"
-                  : "male";
+                  : "male");
 
               return (
                 <motion.div

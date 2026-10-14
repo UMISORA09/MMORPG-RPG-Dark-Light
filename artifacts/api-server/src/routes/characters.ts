@@ -46,6 +46,7 @@ router.post("/characters", requireAuth, async (req, res) => {
   }
 
   const { name, classId } = parsed.data;
+  const gender = (req.body.gender === "female" ? "female" : "male") as "male" | "female";
   const cls = CHARACTER_CLASSES.find((c) => c.id === classId);
   if (!cls) {
     return res.status(400).json({ error: "Chức nghiệp không hợp lệ" });
@@ -61,6 +62,7 @@ router.post("/characters", requireAuth, async (req, res) => {
       name,
       classId,
       className: cls.name,
+      gender,
       level: 1,
       experience: 0,
       hp: stats.hp,

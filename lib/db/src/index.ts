@@ -317,8 +317,11 @@ export async function initDatabase() {
           gold INTEGER DEFAULT 0 NOT NULL,
           kills INTEGER DEFAULT 0 NOT NULL,
           deaths INTEGER DEFAULT 0 NOT NULL,
+          gender TEXT DEFAULT 'male' NOT NULL,
           created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP NOT NULL
         );
+
+        ALTER TABLE characters ADD COLUMN IF NOT EXISTS gender TEXT DEFAULT 'male' NOT NULL;
 
         CREATE TABLE IF NOT EXISTS items (
           id TEXT PRIMARY KEY,

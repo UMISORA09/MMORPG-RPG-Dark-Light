@@ -143,7 +143,7 @@ export function CharacterCreationModal({ isOpen, onClose, onCharacterCreated }: 
     }
 
     createCharacter.mutate(
-      { data: { name: trimmed, classId: selectedClassId } },
+      { data: { name: trimmed, classId: selectedClassId, gender } as any },
       {
         onSuccess: async (created: any) => {
           // Persist gender and selection

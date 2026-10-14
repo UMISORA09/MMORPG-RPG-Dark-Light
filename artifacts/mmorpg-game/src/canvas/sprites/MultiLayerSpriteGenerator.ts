@@ -18,7 +18,7 @@ const multiLayerTextureCache = new Map<string, THREE.CanvasTexture>();
 export function generateMultiLayerSpritesheet(options: MultiLayerRenderOptions): HTMLCanvasElement {
   const { anatomy, frameSize = 128, equippedWeaponTint, weaponGlowBoost = 1.0 } = options;
   const cols = 8;
-  const rows = 5;
+  const rows = 9;
   const width = cols * frameSize;
   const height = rows * frameSize;
 
@@ -35,12 +35,16 @@ export function generateMultiLayerSpritesheet(options: MultiLayerRenderOptions):
   const weaponTrail = equippedWeaponTint || weapon.trailColor;
   const glow = weapon.glowIntensity * weaponGlowBoost;
 
-  // Render each frame across 5 rows:
+  // Render each frame across 9 rows (Matching 9-row JRPG Combat Standard):
   // Row 0: Idle (8 frames)
-  // Row 1: Run (8 frames)
-  // Row 2: Combo 1 & 2 (8 frames)
-  // Row 3: Combo 3 & Skill Cast (8 frames)
-  // Row 4: Dash & Hurt (8 frames)
+  // Row 1: Walk / Run (8 frames)
+  // Row 2: Jump / Fall (8 frames)
+  // Row 3: Attack 1 (8 frames)
+  // Row 4: Attack 2 (8 frames)
+  // Row 5: Air Attack (8 frames)
+  // Row 6: Attack 3 (8 frames)
+  // Row 7: Attack 4 (8 frames)
+  // Row 8: Hurt / Death (8 frames)
   for (let r = 0; r < rows; r++) {
     for (let c = 0; c < cols; c++) {
       const x = c * frameSize;
@@ -61,33 +65,56 @@ export function generateMultiLayerSpritesheet(options: MultiLayerRenderOptions):
       let flashHurt = false;
 
       if (r === 0) {
-        // Idle: Subtle rhythmic breathing
+        // Row 0: Idle - Subtle rhythmic breathing
         bobY = Math.sin(t * Math.PI * 2) * 3;
       } else if (r === 1) {
-        // Run: High-speed forward lean and stepping bob
+        // Row 1: Walk / Run - Stepping bob & arm phase
         bobY = Math.abs(Math.sin(t * Math.PI * 2)) * 6;
         leanX = 3;
         armPhase = Math.sin(t * Math.PI * 2);
       } else if (r === 2) {
-        // Combo 1 & 2: Quick slashes/shots
-        swingWeapon = true;
-        bobY = Math.sin(t * Math.PI) * 4;
-        leanX = 4;
+        // Row 2: Jump / Fall - Airborne suspension & tuck
+        bobY = Math.sin(t * Math.PI) * 14 - 4;
+        leanX = 1;
+        dashBlur = c === 3 || c === 4;
       } else if (r === 3) {
-        // Combo 3 & Cast: Heavy slam / high energy burst
+        // Row 3: Attack 1 - Quick slash / direct strike
         swingWeapon = true;
-        bobY = -Math.sin(t * Math.PI) * 10;
-        leanX = 2;
+        bobY = Math.sin(t * Math.PI) * 3;
+        leanX = 4;
       } else if (r === 4) {
-        // Dash & Hurt
+        // Row 4: Attack 2 - Follow-up horizontal cleave
+        swingWeapon = true;
+        bobY = -Math.sin(t * Math.PI) * 4;
+        leanX = 6;
+      } else if (r === 5) {
+        // Row 5: Air Attack - Aerial downward plunge
+        swingWeapon = true;
+        bobY = Math.cos(t * Math.PI) * 8;
+        leanX = 5;
+        dashBlur = true;
+      } else if (r === 6) {
+        // Row 6: Attack 3 - Heavy spin / thrust
+        swingWeapon = true;
+        bobY = Math.sin(t * Math.PI) * 6;
+        leanX = 8;
+      } else if (r === 7) {
+        // Row 7: Attack 4 - Ultimate finisher slam & shockwave
+        swingWeapon = true;
+        bobY = -Math.sin(t * Math.PI) * 12;
+        leanX = 3;
+        dashBlur = c >= 4;
+      } else if (r === 8) {
+        // Row 8: Hurt / Death
         if (c < 4) {
-          dashBlur = true;
-          leanX = 12;
-          bobY = 4;
-        } else {
           flashHurt = true;
-          leanX = -6;
-          bobY = -2;
+          leanX = -8;
+          bobY = -4;
+        } else {
+          // Death collapse
+          flashHurt = true;
+          leanX = -12 * (c - 3);
+          bobY = -6 * (c - 3);
         }
       }
 
