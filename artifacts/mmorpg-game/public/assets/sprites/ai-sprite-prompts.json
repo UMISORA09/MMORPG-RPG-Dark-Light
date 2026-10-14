@@ -1,0 +1,202 @@
+{
+  "gunner": {
+    "name": "Tech Gunner",
+    "title": "Xạ Thủ Năng Lượng",
+    "type": "Hero Class",
+    "primaryColor": "#00f2ff",
+    "glowColor": "#38bdf8",
+    "weapon": "dual_guns",
+    "prompt": "Tech Gunner, Xạ Thủ Năng Lượng, wielding dual_guns, glowing #00f2ff neon aura, HD-2D 16-bit Octopath Traveler style, dark fantasy MMORPG, pixel art warrior sprite sheet, 4x4 animation grid, row 0 idle, row 1 running, row 2 attacking, row 3 damaged, game asset, pure transparent background, sharp pixels, volumetric dramatic lighting --ar 1:1 --v 6.0",
+    "negativePrompt": "blurry, 3d realistic render, photorealistic, deformed limbs, messy background, extra rows, text, watermark, bad anatomy",
+    "gridFormat": {
+      "cols": 4,
+      "rows": 4,
+      "rowMapping": {
+        "0": "Idle animation (4 frames breathing loop)",
+        "1": "Run cycle (4 frames walking stride)",
+        "2": "Attack windup and strike (4 frames slashing/shooting)",
+        "3": "Hurt and defeat reaction (4 frames flashing red)"
+      }
+    }
+  },
+  "assassin": {
+    "name": "Shadow Assassin",
+    "title": "Sát Thủ Bóng Tối",
+    "type": "Hero Class",
+    "primaryColor": "#ff3366",
+    "glowColor": "#f43f5e",
+    "weapon": "twin_blades",
+    "prompt": "Shadow Assassin, Sát Thủ Bóng Tối, wielding twin_blades, glowing #ff3366 neon aura, HD-2D 16-bit Octopath Traveler style, dark fantasy MMORPG, pixel art warrior sprite sheet, 4x4 animation grid, row 0 idle, row 1 running, row 2 attacking, row 3 damaged, game asset, pure transparent background, sharp pixels, volumetric dramatic lighting --ar 1:1 --v 6.0",
+    "negativePrompt": "blurry, 3d realistic render, photorealistic, deformed limbs, messy background, extra rows, text, watermark, bad anatomy",
+    "gridFormat": {
+      "cols": 4,
+      "rows": 4,
+      "rowMapping": {
+        "0": "Idle animation (4 frames breathing loop)",
+        "1": "Run cycle (4 frames walking stride)",
+        "2": "Attack windup and strike (4 frames slashing/shooting)",
+        "3": "Hurt and defeat reaction (4 frames flashing red)"
+      }
+    }
+  },
+  "fighter": {
+    "name": "Berserk Fighter",
+    "title": "Chiến Binh Cuồng Nộ",
+    "type": "Hero Class",
+    "primaryColor": "#ffaa00",
+    "glowColor": "#f59e0b",
+    "weapon": "dragon_fists",
+    "prompt": "Berserk Fighter, Chiến Binh Cuồng Nộ, wielding dragon_fists, glowing #ffaa00 neon aura, HD-2D 16-bit Octopath Traveler style, dark fantasy MMORPG, pixel art warrior sprite sheet, 4x4 animation grid, row 0 idle, row 1 running, row 2 attacking, row 3 damaged, game asset, pure transparent background, sharp pixels, volumetric dramatic lighting --ar 1:1 --v 6.0",
+    "negativePrompt": "blurry, 3d realistic render, photorealistic, deformed limbs, messy background, extra rows, text, watermark, bad anatomy",
+    "gridFormat": {
+      "cols": 4,
+      "rows": 4,
+      "rowMapping": {
+        "0": "Idle animation (4 frames breathing loop)",
+        "1": "Run cycle (4 frames walking stride)",
+        "2": "Attack windup and strike (4 frames slashing/shooting)",
+        "3": "Hurt and defeat reaction (4 frames flashing red)"
+      }
+    }
+  },
+  "tank": {
+    "name": "Holy Guardian",
+    "title": "Hộ Vệ Hoàng Kim",
+    "type": "Hero Class",
+    "primaryColor": "#00ff88",
+    "glowColor": "#ffd700",
+    "weapon": "shield_hammer",
+    "prompt": "Holy Guardian, Hộ Vệ Hoàng Kim, wielding shield_hammer, glowing #00ff88 neon aura, HD-2D 16-bit Octopath Traveler style, dark fantasy MMORPG, pixel art warrior sprite sheet, 4x4 animation grid, row 0 idle, row 1 running, row 2 attacking, row 3 damaged, game asset, pure transparent background, sharp pixels, volumetric dramatic lighting --ar 1:1 --v 6.0",
+    "negativePrompt": "blurry, 3d realistic render, photorealistic, deformed limbs, messy background, extra rows, text, watermark, bad anatomy",
+    "gridFormat": {
+      "cols": 4,
+      "rows": 4,
+      "rowMapping": {
+        "0": "Idle animation (4 frames breathing loop)",
+        "1": "Run cycle (4 frames walking stride)",
+        "2": "Attack windup and strike (4 frames slashing/shooting)",
+        "3": "Hurt and defeat reaction (4 frames flashing red)"
+      }
+    }
+  },
+  "slime": {
+    "name": "Slime",
+    "title": "Slime Rừng Sâu",
+    "type": "Monster/Boss",
+    "primaryColor": "#22c55e",
+    "glowColor": "#86efac",
+    "weapon": "claws",
+    "prompt": "Slime, Slime Rừng Sâu, wielding claws, glowing #22c55e neon aura, HD-2D 16-bit Octopath Traveler style, dark fantasy MMORPG, pixel art warrior sprite sheet, 4x4 animation grid, row 0 idle, row 1 running, row 2 attacking, row 3 damaged, game asset, pure transparent background, sharp pixels, volumetric dramatic lighting --ar 1:1 --v 6.0",
+    "negativePrompt": "blurry, 3d realistic render, photorealistic, deformed limbs, messy background, extra rows, text, watermark, bad anatomy",
+    "gridFormat": {
+      "cols": 4,
+      "rows": 4,
+      "rowMapping": {
+        "0": "Idle animation (4 frames breathing loop)",
+        "1": "Run cycle (4 frames walking stride)",
+        "2": "Attack windup and strike (4 frames slashing/shooting)",
+        "3": "Hurt and defeat reaction (4 frames flashing red)"
+      }
+    }
+  },
+  "wolf": {
+    "name": "Dark Wolf",
+    "title": "Sói Hoang Hoang Dã",
+    "type": "Monster/Boss",
+    "primaryColor": "#94a3b8",
+    "glowColor": "#e2e8f0",
+    "weapon": "claws",
+    "prompt": "Dark Wolf, Sói Hoang Hoang Dã, wielding claws, glowing #94a3b8 neon aura, HD-2D 16-bit Octopath Traveler style, dark fantasy MMORPG, pixel art warrior sprite sheet, 4x4 animation grid, row 0 idle, row 1 running, row 2 attacking, row 3 damaged, game asset, pure transparent background, sharp pixels, volumetric dramatic lighting --ar 1:1 --v 6.0",
+    "negativePrompt": "blurry, 3d realistic render, photorealistic, deformed limbs, messy background, extra rows, text, watermark, bad anatomy",
+    "gridFormat": {
+      "cols": 4,
+      "rows": 4,
+      "rowMapping": {
+        "0": "Idle animation (4 frames breathing loop)",
+        "1": "Run cycle (4 frames walking stride)",
+        "2": "Attack windup and strike (4 frames slashing/shooting)",
+        "3": "Hurt and defeat reaction (4 frames flashing red)"
+      }
+    }
+  },
+  "goblin": {
+    "name": "Goblin",
+    "title": "Yêu Tinh Đao Phủ",
+    "type": "Monster/Boss",
+    "primaryColor": "#84cc16",
+    "glowColor": "#bef264",
+    "weapon": "dagger",
+    "prompt": "Goblin, Yêu Tinh Đao Phủ, wielding dagger, glowing #84cc16 neon aura, HD-2D 16-bit Octopath Traveler style, dark fantasy MMORPG, pixel art warrior sprite sheet, 4x4 animation grid, row 0 idle, row 1 running, row 2 attacking, row 3 damaged, game asset, pure transparent background, sharp pixels, volumetric dramatic lighting --ar 1:1 --v 6.0",
+    "negativePrompt": "blurry, 3d realistic render, photorealistic, deformed limbs, messy background, extra rows, text, watermark, bad anatomy",
+    "gridFormat": {
+      "cols": 4,
+      "rows": 4,
+      "rowMapping": {
+        "0": "Idle animation (4 frames breathing loop)",
+        "1": "Run cycle (4 frames walking stride)",
+        "2": "Attack windup and strike (4 frames slashing/shooting)",
+        "3": "Hurt and defeat reaction (4 frames flashing red)"
+      }
+    }
+  },
+  "orc": {
+    "name": "Orc Warrior",
+    "title": "Chiến Binh Orc Cổ",
+    "type": "Monster/Boss",
+    "primaryColor": "#dc2626",
+    "glowColor": "#f87171",
+    "weapon": "axe",
+    "prompt": "Orc Warrior, Chiến Binh Orc Cổ, wielding axe, glowing #dc2626 neon aura, HD-2D 16-bit Octopath Traveler style, dark fantasy MMORPG, pixel art warrior sprite sheet, 4x4 animation grid, row 0 idle, row 1 running, row 2 attacking, row 3 damaged, game asset, pure transparent background, sharp pixels, volumetric dramatic lighting --ar 1:1 --v 6.0",
+    "negativePrompt": "blurry, 3d realistic render, photorealistic, deformed limbs, messy background, extra rows, text, watermark, bad anatomy",
+    "gridFormat": {
+      "cols": 4,
+      "rows": 4,
+      "rowMapping": {
+        "0": "Idle animation (4 frames breathing loop)",
+        "1": "Run cycle (4 frames walking stride)",
+        "2": "Attack windup and strike (4 frames slashing/shooting)",
+        "3": "Hurt and defeat reaction (4 frames flashing red)"
+      }
+    }
+  },
+  "skeleton": {
+    "name": "Skeleton Knight",
+    "title": "Kỵ Sĩ Xương Cổ Đại",
+    "type": "Monster/Boss",
+    "primaryColor": "#cbd5e1",
+    "glowColor": "#93c5fd",
+    "weapon": "sword",
+    "prompt": "Skeleton Knight, Kỵ Sĩ Xương Cổ Đại, wielding sword, glowing #cbd5e1 neon aura, HD-2D 16-bit Octopath Traveler style, dark fantasy MMORPG, pixel art warrior sprite sheet, 4x4 animation grid, row 0 idle, row 1 running, row 2 attacking, row 3 damaged, game asset, pure transparent background, sharp pixels, volumetric dramatic lighting --ar 1:1 --v 6.0",
+    "negativePrompt": "blurry, 3d realistic render, photorealistic, deformed limbs, messy background, extra rows, text, watermark, bad anatomy",
+    "gridFormat": {
+      "cols": 4,
+      "rows": 4,
+      "rowMapping": {
+        "0": "Idle animation (4 frames breathing loop)",
+        "1": "Run cycle (4 frames walking stride)",
+        "2": "Attack windup and strike (4 frames slashing/shooting)",
+        "3": "Hurt and defeat reaction (4 frames flashing red)"
+      }
+    }
+  },
+  "dragon": {
+    "name": "Ancient Fire Dragon",
+    "title": "Rồng Lửa Cổ Đại (Boss Cấp 20)",
+    "type": "Monster/Boss",
+    "primaryColor": "#ef4444",
+    "glowColor": "#f97316",
+    "weapon": "dragon_breath",
+    "prompt": "Ancient Fire Dragon, Rồng Lửa Cổ Đại (Boss Cấp 20), wielding dragon_breath, glowing #ef4444 neon aura, HD-2D 16-bit Octopath Traveler style, dark fantasy MMORPG, pixel art warrior sprite sheet, 4x4 animation grid, row 0 idle, row 1 running, row 2 attacking, row 3 damaged, game asset, pure transparent background, sharp pixels, volumetric dramatic lighting --ar 1:1 --v 6.0",
+    "negativePrompt": "blurry, 3d realistic render, photorealistic, deformed limbs, messy background, extra rows, text, watermark, bad anatomy",
+    "gridFormat": {
+      "cols": 4,
+      "rows": 4,
+      "rowMapping": {
+        "0": "Idle animation (4 frames breathing loop)",
+        "1": "Run cycle (4 frames walking stride)",
+        "2": "Attack windup and strike (4 frames slashing/shooting)",
+        "3": "Hurt and defeat reaction (4 frames flashing red)"
+      }
+    }
+  }
+}

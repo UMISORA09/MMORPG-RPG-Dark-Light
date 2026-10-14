@@ -1,6 +1,7 @@
 import { memo, useRef, useState, useEffect } from "react";
 import { useGameWorldStore } from "@/stores/useGameWorldStore";
 import { mobileState } from "@/game/mobileControls";
+import { getCharacterBlueprint } from "@/skills";
 import { 
   Backpack, 
   ShoppingBag, 
@@ -258,86 +259,109 @@ export const UnifiedGameHUD = memo(function UnifiedGameHUD({
         )}
 
         {/* Center Action Bar: Attack, Shoot, Skills 1, 2, 3 */}
-        <div className="pointer-events-auto bg-slate-950/85 backdrop-blur-md border border-slate-800/90 rounded-2xl p-2.5 shadow-2xl flex items-center gap-2.5">
-          {/* Normal Attack (J) */}
-          <button
-            onClick={() => { mobileState.attack = true; }}
-            className="flex flex-col items-center justify-center w-12 h-12 rounded-xl bg-red-600/30 hover:bg-red-600/50 border border-red-500/60 text-red-200 transition active:scale-95 cursor-pointer"
-            title="Đánh Thường (Phím J)"
-          >
-            <Sword className="w-5 h-5 text-red-400" />
-            <span className="text-[9px] font-mono font-bold text-red-300">J / Đánh</span>
-          </button>
+        {(() => {
+          const bp = getCharacterBlueprint(playerClassId);
+          const basic = bp.basicAttack;
+          const s1 = bp.skills[0];
+          const s2 = bp.skills[1];
+          const s3 = bp.skills[2];
 
-          {/* Ranged Shoot (K) */}
-          <button
-            onClick={() => { mobileState.shoot = true; }}
-            className="flex flex-col items-center justify-center w-12 h-12 rounded-xl bg-cyan-600/30 hover:bg-cyan-600/50 border border-cyan-500/60 text-cyan-200 transition active:scale-95 cursor-pointer"
-            title="Bắn Đạn (Phím K)"
-          >
-            <Target className="w-5 h-5 text-cyan-400" />
-            <span className="text-[9px] font-mono font-bold text-cyan-300">K / Bắn</span>
-          </button>
+          return (
+            <div className="pointer-events-auto bg-slate-950/85 backdrop-blur-md border border-slate-800/90 rounded-2xl p-2.5 shadow-2xl flex items-center gap-2.5">
+              {/* Normal Attack (J or K depending on class) */}
+              <button
+                onClick={() => {
+                  if (playerClassId === "gunner") {
+                    mobileState.shoot = true;
+                  } else {
+                    mobileState.attack = true;
+                  }
+                }}
+                className="flex flex-col items-center justify-center min-w-[52px] h-12 px-2 rounded-xl bg-red-600/30 hover:bg-red-600/50 border border-red-500/60 text-red-200 transition active:scale-95 cursor-pointer"
+                title={`${basic.name} (${basic.keybind})`}
+              >
+                {playerClassId === "gunner" ? <Target className="w-5 h-5 text-cyan-400" /> : <Sword className="w-5 h-5 text-red-400" />}
+                <span className="text-[9px] font-mono font-bold text-red-300 truncate max-w-[64px]">
+                  {basic.keybind} / {basic.name.split(" ")[0]}
+                </span>
+              </button>
 
-          <div className="w-px h-8 bg-slate-800" />
+              <div className="w-px h-8 bg-slate-800" />
 
-          {/* Skill 1 (Phím 1) */}
-          <button
-            onClick={() => triggerSkill(1)}
-            disabled={(skillCooldowns.skill1 || 0) > 0}
-            className={`relative flex flex-col items-center justify-center w-12 h-12 rounded-xl border transition active:scale-95 cursor-pointer ${
-              (skillCooldowns.skill1 || 0) > 0
-                ? "bg-slate-900 border-slate-800 text-slate-500"
-                : "bg-amber-600/30 hover:bg-amber-600/50 border-amber-500/60 text-amber-200"
-            }`}
-          >
-            <Zap className="w-5 h-5 text-amber-400" />
-            <span className="text-[9px] font-mono font-bold">1 / Chiêu</span>
-            {(skillCooldowns.skill1 || 0) > 0 && (
-              <span className="absolute inset-0 bg-black/75 rounded-xl flex items-center justify-center text-xs font-mono font-black text-amber-300">
-                {Math.ceil(skillCooldowns.skill1)}s
-              </span>
-            )}
-          </button>
+              {/* Skill 1 (Phím 1) */}
+              {s1 && (
+                <button
+                  onClick={() => triggerSkill(1)}
+                  disabled={(skillCooldowns.skill1 || 0) > 0}
+                  className={`relative flex flex-col items-center justify-center min-w-[52px] h-12 px-2 rounded-xl border transition active:scale-95 cursor-pointer ${
+                    (skillCooldowns.skill1 || 0) > 0
+                      ? "bg-slate-900 border-slate-800 text-slate-500"
+                      : "bg-amber-600/30 hover:bg-amber-600/50 border-amber-500/60 text-amber-200"
+                  }`}
+                  title={`${s1.name}: ${s1.description}`}
+                >
+                  <Zap className="w-5 h-5 text-amber-400" />
+                  <span className="text-[9px] font-mono font-bold truncate max-w-[64px]">
+                    1 / {s1.name.split(" ")[0]}
+                  </span>
+                  {(skillCooldowns.skill1 || 0) > 0 && (
+                    <span className="absolute inset-0 bg-black/75 rounded-xl flex items-center justify-center text-xs font-mono font-black text-amber-300">
+                      {Math.ceil(skillCooldowns.skill1)}s
+                    </span>
+                  )}
+                </button>
+              )}
 
-          {/* Skill 2 (Phím 2) */}
-          <button
-            onClick={() => triggerSkill(2)}
-            disabled={(skillCooldowns.skill2 || 0) > 0}
-            className={`relative flex flex-col items-center justify-center w-12 h-12 rounded-xl border transition active:scale-95 cursor-pointer ${
-              (skillCooldowns.skill2 || 0) > 0
-                ? "bg-slate-900 border-slate-800 text-slate-500"
-                : "bg-purple-600/30 hover:bg-purple-600/50 border-purple-500/60 text-purple-200"
-            }`}
-          >
-            <Shield className="w-5 h-5 text-purple-400" />
-            <span className="text-[9px] font-mono font-bold">2 / Chiêu</span>
-            {(skillCooldowns.skill2 || 0) > 0 && (
-              <span className="absolute inset-0 bg-black/75 rounded-xl flex items-center justify-center text-xs font-mono font-black text-purple-300">
-                {Math.ceil(skillCooldowns.skill2)}s
-              </span>
-            )}
-          </button>
+              {/* Skill 2 (Phím 2) */}
+              {s2 && (
+                <button
+                  onClick={() => triggerSkill(2)}
+                  disabled={(skillCooldowns.skill2 || 0) > 0}
+                  className={`relative flex flex-col items-center justify-center min-w-[52px] h-12 px-2 rounded-xl border transition active:scale-95 cursor-pointer ${
+                    (skillCooldowns.skill2 || 0) > 0
+                      ? "bg-slate-900 border-slate-800 text-slate-500"
+                      : "bg-purple-600/30 hover:bg-purple-600/50 border-purple-500/60 text-purple-200"
+                  }`}
+                  title={`${s2.name}: ${s2.description}`}
+                >
+                  <Shield className="w-5 h-5 text-purple-400" />
+                  <span className="text-[9px] font-mono font-bold truncate max-w-[64px]">
+                    2 / {s2.name.split(" ")[0]}
+                  </span>
+                  {(skillCooldowns.skill2 || 0) > 0 && (
+                    <span className="absolute inset-0 bg-black/75 rounded-xl flex items-center justify-center text-xs font-mono font-black text-purple-300">
+                      {Math.ceil(skillCooldowns.skill2)}s
+                    </span>
+                  )}
+                </button>
+              )}
 
-          {/* Skill 3 (Phím 3 - Nộ) */}
-          <button
-            onClick={() => triggerSkill(3)}
-            disabled={(skillCooldowns.skill3 || 0) > 0}
-            className={`relative flex flex-col items-center justify-center w-12 h-12 rounded-xl border transition active:scale-95 cursor-pointer ${
-              (skillCooldowns.skill3 || 0) > 0
-                ? "bg-slate-900 border-slate-800 text-slate-500"
-                : "bg-red-700/40 hover:bg-red-700/60 border-red-500/80 text-red-200 shadow-[0_0_15px_rgba(239,68,68,0.4)]"
-            }`}
-          >
-            <Sparkles className="w-5 h-5 text-orange-400" />
-            <span className="text-[9px] font-mono font-bold text-orange-300">3 / Nộ</span>
-            {(skillCooldowns.skill3 || 0) > 0 && (
-              <span className="absolute inset-0 bg-black/75 rounded-xl flex items-center justify-center text-xs font-mono font-black text-red-400">
-                {Math.ceil(skillCooldowns.skill3)}s
-              </span>
-            )}
-          </button>
-        </div>
+              {/* Skill 3 (Phím 3 - Nộ) */}
+              {s3 && (
+                <button
+                  onClick={() => triggerSkill(3)}
+                  disabled={(skillCooldowns.skill3 || 0) > 0}
+                  className={`relative flex flex-col items-center justify-center min-w-[52px] h-12 px-2 rounded-xl border transition active:scale-95 cursor-pointer ${
+                    (skillCooldowns.skill3 || 0) > 0
+                      ? "bg-slate-900 border-slate-800 text-slate-500"
+                      : "bg-red-700/40 hover:bg-red-700/60 border-red-500/80 text-red-200 shadow-[0_0_15px_rgba(239,68,68,0.4)]"
+                  }`}
+                  title={`${s3.name}: ${s3.description}`}
+                >
+                  <Sparkles className="w-5 h-5 text-orange-400" />
+                  <span className="text-[9px] font-mono font-bold truncate max-w-[64px]">
+                    3 / {s3.name.split(" ")[0]}
+                  </span>
+                  {(skillCooldowns.skill3 || 0) > 0 && (
+                    <span className="absolute inset-0 bg-black/75 rounded-xl flex items-center justify-center text-xs font-mono font-black text-red-400">
+                      {Math.ceil(skillCooldowns.skill3)}s
+                    </span>
+                  )}
+                </button>
+              )}
+            </div>
+          );
+        })()}
 
         {/* Right Space */}
         <div className="w-28" />

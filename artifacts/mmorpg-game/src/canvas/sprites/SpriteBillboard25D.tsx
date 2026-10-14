@@ -2,7 +2,7 @@ import { memo, useRef, useMemo, useEffect } from "react";
 import * as THREE from "three";
 import { useFrame } from "@react-three/fiber";
 import { Billboard, Text } from "@react-three/drei";
-import { getOrCreateProceduralSpritesheet } from "./ProceduralSpriteFallback";
+import { loadOrFallbackSpritesheet } from "./ProceduralSpriteFallback";
 
 export type EntityAnimationState = "idle" | "run" | "attack" | "hurt";
 
@@ -57,7 +57,7 @@ export const SpriteBillboard25D = memo(function SpriteBillboard25D({
   // Obtain or generate procedural 4x4 spritesheet
   const baseTexture = useMemo(() => {
     if (customTexture) return customTexture;
-    return getOrCreateProceduralSpritesheet({
+    return loadOrFallbackSpritesheet({
       key: textureKey,
       color,
       secondaryColor,

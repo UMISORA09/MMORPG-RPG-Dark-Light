@@ -19,6 +19,31 @@ export interface SpriteGeneratorOptions {
 }
 
 const textureCache = new Map<string, THREE.CanvasTexture>();
+const fileTextureCache = new Map<string, THREE.Texture>();
+
+export function loadOrFallbackSpritesheet(options: SpriteGeneratorOptions): THREE.Texture {
+  const fileKey = options.key.replace(/^player_|^mob_/, "");
+  const cached = fileTextureCache.get(fileKey);
+  if (cached) return cached;
+
+  const fallback = getOrCreateProceduralSpritesheet(options);
+
+  if (typeof window !== "undefined") {
+    const img = new Image();
+    img.src = `/assets/sprites/${fileKey}.svg`;
+    img.onload = () => {
+      const tex = new THREE.CanvasTexture(img);
+      tex.magFilter = THREE.NearestFilter;
+      tex.minFilter = THREE.NearestFilter;
+      tex.generateMipmaps = false;
+      tex.colorSpace = THREE.SRGBColorSpace;
+      tex.needsUpdate = true;
+      fileTextureCache.set(fileKey, tex);
+    };
+  }
+
+  return fallback;
+}
 
 export function getOrCreateProceduralSpritesheet(options: SpriteGeneratorOptions): THREE.CanvasTexture {
   const cacheKey = `${options.key}_${options.color}_${options.isBoss ? "boss" : "norm"}`;

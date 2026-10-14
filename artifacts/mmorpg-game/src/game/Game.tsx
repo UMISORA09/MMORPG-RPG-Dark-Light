@@ -4,6 +4,7 @@ import {
   SeamlessWorldMap,
   PlayerEntity25D,
   MonsterManager25D,
+  VFXManager,
   Particles as Stars,
 } from "../canvas";
 import { UnifiedGameHUD } from "../ui";
@@ -234,6 +235,7 @@ const Game = memo(function Game({ onLogout }: GameProps) {
         <SeamlessWorldMap />
         <PlayerEntity25D />
         <MonsterManager25D />
+        <VFXManager />
         <Stars />
       </Canvas>
 

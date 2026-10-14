@@ -22,3 +22,8 @@ export { default as SeamlessWorld } from "./scenes/SeamlessWorld";
 export { default as Bullets } from "./vfx/Bullets";
 export { default as Particles } from "./vfx/Particles";
 export { default as SkillFX } from "./vfx/SkillFX";
+export { VFXManager } from "./vfx/VFXManager";
+export { SlashArcShader } from "./vfx/SlashArcShader";
+export { ShockwaveRingShader } from "./vfx/ShockwaveRingShader";
+export { CyberProjectileVFX } from "./vfx/CyberProjectileVFX";
+export { HolyShieldDomeVFX } from "./vfx/HolyShieldDomeVFX";

@@ -1,5 +1,6 @@
 import { create } from "zustand";
 import * as THREE from "three";
+import { getCharacterBlueprint, type SkillVFXConfig, type SkillBlueprint } from "@/skills";
 
 export type WorldZone = "SAFE_VILLAGE" | "WILDERNESS" | "BOSS_ALTAR";
 
@@ -28,6 +29,13 @@ export interface SlashEffect {
   color: string;
   lifetime: number;
   maxLifetime: number;
+}
+
+export interface ActiveVFXInstance {
+  id: number;
+  config: SkillVFXConfig;
+  position: THREE.Vector3;
+  direction: number;
 }
 
 export interface GameWorldState {
@@ -64,10 +72,11 @@ export interface GameWorldState {
   bossMaxHealth: number;
   bossActive: boolean;
 
-  // --- Combat Objects ---
+  // --- Combat Objects & Shader VFX ---
   floatingTexts: FloatingTextItem[];
   bullets: BulletProjectile[];
   slashEffects: SlashEffect[];
+  activeVFXList: ActiveVFXInstance[];
 
   // --- Overlay Modals ---
   activeModal: "inventory" | "shop" | "leaderboard" | "battleLog" | null;
@@ -89,6 +98,8 @@ export interface GameWorldState {
   damagePlayer: (amount: number, fromDir?: THREE.Vector3) => void;
   healPlayer: (amount: number) => void;
   triggerSkill: (skillIndex: number) => void;
+  spawnVFX: (config: SkillVFXConfig, position: THREE.Vector3, direction?: number) => void;
+  removeVFX: (id: number) => void;
   addBullet: (bullet: BulletProjectile) => void;
   addSlashEffect: (effect: SlashEffect) => void;
   addFloatingText: (text: string, pos: THREE.Vector3, color?: string) => void;
@@ -107,6 +118,7 @@ export interface GameWorldState {
 }
 
 let nextTextId = 1;
+let nextVFXId = 5000;
 
 export const useGameWorldStore = create<GameWorldState>((set, get) => ({
   // Player initial
@@ -124,7 +136,7 @@ export const useGameWorldStore = create<GameWorldState>((set, get) => ({
   playerName: "Hiệp Sĩ",
   playerClassId: "fighter",
   playerClassName: "Đấu Sĩ",
-  playerColorHex: "#e74c3c",
+  playerColorHex: "#ffaa00",
   isInvincible: false,
   invincibleTimer: 0,
 
@@ -149,6 +161,7 @@ export const useGameWorldStore = create<GameWorldState>((set, get) => ({
   floatingTexts: [],
   bullets: [],
   slashEffects: [],
+  activeVFXList: [],
 
   // Modals
   activeModal: null,
@@ -249,18 +262,66 @@ export const useGameWorldStore = create<GameWorldState>((set, get) => ({
 
   triggerSkill: (skillIndex) => {
     const s = get();
+    const blueprint = getCharacterBlueprint(s.playerClassId);
+    const skill: SkillBlueprint | undefined =
+      skillIndex === 0
+        ? blueprint.basicAttack
+        : blueprint.skills[skillIndex - 1];
+
+    if (!skill) return;
+
     const key = `skill${skillIndex}`;
-    if ((s.skillCooldowns[key] || 0) > 0) return; // on cooldown
+    if (skillIndex > 0 && (s.skillCooldowns[key] || 0) > 0) return; // on cooldown
 
-    const cooldowns = [0, 3.5, 6.0, 12.0];
-    const cd = cooldowns[skillIndex] || 4.0;
+    const facingAngle = s.playerFacingLeft ? Math.PI : 0;
+    const forwardVec = new THREE.Vector3(s.playerFacingLeft ? -1 : 1, 0, 0);
 
-    set((state) => ({
-      skillCooldowns: {
-        ...state.skillCooldowns,
-        [key]: cd,
-      },
+    // 1. Set Cooldown if not basic attack
+    if (skillIndex > 0) {
+      set((state) => ({
+        skillCooldowns: {
+          ...state.skillCooldowns,
+          [key]: skill.cooldown,
+        },
+      }));
+    }
+
+    // 2. Movement Effect (DASH_FORWARD or LEAP)
+    const newPos = s.playerPosition.clone();
+    if (skill.movementEffect?.type === "DASH_FORWARD") {
+      newPos.addScaledVector(forwardVec, skill.movementEffect.distance);
+    } else if (skill.movementEffect?.type === "LEAP") {
+      newPos.addScaledVector(forwardVec, skill.movementEffect.distance * 0.7);
+    }
+
+    // 3. Spawn Custom Shader VFX
+    const vfxSpawnPos = newPos.clone().add(new THREE.Vector3(forwardVec.x * 0.8, 0.8, 0));
+    s.spawnVFX(skill.vfx, vfxSpawnPos, facingAngle);
+
+    // 4. Update Animation & Position
+    set({
+      playerPosition: newPos,
       playerAnimState: "attack",
+    });
+  },
+
+  spawnVFX: (config, position, direction = 0) => {
+    set((state) => ({
+      activeVFXList: [
+        ...state.activeVFXList,
+        {
+          id: nextVFXId++,
+          config,
+          position: position.clone(),
+          direction,
+        },
+      ],
+    }));
+  },
+
+  removeVFX: (id) => {
+    set((state) => ({
+      activeVFXList: state.activeVFXList.filter((item) => item.id !== id),
     }));
   },
 
@@ -305,12 +366,7 @@ export const useGameWorldStore = create<GameWorldState>((set, get) => ({
 
   syncFromBackendCharacter: (char) => {
     if (!char) return;
-    const classColors: Record<string, string> = {
-      gunner: "#00b4ff",
-      assassin: "#9b59b6",
-      fighter: "#e74c3c",
-      tank: "#f39c12",
-    };
+    const blueprint = getCharacterBlueprint(char.classId);
 
     set((s) => {
       const maxHp = char.maxHp || s.playerMaxHealth;
@@ -319,8 +375,8 @@ export const useGameWorldStore = create<GameWorldState>((set, get) => ({
       return {
         playerName: char.name || s.playerName,
         playerClassId: char.classId || s.playerClassId,
-        playerClassName: char.className || s.playerClassName,
-        playerColorHex: classColors[char.classId] || s.playerColorHex,
+        playerClassName: char.className || blueprint.className || s.playerClassName,
+        playerColorHex: blueprint.visual.primaryColor || s.playerColorHex,
         playerLevel: char.level || s.playerLevel,
         playerExp: char.experience || s.playerExp,
         playerExpToNext: char.experienceToNextLevel || 100,
@@ -373,7 +429,7 @@ export const useGameWorldStore = create<GameWorldState>((set, get) => ({
       updatedCds[k] = Math.max(0, v - dt);
     }
 
-    // 4. Update Floating Texts (move up and fade)
+    // 4. Update Floating Texts
     const updatedTexts = s.floatingTexts
       .map((t) => {
         t.position.y += 1.2 * dt;

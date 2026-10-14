@@ -13,6 +13,7 @@
     "build:game": "pnpm --filter @workspace/mmorpg-game run build",
     "build:all": "pnpm run typecheck && pnpm run build:server && pnpm run build:game",
     "build": "pnpm run build:all",
+    "generate:sprites": "pnpm --filter @workspace/scripts run generate:sprites",
     "start": "pnpm --filter @workspace/api-server run start"
   },
   "private": true,
