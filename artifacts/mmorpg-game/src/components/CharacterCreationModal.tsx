@@ -209,18 +209,18 @@ export function CharacterCreationModal({ isOpen, onClose, onCharacterCreated }: 
 
             {/* Header */}
             <div className="text-center mb-6">
-              <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-gradient-to-r from-[#ff3366]/20 to-[#00f2ff]/20 border border-[#00f2ff]/30 text-xs font-semibold uppercase tracking-widest text-cyan-300 mb-2">
+              <div className="font-sans inline-flex items-center gap-2 px-3 py-1 rounded-full bg-gradient-to-r from-[#ff3366]/20 to-[#00f2ff]/20 border border-[#00f2ff]/30 text-xs font-black uppercase tracking-widest text-cyan-300 mb-2">
                 <Dna className="w-3.5 h-3.5 text-cyan-400" />
                 Thiên Mệnh Thức Tỉnh — Tạo Nhân Vật Mới
               </div>
-              <h2 className="text-2xl sm:text-3xl font-extrabold tracking-tight bg-gradient-to-r from-amber-200 via-rose-300 to-cyan-300 bg-clip-text text-transparent">
+              <h2 className="font-display text-2xl sm:text-3xl font-black tracking-wider uppercase bg-gradient-to-r from-amber-200 via-rose-300 to-cyan-300 bg-clip-text text-transparent text-glow-red">
                 CHỌN HỆ PHÁI & THIẾT LẬP ANH HÙNG
               </h2>
             </div>
 
             {/* 1. LỰA CHỌN 4 HỆ PHÁI */}
             <div className="mb-6">
-              <label className="block text-xs uppercase tracking-wider font-bold text-white/60 mb-2.5">
+              <label className="font-sans block text-xs uppercase tracking-wider font-bold text-white/70 mb-2.5">
                 Bước 1: Chọn Hệ Phái Chiến Đấu
               </label>
               <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
@@ -252,8 +252,8 @@ export function CharacterCreationModal({ isOpen, onClose, onCharacterCreated }: 
                       >
                         <Icon className="w-6 h-6" style={{ color: cls.color }} />
                       </div>
-                      <span className="font-bold text-sm sm:text-base text-white">{cls.name}</span>
-                      <span className="text-[11px] text-white/50">{cls.role}</span>
+                      <span className="font-sans font-black text-sm sm:text-base text-white">{cls.name}</span>
+                      <span className="font-sans text-[11px] text-white/50">{cls.role}</span>
                     </button>
                   );
                 })}
@@ -266,12 +266,12 @@ export function CharacterCreationModal({ isOpen, onClose, onCharacterCreated }: 
               <div className="md:col-span-5 flex flex-col items-center justify-between p-4 rounded-xl bg-black/40 border border-white/10">
                 <div className="w-full text-center">
                   <span
-                    className="text-xs font-bold uppercase tracking-wider px-2.5 py-0.5 rounded-full"
+                    className="font-sans text-xs font-bold uppercase tracking-wider px-2.5 py-0.5 rounded-full"
                     style={{ backgroundColor: `${currentClass.color}20`, color: currentClass.color }}
                   >
                     {currentClass.title}
                   </span>
-                  <div className="text-lg font-bold text-white mt-1">{currentClass.name}</div>
+                  <div className="font-display text-xl sm:text-2xl font-black text-white mt-1 text-glow-cyan">{currentClass.name}</div>
                 </div>
 
                 {/* 2.5D Sprite Avatar Preview with glow */}
@@ -428,7 +428,7 @@ export function CharacterCreationModal({ isOpen, onClose, onCharacterCreated }: 
 
             {/* 3. ĐẶT TÊN & RANDOM TÊN (NAME INPUT & RANDOMIZER) */}
             <div className="mb-6">
-              <label className="block text-xs uppercase tracking-wider font-bold text-white/60 mb-2">
+              <label className="font-sans block text-xs uppercase tracking-wider font-bold text-white/70 mb-2">
                 Bước 2: Danh Xưng Anh Hùng (2 - 20 Ký Tự)
               </label>
               <div className="flex gap-2">
@@ -442,27 +442,27 @@ export function CharacterCreationModal({ isOpen, onClose, onCharacterCreated }: 
                     }}
                     placeholder={`VD: ${gender === "male" ? "HắcLong_88" : "BăngNhi_99"}`}
                     maxLength={20}
-                    className={`w-full h-12 px-4 rounded-xl bg-black/50 border text-white placeholder-white/30 text-sm font-semibold focus:outline-none transition-all ${
+                    className={`font-sans w-full h-12 px-4 rounded-xl bg-black/50 border text-white placeholder-white/30 text-sm font-semibold focus:outline-none transition-all ${
                       nameError
                         ? "border-rose-500 focus:border-rose-400"
                         : "border-white/20 focus:border-[#00f2ff] focus:ring-1 focus:ring-[#00f2ff]"
                     }`}
                   />
-                  <span className="absolute right-3 top-3.5 text-xs font-mono text-white/40">
+                  <span className="font-mono absolute right-3 top-3.5 text-xs text-white/40">
                     {characterName.length}/20
                   </span>
                 </div>
                 <button
                   type="button"
                   onClick={handleRandomName}
-                  className="px-4 h-12 rounded-xl bg-gradient-to-r from-purple-600/30 to-indigo-600/30 hover:from-purple-600/50 hover:to-indigo-600/50 border border-purple-500/40 text-purple-200 font-bold text-xs flex items-center gap-1.5 transition-all shadow-[0_0_15px_rgba(157,78,221,0.2)]"
+                  className="font-sans px-4 h-12 rounded-xl bg-gradient-to-r from-purple-600/30 to-indigo-600/30 hover:from-purple-600/50 hover:to-indigo-600/50 border border-purple-500/40 text-purple-200 font-black text-xs uppercase flex items-center gap-1.5 transition-all shadow-[0_0_15px_rgba(157,78,221,0.2)]"
                 >
                   <Dice5 className="w-4 h-4 text-purple-300 animate-spin-slow" />
                   <span>🎲 Random Tên</span>
                 </button>
               </div>
               {nameError && (
-                <p className="mt-1.5 text-xs text-rose-400 font-medium">{nameError}</p>
+                <p className="font-sans mt-1.5 text-xs text-rose-400 font-medium">{nameError}</p>
               )}
             </div>
 
@@ -471,7 +471,7 @@ export function CharacterCreationModal({ isOpen, onClose, onCharacterCreated }: 
               <button
                 type="button"
                 onClick={onClose}
-                className="px-5 py-3 rounded-xl bg-white/5 hover:bg-white/10 text-white/70 hover:text-white font-semibold text-sm transition-colors"
+                className="font-sans px-5 py-3 rounded-xl bg-white/5 hover:bg-white/10 text-white/70 hover:text-white font-bold text-sm transition-colors"
               >
                 Hủy Bỏ
               </button>
@@ -479,7 +479,7 @@ export function CharacterCreationModal({ isOpen, onClose, onCharacterCreated }: 
                 type="button"
                 onClick={handleConfirmCreate}
                 disabled={createCharacter.isPending}
-                className="flex items-center justify-center gap-2 px-8 py-3.5 rounded-xl bg-gradient-to-r from-[#ff3366] via-[#ff0055] to-orange-500 hover:from-[#ff5588] hover:to-orange-600 text-white font-extrabold text-sm sm:text-base tracking-wide shadow-[0_0_30px_rgba(255,51,102,0.5)] transition-all hover:scale-[1.02] active:scale-[0.98] disabled:opacity-50"
+                className="font-sans flex items-center justify-center gap-2 px-8 py-3.5 rounded-xl bg-gradient-to-r from-[#ff3366] via-[#ff0055] to-orange-500 hover:from-[#ff5588] hover:to-orange-600 text-white font-black text-sm sm:text-base tracking-wider uppercase shadow-[0_0_30px_rgba(255,51,102,0.5)] transition-all hover:scale-[1.02] active:scale-[0.98] disabled:opacity-50"
               >
                 {createCharacter.isPending ? (
                   <>

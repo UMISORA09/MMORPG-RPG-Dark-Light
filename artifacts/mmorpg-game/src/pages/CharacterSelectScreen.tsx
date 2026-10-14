@@ -150,10 +150,10 @@ export default function CharacterSelectScreen() {
             </div>
           </div>
           <div>
-            <h1 className="text-base sm:text-lg font-black tracking-wider uppercase bg-gradient-to-r from-amber-200 via-rose-300 to-cyan-300 bg-clip-text text-transparent">
+            <h1 className="font-display text-base sm:text-xl font-black tracking-wider uppercase bg-gradient-to-r from-amber-200 via-rose-300 to-cyan-300 bg-clip-text text-transparent text-glow-red">
               CHIẾN LONG BÁ
             </h1>
-            <span className="text-[10px] uppercase font-bold tracking-widest text-cyan-400">
+            <span className="font-sans text-[10px] uppercase font-black tracking-widest text-cyan-400">
               Sảnh Anh Hùng (Character Hall)
             </span>
           </div>
@@ -161,16 +161,16 @@ export default function CharacterSelectScreen() {
 
         {/* User Info & Actions */}
         <div className="flex items-center gap-3 sm:gap-4">
-          <div className="hidden sm:flex items-center gap-2 px-3 py-1.5 rounded-xl bg-white/5 border border-white/10 text-xs">
+          <div className="font-sans hidden sm:flex items-center gap-2 px-3 py-1.5 rounded-xl bg-white/5 border border-white/10 text-xs">
             <User className="w-3.5 h-3.5 text-cyan-400" />
             <span className="text-white/60">Đại hiệp:</span>
-            <span className="font-bold text-white">{user?.username}</span>
+            <span className="font-mono font-bold text-white">{user?.username}</span>
           </div>
 
           <button
             type="button"
             onClick={() => setIsModalOpen(true)}
-            className="flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-gradient-to-r from-[#ff3366] to-[#ff0055] hover:from-[#ff5588] hover:to-[#ff1a66] text-white text-xs font-bold tracking-wider uppercase shadow-[0_0_20px_rgba(255,51,102,0.4)] transition-all hover:scale-105"
+            className="font-sans flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-gradient-to-r from-[#ff3366] to-[#ff0055] hover:from-[#ff5588] hover:to-[#ff1a66] text-white text-xs font-black tracking-wider uppercase shadow-[0_0_20px_rgba(255,51,102,0.4)] transition-all hover:scale-105"
           >
             <Plus className="w-4 h-4 stroke-[3]" />
             <span className="hidden sm:inline">Tạo Nhân Vật Mới</span>
@@ -193,15 +193,15 @@ export default function CharacterSelectScreen() {
         {/* Title & Slots */}
         <div className="flex flex-col sm:flex-row sm:items-end justify-between mb-8 gap-2">
           <div>
-            <div className="inline-flex items-center gap-1.5 text-xs uppercase tracking-widest font-bold text-cyan-400 mb-1">
+            <div className="font-sans inline-flex items-center gap-1.5 text-xs uppercase tracking-widest font-black text-cyan-400 mb-1">
               <Sparkles className="w-3.5 h-3.5" />
               Lựa Chọn Nhân Vật Xuất Chiến
             </div>
-            <h2 className="text-2xl sm:text-4xl font-extrabold tracking-tight text-white">
+            <h2 className="font-display text-2xl sm:text-4xl font-black tracking-tight text-white text-glow-cyan">
               DANH SÁCH ANH HÙNG
             </h2>
           </div>
-          <div className="text-xs font-mono text-white/50 bg-white/5 px-3 py-1.5 rounded-lg border border-white/10 self-start sm:self-auto">
+          <div className="font-mono text-xs text-white/50 bg-white/5 px-3 py-1.5 rounded-lg border border-white/10 self-start sm:self-auto">
             Số nhân vật đã tạo:{" "}
             <span className="text-amber-400 font-bold">{charList.length}</span> / 4
           </div>
@@ -218,17 +218,17 @@ export default function CharacterSelectScreen() {
               <Swords className="w-12 h-12 text-amber-300" />
             </div>
 
-            <h3 className="text-xl sm:text-2xl font-black text-white mb-2">
+            <h3 className="font-display text-xl sm:text-2xl font-black text-white mb-2 text-glow-gold">
               CHƯA CÓ ANH HÙNG NÀO XUẤT THẾ
             </h3>
-            <p className="text-sm text-white/60 mb-8 max-w-md mx-auto leading-relaxed">
+            <p className="font-sans text-sm text-white/60 mb-8 max-w-md mx-auto leading-relaxed">
               Vùng đất Long Tộc đang chìm trong loạn lạc. Hãy đánh thức thiên mệnh của bạn, chọn 1 trong 4 hệ phái và đặt tên cho huyền thoại đầu tiên!
             </p>
 
             <button
               type="button"
               onClick={() => setIsModalOpen(true)}
-              className="inline-flex items-center gap-2.5 px-8 py-4 rounded-2xl bg-gradient-to-r from-[#ff3366] via-[#ff0055] to-orange-500 hover:from-[#ff5588] hover:to-orange-600 text-white font-extrabold text-base tracking-wide shadow-[0_0_35px_rgba(255,51,102,0.5)] transition-all hover:scale-105 active:scale-95"
+              className="font-sans inline-flex items-center gap-2.5 px-8 py-4 rounded-2xl bg-gradient-to-r from-[#ff3366] via-[#ff0055] to-orange-500 hover:from-[#ff5588] hover:to-orange-600 text-white font-black text-base tracking-wider uppercase shadow-[0_0_35px_rgba(255,51,102,0.5)] transition-all hover:scale-105 active:scale-95"
             >
               <Sparkles className="w-5 h-5 text-amber-300" />
               <span>✨ KHỞI TẠO ANH HÙNG ĐẦU TIÊN</span>
@@ -262,13 +262,13 @@ export default function CharacterSelectScreen() {
                   {/* Top Badge: Class & Gender */}
                   <div className="flex items-center justify-between mb-4">
                     <span
-                      className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold uppercase tracking-wider shadow-sm"
+                      className="font-sans inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-black uppercase tracking-wider shadow-sm"
                       style={{ backgroundColor: `${cfg.color}20`, color: cfg.color }}
                     >
                       <Icon className="w-3.5 h-3.5" />
                       {char.className || cfg.name}
                     </span>
-                    <span className="text-xs font-semibold px-2 py-0.5 rounded-md bg-white/5 text-white/50 border border-white/10">
+                    <span className="font-sans text-xs font-semibold px-2 py-0.5 rounded-md bg-white/5 text-white/50 border border-white/10">
                       {storedGender === "female" ? "♀ Nữ" : "♂ Nam"}
                     </span>
                   </div>
@@ -286,10 +286,10 @@ export default function CharacterSelectScreen() {
 
                   {/* Character Identity */}
                   <div className="text-center mb-4">
-                    <h3 className="text-xl font-black text-white tracking-tight group-hover:text-amber-300 transition-colors">
+                    <h3 className="font-display text-xl font-black text-white tracking-tight group-hover:text-amber-300 transition-colors">
                       {char.name}
                     </h3>
-                    <div className="inline-flex items-center gap-1 text-xs font-mono font-bold text-cyan-400 mt-1">
+                    <div className="font-mono inline-flex items-center gap-1 text-xs font-bold text-cyan-400 mt-1">
                       <Award className="w-3.5 h-3.5" />
                       Cấp Lv. {char.level}
                     </div>
@@ -316,7 +316,7 @@ export default function CharacterSelectScreen() {
                   </div>
 
                   {/* Gold & Kills Banner */}
-                  <div className="flex items-center justify-between text-xs font-semibold px-3 py-2 rounded-lg bg-black/40 border border-white/5 text-white/70 mb-5">
+                  <div className="font-mono flex items-center justify-between text-xs font-semibold px-3 py-2 rounded-lg bg-black/40 border border-white/5 text-white/70 mb-5">
                     <div className="flex items-center gap-1 text-amber-400">
                       <Coins className="w-3.5 h-3.5" />
                       <span>{char.gold.toLocaleString()} Vàng</span>
@@ -331,7 +331,7 @@ export default function CharacterSelectScreen() {
                   <button
                     type="button"
                     onClick={() => handleSelectCharacter(char)}
-                    className="w-full py-3.5 rounded-2xl bg-gradient-to-r from-[#ff3366] to-[#00f2ff] hover:from-[#ff5588] hover:to-[#33f5ff] text-white font-extrabold text-sm tracking-wider uppercase shadow-[0_0_20px_rgba(255,51,102,0.4)] flex items-center justify-center gap-2 transition-all hover:scale-[1.02] active:scale-[0.98]"
+                    className="font-sans w-full py-3.5 rounded-2xl bg-gradient-to-r from-[#ff3366] to-[#00f2ff] hover:from-[#ff5588] hover:to-[#33f5ff] text-white font-black text-sm tracking-wider uppercase shadow-[0_0_20px_rgba(255,51,102,0.4)] flex items-center justify-center gap-2 transition-all hover:scale-[1.02] active:scale-[0.98]"
                   >
                     <Play className="w-4 h-4 fill-white" />
                     <span>VÀO THẾ GIỚI</span>

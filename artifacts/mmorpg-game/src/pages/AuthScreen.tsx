@@ -218,10 +218,10 @@ export default function AuthScreen() {
             </div>
           </motion.div>
 
-          <h1 className="text-3xl sm:text-4xl font-black uppercase tracking-wider bg-gradient-to-r from-amber-200 via-rose-300 to-cyan-300 bg-clip-text text-transparent drop-shadow-sm">
+          <h1 className="font-display text-4xl sm:text-5xl font-black uppercase tracking-wider bg-gradient-to-r from-amber-200 via-rose-300 to-cyan-300 bg-clip-text text-transparent text-glow-red">
             CHIẾN LONG BÁ
           </h1>
-          <div className="inline-flex items-center gap-1.5 px-3 py-0.5 rounded-full bg-gradient-to-r from-[#ff3366]/20 to-[#00f2ff]/20 border border-[#00f2ff]/30 text-[10px] font-extrabold uppercase tracking-widest text-cyan-300 mt-2">
+          <div className="font-sans inline-flex items-center gap-1.5 px-3.5 py-1 rounded-full bg-gradient-to-r from-[#ff3366]/20 to-[#00f2ff]/20 border border-[#00f2ff]/30 text-[10px] font-extrabold uppercase tracking-widest text-cyan-300 mt-2.5">
             <Sparkles className="w-3 h-3 text-cyan-400" />
             REALM OF LEGENDS &bull; 2.5D REAL-TIME MMORPG
           </div>
@@ -242,7 +242,7 @@ export default function AuthScreen() {
                 setActiveTab("login");
                 setFormErrors({});
               }}
-              className={`relative z-10 py-2.5 text-xs font-bold uppercase tracking-wider transition-colors duration-200 text-center ${
+              className={`font-sans relative z-10 py-2.5 text-xs font-black uppercase tracking-wider transition-colors duration-200 text-center ${
                 activeTab === "login" ? "text-white" : "text-white/50 hover:text-white/80"
               }`}
             >
@@ -254,7 +254,7 @@ export default function AuthScreen() {
                 setActiveTab("register");
                 setFormErrors({});
               }}
-              className={`relative z-10 py-2.5 text-xs font-bold uppercase tracking-wider transition-colors duration-200 text-center ${
+              className={`font-sans relative z-10 py-2.5 text-xs font-black uppercase tracking-wider transition-colors duration-200 text-center ${
                 activeTab === "register" ? "text-white" : "text-white/50 hover:text-white/80"
               }`}
             >
@@ -277,7 +277,7 @@ export default function AuthScreen() {
           <form onSubmit={handleSubmit} className="space-y-4">
             {/* Username Input */}
             <div>
-              <label className="block text-xs font-bold uppercase tracking-wider text-white/60 mb-1.5">
+              <label className="font-sans block text-xs font-bold uppercase tracking-wider text-white/70 mb-1.5">
                 Tài Khoản Đại Hiệp
               </label>
               <div className="relative">
@@ -292,7 +292,7 @@ export default function AuthScreen() {
                     if (formErrors.username) setFormErrors({ ...formErrors, username: undefined });
                   }}
                   placeholder="Nhập tên tài khoản (3-20 ký tự)"
-                  className={`w-full h-12 pl-10 pr-4 rounded-xl bg-black/60 border text-white placeholder-white/30 text-sm font-semibold focus:outline-none transition-all ${
+                  className={`font-sans w-full h-12 pl-10 pr-4 rounded-xl bg-black/60 border text-white placeholder-white/30 text-sm font-semibold focus:outline-none transition-all ${
                     formErrors.username
                       ? "border-rose-500 focus:border-rose-400"
                       : "border-white/15 focus:border-[#00f2ff] focus:ring-1 focus:ring-[#00f2ff]"
@@ -300,13 +300,13 @@ export default function AuthScreen() {
                 />
               </div>
               {formErrors.username && (
-                <p className="mt-1 text-xs text-rose-400 font-medium">{formErrors.username}</p>
+                <p className="font-sans mt-1 text-xs text-rose-400 font-medium">{formErrors.username}</p>
               )}
             </div>
 
             {/* Password Input */}
             <div>
-              <label className="block text-xs font-bold uppercase tracking-wider text-white/60 mb-1.5">
+              <label className="font-sans block text-xs font-bold uppercase tracking-wider text-white/70 mb-1.5">
                 Mật Khẩu
               </label>
               <div className="relative">
@@ -321,7 +321,7 @@ export default function AuthScreen() {
                     if (formErrors.password) setFormErrors({ ...formErrors, password: undefined });
                   }}
                   placeholder="Tối thiểu 6 ký tự"
-                  className={`w-full h-12 pl-10 pr-4 rounded-xl bg-black/60 border text-white placeholder-white/30 text-sm font-semibold focus:outline-none transition-all ${
+                  className={`font-sans w-full h-12 pl-10 pr-4 rounded-xl bg-black/60 border text-white placeholder-white/30 text-sm font-semibold focus:outline-none transition-all ${
                     formErrors.password
                       ? "border-rose-500 focus:border-rose-400"
                       : "border-white/15 focus:border-[#00f2ff] focus:ring-1 focus:ring-[#00f2ff]"
@@ -329,7 +329,7 @@ export default function AuthScreen() {
                 />
               </div>
               {formErrors.password && (
-                <p className="mt-1 text-xs text-rose-400 font-medium">{formErrors.password}</p>
+                <p className="font-sans mt-1 text-xs text-rose-400 font-medium">{formErrors.password}</p>
               )}
             </div>
 
@@ -342,7 +342,7 @@ export default function AuthScreen() {
                   exit={{ opacity: 0, height: 0 }}
                   transition={{ duration: 0.2 }}
                 >
-                  <label className="block text-xs font-bold uppercase tracking-wider text-white/60 mb-1.5">
+                  <label className="font-sans block text-xs font-bold uppercase tracking-wider text-white/70 mb-1.5">
                     Xác Nhận Mật Khẩu
                   </label>
                   <div className="relative">
@@ -357,7 +357,7 @@ export default function AuthScreen() {
                         if (formErrors.confirm) setFormErrors({ ...formErrors, confirm: undefined });
                       }}
                       placeholder="Nhập lại mật khẩu"
-                      className={`w-full h-12 pl-10 pr-4 rounded-xl bg-black/60 border text-white placeholder-white/30 text-sm font-semibold focus:outline-none transition-all ${
+                      className={`font-sans w-full h-12 pl-10 pr-4 rounded-xl bg-black/60 border text-white placeholder-white/30 text-sm font-semibold focus:outline-none transition-all ${
                         formErrors.confirm
                           ? "border-rose-500 focus:border-rose-400"
                           : "border-white/15 focus:border-[#00f2ff] focus:ring-1 focus:ring-[#00f2ff]"
@@ -365,7 +365,7 @@ export default function AuthScreen() {
                     />
                   </div>
                   {formErrors.confirm && (
-                    <p className="mt-1 text-xs text-rose-400 font-medium">{formErrors.confirm}</p>
+                    <p className="font-sans mt-1 text-xs text-rose-400 font-medium">{formErrors.confirm}</p>
                   )}
                 </motion.div>
               )}
@@ -375,7 +375,7 @@ export default function AuthScreen() {
             <button
               type="submit"
               disabled={loginMutation.isPending || registerMutation.isPending}
-              className="w-full h-12 rounded-xl bg-gradient-to-r from-[#ff3366] via-[#ff0055] to-orange-500 hover:from-[#ff5588] hover:to-orange-600 text-white font-extrabold text-sm sm:text-base tracking-wider uppercase shadow-[0_0_25px_rgba(255,51,102,0.5)] flex items-center justify-center gap-2 transition-all hover:scale-[1.02] active:scale-[0.98] disabled:opacity-50 mt-2"
+              className="font-sans w-full h-12 rounded-xl bg-gradient-to-r from-[#ff3366] via-[#ff0055] to-orange-500 hover:from-[#ff5588] hover:to-orange-600 text-white font-black text-sm sm:text-base tracking-wider uppercase shadow-[0_0_25px_rgba(255,51,102,0.5)] flex items-center justify-center gap-2 transition-all hover:scale-[1.02] active:scale-[0.98] disabled:opacity-50 mt-2"
             >
               {loginMutation.isPending || registerMutation.isPending ? (
                 <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin" />
@@ -394,7 +394,7 @@ export default function AuthScreen() {
             <div className="absolute inset-0 flex items-center">
               <div className="w-full border-t border-white/10" />
             </div>
-            <span className="relative z-10 px-3 bg-[#0d071a] text-[11px] font-bold uppercase tracking-wider text-white/40">
+            <span className="font-sans relative z-10 px-3 bg-[#0d071a] text-[10px] font-bold uppercase tracking-wider text-white/40">
               Hoặc trải nghiệm tức thì
             </span>
           </div>
@@ -403,25 +403,25 @@ export default function AuthScreen() {
           <button
             type="button"
             onClick={handleQuickPlay}
-            className="w-full h-12 rounded-xl bg-gradient-to-r from-amber-500 via-orange-500 to-rose-600 hover:from-amber-400 hover:to-rose-500 text-white font-black text-sm tracking-wide uppercase shadow-[0_0_20px_rgba(245,158,11,0.3)] flex items-center justify-center gap-2 transition-all hover:scale-[1.02] active:scale-[0.98] animate-pulse"
+            className="font-sans w-full h-12 rounded-xl bg-gradient-to-r from-amber-500 via-orange-500 to-rose-600 hover:from-amber-400 hover:to-rose-500 text-white font-black text-sm tracking-wide uppercase shadow-[0_0_20px_rgba(245,158,11,0.3)] flex items-center justify-center gap-2 transition-all hover:scale-[1.02] active:scale-[0.98] animate-pulse"
           >
             <span>⚡ VÀO CHƠI NGAY (QUICK PLAY)</span>
           </button>
         </motion.div>
 
         {/* Feature Highlights */}
-        <div className="mt-8 grid grid-cols-3 gap-3 text-center text-xs text-white/50">
+        <div className="font-sans mt-8 grid grid-cols-3 gap-3 text-center text-xs text-white/50">
           <div className="p-2 rounded-xl bg-white/[0.02] border border-white/5">
             <Shield className="w-4 h-4 mx-auto text-amber-400 mb-1" />
-            <span>4 Hệ Phái</span>
+            <span className="font-bold">4 Hệ Phái</span>
           </div>
           <div className="p-2 rounded-xl bg-white/[0.02] border border-white/5">
             <Swords className="w-4 h-4 mx-auto text-rose-400 mb-1" />
-            <span>Map Liên Thông</span>
+            <span className="font-bold">Map Liên Thông</span>
           </div>
           <div className="p-2 rounded-xl bg-white/[0.02] border border-white/5">
             <Sparkles className="w-4 h-4 mx-auto text-cyan-400 mb-1" />
-            <span>Đồ Rơi 3D</span>
+            <span className="font-bold">Đồ Rơi 3D</span>
           </div>
         </div>
       </div>

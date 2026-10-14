@@ -939,12 +939,13 @@ export const MonsterManager25D = memo(function MonsterManager25D() {
         <Text
           key={`txt-${ft.id}`}
           position={ft.position}
-          fontSize={0.42}
+          fontSize={0.48}
           color={ft.color}
           anchorX="center"
           anchorY="middle"
-          outlineWidth={0.04}
+          outlineWidth={0.06}
           outlineColor="#000000"
+          letterSpacing={0.05}
         >
           {ft.text}
         </Text>

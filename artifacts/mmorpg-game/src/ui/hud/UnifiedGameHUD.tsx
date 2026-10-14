@@ -133,8 +133,8 @@ export const UnifiedGameHUD = memo(function UnifiedGameHUD({
 
             <div className="flex-1 min-w-0">
               <div className="flex items-center justify-between gap-2 mb-1">
-                <span className="font-extrabold text-sm text-slate-100 truncate">{playerName}</span>
-                <span className="text-[10px] font-black px-1.5 py-0.5 rounded border border-cyan-500/40 bg-cyan-500/10 text-cyan-300">
+                <span className="font-sans font-black text-sm text-slate-100 truncate tracking-wide">{playerName}</span>
+                <span className="font-mono text-[10px] font-black px-1.5 py-0.5 rounded border border-cyan-500/40 bg-cyan-500/10 text-cyan-300">
                   Lv.{playerLevel} {playerClassName}
                 </span>
               </div>
@@ -148,7 +148,7 @@ export const UnifiedGameHUD = memo(function UnifiedGameHUD({
                     background: hpPct > 0.5 ? "linear-gradient(90deg, #10b981, #34d399)" : hpPct > 0.25 ? "linear-gradient(90deg, #f59e0b, #fbbf24)" : "linear-gradient(90deg, #ef4444, #f87171)",
                   }}
                 />
-                <span className="absolute inset-0 flex items-center justify-center text-[9px] font-extrabold text-white drop-shadow">
+                <span className="font-mono absolute inset-0 flex items-center justify-center text-[9px] font-black text-white drop-shadow">
                   {playerHealth} / {playerMaxHealth} HP
                 </span>
               </div>
@@ -161,13 +161,13 @@ export const UnifiedGameHUD = memo(function UnifiedGameHUD({
                     style={{ width: `${expPct}%` }}
                   />
                 </div>
-                <span className="font-mono text-[9px]">{Math.floor(expPct)}%</span>
+                <span className="font-mono text-[9px] font-bold">{Math.floor(expPct)}%</span>
               </div>
 
               {/* Gold & Kills Badge */}
-              <div className="flex items-center gap-3 mt-1 text-[11px] font-bold">
+              <div className="font-mono flex items-center gap-3 mt-1 text-[11px] font-bold">
                 <span className="text-amber-400 flex items-center gap-1">
-                  🪙 {playerGold} Vàng
+                  🪙 {playerGold.toLocaleString()} Vàng
                 </span>
                 <span className="text-red-400 flex items-center gap-1">
                   ⚔️ {playerKills} Quái
@@ -252,9 +252,9 @@ export const UnifiedGameHUD = memo(function UnifiedGameHUD({
                       bossPhase === 2 ? "text-red-500 animate-bounce" : "text-orange-500 animate-spin"
                     }`}
                   />
-                  <span className="text-slate-100 text-xs font-extrabold truncate">{bossName}</span>
+                  <span className="font-display text-slate-100 text-xs font-black uppercase tracking-wider truncate text-glow-red">{bossName}</span>
                   <span
-                    className={`text-[9px] font-black px-1.5 py-0.5 rounded border transition-colors ${
+                    className={`font-sans text-[9px] font-black px-1.5 py-0.5 rounded border transition-colors ${
                       bossPhase === 2
                         ? "bg-red-600/30 border-red-500 text-red-300 animate-pulse"
                         : "bg-slate-800 border-slate-700 text-slate-300"
@@ -264,7 +264,7 @@ export const UnifiedGameHUD = memo(function UnifiedGameHUD({
                   </span>
                 </div>
 
-                <span className="text-amber-400 font-mono text-xs">
+                <span className="text-amber-400 font-mono text-xs font-black">
                   {bossHealth} / {bossMaxHealth}
                 </span>
               </div>
@@ -285,7 +285,7 @@ export const UnifiedGameHUD = memo(function UnifiedGameHUD({
                   }`}
                   style={{ width: `${bossHpPct * 100}%` }}
                 />
-                <span className="absolute inset-0 flex items-center justify-center text-[10px] font-black text-white drop-shadow">
+                <span className="font-mono absolute inset-0 flex items-center justify-center text-[10px] font-black text-white drop-shadow">
                   {Math.round(bossHpPct * 100)}% HP
                 </span>
               </div>
@@ -303,21 +303,21 @@ export const UnifiedGameHUD = memo(function UnifiedGameHUD({
                     style={{ width: `${bossStagger}%` }}
                   />
                 </div>
-                <span className="text-[9px] font-mono text-amber-300 shrink-0">{Math.round(bossStagger)}%</span>
+                <span className="text-[9px] font-mono font-bold text-amber-300 shrink-0">{Math.round(bossStagger)}%</span>
               </div>
 
               {/* Stagger Alert Banner */}
               {bossIsStaggered && (
-                <div className="mt-1 text-center text-[10px] font-black tracking-wider text-amber-300 bg-amber-500/20 border border-amber-400/50 rounded py-0.5 animate-bounce">
+                <div className="font-sans mt-1 text-center text-[10px] font-black tracking-wider text-amber-300 bg-amber-500/20 border border-amber-400/50 rounded py-0.5 animate-bounce">
                   ⚡ BOSS BỊ PHÁ GIÁP! CHOÁNG VÁNG — TẤN CÔNG GÂY 1.5X SÁT THƯƠNG!
                 </div>
               )}
 
               {/* Casting Spell Alert */}
               {!bossIsStaggered && bossCastingSpell && (
-                <div className="mt-1 flex items-center justify-between text-[10px] font-bold text-rose-300 bg-rose-950/60 border border-rose-500/50 rounded px-2 py-0.5 animate-pulse">
+                <div className="font-sans mt-1 flex items-center justify-between text-[10px] font-bold text-rose-300 bg-rose-950/60 border border-rose-500/50 rounded px-2 py-0.5 animate-pulse">
                   <span className="flex items-center gap-1">
-                    ⚠️ ĐANG NIỆM: <span className="text-white font-black">{bossCastingSpell}</span>
+                    ⚠️ ĐANG NIỆM: <span className="font-display text-white font-black">{bossCastingSpell}</span>
                   </span>
                   <span className="font-mono text-yellow-300">
                     {Math.max(0, bossCastingTimer).toFixed(1)}s
@@ -329,18 +329,18 @@ export const UnifiedGameHUD = memo(function UnifiedGameHUD({
 
           {/* Smooth Zone Transition Notice */}
           {zoneNotification && (
-            <div className="bg-slate-950/90 backdrop-blur-lg border border-cyan-500/50 rounded-full px-5 py-1.5 shadow-[0_0_15px_rgba(6,182,212,0.4)] text-xs font-extrabold tracking-wide text-cyan-300 animate-bounce">
+            <div className="font-display bg-slate-950/90 backdrop-blur-lg border border-cyan-500/50 rounded-full px-5 py-1.5 shadow-[0_0_15px_rgba(6,182,212,0.4)] text-xs font-black tracking-widest uppercase text-cyan-300 animate-bounce text-glow-cyan">
               {zoneNotification}
             </div>
           )}
         </div>
 
         {/* Top-Right: Glassmorphism Modals Navigation */}
-        <div className="pointer-events-auto flex items-center gap-2">
+        <div className="font-sans pointer-events-auto flex items-center gap-2">
           {/* Inventory (I) */}
           <button
             onClick={() => setActiveModal("inventory")}
-            className="flex items-center gap-1.5 px-3 py-2 bg-slate-950/80 hover:bg-slate-900 border border-slate-700 hover:border-cyan-400 rounded-xl text-slate-200 hover:text-cyan-300 text-xs font-bold transition shadow-lg backdrop-blur-md cursor-pointer"
+            className="flex items-center gap-1.5 px-3 py-2 bg-slate-950/80 hover:bg-slate-900 border border-slate-700 hover:border-cyan-400 rounded-xl text-slate-200 hover:text-cyan-300 text-xs font-black uppercase tracking-wider transition shadow-lg backdrop-blur-md cursor-pointer"
             title="Túi Đồ (Phím I)"
           >
             <Backpack className="w-4 h-4 text-cyan-400" />
@@ -350,7 +350,7 @@ export const UnifiedGameHUD = memo(function UnifiedGameHUD({
           {/* Shop (B) */}
           <button
             onClick={() => setActiveModal("shop")}
-            className="flex items-center gap-1.5 px-3 py-2 bg-slate-950/80 hover:bg-slate-900 border border-slate-700 hover:border-amber-400 rounded-xl text-slate-200 hover:text-amber-300 text-xs font-bold transition shadow-lg backdrop-blur-md cursor-pointer"
+            className="flex items-center gap-1.5 px-3 py-2 bg-slate-950/80 hover:bg-slate-900 border border-slate-700 hover:border-amber-400 rounded-xl text-slate-200 hover:text-amber-300 text-xs font-black uppercase tracking-wider transition shadow-lg backdrop-blur-md cursor-pointer"
             title="Cửa Hàng (Phím B)"
           >
             <ShoppingBag className="w-4 h-4 text-amber-400" />
@@ -360,7 +360,7 @@ export const UnifiedGameHUD = memo(function UnifiedGameHUD({
           {/* Leaderboard (L) */}
           <button
             onClick={() => setActiveModal("leaderboard")}
-            className="flex items-center gap-1.5 px-3 py-2 bg-slate-950/80 hover:bg-slate-900 border border-slate-700 hover:border-purple-400 rounded-xl text-slate-200 hover:text-purple-300 text-xs font-bold transition shadow-lg backdrop-blur-md cursor-pointer"
+            className="flex items-center gap-1.5 px-3 py-2 bg-slate-950/80 hover:bg-slate-900 border border-slate-700 hover:border-purple-400 rounded-xl text-slate-200 hover:text-purple-300 text-xs font-black uppercase tracking-wider transition shadow-lg backdrop-blur-md cursor-pointer"
             title="Bảng Xếp Hạng (Phím L)"
           >
             <Trophy className="w-4 h-4 text-purple-400" />
@@ -370,7 +370,7 @@ export const UnifiedGameHUD = memo(function UnifiedGameHUD({
           {/* Battle Logs (H) */}
           <button
             onClick={() => setActiveModal("battleLog")}
-            className="flex items-center gap-1.5 px-3 py-2 bg-slate-950/80 hover:bg-slate-900 border border-slate-700 hover:border-red-400 rounded-xl text-slate-200 hover:text-red-300 text-xs font-bold transition shadow-lg backdrop-blur-md cursor-pointer"
+            className="flex items-center gap-1.5 px-3 py-2 bg-slate-950/80 hover:bg-slate-900 border border-slate-700 hover:border-red-400 rounded-xl text-slate-200 hover:text-red-300 text-xs font-black uppercase tracking-wider transition shadow-lg backdrop-blur-md cursor-pointer"
             title="Lịch Sử Chiến Báo (Phím H)"
           >
             <ScrollText className="w-4 h-4 text-red-400" />
@@ -417,7 +417,7 @@ export const UnifiedGameHUD = memo(function UnifiedGameHUD({
         <div className="flex flex-col items-center gap-1.5 pointer-events-auto">
           
           {/* ── 3-Hit Combo Flow Tracker ── */}
-          <div className="bg-slate-950/85 backdrop-blur-md border border-slate-800/90 rounded-full px-3 py-1 flex items-center gap-1.5 shadow-xl">
+          <div className="font-sans bg-slate-950/85 backdrop-blur-md border border-slate-800/90 rounded-full px-3 py-1 flex items-center gap-1.5 shadow-xl">
             {blueprint.comboAttacks.map((combo, idx) => {
               const isCurrent = comboIndex === idx;
               const isPast = comboIndex > idx && comboTimer > 0;
@@ -464,7 +464,7 @@ export const UnifiedGameHUD = memo(function UnifiedGameHUD({
                   ) : (
                     <Sword className="w-5 h-5 text-red-400" />
                   )}
-                  <span className="text-[9px] font-mono font-bold text-red-300 truncate max-w-[64px]">
+                  <span className="font-mono text-[9px] font-bold text-red-300 truncate max-w-[64px]">
                     J / Đòn {comboIndex + 1}
                   </span>
                   {comboTimer > 0 && (
