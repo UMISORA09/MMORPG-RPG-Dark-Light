@@ -1,2 +1,3 @@
 - [Battle animation state](battle-animation-state.md) — key the combat arena by round so CSS attack and hit animations replay for every simulated turn.
 - [Drizzle push prompts](drizzle-push-prompts.md) — `push-force` can still require a TTY; verify development schema changes explicitly and use Publish for production.
+- [Chiến Long Bá UI Design System](clb-ui-design-system.md) — quy chuẩn thiết kế UI/UX Dark Fantasy Slate Teal (#4c6e6f) + Charcoal Mauve (#342a2b) + Cyan Pill (#28c3e1) cho mọi trang và modal. Xem skill `clb-dark-fantasy-ui`.
