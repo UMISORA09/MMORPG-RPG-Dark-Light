@@ -93,3 +93,20 @@ Bất kỳ khi nào tạo nhân vật mới, thêm NPC, trang bị thời trang 
    ```
 3. **Script Tự Động Sinh Sprite:**
    - Chạy `python scripts/generate_pixel_characters.py` bất cứ khi nào cần cập nhật lại toàn bộ 8 nhân vật chuẩn pixel art.
+
+---
+
+## 6. QUY TẮC BẮT BUỘC: KẾT HỢP VỚI SKILL ẢNH ĐỘNG CHIẾN ĐẤU (`clb-combat-animation`)
+- **Nguyên Tắc Bất Di Bất Dịch:** Mọi nhân vật sinh ra từ quy chuẩn tạo hình này **LUÔN LUÔN PHẢI KẾT HỢP** với skill `clb-combat-animation` (`c:\Cassavas\Game2.5D\.agents\skills\clb-combat-animation\SKILL.md`).
+- Tuyệt đối không để nhân vật chỉ tồn tại dưới dạng ảnh tĩnh. Mỗi nhân vật phải có đầy đủ spritesheet 9 hàng tương ứng:
+  - `Idle` (Thở/nhấp nhô/chớp mắt)
+  - `Walk` / `Run` (Di chuyển chiến đấu)
+  - `Jump` & `Fall` (Nhảy/rơi)
+  - `Attack 1` (Chém thường 1)
+  - `Attack 2` (Xoay người 360 độ chém vòng tròn)
+  - `Air Attack` (Không kích cắm sàn)
+  - `Attack 3` (Đâm lướt xuyên phá)
+  - `Attack 4` (Trảm kích trăng khuyết hạng nặng / Crescent Energy Wave)
+  - `Death` (Gục ngã / Trúng đòn)
+- Toàn bộ spritesheet chiến đấu tương thích 100% với `SpriteBillboard25D.tsx` và engine 2.5D Canvas Three.js.
+

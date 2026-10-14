@@ -60,8 +60,21 @@ export interface GameWorldState {
   playerPosition: THREE.Vector3;
   playerVelocity: THREE.Vector3;
   playerFacingLeft: boolean;
-  playerAnimState: "idle" | "run" | "attack" | "hurt";
   playerHealth: number;
+  playerAnimState:
+    | "idle"
+    | "walk"
+    | "run"
+    | "jump"
+    | "fall"
+    | "attack"
+    | "attack1"
+    | "attack2"
+    | "attack3"
+    | "attack4"
+    | "air_attack"
+    | "hurt"
+    | "death";
   playerMaxHealth: number;
   playerLevel: number;
   playerExp: number;
@@ -131,7 +144,20 @@ export interface GameWorldState {
   updatePlayerPosition: (
     pos: THREE.Vector3,
     facingLeft: boolean,
-    animState: "idle" | "run" | "attack" | "hurt"
+    animState:
+      | "idle"
+      | "walk"
+      | "run"
+      | "jump"
+      | "fall"
+      | "attack"
+      | "attack1"
+      | "attack2"
+      | "attack3"
+      | "attack4"
+      | "air_attack"
+      | "hurt"
+      | "death"
   ) => void;
   damagePlayer: (amount: number, fromDir?: THREE.Vector3) => void;
   healPlayer: (amount: number) => void;

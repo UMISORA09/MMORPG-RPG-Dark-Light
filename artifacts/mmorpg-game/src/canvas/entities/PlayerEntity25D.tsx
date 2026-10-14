@@ -132,7 +132,7 @@ export const PlayerEntity25D = memo(function PlayerEntity25D() {
     // 4. Attack Execution (3-step Combo Chain)
     const wantsAttack = keys.has("j") || mobileState.attack || mobileState.shoot;
 
-    let currentAnim: "idle" | "run" | "attack" | "hurt" = "idle";
+    let currentAnim: import("../sprites/SpriteBillboard25D").EntityAnimationState = "idle";
 
     if (wantsAttack) {
       if (attackCooldown.current <= 0) {
@@ -146,7 +146,14 @@ export const PlayerEntity25D = memo(function PlayerEntity25D() {
     }
 
     if (animLockTimer.current > 0) {
-      currentAnim = "attack";
+      if (!isGrounded.current) {
+        currentAnim = "air_attack";
+      } else {
+        const cStep = useGameWorldStore.getState().comboIndex;
+        currentAnim = cStep === 1 ? "attack1" : cStep === 2 ? "attack2" : "attack3";
+      }
+    } else if (!isGrounded.current) {
+      currentAnim = velocityY.current > 0 ? "jump" : "fall";
     } else if (len > 0.1) {
       currentAnim = "run";
     }

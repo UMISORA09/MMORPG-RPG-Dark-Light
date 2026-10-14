@@ -4,7 +4,20 @@ import { useFrame } from "@react-three/fiber";
 import { Billboard, Text } from "@react-three/drei";
 import { loadOrFallbackSpritesheet } from "./ProceduralSpriteFallback";
 
-export type EntityAnimationState = "idle" | "run" | "attack" | "hurt";
+export type EntityAnimationState =
+  | "idle"
+  | "walk"
+  | "run"
+  | "jump"
+  | "fall"
+  | "attack"
+  | "attack1"
+  | "attack2"
+  | "attack3"
+  | "attack4"
+  | "air_attack"
+  | "hurt"
+  | "death";
 
 export interface SpriteBillboard25DProps {
   position: [number, number, number] | THREE.Vector3;
@@ -26,6 +39,9 @@ export interface SpriteBillboard25DProps {
   isInvincible?: boolean;
   onClick?: () => void;
 }
+
+const TOTAL_COLS = 8;
+const TOTAL_ROWS = 9;
 
 export const SpriteBillboard25D = memo(function SpriteBillboard25D({
   position,
@@ -54,7 +70,7 @@ export const SpriteBillboard25D = memo(function SpriteBillboard25D({
   const entityWidth = width ?? (isBoss ? 4.2 : 2.2);
   const entityHeight = height ?? (isBoss ? 4.2 : 2.2);
 
-  // Obtain or generate procedural 4x4 spritesheet
+  // Obtain or generate procedural or combat spritesheet
   const baseTexture = useMemo(() => {
     if (customTexture) return customTexture;
     return loadOrFallbackSpritesheet({
@@ -75,7 +91,7 @@ export const SpriteBillboard25D = memo(function SpriteBillboard25D({
     cloned.colorSpace = THREE.SRGBColorSpace;
     cloned.wrapS = THREE.RepeatWrapping;
     cloned.wrapT = THREE.RepeatWrapping;
-    cloned.repeat.set(0.25, 0.25);
+    cloned.repeat.set(1 / TOTAL_COLS, 1 / TOTAL_ROWS);
     cloned.needsUpdate = true;
     return cloned;
   }, [baseTexture]);
@@ -90,43 +106,68 @@ export const SpriteBillboard25D = memo(function SpriteBillboard25D({
   const frameTimer = useRef(0);
   const currentFrame = useRef(0);
 
-  // UV row mapping: 0 = Idle, 1 = Run, 2 = Attack, 3 = Hurt
+  // UV row mapping for 9-row combat sheet:
+  // Row 0: Idle, Row 1: Walk/Run, Row 2: Jump/Fall, Row 3: Attack 1, Row 4: Attack 2,
+  // Row 5: Air Attack, Row 6: Attack 3, Row 7: Attack 4, Row 8: Death / Hurt
   const rowIndex = useMemo(() => {
     switch (state) {
       case "idle":
         return 0;
+      case "walk":
       case "run":
         return 1;
-      case "attack":
+      case "jump":
+      case "fall":
         return 2;
-      case "hurt":
+      case "attack":
+      case "attack1":
         return 3;
+      case "attack2":
+        return 4;
+      case "air_attack":
+        return 5;
+      case "attack3":
+        return 6;
+      case "attack4":
+        return 7;
+      case "death":
+      case "hurt":
+        return 8;
       default:
         return 0;
     }
   }, [state]);
 
   useFrame((_, delta) => {
-    // Animation frame advancement (8 FPS for idle, 12 FPS for run/attack)
-    const fps = state === "run" ? 12 : state === "attack" ? 14 : 7;
+    // Animation frame advancement FPS tuning
+    const fps =
+      state === "run" || state === "walk"
+        ? 12
+        : state.startsWith("attack") || state === "air_attack"
+        ? 14
+        : state === "death"
+        ? 8
+        : 8;
     frameTimer.current += delta;
 
     if (frameTimer.current >= 1 / fps) {
       frameTimer.current = 0;
-      currentFrame.current = (currentFrame.current + 1) % 4;
+      currentFrame.current = (currentFrame.current + 1) % TOTAL_COLS;
 
       const col = currentFrame.current;
+      const uStep = 1 / TOTAL_COLS;
+      const vStep = 1 / TOTAL_ROWS;
 
       // In Three.js, UV origin (0, 0) is bottom-left
-      // Row 0 is at top, row 3 is at bottom -> vOffset = (3 - rowIndex) * 0.25
-      const vOffset = (3 - rowIndex) * 0.25;
+      // Row 0 is at top -> vOffset = (TOTAL_ROWS - 1 - rowIndex) * vStep
+      const vOffset = (TOTAL_ROWS - 1 - rowIndex) * vStep;
 
       if (facingLeft) {
-        texture.repeat.x = -0.25;
-        texture.offset.x = (col + 1) * 0.25;
+        texture.repeat.x = -uStep;
+        texture.offset.x = (col + 1) * uStep;
       } else {
-        texture.repeat.x = 0.25;
-        texture.offset.x = col * 0.25;
+        texture.repeat.x = uStep;
+        texture.offset.x = col * uStep;
       }
 
       texture.offset.y = vOffset;

@@ -29,16 +29,45 @@ export function loadOrFallbackSpritesheet(options: SpriteGeneratorOptions): THRE
   const fallback = getOrCreateProceduralSpritesheet(options);
 
   if (typeof window !== "undefined") {
-    const img = new Image();
-    img.src = `/assets/sprites/${fileKey}.svg`;
-    img.onload = () => {
-      const tex = new THREE.CanvasTexture(img);
+    // 1. Try class-specific combat sheet (e.g. fighter_combat_sheet.png)
+    const combatImg = new Image();
+    combatImg.src = `/assets/sprites/${fileKey}_combat_sheet.png`;
+    combatImg.onload = () => {
+      const tex = new THREE.CanvasTexture(combatImg);
       tex.magFilter = THREE.NearestFilter;
       tex.minFilter = THREE.NearestFilter;
       tex.generateMipmaps = false;
       tex.colorSpace = THREE.SRGBColorSpace;
       tex.needsUpdate = true;
       fileTextureCache.set(fileKey, tex);
+    };
+    combatImg.onerror = () => {
+      // 2. Try global hero combat spritesheet
+      const heroImg = new Image();
+      heroImg.src = `/assets/sprites/hero_combat_sheet.png`;
+      heroImg.onload = () => {
+        const tex = new THREE.CanvasTexture(heroImg);
+        tex.magFilter = THREE.NearestFilter;
+        tex.minFilter = THREE.NearestFilter;
+        tex.generateMipmaps = false;
+        tex.colorSpace = THREE.SRGBColorSpace;
+        tex.needsUpdate = true;
+        fileTextureCache.set(fileKey, tex);
+      };
+      heroImg.onerror = () => {
+        // 3. Fallback to vector SVG
+        const svgImg = new Image();
+        svgImg.src = `/assets/sprites/${fileKey}.svg`;
+        svgImg.onload = () => {
+          const tex = new THREE.CanvasTexture(svgImg);
+          tex.magFilter = THREE.NearestFilter;
+          tex.minFilter = THREE.NearestFilter;
+          tex.generateMipmaps = false;
+          tex.colorSpace = THREE.SRGBColorSpace;
+          tex.needsUpdate = true;
+          fileTextureCache.set(fileKey, tex);
+        };
+      };
     };
   }
 
