@@ -2,9 +2,8 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { Toaster } from '@/components/ui/toaster';
 import { TooltipProvider } from '@/components/ui/tooltip';
 import NotFound from '@/pages/not-found';
-import LoginPage from '@/pages/login';
-import RegisterPage from '@/pages/register';
-import SelectClassPage from '@/pages/select-class';
+import AuthScreen from '@/pages/AuthScreen';
+import CharacterSelectScreen from '@/pages/CharacterSelectScreen';
 import GamePage from '@/pages/game';
 import { Route, Switch, Router as WouterRouter } from 'wouter';
 
@@ -20,9 +19,11 @@ const queryClient = new QueryClient({
 function Router() {
   return (
     <Switch>
-      <Route path="/" component={LoginPage} />
-      <Route path="/register" component={RegisterPage} />
-      <Route path="/select-class" component={SelectClassPage} />
+      <Route path="/" component={AuthScreen} />
+      <Route path="/login" component={AuthScreen} />
+      <Route path="/register" component={AuthScreen} />
+      <Route path="/characters" component={CharacterSelectScreen} />
+      <Route path="/select-class" component={CharacterSelectScreen} />
       <Route path="/game" component={GamePage} />
       <Route component={NotFound} />
     </Switch>

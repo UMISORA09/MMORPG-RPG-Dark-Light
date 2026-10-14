@@ -36,7 +36,8 @@ export default function GamePage() {
     query: { queryKey: getGetCharactersQueryKey() },
   });
 
-  const character = characters?.[0];
+  const selectedCharId = typeof window !== "undefined" ? Number(localStorage.getItem("selectedCharacterId")) : null;
+  const character = (characters && selectedCharId ? characters.find((c) => c.id === selectedCharId) : null) || characters?.[0];
 
   const { data: characterDetail, isLoading: characterLoading } = useGetCharacter(
     character?.id || 0,
@@ -61,7 +62,7 @@ export default function GamePage() {
     if (!userLoading && !user) {
       setLocation("/");
     } else if (!charactersLoading && (!characters || characters.length === 0)) {
-      setLocation("/select-class");
+      setLocation("/characters");
     }
   }, [user, userLoading, characters, charactersLoading, setLocation]);
 
