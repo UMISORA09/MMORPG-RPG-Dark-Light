@@ -49,6 +49,11 @@ export const UnifiedGameHUD = memo(function UnifiedGameHUD({
   const bossHealth = useGameWorldStore((s) => s.bossHealth);
   const bossMaxHealth = useGameWorldStore((s) => s.bossMaxHealth);
   const bossActive = useGameWorldStore((s) => s.bossActive);
+  const bossPhase = useGameWorldStore((s) => s.bossPhase);
+  const bossStagger = useGameWorldStore((s) => s.bossStagger);
+  const bossIsStaggered = useGameWorldStore((s) => s.bossIsStaggered);
+  const bossCastingSpell = useGameWorldStore((s) => s.bossCastingSpell);
+  const bossCastingTimer = useGameWorldStore((s) => s.bossCastingTimer);
 
   const skillCooldowns = useGameWorldStore((s) => s.skillCooldowns);
   const triggerComboAttack = useGameWorldStore((s) => s.triggerComboAttack);
@@ -59,6 +64,15 @@ export const UnifiedGameHUD = memo(function UnifiedGameHUD({
   const hpPct = Math.max(0, Math.min(1, playerHealth / Math.max(1, playerMaxHealth)));
   const expPct = playerExpToNext > 0 ? Math.min(100, (playerExp / playerExpToNext) * 100) : 0;
   const bossHpPct = Math.max(0, Math.min(1, bossHealth / Math.max(1, bossMaxHealth)));
+
+  // Smooth Delayed Damage Bar for Boss HP
+  const [delayedBossHpPct, setDelayedBossHpPct] = useState(bossHpPct);
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setDelayedBossHpPct(bossHpPct);
+    }, 450);
+    return () => clearTimeout(timer);
+  }, [bossHpPct]);
 
   const blueprint = getCharacterBlueprint(playerClassId);
 
@@ -218,23 +232,97 @@ export const UnifiedGameHUD = memo(function UnifiedGameHUD({
 
         {/* Top-Center: Zone Notification Banner & Boss Health Bar */}
         <div className="flex flex-col items-center flex-1 max-w-md mx-3">
-          {/* Boss HP Bar */}
+          {/* ── Boss Raid Health Bar (Delayed Damage, Stagger Bar, 2-Phase Enrage) ── */}
           {(bossActive || currentZone === "BOSS_ALTAR") && (
-            <div className="pointer-events-auto w-full bg-slate-950/90 backdrop-blur-md border-2 border-red-500/80 rounded-2xl p-2.5 shadow-[0_0_25px_rgba(239,68,68,0.5)] mb-2 animate-pulse">
-              <div className="flex items-center justify-between text-xs font-black mb-1">
-                <span className="text-red-400 flex items-center gap-1">
-                  <Flame className="w-4 h-4 text-orange-500 animate-spin" /> {bossName}
-                </span>
-                <span className="text-amber-400 font-mono">
+            <div
+              className={`pointer-events-auto w-full bg-slate-950/95 backdrop-blur-md rounded-2xl p-3 mb-2 transition-all ${
+                bossIsStaggered
+                  ? "border-2 border-amber-400 shadow-[0_0_35px_rgba(251,191,36,0.7)] animate-pulse"
+                  : bossPhase === 2
+                  ? "border-2 border-red-500 shadow-[0_0_30px_rgba(239,68,68,0.6)]"
+                  : "border-2 border-red-900/80 shadow-[0_0_20px_rgba(239,68,68,0.3)]"
+              }`}
+            >
+              {/* Header: Name, Phase Badge, HP */}
+              <div className="flex items-center justify-between text-xs font-black mb-1.5">
+                <div className="flex items-center gap-1.5 truncate">
+                  <Flame
+                    className={`w-4 h-4 ${
+                      bossPhase === 2 ? "text-red-500 animate-bounce" : "text-orange-500 animate-spin"
+                    }`}
+                  />
+                  <span className="text-slate-100 text-xs font-extrabold truncate">{bossName}</span>
+                  <span
+                    className={`text-[9px] font-black px-1.5 py-0.5 rounded border transition-colors ${
+                      bossPhase === 2
+                        ? "bg-red-600/30 border-red-500 text-red-300 animate-pulse"
+                        : "bg-slate-800 border-slate-700 text-slate-300"
+                    }`}
+                  >
+                    {bossPhase === 2 ? "🔥 PHASE 2: CUỒNG NỘ" : "PHASE 1"}
+                  </span>
+                </div>
+
+                <span className="text-amber-400 font-mono text-xs">
                   {bossHealth} / {bossMaxHealth}
                 </span>
               </div>
-              <div className="w-full bg-red-950/80 rounded-full h-3.5 border border-red-500/60 overflow-hidden relative">
+
+              {/* Delayed Damage Health Bar */}
+              <div className="w-full bg-red-950/90 rounded-full h-4 border border-red-900/60 overflow-hidden relative mb-1.5">
+                {/* Delayed ghost bar */}
                 <div
-                  className="h-full bg-gradient-to-r from-red-600 via-orange-500 to-yellow-400 transition-all duration-200"
+                  className="absolute inset-y-0 left-0 bg-amber-200/50 transition-all duration-500 ease-out"
+                  style={{ width: `${delayedBossHpPct * 100}%` }}
+                />
+                {/* Active real HP bar */}
+                <div
+                  className={`relative h-full transition-all duration-150 ${
+                    bossPhase === 2
+                      ? "bg-gradient-to-r from-red-600 via-rose-500 to-yellow-400 shadow-[0_0_12px_#ef4444]"
+                      : "bg-gradient-to-r from-red-700 via-orange-600 to-amber-500"
+                  }`}
                   style={{ width: `${bossHpPct * 100}%` }}
                 />
+                <span className="absolute inset-0 flex items-center justify-center text-[10px] font-black text-white drop-shadow">
+                  {Math.round(bossHpPct * 100)}% HP
+                </span>
               </div>
+
+              {/* Stagger Gauge (Phá Giáp) */}
+              <div className="flex items-center gap-1.5">
+                <span className="text-[9px] font-mono font-bold text-amber-400/90 shrink-0">STAGGER</span>
+                <div className="flex-1 bg-slate-900 rounded-full h-1.5 border border-amber-600/40 overflow-hidden">
+                  <div
+                    className={`h-full transition-all duration-200 ${
+                      bossIsStaggered
+                        ? "bg-yellow-300 shadow-[0_0_10px_#facc15] animate-pulse"
+                        : "bg-gradient-to-r from-amber-500 to-yellow-400"
+                    }`}
+                    style={{ width: `${bossStagger}%` }}
+                  />
+                </div>
+                <span className="text-[9px] font-mono text-amber-300 shrink-0">{Math.round(bossStagger)}%</span>
+              </div>
+
+              {/* Stagger Alert Banner */}
+              {bossIsStaggered && (
+                <div className="mt-1 text-center text-[10px] font-black tracking-wider text-amber-300 bg-amber-500/20 border border-amber-400/50 rounded py-0.5 animate-bounce">
+                  ⚡ BOSS BỊ PHÁ GIÁP! CHOÁNG VÁNG — TẤN CÔNG GÂY 1.5X SÁT THƯƠNG!
+                </div>
+              )}
+
+              {/* Casting Spell Alert */}
+              {!bossIsStaggered && bossCastingSpell && (
+                <div className="mt-1 flex items-center justify-between text-[10px] font-bold text-rose-300 bg-rose-950/60 border border-rose-500/50 rounded px-2 py-0.5 animate-pulse">
+                  <span className="flex items-center gap-1">
+                    ⚠️ ĐANG NIỆM: <span className="text-white font-black">{bossCastingSpell}</span>
+                  </span>
+                  <span className="font-mono text-yellow-300">
+                    {Math.max(0, bossCastingTimer).toFixed(1)}s
+                  </span>
+                </div>
+              )}
             </div>
           )}
 

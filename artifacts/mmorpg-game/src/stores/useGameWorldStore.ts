@@ -80,6 +80,11 @@ export interface GameWorldState {
   bossHealth: number;
   bossMaxHealth: number;
   bossActive: boolean;
+  bossPhase: 1 | 2;
+  bossStagger: number; // 0 to 100%
+  bossIsStaggered: boolean;
+  bossCastingSpell: string | null;
+  bossCastingTimer: number;
 
   // --- Combat Objects & Shader VFX ---
   floatingTexts: FloatingTextItem[];
@@ -114,6 +119,15 @@ export interface GameWorldState {
   addSlashEffect: (effect: SlashEffect) => void;
   addFloatingText: (text: string, pos: THREE.Vector3, color?: string) => void;
   setBossHealth: (hp: number, maxHp?: number) => void;
+  setBossRaidState: (data: {
+    health?: number;
+    maxHealth?: number;
+    stagger?: number;
+    isStaggered?: boolean;
+    phase?: 1 | 2;
+    castingSpell?: string | null;
+    castingTimer?: number;
+  }) => void;
   setActiveModal: (modal: "inventory" | "shop" | "leaderboard" | "battleLog" | null) => void;
   closeActiveModal: () => void;
   syncFromBackendCharacter: (char: any) => void;
@@ -176,6 +190,11 @@ export const useGameWorldStore = create<GameWorldState>((set, get) => ({
   bossHealth: 1500,
   bossMaxHealth: 1500,
   bossActive: false,
+  bossPhase: 1,
+  bossStagger: 0,
+  bossIsStaggered: false,
+  bossCastingSpell: null,
+  bossCastingTimer: 0,
 
   // Combat objects
   floatingTexts: [],
@@ -496,6 +515,18 @@ export const useGameWorldStore = create<GameWorldState>((set, get) => ({
     set((s) => ({
       bossHealth: Math.max(0, hp),
       bossMaxHealth: maxHp ?? s.bossMaxHealth,
+    }));
+  },
+
+  setBossRaidState: (data) => {
+    set((s) => ({
+      bossHealth: data.health !== undefined ? Math.max(0, data.health) : s.bossHealth,
+      bossMaxHealth: data.maxHealth ?? s.bossMaxHealth,
+      bossStagger: data.stagger !== undefined ? Math.max(0, Math.min(100, data.stagger)) : s.bossStagger,
+      bossIsStaggered: data.isStaggered !== undefined ? data.isStaggered : s.bossIsStaggered,
+      bossPhase: data.phase ?? s.bossPhase,
+      bossCastingSpell: data.castingSpell !== undefined ? data.castingSpell : s.bossCastingSpell,
+      bossCastingTimer: data.castingTimer !== undefined ? data.castingTimer : s.bossCastingTimer,
     }));
   },
 

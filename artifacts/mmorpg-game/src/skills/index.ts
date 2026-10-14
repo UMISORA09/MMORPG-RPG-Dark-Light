@@ -13,6 +13,9 @@ export * from "./classes/gunner.skills";
 export * from "./classes/assassin.skills";
 export * from "./classes/fighter.skills";
 export * from "./classes/tank.skills";
+export * from "./monsters/monster-ai.types";
+export * from "./monsters/boss-patterns";
+export * from "./monsters/monster-registry";
 
 export const CHARACTER_BLUEPRINTS: Record<string, CharacterClassBlueprint> = {
   gunner: GUNNER_BLUEPRINT,
