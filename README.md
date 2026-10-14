@@ -1,3 +1,9 @@
+<div align="center">
+  <img src="header-banner.png" alt="Chiến Long Bí Sử — Realm of Legends Banner" width="100%" />
+</div>
+
+<br/>
+
 # 🐉 CHIẾN LONG BÍ SỬ — 2.5D Real-Time Action MMORPG
 > **Realm of Legends**: Trò chơi hoàn toàn mới được kiến tạo bằng cách kết hợp cơ chế chiến đấu 3D thời gian thực (Three.js/Fiber) và chiều sâu thế giới MMORPG Dark Fantasy (Class, Trang bị, Phó bản Boss, Xếp hạng).
 
