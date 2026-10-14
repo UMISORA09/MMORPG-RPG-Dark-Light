@@ -1,16 +1,13 @@
 import { Canvas, useFrame } from "@react-three/fiber";
 import { useEffect, useRef, useState, useCallback, memo } from "react";
 import {
-  SeamlessWorld,
-  Player,
-  Enemies,
-  Bullets,
-  SkillFX,
-  GameCamera,
+  SeamlessWorldMap,
+  PlayerEntity25D,
+  MonsterManager25D,
   Particles as Stars,
 } from "../canvas";
-import { HUD, MobileControls } from "../ui";
-import { useGameStore } from "../stores";
+import { UnifiedGameHUD } from "../ui";
+import { useGameStore, useGameWorldStore } from "../stores";
 import { mobileState } from "./mobileControls";
 import { cameraControls } from "./cameraControls";
 import { useDeviceType } from "./useDeviceDetect";
@@ -227,28 +224,23 @@ const Game = memo(function Game({ onLogout }: GameProps) {
 
   return (
     <div style={{ position: "fixed", inset: 0, width: "100%", height: "100%", overflow: "hidden", background: "#030712" }}>
-      {/* ── Single Unified 3D Canvas ── */}
+      {/* ── Single Unified 3D Canvas with 2.5D Billboard Sprite Engine ── */}
       <Canvas
         ref={canvasRef}
         shadows
         camera={{ position: [0, 8, 14], fov: 50 }}
         style={{ width: "100%", height: "100%", display: "block" }}
       >
-        <WorldLoop />
-        <SeamlessWorld />
-        <Player />
-        <Enemies />
-        <Bullets />
-        <SkillFX />
-        <GameCamera />
+        <SeamlessWorldMap />
+        <PlayerEntity25D />
+        <MonsterManager25D />
         <Stars />
       </Canvas>
 
       {/* ── 2D Unified HUD Overlay ── */}
-      <HUD onLogout={onLogout} />
+      <UnifiedGameHUD onLogout={onLogout} />
       <LockToast canvasRef={canvasRef} />
       <FullscreenButton />
-      {device !== "desktop" && <MobileControls />}
     </div>
   );
 });

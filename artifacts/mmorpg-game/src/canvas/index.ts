@@ -1,6 +1,12 @@
 // ==============================================================================
-// 3D Canvas Modules (Scenes, Entities, VFX, Camera)
+// 3D Canvas Modules (2.5D Billboard Sprites, World, Scenes, Entities, VFX)
 // ==============================================================================
+
+export { SpriteBillboard25D } from "./sprites/SpriteBillboard25D";
+export { getOrCreateProceduralSpritesheet } from "./sprites/ProceduralSpriteFallback";
+export { SeamlessWorldMap } from "./world/SeamlessWorldMap";
+export { PlayerEntity25D } from "./entities/PlayerEntity25D";
+export { MonsterManager25D } from "./entities/MonsterManager25D";
 
 export { default as GameCamera } from "./camera/GameCamera";
 export { default as MenuCamera } from "./camera/MenuCamera";

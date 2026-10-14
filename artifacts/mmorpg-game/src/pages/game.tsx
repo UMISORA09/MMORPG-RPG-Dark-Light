@@ -19,6 +19,7 @@ import { useQueryClient } from "@tanstack/react-query";
 import { useToast } from "@/hooks/use-toast";
 import Game from "@/game/Game";
 import { useGameStore } from "@/game/useGameStore";
+import { useGameWorldStore } from "@/stores/useGameWorldStore";
 import { UnifiedOverlayModals } from "@/components/UnifiedOverlayModals";
 
 export default function GamePage() {
@@ -68,6 +69,7 @@ export default function GamePage() {
   useEffect(() => {
     if (characterDetail) {
       useGameStore.getState().syncFromCharacter(characterDetail);
+      useGameWorldStore.getState().syncFromBackendCharacter(characterDetail);
     }
   }, [characterDetail]);
 
@@ -77,66 +79,73 @@ export default function GamePage() {
 
   // ── Real-Time Combat Sync with Backend PostgreSQL via useStartBattle ──
   useEffect(() => {
-    const registerCallbacks = useGameStore.getState().registerCombatCallbacks;
+    const handleMonsterDefeat = (monsterId: string) => {
+      const currentChar = charRef.current;
+      if (!currentChar) return;
 
-    registerCallbacks(
-      (monsterId: string) => {
-        const currentChar = charRef.current;
-        if (!currentChar) return;
+      // Auto-call backend battle mutation to persist victory, rewards, logs and level-ups
+      startBattle.mutate(
+        { characterId: currentChar.id, data: { monsterId } },
+        {
+          onSuccess: async (result) => {
+            // Update both stores HUD with new gold, exp, level and health
+            useGameWorldStore.getState().updateAfterBattle({
+              exp: result.character.experience,
+              gold: result.character.gold,
+              level: result.character.level,
+              hp: result.character.hp,
+              maxHp: result.character.maxHp,
+            });
+            useGameStore.getState().updatePlayerStatsAfterBattle({
+              exp: result.character.experience,
+              gold: result.character.gold,
+              level: result.character.level,
+              hp: result.character.hp,
+              maxHp: result.character.maxHp,
+            });
 
-        // Auto-call backend battle mutation to persist victory, rewards, logs and level-ups
-        startBattle.mutate(
-          { characterId: currentChar.id, data: { monsterId } },
-          {
-            onSuccess: async (result) => {
-              // Update Game Store HUD with new gold, exp, level and health
-              useGameStore.getState().updatePlayerStatsAfterBattle({
-                exp: result.character.experience,
-                gold: result.character.gold,
-                level: result.character.level,
-                hp: result.character.hp,
-                maxHp: result.character.maxHp,
+            // Show celebratory notification for Level Up
+            if (result.leveledUp) {
+              toast({
+                title: "🎉 THĂNG CẤP THÀNH CÔNG!",
+                description: `Chúc mừng bạn đã đạt Cấp ${result.character.level}! Sức mạnh tấn công và phòng ngự tăng vọt.`,
               });
+            }
 
-              // Show celebratory notification for Level Up
-              if (result.leveledUp) {
-                toast({
-                  title: "🎉 THĂNG CẤP THÀNH CÔNG!",
-                  description: `Chúc mừng bạn đã đạt Cấp ${result.character.level}! Sức mạnh tấn công và phòng ngự tăng vọt.`,
-                });
-              }
+            // Invalidate cache to ensure UI and modals stay in sync
+            await Promise.all([
+              queryClient.invalidateQueries({
+                queryKey: getGetCharacterQueryKey(currentChar.id),
+              }),
+              queryClient.invalidateQueries({
+                queryKey: getGetCharactersQueryKey(),
+              }),
+              queryClient.invalidateQueries({
+                queryKey: getGetBattleLogQueryKey(currentChar.id),
+              }),
+              queryClient.invalidateQueries({
+                queryKey: getGetLeaderboardQueryKey(),
+              }),
+            ]);
+          },
+          onError: (err: any) => {
+            console.error("Lỗi đồng bộ chiến đấu về cơ sở dữ liệu:", err);
+          },
+        }
+      );
+    };
 
-              // Invalidate cache to ensure UI and modals stay in sync
-              await Promise.all([
-                queryClient.invalidateQueries({
-                  queryKey: getGetCharacterQueryKey(currentChar.id),
-                }),
-                queryClient.invalidateQueries({
-                  queryKey: getGetCharactersQueryKey(),
-                }),
-                queryClient.invalidateQueries({
-                  queryKey: getGetBattleLogQueryKey(currentChar.id),
-                }),
-                queryClient.invalidateQueries({
-                  queryKey: getGetLeaderboardQueryKey(),
-                }),
-              ]);
-            },
-            onError: (err: any) => {
-              console.error("Lỗi đồng bộ chiến đấu về cơ sở dữ liệu:", err);
-            },
-          }
-        );
-      },
-      () => {
-        // Player defeated: Show notification
-        toast({
-          variant: "destructive",
-          title: "💀 Bạn đã bị hạ gục!",
-          description: "Được hộ tống về Làng Long Tộc để trị thương và hồi sinh đầy bình máu.",
-        });
-      }
-    );
+    const handlePlayerDefeat = () => {
+      // Player defeated: Show notification
+      toast({
+        variant: "destructive",
+        title: "💀 Bạn đã bị hạ gục!",
+        description: "Được hộ tống về Làng Long Tộc để trị thương và hồi sinh đầy bình máu.",
+      });
+    };
+
+    useGameStore.getState().registerCombatCallbacks(handleMonsterDefeat, handlePlayerDefeat);
+    useGameWorldStore.getState().registerCombatCallbacks(handleMonsterDefeat, handlePlayerDefeat);
   }, [startBattle, queryClient, toast]);
 
   const handleLogout = () => {

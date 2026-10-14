@@ -3,6 +3,7 @@
 // ==============================================================================
 
 export { default as HUD } from "./hud/HUD";
+export { UnifiedGameHUD } from "./hud/UnifiedGameHUD";
 export { default as VillageHUD } from "./hud/VillageHUD";
 export { default as MobileControls } from "./controls/MobileControls";
 export { default as CharacterMenu } from "./modals/CharacterMenu";

@@ -19,6 +19,7 @@ import {
 import { useQueryClient } from "@tanstack/react-query";
 import { useGameStore } from "../stores";
 import { useToast } from "@/hooks/use-toast";
+import { useGameWorldStore } from "@/stores/useGameWorldStore";
 import { 
   X, 
   Backpack, 
@@ -43,12 +44,20 @@ interface UnifiedOverlayModalsProps {
 export const UnifiedOverlayModals = memo(function UnifiedOverlayModals({
   character,
 }: UnifiedOverlayModalsProps) {
-  const activeModal = useGameStore((s) => s.game.activeModal);
-  const closeActiveModal = useGameStore((s) => s.closeActiveModal);
+  const worldModal = useGameWorldStore((s) => s.activeModal);
+  const legacyModal = useGameStore((s) => s.game.activeModal);
+  const activeModal = worldModal || legacyModal;
+
+  const closeActiveModal = () => {
+    useGameWorldStore.getState().closeActiveModal();
+    useGameStore.getState().closeActiveModal();
+  };
+
   const { toast } = useToast();
   const queryClient = useQueryClient();
 
   // ── Queries ──
+  const isLogOpen = activeModal === "battleLog" || activeModal === "battle_logs";
   const { data: inventory = [], isLoading: inventoryLoading } = useGetInventory(
     character.id,
     { query: { queryKey: getGetInventoryQueryKey(character.id), enabled: activeModal === "inventory" || activeModal === "shop" } }
@@ -64,7 +73,7 @@ export const UnifiedOverlayModals = memo(function UnifiedOverlayModals({
 
   const { data: battleLogs = [], isLoading: logsLoading } = useGetBattleLog(
     character.id,
-    { query: { queryKey: getGetBattleLogQueryKey(character.id), enabled: activeModal === "battle_logs" } }
+    { query: { queryKey: getGetBattleLogQueryKey(character.id), enabled: isLogOpen } }
   );
 
   // ── Mutations ──
@@ -160,20 +169,20 @@ export const UnifiedOverlayModals = memo(function UnifiedOverlayModals({
             {activeModal === "inventory" && <Backpack className="w-6 h-6 text-cyan-400" />}
             {activeModal === "shop" && <ShoppingBag className="w-6 h-6 text-amber-400" />}
             {activeModal === "leaderboard" && <Trophy className="w-6 h-6 text-purple-400" />}
-            {activeModal === "battle_logs" && <ScrollText className="w-6 h-6 text-red-400" />}
+            {isLogOpen && <ScrollText className="w-6 h-6 text-red-400" />}
 
             <div>
               <h2 className="text-lg font-black tracking-wide text-white flex items-center gap-2">
                 {activeModal === "inventory" && "TÚI ĐỒ & TRANG BỊ"}
                 {activeModal === "shop" && "CỬA HÀNG THƯƠNG GIA LONG TỘC"}
                 {activeModal === "leaderboard" && "BẢNG VINH DANH LONG TỘC"}
-                {activeModal === "battle_logs" && "LỊCH SỬ CHIẾN BÁO"}
+                {isLogOpen && "LỊCH SỬ CHIẾN BÁO"}
               </h2>
               <p className="text-xs text-slate-400">
                 {activeModal === "inventory" && "Quản lý trang bị để gia tăng sức mạnh chiến đấu thời gian thực"}
                 {activeModal === "shop" && "Mua sắm thần binh, giáp trụ và phụ kiện gia tăng chỉ số"}
                 {activeModal === "leaderboard" && "Top những chiến binh mạnh nhất đại lục Long Tộc"}
-                {activeModal === "battle_logs" && "Ghi nhận các chiến tích tiêu diệt quái vật và Boss rồng"}
+                {isLogOpen && "Ghi nhận các chiến tích tiêu diệt quái vật và Boss rồng"}
               </p>
             </div>
           </div>
@@ -400,7 +409,7 @@ export const UnifiedOverlayModals = memo(function UnifiedOverlayModals({
           )}
 
           {/* 4. BATTLE LOGS MODAL */}
-          {activeModal === "battle_logs" && (
+          {isLogOpen && (
             <div>
               {logsLoading ? (
                 <div className="text-center py-12 text-slate-400">Đang tải lịch sử chiến đấu...</div>
