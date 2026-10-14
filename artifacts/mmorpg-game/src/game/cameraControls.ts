@@ -1,6 +1,6 @@
 // Shared camera orbit state — modified by Pointer Lock mouse (PC) and touch drag (mobile)
 export const cameraControls = {
-  yaw: Math.PI,   // horizontal angle (around Y axis)
+  yaw: 0,         // horizontal angle (around Y axis) - 0 points camera forward towards Wilderness & Boss Altar
   pitch: 0.45,    // vertical angle: positive = camera above looking down
   locked: false,  // whether pointer lock is active (PC)
 };

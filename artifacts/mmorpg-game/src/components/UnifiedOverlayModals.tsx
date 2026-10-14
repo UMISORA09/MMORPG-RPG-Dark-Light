@@ -107,8 +107,15 @@ export const UnifiedOverlayModals = memo(function UnifiedOverlayModals({
             title: "Mua thành công!",
             description: `Đã mua ${itemName} và cất vào Túi đồ.`,
           });
-          // Update gold in game store
+          // Update gold in game stores
           useGameStore.getState().updatePlayerStatsAfterBattle({
+            exp: data.character.experience,
+            gold: data.character.gold,
+            level: data.character.level,
+            hp: data.character.hp,
+            maxHp: data.character.maxHp,
+          });
+          useGameWorldStore.getState().updateAfterBattle({
             exp: data.character.experience,
             gold: data.character.gold,
             level: data.character.level,

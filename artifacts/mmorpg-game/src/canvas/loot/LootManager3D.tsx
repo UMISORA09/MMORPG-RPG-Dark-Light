@@ -188,7 +188,6 @@ const LootItemInstance = memo(function LootItemInstance({
             color={colors.beam}
             anchorX="center"
             anchorY="middle"
-            font="sans-serif"
             outlineWidth={0.02}
             outlineColor="#000000"
           >
