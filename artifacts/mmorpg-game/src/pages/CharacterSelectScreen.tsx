@@ -311,7 +311,11 @@ export default function CharacterSelectScreen() {
                       style={{ backgroundColor: cfg.color }}
                     />
                     <div className="relative z-10 w-28 h-28 transform transition-transform group-hover:scale-110 duration-300">
-                      <ClassSprite classId={char.classId} className="w-full h-full drop-shadow-[0_10px_20px_rgba(0,0,0,0.8)]" />
+                      <ClassSprite
+                        classId={char.classId}
+                        gender={storedGender as "male" | "female"}
+                        className="w-full h-full drop-shadow-[0_10px_20px_rgba(0,0,0,0.8)]"
+                      />
                     </div>
                   </div>
 

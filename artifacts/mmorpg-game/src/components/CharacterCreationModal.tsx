@@ -276,8 +276,12 @@ export function CharacterCreationModal({ isOpen, onClose, onCharacterCreated }: 
                     className="absolute inset-0 rounded-full blur-2xl opacity-30 animate-pulse"
                     style={{ backgroundColor: currentClass.color }}
                   />
-                  <div className="relative z-10 w-full h-full transform transition-transform hover:scale-110 duration-300">
-                    <ClassSprite classId={selectedClassId} className="w-full h-full drop-shadow-[0_10px_20px_rgba(0,0,0,0.8)]" />
+                  <div className="relative z-10 w-full h-full transform transition-transform hover:scale-105 duration-300">
+                    <ClassSprite
+                      classId={selectedClassId}
+                      gender={gender}
+                      className="w-full h-full drop-shadow-[0_15px_25px_rgba(0,0,0,0.85)]"
+                    />
                   </div>
                 </div>
 

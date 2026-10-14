@@ -1,0 +1,76 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 380" width="100%" height="100%">
+  <defs>
+    <radialGradient id="gfGlow" cx="50%" cy="50%" r="50%">
+      <stop offset="0%" stop-color="#00f2ff" stop-opacity="0.6"/>
+      <stop offset="100%" stop-color="#00f2ff" stop-opacity="0"/>
+    </radialGradient>
+    <linearGradient id="gfSkin" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#ffedd5"/>
+      <stop offset="50%" stop-color="#fed7aa"/>
+      <stop offset="100%" stop-color="#fba575"/>
+    </linearGradient>
+    <linearGradient id="gfHair" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#38bdf8"/>
+      <stop offset="50%" stop-color="#06b6d4"/>
+      <stop offset="100%" stop-color="#0891b2"/>
+    </linearGradient>
+    <filter id="gfShadow" x="-20%" y="-20%" width="140%" height="140%">
+      <feDropShadow dx="0" dy="6" stdDeviation="6" flood-color="#000" flood-opacity="0.5"/>
+    </filter>
+  </defs>
+
+  <circle cx="160" cy="180" r="140" fill="url(#gfGlow)" opacity="0.4"/>
+
+  <g filter="url(#gfShadow)">
+    <!-- Cyber Twin-Tails Hair (Hai Chùm Tóc Dài Bay Lượn) -->
+    <path d="M135 60 C90 70 65 140 75 220 C85 240 95 200 90 140 Z" fill="url(#gfHair)"/>
+    <path d="M185 60 C230 70 255 140 245 220 C235 240 225 200 230 140 Z" fill="url(#gfHair)"/>
+
+    <!-- Curvy Thighs & High Cyber Boots -->
+    <path d="M128 285 C124 330 126 370 138 375 L155 375 C158 335 156 300 158 295 L162 295 C164 300 162 335 165 375 L182 375 C194 370 196 330 192 285 Z" fill="#09090b"/>
+    <path d="M130 330 L152 330" stroke="#00f2ff" stroke-width="2"/>
+    <path d="M168 330 L190 330" stroke="#00f2ff" stroke-width="2"/>
+
+    <!-- Hourglass Curves & Sexy Cyber Suit -->
+    <path d="M122 145 C116 170 135 240 135 265 L185 265 C185 240 204 170 198 145 Z" fill="#0f172a"/>
+
+    <!-- Keyhole Cleavage Cutout (Cắt Xẻ Ngực Sexy) -->
+    <path d="M145 152 C145 178 175 178 175 152 C168 148 152 148 145 152 Z" fill="url(#gfSkin)"/>
+    <path d="M160 156 L160 174" stroke="#e11d48" stroke-width="1.8" stroke-linecap="round"/>
+
+    <!-- Dual Laser Blasters (Súng Laser Đôi) -->
+    <rect x="70" y="210" width="30" height="16" rx="4" fill="#0284c7" stroke="#00f2ff" stroke-width="1.5"/>
+    <rect x="62" y="215" width="10" height="4" fill="#38bdf8"/>
+    <rect x="220" y="210" width="30" height="16" rx="4" fill="#0284c7" stroke="#00f2ff" stroke-width="1.5"/>
+    <rect x="248" y="215" width="10" height="4" fill="#38bdf8"/>
+
+    <!-- Seductive Face & Cyber Headset -->
+    <path d="M145 105 L145 135 L175 135 L175 105 Z" fill="url(#gfSkin)"/>
+    <path d="M138 65 C132 95 145 116 160 120 C175 116 188 95 182 65 Z" fill="#ffedd5" stroke="#00f2ff" stroke-width="1.2"/>
+
+    <!-- Big Alluring Eyes with Cyan Pupils -->
+    <path d="M143 82 Q150 77 156 82" stroke="#09090b" stroke-width="2.5" fill="none"/>
+    <ellipse cx="149" cy="85" rx="4.5" ry="5" fill="#0891b2"/>
+    <circle cx="147" cy="83" r="1.5" fill="#fff"/>
+    <circle cx="151" cy="86" r="0.8" fill="#fff"/>
+
+    <path d="M164 82 Q170 77 177 82" stroke="#09090b" stroke-width="2.5" fill="none"/>
+    <ellipse cx="171" cy="85" rx="4.5" ry="5" fill="#0891b2"/>
+    <circle cx="169" cy="83" r="1.5" fill="#fff"/>
+    <circle cx="173" cy="86" r="0.8" fill="#fff"/>
+
+    <!-- Pink Glossy Lips -->
+    <ellipse cx="160" cy="103" rx="4" ry="2" fill="#f43f5e"/>
+    <circle cx="159" cy="102" r="0.7" fill="#fff"/>
+
+    <!-- Cyber Headset Ribbon -->
+    <rect x="126" y="70" width="6" height="14" rx="2" fill="#00f2ff"/>
+    <rect x="188" y="70" width="6" height="14" rx="2" fill="#00f2ff"/>
+    <path d="M128 72 C138 35 182 35 192 72" stroke="#00f2ff" stroke-width="2.5" fill="none"/>
+
+    <!-- Bangs -->
+    <path d="M138 52 C132 75 142 85 142 90" stroke="url(#gfHair)" stroke-width="3.5" fill="none"/>
+    <path d="M182 52 C188 75 178 85 178 90" stroke="url(#gfHair)" stroke-width="3.5" fill="none"/>
+    <path d="M148 55 L154 75 L160 62 L166 75 L172 55" fill="url(#gfHair)"/>
+  </g>
+</svg>

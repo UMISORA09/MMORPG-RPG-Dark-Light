@@ -1,0 +1,85 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 380" width="100%" height="100%">
+  <defs>
+    <radialGradient id="gmGlow" cx="50%" cy="50%" r="50%">
+      <stop offset="0%" stop-color="#00f2ff" stop-opacity="0.6"/>
+      <stop offset="100%" stop-color="#00f2ff" stop-opacity="0"/>
+    </radialGradient>
+    <linearGradient id="gmSkin" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#fed7aa"/>
+      <stop offset="50%" stop-color="#fdba74"/>
+      <stop offset="100%" stop-color="#fb923c"/>
+    </linearGradient>
+    <linearGradient id="gmCoat" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#0f172a"/>
+      <stop offset="50%" stop-color="#1e293b"/>
+      <stop offset="100%" stop-color="#334155"/>
+    </linearGradient>
+    <linearGradient id="gmRifle" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#38bdf8"/>
+      <stop offset="50%" stop-color="#0284c7"/>
+      <stop offset="100%" stop-color="#0f172a"/>
+    </linearGradient>
+    <filter id="gmShadow" x="-20%" y="-20%" width="140%" height="140%">
+      <feDropShadow dx="0" dy="6" stdDeviation="6" flood-color="#000" flood-opacity="0.6"/>
+    </filter>
+  </defs>
+
+  <circle cx="160" cy="180" r="140" fill="url(#gmGlow)" opacity="0.35"/>
+
+  <g filter="url(#gmShadow)">
+    <!-- Cyber Tactical Trench Coat -->
+    <path d="M100 140 C85 210 70 320 85 375 L110 375 C105 310 115 220 120 170 Z" fill="url(#gmCoat)"/>
+    <path d="M220 140 C235 210 250 320 235 375 L210 375 C215 310 205 220 200 170 Z" fill="url(#gmCoat)"/>
+
+    <!-- Tactical Trousers with Holsters -->
+    <path d="M120 280 L115 375 L145 375 L158 305 L162 305 L175 375 L205 375 L200 280 Z" fill="#09090b"/>
+    <rect x="110" y="300" width="10" height="25" rx="3" fill="#0284c7"/>
+    <rect x="200" y="300" width="10" height="25" rx="3" fill="#0284c7"/>
+
+    <!-- 6-PACK BARE CHEST WITH TACTICAL HARNESS -->
+    <path d="M115 135 C105 170 122 280 125 280 L195 280 C198 280 215 170 205 135 Z" fill="url(#gmSkin)"/>
+    <!-- Cybernetic Harness Straps -->
+    <path d="M120 135 L145 280" stroke="#00f2ff" stroke-width="3" fill="none" opacity="0.8"/>
+    <path d="M200 135 L175 280" stroke="#00f2ff" stroke-width="3" fill="none" opacity="0.8"/>
+
+    <!-- Pectoral Muscles -->
+    <path d="M122 162 C135 176 156 178 158 168 Z" fill="#fed7aa" stroke="#ea580c" stroke-width="2"/>
+    <path d="M198 162 C185 176 164 178 162 168 Z" fill="#fed7aa" stroke="#ea580c" stroke-width="2"/>
+    <line x1="160" y1="158" x2="160" y2="272" stroke="#ea580c" stroke-width="2.5"/>
+
+    <!-- 6-Pack Abs -->
+    <rect x="138" y="188" width="19" height="17" rx="3" fill="#fed7aa" stroke="#ea580c" stroke-width="1.8"/>
+    <rect x="163" y="188" width="19" height="17" rx="3" fill="#fed7aa" stroke="#ea580c" stroke-width="1.8"/>
+    <rect x="139" y="212" width="18" height="17" rx="3" fill="#fed7aa" stroke="#ea580c" stroke-width="1.8"/>
+    <rect x="163" y="212" width="18" height="17" rx="3" fill="#fed7aa" stroke="#ea580c" stroke-width="1.8"/>
+    <rect x="141" y="236" width="16" height="17" rx="3" fill="#fed7aa" stroke="#ea580c" stroke-width="1.8"/>
+    <rect x="163" y="236" width="16" height="17" rx="3" fill="#fed7aa" stroke="#ea580c" stroke-width="1.8"/>
+
+    <!-- Plasma Sniper Rifle (Súng Laser Công Nghệ Cao) -->
+    <path d="M220 160 L295 130 L305 138 L230 175 Z" fill="url(#gmRifle)"/>
+    <rect x="250" y="142" width="22" height="6" fill="#00f2ff"/>
+    <circle cx="295" cy="132" r="5" fill="#38bdf8"/>
+
+    <!-- Handsome Face with Cyber Monocle -->
+    <path d="M142 105 L142 135 L178 135 L178 105 Z" fill="url(#gmSkin)"/>
+    <path d="M136 65 C132 95 145 116 160 120 C175 116 188 95 184 65 Z" fill="#fed7aa" stroke="#ea580c" stroke-width="1.5"/>
+
+    <!-- Left Eye: Cyber Monocle Visor (Mắt Kính Ngắm Laser Neon Cyan) -->
+    <circle cx="150" cy="83" r="8" fill="#0284c7" stroke="#00f2ff" stroke-width="2"/>
+    <circle cx="150" cy="83" r="4" fill="#38bdf8"/>
+    <line x1="142" y1="83" x2="158" y2="83" stroke="#fff" stroke-width="1"/>
+
+    <!-- Right Eye: Natural Handsome Eye -->
+    <path d="M164 80 Q170 76 176 80" stroke="#09090b" stroke-width="2.5" fill="none"/>
+    <ellipse cx="170" cy="83" rx="3.5" ry="4" fill="#0284c7"/>
+    <circle cx="169" cy="81.5" r="1.2" fill="#fff"/>
+
+    <path d="M164 72 L179 74" stroke="#0f172a" stroke-width="2.5" stroke-linecap="round"/>
+    <path d="M160 78 L159 91 L162 91" stroke="#ea580c" stroke-width="1.8" fill="none"/>
+    <path d="M154 101 Q160 103 166 101" stroke="#0284c7" stroke-width="2" fill="none"/>
+
+    <!-- Undercut Cyberpunk Hair with Cyan Highlights -->
+    <path d="M130 55 L118 35 L135 30 L130 15 L150 20 L160 8 L175 15 L190 8 L195 25 L205 35 L190 55 Z" fill="#1e293b"/>
+    <path d="M145 22 L160 10 L172 20" stroke="#00f2ff" stroke-width="3" stroke-linecap="round" fill="none"/>
+  </g>
+</svg>
