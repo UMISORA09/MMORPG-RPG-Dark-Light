@@ -4,7 +4,7 @@
 
 export { SpriteBillboard25D } from "./sprites/SpriteBillboard25D";
 export { getOrCreateProceduralSpritesheet } from "./sprites/ProceduralSpriteFallback";
-export { SeamlessWorldMap } from "./world/SeamlessWorldMap";
+export { SeamlessWorldMap, ZoneDetector } from "./world";
 export { PlayerEntity25D } from "./entities/PlayerEntity25D";
 export { MonsterManager25D } from "./entities/MonsterManager25D";
 export { LootManager3D } from "./loot/LootManager3D";

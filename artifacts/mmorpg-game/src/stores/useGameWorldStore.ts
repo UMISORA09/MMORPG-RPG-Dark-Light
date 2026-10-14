@@ -178,6 +178,7 @@ export interface GameWorldState {
     castingSpell?: string | null;
     castingTimer?: number;
   }) => void;
+  setZone: (zone: WorldZone, notification?: string) => void;
   setActiveModal: (modal: "inventory" | "shop" | "leaderboard" | "battleLog" | null) => void;
   closeActiveModal: () => void;
   syncFromBackendCharacter: (char: any) => void;
@@ -700,6 +701,24 @@ export const useGameWorldStore = create<GameWorldState>((set, get) => ({
       bossCastingSpell: data.castingSpell !== undefined ? data.castingSpell : s.bossCastingSpell,
       bossCastingTimer: data.castingTimer !== undefined ? data.castingTimer : s.bossCastingTimer,
     }));
+  },
+
+  setZone: (zone, notification) => {
+    const current = get().currentZone;
+    if (current !== zone) {
+      const defaultNotif =
+        zone === "SAFE_VILLAGE"
+          ? "🛡️ Làng Long Tộc — Khu Vực An Toàn (Tự động hồi phục)"
+          : zone === "BOSS_ALTAR"
+          ? "🔥 Cấm Địa Săn Boss — Rồng Lửa Cổ Đại Thức Tỉnh!"
+          : "⚔️ Đấu Trường Hoang Dã — Quái vật lang thang (PvE)";
+
+      set({
+        currentZone: zone,
+        zoneNotification: notification !== undefined ? notification : defaultNotif,
+        zoneNotificationTimer: 4.0,
+      });
+    }
   },
 
   setActiveModal: (modal) => {

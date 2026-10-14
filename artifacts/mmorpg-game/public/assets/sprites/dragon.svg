@@ -128,31 +128,31 @@
 <ellipse cx="192" cy="371.2" rx="24" ry="7.5" fill="rgba(0,0,0,0.35)" />
 <polygon points="162,324.2 124.5,286.7 147,354.2" fill="#7f1d1d" stroke="#f97316" stroke-width="2" />
 <polygon points="222,324.2 259.5,286.7 237,354.2" fill="#7f1d1d" stroke="#f97316" stroke-width="2" />
-<rect x="181.5" y="351.2" width="6" height="15" rx="2" fill="#1e293b" />
-<rect x="196.5" y="351.2" width="6" height="15" rx="2" fill="#1e293b" />
-<rect x="177" y="327.2" width="30" height="27" rx="4" fill="#ef4444" />
-<rect x="183" y="333.2" width="18" height="15" rx="2" fill="#f97316" />
-<circle cx="192" cy="312.2" r="15" fill="#ef4444" />
-<rect x="183" y="309.2" width="18" height="6" rx="1" fill="#0f172a" />
-<circle cx="187.5" cy="312.2" r="2.25" fill="#f97316" />
-<circle cx="196.5" cy="312.2" r="2.25" fill="#f97316" />
-<rect x="204" y="333.2" width="24" height="6" fill="#94a3b8" />
-<rect x="210" y="334.7" width="15" height="3" fill="#ef4444" />
-<path d="M 207 318.2 A 27 27 0 0 1 231 351.2" fill="none" stroke="#f97316" stroke-width="4.5" stroke-linecap="round" />
+<rect x="181.5" y="348.6019237886467" width="6" height="15" rx="2" fill="#1e293b" />
+<rect x="196.5" y="348.6019237886467" width="6" height="15" rx="2" fill="#1e293b" />
+<rect x="177" y="324.6019237886467" width="30" height="27" rx="4" fill="#ef4444" />
+<rect x="183" y="330.6019237886467" width="18" height="15" rx="2" fill="#f97316" />
+<circle cx="192" cy="309.6019237886467" r="15" fill="#ef4444" />
+<rect x="183" y="306.6019237886467" width="18" height="6" rx="1" fill="#0f172a" />
+<circle cx="187.5" cy="309.6019237886467" r="2.25" fill="#f97316" />
+<circle cx="196.5" cy="309.6019237886467" r="2.25" fill="#f97316" />
+<rect x="204" y="330.6019237886467" width="24" height="6" fill="#94a3b8" />
+<rect x="210" y="332.1019237886467" width="15" height="3" fill="#ef4444" />
+<path d="M 207 315.6019237886467 A 27 27 0 0 1 231 348.6019237886467" fill="none" stroke="#f97316" stroke-width="4.5" stroke-linecap="round" />
 <ellipse cx="320" cy="371.2" rx="24" ry="7.5" fill="rgba(0,0,0,0.35)" />
 <polygon points="290,324.2 252.5,286.7 275,354.2" fill="#7f1d1d" stroke="#f97316" stroke-width="2" />
 <polygon points="350,324.2 387.5,286.7 365,354.2" fill="#7f1d1d" stroke="#f97316" stroke-width="2" />
-<rect x="309.5" y="351.2" width="6" height="15" rx="2" fill="#1e293b" />
-<rect x="324.5" y="351.2" width="6" height="15" rx="2" fill="#1e293b" />
-<rect x="305" y="327.2" width="30" height="27" rx="4" fill="#ef4444" />
-<rect x="311" y="333.2" width="18" height="15" rx="2" fill="#f97316" />
-<circle cx="320" cy="312.2" r="15" fill="#ef4444" />
-<rect x="311" y="309.2" width="18" height="6" rx="1" fill="#0f172a" />
-<circle cx="315.5" cy="312.2" r="2.25" fill="#f97316" />
-<circle cx="324.5" cy="312.2" r="2.25" fill="#f97316" />
-<rect x="332" y="333.2" width="24" height="6" fill="#94a3b8" />
-<rect x="338" y="334.7" width="15" height="3" fill="#ef4444" />
-<path d="M 335 318.2 A 27 27 0 0 1 359 351.2" fill="none" stroke="#f97316" stroke-width="4.5" stroke-linecap="round" />
+<rect x="309.5" y="348.6019237886467" width="6" height="15" rx="2" fill="#1e293b" />
+<rect x="324.5" y="348.6019237886467" width="6" height="15" rx="2" fill="#1e293b" />
+<rect x="305" y="324.6019237886467" width="30" height="27" rx="4" fill="#ef4444" />
+<rect x="311" y="330.6019237886467" width="18" height="15" rx="2" fill="#f97316" />
+<circle cx="320" cy="309.6019237886467" r="15" fill="#ef4444" />
+<rect x="311" y="306.6019237886467" width="18" height="6" rx="1" fill="#0f172a" />
+<circle cx="315.5" cy="309.6019237886467" r="2.25" fill="#f97316" />
+<circle cx="324.5" cy="309.6019237886467" r="2.25" fill="#f97316" />
+<rect x="332" y="330.6019237886467" width="24" height="6" fill="#94a3b8" />
+<rect x="338" y="332.1019237886467" width="15" height="3" fill="#ef4444" />
+<path d="M 335 315.6019237886467 A 27 27 0 0 1 359 348.6019237886467" fill="none" stroke="#f97316" stroke-width="4.5" stroke-linecap="round" />
 <ellipse cx="448" cy="371.2" rx="24" ry="7.5" fill="rgba(0,0,0,0.35)" />
 <polygon points="418,324.2 380.5,286.7 403,354.2" fill="#7f1d1d" stroke="#f97316" stroke-width="2" />
 <polygon points="478,324.2 515.5,286.7 493,354.2" fill="#7f1d1d" stroke="#f97316" stroke-width="2" />

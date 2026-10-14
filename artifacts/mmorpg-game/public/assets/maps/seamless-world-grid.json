@@ -1,0 +1,66 @@
+{
+  "worldName": "Chiến Long Bá — Đại Lục Long Tộc",
+  "mapSize": {
+    "width": 140,
+    "height": 180,
+    "unit": "meters"
+  },
+  "zones": [
+    {
+      "id": "SAFE_VILLAGE",
+      "name": "Làng Long Tộc",
+      "type": "safe_zone",
+      "center": {
+        "x": 0,
+        "z": 0
+      },
+      "radius": 18,
+      "features": [
+        "Healing Fountain (+5% HP/s)",
+        "Merchant NPC",
+        "Leaderboard Monument",
+        "Elder NPC"
+      ],
+      "lightColor": "#f59e0b"
+    },
+    {
+      "id": "WILDERNESS",
+      "name": "Đấu Trường Hoang Dã",
+      "type": "wilderness",
+      "center": {
+        "x": 0,
+        "z": 0
+      },
+      "innerRadius": 18,
+      "outerRadius": 50,
+      "features": [
+        "Ancient Broken Pillars",
+        "Mob Patrol Spawners",
+        "Loot Drops"
+      ],
+      "lightColor": "#6366f1"
+    },
+    {
+      "id": "BOSS_ALTAR",
+      "name": "Cấm Địa Săn Boss",
+      "type": "boss_raid",
+      "center": {
+        "x": 0,
+        "z": -70
+      },
+      "radius": 18,
+      "entryBridge": {
+        "zStart": -40,
+        "zEnd": -52,
+        "width": 7
+      },
+      "features": [
+        "Molten Lava Moat",
+        "Dragon Pentagram Seal",
+        "6 Dragon Horn Pillars",
+        "Boss 2 Phase"
+      ],
+      "lightColor": "#ef4444"
+    }
+  ]
+}

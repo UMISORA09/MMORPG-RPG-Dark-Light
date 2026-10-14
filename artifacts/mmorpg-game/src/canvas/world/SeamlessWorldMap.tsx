@@ -3,6 +3,7 @@ import * as THREE from "three";
 import { useFrame } from "@react-three/fiber";
 import { Text } from "@react-three/drei";
 import { SpriteBillboard25D } from "../sprites/SpriteBillboard25D";
+import { ZoneDetector } from "./ZoneDetector";
 import { useGameStore } from "@/game/useGameStore";
 
 // ==============================================================================
@@ -29,6 +30,9 @@ export const SeamlessWorldMap = memo(function SeamlessWorldMap() {
 
   return (
     <group>
+      {/* ── REAL-TIME ZONE DETECTOR & AUDIO / HUD SIGNALS ── */}
+      <ZoneDetector />
+
       {/* ── ATMOSPHERIC LIGHTING & FOG ── */}
       <ambientLight color="#1e1b4b" intensity={0.75} />
       

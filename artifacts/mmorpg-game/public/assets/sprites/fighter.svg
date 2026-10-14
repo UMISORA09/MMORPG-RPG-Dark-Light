@@ -108,29 +108,29 @@
 <rect x="44" y="166.6" width="10" height="2" fill="#ffaa00" />
 <path d="M 42 155.6 A 18 18 0 0 1 58 177.6" fill="none" stroke="#f59e0b" stroke-width="3" stroke-linecap="round" />
 <ellipse cx="96" cy="185.6" rx="16" ry="5" fill="rgba(0,0,0,0.35)" />
-<rect x="89" y="177.6" width="4" height="10" rx="2" fill="#1e293b" />
-<rect x="99" y="177.6" width="4" height="10" rx="2" fill="#1e293b" />
-<rect x="86" y="161.6" width="20" height="18" rx="4" fill="#ffaa00" />
-<rect x="90" y="165.6" width="12" height="10" rx="2" fill="#f59e0b" />
-<circle cx="96" cy="151.6" r="10" fill="#ffaa00" />
-<rect x="90" y="149.6" width="12" height="4" rx="1" fill="#0f172a" />
-<circle cx="93" cy="151.6" r="1.5" fill="#f59e0b" />
-<circle cx="99" cy="151.6" r="1.5" fill="#f59e0b" />
-<rect x="104" y="165.6" width="16" height="4" fill="#94a3b8" />
-<rect x="108" y="166.6" width="10" height="2" fill="#ffaa00" />
-<path d="M 106 155.6 A 18 18 0 0 1 122 177.6" fill="none" stroke="#f59e0b" stroke-width="3" stroke-linecap="round" />
+<rect x="89" y="175.86794919243113" width="4" height="10" rx="2" fill="#1e293b" />
+<rect x="99" y="175.86794919243113" width="4" height="10" rx="2" fill="#1e293b" />
+<rect x="86" y="159.86794919243113" width="20" height="18" rx="4" fill="#ffaa00" />
+<rect x="90" y="163.86794919243113" width="12" height="10" rx="2" fill="#f59e0b" />
+<circle cx="96" cy="149.86794919243113" r="10" fill="#ffaa00" />
+<rect x="90" y="147.86794919243113" width="12" height="4" rx="1" fill="#0f172a" />
+<circle cx="93" cy="149.86794919243113" r="1.5" fill="#f59e0b" />
+<circle cx="99" cy="149.86794919243113" r="1.5" fill="#f59e0b" />
+<rect x="104" y="163.86794919243113" width="16" height="4" fill="#94a3b8" />
+<rect x="108" y="164.86794919243113" width="10" height="2" fill="#ffaa00" />
+<path d="M 106 153.86794919243113 A 18 18 0 0 1 122 175.86794919243113" fill="none" stroke="#f59e0b" stroke-width="3" stroke-linecap="round" />
 <ellipse cx="160" cy="185.6" rx="16" ry="5" fill="rgba(0,0,0,0.35)" />
-<rect x="153" y="177.6" width="4" height="10" rx="2" fill="#1e293b" />
-<rect x="163" y="177.6" width="4" height="10" rx="2" fill="#1e293b" />
-<rect x="150" y="161.6" width="20" height="18" rx="4" fill="#ffaa00" />
-<rect x="154" y="165.6" width="12" height="10" rx="2" fill="#f59e0b" />
-<circle cx="160" cy="151.6" r="10" fill="#ffaa00" />
-<rect x="154" y="149.6" width="12" height="4" rx="1" fill="#0f172a" />
-<circle cx="157" cy="151.6" r="1.5" fill="#f59e0b" />
-<circle cx="163" cy="151.6" r="1.5" fill="#f59e0b" />
-<rect x="168" y="165.6" width="16" height="4" fill="#94a3b8" />
-<rect x="172" y="166.6" width="10" height="2" fill="#ffaa00" />
-<path d="M 170 155.6 A 18 18 0 0 1 186 177.6" fill="none" stroke="#f59e0b" stroke-width="3" stroke-linecap="round" />
+<rect x="153" y="175.86794919243113" width="4" height="10" rx="2" fill="#1e293b" />
+<rect x="163" y="175.86794919243113" width="4" height="10" rx="2" fill="#1e293b" />
+<rect x="150" y="159.86794919243113" width="20" height="18" rx="4" fill="#ffaa00" />
+<rect x="154" y="163.86794919243113" width="12" height="10" rx="2" fill="#f59e0b" />
+<circle cx="160" cy="149.86794919243113" r="10" fill="#ffaa00" />
+<rect x="154" y="147.86794919243113" width="12" height="4" rx="1" fill="#0f172a" />
+<circle cx="157" cy="149.86794919243113" r="1.5" fill="#f59e0b" />
+<circle cx="163" cy="149.86794919243113" r="1.5" fill="#f59e0b" />
+<rect x="168" y="163.86794919243113" width="16" height="4" fill="#94a3b8" />
+<rect x="172" y="164.86794919243113" width="10" height="2" fill="#ffaa00" />
+<path d="M 170 153.86794919243113 A 18 18 0 0 1 186 175.86794919243113" fill="none" stroke="#f59e0b" stroke-width="3" stroke-linecap="round" />
 <ellipse cx="224" cy="185.6" rx="16" ry="5" fill="rgba(0,0,0,0.35)" />
 <rect x="217" y="177.6" width="4" height="10" rx="2" fill="#1e293b" />
 <rect x="227" y="177.6" width="4" height="10" rx="2" fill="#1e293b" />
