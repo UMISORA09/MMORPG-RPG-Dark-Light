@@ -98,8 +98,8 @@ function LockToast({ canvasRef }: { canvasRef: React.RefObject<HTMLCanvasElement
 
   if (menuOpen) return null;
 
-  const mobileHint  = "Joystick di chuyển · Nút J chém · Nút K bắn · 1/2/3 Chiêu thức";
-  const desktopHint = "Click 3D để xoay chuột · WASD di chuyển · J chém · K bắn · I Túi đồ · B Shop";
+  const mobileHint  = "Joystick di chuyển · Nút J chém · Nút K bắn · 1/2/3 Chiêu thức · V Đổi 2.5D/3D";
+  const desktopHint = "Click 3D để xoay chuột · WASD di chuyển · J chém · K bắn · V Đổi 2.5D/3D RPG · I Túi đồ · B Shop";
 
   return (
     <div

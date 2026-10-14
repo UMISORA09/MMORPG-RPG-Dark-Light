@@ -5,8 +5,13 @@
 export { SpriteBillboard25D } from "./sprites/SpriteBillboard25D";
 export { getOrCreateProceduralSpritesheet } from "./sprites/ProceduralSpriteFallback";
 export { SeamlessWorldMap, ZoneDetector } from "./world";
-export { PlayerEntity25D } from "./entities/PlayerEntity25D";
-export { MonsterManager25D } from "./entities/MonsterManager25D";
+export {
+  PlayerEntity25D,
+  RPGCharacterModel3D,
+  ProceduralGreyboxCharacter,
+  WeaponSocket3D,
+  MonsterManager25D,
+} from "./entities";
 export { LootManager3D } from "./loot/LootManager3D";
 export * from "./loot/loot.types";
 

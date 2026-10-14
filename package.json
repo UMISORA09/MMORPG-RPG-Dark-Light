@@ -14,6 +14,7 @@
     "build:all": "pnpm run typecheck && pnpm run build:server && pnpm run build:game",
     "build": "pnpm run build:all",
     "generate:sprites": "pnpm --filter @workspace/scripts run generate:sprites",
+    "pipeline:rpg-assets": "pnpm --filter @workspace/scripts run pipeline:rpg-assets",
     "start": "pnpm --filter @workspace/api-server run start"
   },
   "private": true,

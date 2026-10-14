@@ -14,7 +14,8 @@ import {
   Zap, 
   Sword,
   Target,
-  ChevronRight
+  ChevronRight,
+  Box
 } from "lucide-react";
 import { InventoryModal } from "../modals/InventoryModal";
 
@@ -60,6 +61,8 @@ export const UnifiedGameHUD = memo(function UnifiedGameHUD({
   const triggerComboAttack = useGameWorldStore((s) => s.triggerComboAttack);
   const triggerSkill = useGameWorldStore((s) => s.triggerSkill);
   const setActiveModal = useGameWorldStore((s) => s.setActiveModal);
+  const characterRenderMode = useGameWorldStore((s) => s.characterRenderMode);
+  const toggleCharacterRenderMode = useGameWorldStore((s) => s.toggleCharacterRenderMode);
 
   // Compute percentages
   const hpPct = Math.max(0, Math.min(1, playerHealth / Math.max(1, playerMaxHealth)));
@@ -337,6 +340,22 @@ export const UnifiedGameHUD = memo(function UnifiedGameHUD({
 
         {/* Top-Right: Glassmorphism Modals Navigation */}
         <div className="font-sans pointer-events-auto flex items-center gap-2">
+          {/* Mode Toggle (2.5D Sprite <-> 3D Model) */}
+          <button
+            onClick={toggleCharacterRenderMode}
+            className={`flex items-center gap-1.5 px-3 py-2 border rounded-xl text-xs font-black uppercase tracking-wider transition shadow-lg backdrop-blur-md cursor-pointer ${
+              characterRenderMode === "3d_model"
+                ? "bg-emerald-950/80 border-emerald-500/80 text-emerald-300 shadow-[0_0_12px_rgba(16,185,129,0.3)]"
+                : "bg-slate-950/80 border-slate-700 text-slate-300 hover:text-white"
+            }`}
+            title="Chuyển chế độ hiển thị 2.5D Billboard / 3D Model (Phím V)"
+          >
+            <Box className="w-4 h-4 text-emerald-400" />
+            <span className="hidden sm:inline">
+              {characterRenderMode === "3d_model" ? "Mode: 3D RPG (V)" : "Mode: 2.5D (V)"}
+            </span>
+          </button>
+
           {/* Inventory (I) */}
           <button
             onClick={() => setActiveModal("inventory")}

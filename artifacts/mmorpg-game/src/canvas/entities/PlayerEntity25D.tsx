@@ -2,6 +2,7 @@ import { memo, useRef, useEffect, useMemo } from "react";
 import * as THREE from "three";
 import { useFrame, useThree } from "@react-three/fiber";
 import { SpriteBillboard25D } from "../sprites/SpriteBillboard25D";
+import { RPGCharacterModel3D } from "./RPGCharacterModel3D";
 import { createMultiLayerCanvasTexture } from "../sprites/MultiLayerSpriteGenerator";
 import { useGameWorldStore } from "@/stores/useGameWorldStore";
 import { mobileState } from "@/game/mobileControls";
@@ -26,6 +27,7 @@ if (typeof window !== "undefined") {
     if (k === "b") useGameWorldStore.getState().setActiveModal("shop");
     if (k === "l" && !e.ctrlKey) useGameWorldStore.getState().setActiveModal("leaderboard");
     if (k === "h") useGameWorldStore.getState().setActiveModal("battleLog");
+    if (k === "v") useGameWorldStore.getState().toggleCharacterRenderMode();
     if (e.key === "Escape") useGameWorldStore.getState().closeActiveModal();
   });
 
@@ -48,6 +50,7 @@ export const PlayerEntity25D = memo(function PlayerEntity25D() {
   const playerClassId = useGameWorldStore((s) => s.playerClassId);
   const playerColorHex = useGameWorldStore((s) => s.playerColorHex);
   const isInvincible = useGameWorldStore((s) => s.isInvincible);
+  const characterRenderMode = useGameWorldStore((s) => s.characterRenderMode);
   const cameraShakeIntensity = useGameWorldStore((s) => s.cameraShakeIntensity);
 
   const updatePlayerPosition = useGameWorldStore((s) => s.updatePlayerPosition);
@@ -180,30 +183,50 @@ export const PlayerEntity25D = memo(function PlayerEntity25D() {
 
   return (
     <group>
-      {/* 2.5D Billboard Sprite for Player with Multi-Layer Cel-Shading */}
-      <SpriteBillboard25D
-        position={playerPosition}
-        state={playerAnimState}
-        facingLeft={playerFacingLeft}
-        textureKey={`player_${playerClassId}`}
-        customTexture={customAnatomyTexture}
-        color={playerColorHex}
-        weaponType={
-          playerClassId === "gunner"
-            ? "gun"
-            : playerClassId === "assassin"
-            ? "daggers"
-            : playerClassId === "tank"
-            ? "shield"
-            : "sword"
-        }
-        name={playerName}
-        level={playerLevel}
-        hp={playerHealth}
-        maxHp={playerMaxHealth}
-        isPlayer={true}
-        isInvincible={isInvincible}
-      />
+      {characterRenderMode === "3d_model" ? (
+        <group position={playerPosition}>
+          <RPGCharacterModel3D
+            classId={playerClassId}
+            animState={playerAnimState}
+            facingLeft={playerFacingLeft}
+            color={playerColorHex}
+            weaponType={
+              playerClassId === "gunner"
+                ? "gun"
+                : playerClassId === "assassin"
+                ? "daggers"
+                : playerClassId === "tank"
+                ? "shield"
+                : "sword"
+            }
+          />
+        </group>
+      ) : (
+        /* 2.5D Billboard Sprite for Player with Multi-Layer Cel-Shading */
+        <SpriteBillboard25D
+          position={playerPosition}
+          state={playerAnimState}
+          facingLeft={playerFacingLeft}
+          textureKey={`player_${playerClassId}`}
+          customTexture={customAnatomyTexture}
+          color={playerColorHex}
+          weaponType={
+            playerClassId === "gunner"
+              ? "gun"
+              : playerClassId === "assassin"
+              ? "daggers"
+              : playerClassId === "tank"
+              ? "shield"
+              : "sword"
+          }
+          name={playerName}
+          level={playerLevel}
+          hp={playerHealth}
+          maxHp={playerMaxHealth}
+          isPlayer={true}
+          isInvincible={isInvincible}
+        />
+      )}
     </group>
   );
 });

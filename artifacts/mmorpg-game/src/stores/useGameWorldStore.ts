@@ -87,6 +87,7 @@ export interface GameWorldState {
   playerColorHex: string;
   isInvincible: boolean;
   invincibleTimer: number;
+  characterRenderMode: "2.5d_sprite" | "3d_model";
 
   // --- Combat Combo & Passive States ---
   comboIndex: 0 | 1 | 2;
@@ -179,6 +180,7 @@ export interface GameWorldState {
     castingTimer?: number;
   }) => void;
   setZone: (zone: WorldZone, notification?: string) => void;
+  toggleCharacterRenderMode: () => void;
   setActiveModal: (modal: "inventory" | "shop" | "leaderboard" | "battleLog" | null) => void;
   closeActiveModal: () => void;
   syncFromBackendCharacter: (char: any) => void;
@@ -216,6 +218,7 @@ export const useGameWorldStore = create<GameWorldState>((set, get) => ({
   playerColorHex: "#f97316",
   isInvincible: false,
   invincibleTimer: 0,
+  characterRenderMode: "2.5d_sprite",
 
   // Combat Combo & Passive States
   comboIndex: 0,
@@ -719,6 +722,12 @@ export const useGameWorldStore = create<GameWorldState>((set, get) => ({
         zoneNotificationTimer: 4.0,
       });
     }
+  },
+
+  toggleCharacterRenderMode: () => {
+    set((s) => ({
+      characterRenderMode: s.characterRenderMode === "2.5d_sprite" ? "3d_model" : "2.5d_sprite",
+    }));
   },
 
   setActiveModal: (modal) => {

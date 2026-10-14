@@ -1,0 +1,195 @@
+{
+  "pipelineVersion": "2.5.0-pro",
+  "animationClips": [
+    "idle",
+    "run",
+    "attack_slash",
+    "skill_cast",
+    "death"
+  ],
+  "socketStandards": [
+    "weapon_slot",
+    "head_socket",
+    "back_socket"
+  ],
+  "models": {
+    "hero_base": {
+      "type": "character",
+      "name": "Hero Base Rig",
+      "file": "/assets/models/characters/hero_base.glb",
+      "size": [
+        0.8,
+        1.8,
+        0.6
+      ],
+      "hasWeaponSocket": true,
+      "animations": [
+        "idle",
+        "run",
+        "attack_slash",
+        "skill_cast",
+        "death"
+      ]
+    },
+    "fighter": {
+      "type": "character",
+      "name": "Cuồng Long Chiến Binh",
+      "file": "/assets/models/characters/fighter.glb",
+      "size": [
+        0.9,
+        1.9,
+        0.7
+      ],
+      "hasWeaponSocket": true,
+      "animations": [
+        "idle",
+        "run",
+        "attack_slash",
+        "skill_cast",
+        "death"
+      ]
+    },
+    "assassin": {
+      "type": "character",
+      "name": "Ám Dạ Sát Thủ",
+      "file": "/assets/models/characters/assassin.glb",
+      "size": [
+        0.75,
+        1.75,
+        0.55
+      ],
+      "hasWeaponSocket": true,
+      "animations": [
+        "idle",
+        "run",
+        "attack_slash",
+        "skill_cast",
+        "death"
+      ]
+    },
+    "tank": {
+      "type": "character",
+      "name": "Hoàng Kim Hộ Vệ",
+      "file": "/assets/models/characters/tank.glb",
+      "size": [
+        1.1,
+        2,
+        0.9
+      ],
+      "hasWeaponSocket": true,
+      "animations": [
+        "idle",
+        "run",
+        "attack_slash",
+        "skill_cast",
+        "death"
+      ]
+    },
+    "gunner": {
+      "type": "character",
+      "name": "Lượng Tử Xạ Thủ",
+      "file": "/assets/models/characters/gunner.glb",
+      "size": [
+        0.8,
+        1.8,
+        0.6
+      ],
+      "hasWeaponSocket": true,
+      "animations": [
+        "idle",
+        "run",
+        "attack_slash",
+        "skill_cast",
+        "death"
+      ]
+    },
+    "slime": {
+      "type": "monster",
+      "name": "Slime Rừng Sâu",
+      "file": "/assets/models/monsters/slime.glb",
+      "size": [
+        1.2,
+        0.8,
+        1.2
+      ],
+      "animations": [
+        "idle",
+        "run",
+        "attack_slash",
+        "death"
+      ]
+    },
+    "wolf": {
+      "type": "monster",
+      "name": "Sói Hoang Hoang Dã",
+      "file": "/assets/models/monsters/wolf.glb",
+      "size": [
+        0.8,
+        1.1,
+        1.8
+      ],
+      "animations": [
+        "idle",
+        "run",
+        "attack_slash",
+        "death"
+      ]
+    },
+    "dragon_boss": {
+      "type": "monster",
+      "name": "Rồng Lửa Cổ Đại",
+      "file": "/assets/models/monsters/dragon_boss.glb",
+      "size": [
+        3.2,
+        4.5,
+        4
+      ],
+      "animations": [
+        "idle",
+        "run",
+        "attack_slash",
+        "death"
+      ]
+    },
+    "weapon_sword": {
+      "type": "weapon",
+      "name": "Thanh Long Kiếm",
+      "file": "/assets/models/weapons/weapon_sword.glb",
+      "size": [
+        0.12,
+        1.4,
+        0.08
+      ]
+    },
+    "weapon_daggers": {
+      "type": "weapon",
+      "name": "Song Đao Ám Ảnh",
+      "file": "/assets/models/weapons/weapon_daggers.glb",
+      "size": [
+        0.08,
+        0.8,
+        0.06
+      ]
+    },
+    "weapon_blaster": {
+      "type": "weapon",
+      "name": "Súng Laze Lượng Tử",
+      "file": "/assets/models/weapons/weapon_blaster.glb",
+      "size": [
+        0.15,
+        0.35,
+        0.7
+      ]
+    },
+    "weapon_shield": {
+      "type": "weapon",
+      "name": "Khiên Thánh Hoàng Kim",
+      "file": "/assets/models/weapons/weapon_shield.glb",
+      "size": [
+        0.8,
+        1.1,
+        0.15
+      ]
+    }
+  }
+}

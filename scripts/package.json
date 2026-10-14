@@ -6,6 +6,7 @@
   "scripts": {
     "hello": "tsx ./src/hello.ts",
     "generate:sprites": "tsx ./src/generate-sprites.ts",
+    "pipeline:rpg-assets": "tsx ./src/rpg-asset-pipeline.ts",
     "generate:prompts": "tsx ./src/generate-ai-prompts.ts",
     "typecheck": "tsc -p tsconfig.json --noEmit"
   },
