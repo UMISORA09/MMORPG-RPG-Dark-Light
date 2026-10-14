@@ -60,10 +60,10 @@ Bất kỳ khi nào tạo nhân vật mới, thêm NPC, trang bị thời trang 
 - **Tạo Hình Nam:** Thánh Hiệp Sĩ tóc vàng kim bồng bềnh, cởi trần khoe cơ bắp 6 múi, giáp vai rồng hoàng kim, tay trái cầm Đại Khiên Thần Sư Tử chạm ngọc cyan, tay phải cầm Kiếm Ánh Sáng bản dày.
 - **Tạo Hình Nữ:** Nữ Thần Valkyrie tóc vàng óng, đội vương miện hoàng gia, áo giáp vàng cúp ngực khoét sâu tôn vòng 1 quyến rũ, khiên hộ mệnh lông vũ cánh én, kiếm lá liễu thanh mảnh.
 
-### 2. Chiến Binh (Fighter) — Long Quyền Lôi Điện
-- **Màu Chủ Đạo:** Đỏ Lửa Rồng (`#ef4444`) & Cam Cháy (`#f97316`).
-- **Tạo Hình Nam:** Đấu Sĩ tóc đỏ gai góc, cởi trần lộ hình xăm Huyết Long uốn lượn qua bả vai và cơ bụng 6 múi săn chắc, đai lưng võ đạo đỏ, găng tay lôi điện bốc lửa.
-- **Tạo Hình Nữ:** Nữ Quyền Vương tóc đuôi ngựa đỏ rực, áo croptop thể thao ôm sát khoe vòng 1 và cơ bụng số 11 săn chắc, găng đấm bọc thép hừng hực tia lửa.
+### 2. Chiến Binh (Fighter) — Đại Kiếm Hộ Quốc (Chuẩn Theo Ảnh Mẫu Mới)
+- **Màu Chủ Đạo:** Thép Bạc Titan, Đỏ Thẫm Rực Lửa, Xanh Lục Bảo & Vàng Hoàng Gia.
+- **Tạo Hình Nam (Ảnh Mẫu Chuẩn):** Kiếm Sĩ tóc vàng lãng tử với chùm đuôi ngựa cao bay lượn kiêu hùng, choàng khăn quàng xanh lục bảo, mặc giáp sắt sáng bóng kết hợp áo bào đỏ xẻ tà, hai tay vác **Đại Kiếm Khổng Lồ (Two-Handed Greatsword)** ngang vai với tư thế thủ bộ cực kỳ dũng mãnh và khí chất soái ca hào sảng.
+- **Tạo Hình Nữ (Ảnh Mẫu Chuẩn):** Nữ Kiếm Sư / Nữ Hiệp Sĩ tóc vàng tết bím quyến rũ, ánh mắt xanh biếc kiên nghị, khoác bộ chiến giáp hắc kim (Dark Plate Armor) ôm trọn vóc dáng kiêu kỳ gợi cảm, dải yếm ngọc lục bảo thêu hoa văn cổ, tay chống **Đại Kiếm Thần Binh Tinh Thể** cắm sàn tỏa ra luồng đao khí / hỏa vân đỏ rực rỡ uốn lượn xung quanh.
 
 ### 3. Sát Thủ (Assassin) — Ảnh Vũ Đoạt Hồn (Chuẩn Theo Ảnh Mẫu)
 - **Màu Chủ Đạo:** Tím Đêm Huyền Bí (`#a855f7`) & Trắng Bạc / Đen Khói.
