@@ -1,28 +1,31 @@
-import { memo, useRef, useEffect } from "react";
+import { memo, useRef, useEffect, useMemo } from "react";
 import * as THREE from "three";
 import { useFrame, useThree } from "@react-three/fiber";
 import { SpriteBillboard25D } from "../sprites/SpriteBillboard25D";
+import { createMultiLayerCanvasTexture } from "../sprites/MultiLayerSpriteGenerator";
 import { useGameWorldStore } from "@/stores/useGameWorldStore";
 import { mobileState } from "@/game/mobileControls";
 import { cameraControls } from "@/game/cameraControls";
+import { getCharacterBlueprint } from "@/skills";
 
 // ── Keyboard State Tracker ──
 const keys = new Set<string>();
 
 if (typeof window !== "undefined") {
   window.addEventListener("keydown", (e) => {
-    keys.add(e.key.toLowerCase());
-    if ([" ", "arrowup", "arrowdown", "arrowleft", "arrowright"].includes(e.key.toLowerCase())) {
+    const k = e.key.toLowerCase();
+    keys.add(k);
+    if ([" ", "arrowup", "arrowdown", "arrowleft", "arrowright"].includes(k)) {
       e.preventDefault();
     }
-    // Number keys for skills
-    if (e.key === "1") useGameWorldStore.getState().triggerSkill(1);
-    if (e.key === "2") useGameWorldStore.getState().triggerSkill(2);
-    if (e.key === "3") useGameWorldStore.getState().triggerSkill(3);
-    if (e.key === "i" || e.key === "I") useGameWorldStore.getState().setActiveModal("inventory");
-    if (e.key === "b" || e.key === "B") useGameWorldStore.getState().setActiveModal("shop");
-    if (e.key === "l" || e.key === "L") useGameWorldStore.getState().setActiveModal("leaderboard");
-    if (e.key === "h" || e.key === "H") useGameWorldStore.getState().setActiveModal("battleLog");
+    // Number and Action keys for skills
+    if (e.key === "1" || k === "k") useGameWorldStore.getState().triggerSkill(1);
+    if (e.key === "2" || k === "l") useGameWorldStore.getState().triggerSkill(2);
+    if (e.key === "3" || k === "u") useGameWorldStore.getState().triggerSkill(3);
+    if (k === "i") useGameWorldStore.getState().setActiveModal("inventory");
+    if (k === "b") useGameWorldStore.getState().setActiveModal("shop");
+    if (k === "l" && !e.ctrlKey) useGameWorldStore.getState().setActiveModal("leaderboard");
+    if (k === "h") useGameWorldStore.getState().setActiveModal("battleLog");
     if (e.key === "Escape") useGameWorldStore.getState().closeActiveModal();
   });
 
@@ -45,10 +48,10 @@ export const PlayerEntity25D = memo(function PlayerEntity25D() {
   const playerClassId = useGameWorldStore((s) => s.playerClassId);
   const playerColorHex = useGameWorldStore((s) => s.playerColorHex);
   const isInvincible = useGameWorldStore((s) => s.isInvincible);
+  const cameraShakeIntensity = useGameWorldStore((s) => s.cameraShakeIntensity);
 
   const updatePlayerPosition = useGameWorldStore((s) => s.updatePlayerPosition);
-  const addBullet = useGameWorldStore((s) => s.addBullet);
-  const addSlashEffect = useGameWorldStore((s) => s.addSlashEffect);
+  const triggerComboAttack = useGameWorldStore((s) => s.triggerComboAttack);
   const tickWorld = useGameWorldStore((s) => s.tickWorld);
 
   // Local physics variables
@@ -63,8 +66,14 @@ export const PlayerEntity25D = memo(function PlayerEntity25D() {
   const jumpForce = 9.0;
   const gravity = -22.0;
 
-  let nextBulletId = 1000;
-  let nextSlashId = 2000;
+  // Multi-layer procedural texture from blueprint anatomy
+  const blueprint = useMemo(() => getCharacterBlueprint(playerClassId), [playerClassId]);
+  const customAnatomyTexture = useMemo(() => {
+    return createMultiLayerCanvasTexture({
+      anatomy: blueprint.anatomy,
+      frameSize: 128,
+    });
+  }, [blueprint]);
 
   useFrame((_, delta) => {
     const dt = Math.min(delta, 0.05);
@@ -120,42 +129,19 @@ export const PlayerEntity25D = memo(function PlayerEntity25D() {
     pos.current.x += moveX * speed * dt;
     pos.current.z += moveZ * speed * dt;
 
-    // 4. Attack / Skill execution
-    const wantsMelee = keys.has("j") || mobileState.attack;
-    const wantsShoot = keys.has("k") || mobileState.shoot;
+    // 4. Attack Execution (3-step Combo Chain)
+    const wantsAttack = keys.has("j") || mobileState.attack || mobileState.shoot;
 
     let currentAnim: "idle" | "run" | "attack" | "hurt" = "idle";
 
-    if (wantsMelee || wantsShoot) {
+    if (wantsAttack) {
       if (attackCooldown.current <= 0) {
-        attackCooldown.current = 0.32;
-        animLockTimer.current = 0.35;
+        attackCooldown.current = 0.28;
+        animLockTimer.current = 0.32;
         mobileState.attack = false;
         mobileState.shoot = false;
 
-        const forwardDir = facingLeftRef.current ? -1 : 1;
-
-        if (playerClassId === "gunner" || wantsShoot) {
-          // Spawn 3D Energy Bullet
-          addBullet({
-            id: nextBulletId++,
-            position: pos.current.clone().add(new THREE.Vector3(forwardDir * 0.8, 1.2, 0)),
-            velocity: new THREE.Vector3(forwardDir * 18, 0, 0),
-            damage: 45,
-            lifetime: 2.0,
-            color: "#38bdf8",
-          });
-        } else {
-          // Spawn Melee 3D Slash VFX / Shockwave
-          addSlashEffect({
-            id: nextSlashId++,
-            position: pos.current.clone().add(new THREE.Vector3(forwardDir * 1.4, 0.9, 0)),
-            radius: playerClassId === "tank" ? 3.5 : 2.2,
-            color: playerColorHex,
-            lifetime: 0.35,
-            maxLifetime: 0.35,
-          });
-        }
+        triggerComboAttack();
       }
     }
 
@@ -168,10 +154,17 @@ export const PlayerEntity25D = memo(function PlayerEntity25D() {
     // Push coordinates to Zustand store
     updatePlayerPosition(pos.current, facingLeftRef.current, currentAnim);
 
-    // 5. Smooth 2.5D Isometric Action Camera Follow (THREE.Vector3.lerp)
+    // 5. Smooth 2.5D Isometric Action Camera Follow with Shake Impulse
     const camOffset = new THREE.Vector3(0, 8.5, 13.5);
-    // Apply camera rotation around yaw if available
     camOffset.applyAxisAngle(new THREE.Vector3(0, 1, 0), cameraControls.yaw);
+
+    // Camera Shake jitter
+    if (cameraShakeIntensity > 0.02) {
+      const shakeAmt = cameraShakeIntensity * 0.45;
+      camOffset.x += (Math.random() - 0.5) * shakeAmt;
+      camOffset.y += (Math.random() - 0.5) * shakeAmt;
+      camOffset.z += (Math.random() - 0.5) * shakeAmt;
+    }
 
     const targetCamPos = pos.current.clone().add(camOffset);
     camera.position.lerp(targetCamPos, 0.08);
@@ -180,12 +173,13 @@ export const PlayerEntity25D = memo(function PlayerEntity25D() {
 
   return (
     <group>
-      {/* 2.5D Billboard Sprite for Player */}
+      {/* 2.5D Billboard Sprite for Player with Multi-Layer Cel-Shading */}
       <SpriteBillboard25D
         position={playerPosition}
         state={playerAnimState}
         facingLeft={playerFacingLeft}
         textureKey={`player_${playerClassId}`}
+        customTexture={customAnatomyTexture}
         color={playerColorHex}
         weaponType={
           playerClassId === "gunner"
