@@ -9,20 +9,20 @@ export interface ClassSpriteProps {
 
 const CHARACTER_ASSETS: Record<string, { male: string; female: string }> = {
   tank: {
-    male: '/assets/characters/tank_male.jpg',
-    female: '/assets/characters/tank_female.jpg',
+    male: '/assets/characters/tank_male.png',
+    female: '/assets/characters/tank_female.png',
   },
   fighter: {
-    male: '/assets/characters/fighter_male.svg',
-    female: '/assets/characters/fighter_female.svg',
+    male: '/assets/characters/fighter_male.png',
+    female: '/assets/characters/fighter_female.png',
   },
   assassin: {
-    male: '/assets/characters/assassin_male.svg',
+    male: '/assets/characters/assassin_male.png',
     female: '/assets/characters/assassin_female.png',
   },
   gunner: {
-    male: '/assets/characters/gunner_male.svg',
-    female: '/assets/characters/gunner_female.svg',
+    male: '/assets/characters/gunner_male.png',
+    female: '/assets/characters/gunner_female.png',
   },
 };
 
@@ -41,7 +41,8 @@ export function ClassSprite({ classId, gender = 'male', className = '', state = 
           src={asset}
           alt={`${normClass} ${normGender}`}
           onError={() => setLoadError(true)}
-          className="w-full h-full object-cover object-center filter drop-shadow-[0_10px_20px_rgba(0,0,0,0.65)] transform transition-transform duration-300 hover:scale-110 select-none pointer-events-none"
+          style={{ imageRendering: 'pixelated' }}
+          className="w-full h-full object-contain object-center filter drop-shadow-[0_10px_20px_rgba(0,0,0,0.65)] transform transition-transform duration-300 hover:scale-110 select-none pointer-events-none"
           loading="eager"
         />
       ) : (

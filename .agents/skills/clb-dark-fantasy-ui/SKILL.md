@@ -92,10 +92,18 @@ Bất kỳ khi nào thiết kế giao diện mới (như Shop, Túi Đồ - Inve
 
 ---
 
-## 5. CHECKLIST KIỂM DUYỆT TRƯỚC KHI BÀN GIAO GIAO DIỆN
+## 5. TÍCH HỢP TẠO HÌNH NHÂN VẬT ANIME PIXEL ART (CHARACTER ART SKILL)
+- Xem chi tiết tại: `c:\Cassavas\Game2.5D\.agents\skills\clb-character-art-style\SKILL.md`.
+- Toàn bộ ảnh nhân vật trong Modal / Sảnh chọn anh hùng tuân thủ chuẩn **Anime Action Pixel Art Sprite** (Nam đam mỹ 6 múi, Nữ quyến rũ sexy, tỷ lệ 3.5-4 đầu, outline 1px tối, 3-tone shading, `style={{ imageRendering: 'pixelated' }}`).
+
+---
+
+## 6. CHECKLIST KIỂM DUYỆT TRƯỚC KHI BÀN GIAO GIAO DIỆN
 1. [ ] Nền trang có đúng mã màu Slate Teal `#4c6e6f` với radial gradient không?
 2. [ ] Card hoặc Modal có sử dụng nền nâu đen than `#342a2b` với góc bo lớn `34px` không?
 3. [ ] Các ô nhập và khối phụ có sử dụng `#4a383a` với viền `#5d4648` không?
 4. [ ] Nút hành động chính có đúng chuẩn viên thuốc `rounded-full` màu cyan `#28c3e1` với chữ đậm `#1c161a` không?
-5. [ ] Font chữ tiêu đề rõ ràng, phụ đề dùng màu `#8e7a7c`?
-6. [ ] Chạy `pnpm run typecheck` đạt 0 lỗi?
+5. [ ] Tạo hình nhân vật sử dụng chuẩn Anime Pixel Art sắc nét từ `clb-character-art-style`?
+6. [ ] Font chữ tiêu đề rõ ràng, phụ đề dùng màu `#8e7a7c`?
+7. [ ] Chạy `pnpm run typecheck` đạt 0 lỗi?
+
