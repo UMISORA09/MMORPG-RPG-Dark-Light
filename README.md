@@ -1,6 +1,6 @@
 <div align="center">
 
-  <img src="./header-banner.svg" alt="Chiến Long Bí Sử — Realm of Legends Banner" width="100%" />
+  <img src="header-banner.png" alt="Chiến Long Bí Sử — Realm of Legends Banner" width="100%" />
 
   <br/><br/>
 
