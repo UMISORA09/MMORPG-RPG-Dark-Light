@@ -16,6 +16,7 @@ import {
   Target,
   ChevronRight
 } from "lucide-react";
+import { InventoryModal } from "../modals/InventoryModal";
 
 export interface UnifiedGameHUDProps {
   onLogout?: () => void;
@@ -555,6 +556,9 @@ export const UnifiedGameHUD = memo(function UnifiedGameHUD({
         {/* Right Space */}
         <div className="w-28" />
       </div>
+
+      {/* ── Modals Layer ── */}
+      <InventoryModal />
     </div>
   );
 });

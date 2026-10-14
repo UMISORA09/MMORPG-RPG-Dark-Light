@@ -7,6 +7,8 @@ export { getOrCreateProceduralSpritesheet } from "./sprites/ProceduralSpriteFall
 export { SeamlessWorldMap } from "./world/SeamlessWorldMap";
 export { PlayerEntity25D } from "./entities/PlayerEntity25D";
 export { MonsterManager25D } from "./entities/MonsterManager25D";
+export { LootManager3D } from "./loot/LootManager3D";
+export * from "./loot/loot.types";
 
 export { default as GameCamera } from "./camera/GameCamera";
 export { default as MenuCamera } from "./camera/MenuCamera";

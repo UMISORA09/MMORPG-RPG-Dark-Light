@@ -4,6 +4,7 @@ import {
   SeamlessWorldMap,
   PlayerEntity25D,
   MonsterManager25D,
+  LootManager3D,
   VFXManager,
   Particles as Stars,
 } from "../canvas";
@@ -235,6 +236,7 @@ const Game = memo(function Game({ onLogout }: GameProps) {
         <SeamlessWorldMap />
         <PlayerEntity25D />
         <MonsterManager25D />
+        <LootManager3D />
         <VFXManager />
         <Stars />
       </Canvas>

@@ -2,8 +2,24 @@ import { create } from "zustand";
 import * as THREE from "three";
 import { getCharacterBlueprint, type SkillVFXConfig, type SkillBlueprint, type CombatSkillSpec } from "@/skills";
 import { playCombatSFX } from "@/audio/CombatSoundSynth";
+import type { DroppedItem } from "@/canvas/loot/loot.types";
 
 export type WorldZone = "SAFE_VILLAGE" | "WILDERNESS" | "BOSS_ALTAR";
+
+export interface CharacterInventoryItem {
+  id: string;
+  itemId: string;
+  name: string;
+  type: string;
+  rarity: string;
+  equipped: boolean;
+  hpBoost: number;
+  atkBoost: number;
+  defBoost: number;
+  spdBoost: number;
+  icon: string;
+  color: string;
+}
 
 export interface FloatingTextItem {
   id: number;
@@ -91,6 +107,8 @@ export interface GameWorldState {
   bullets: BulletProjectile[];
   slashEffects: SlashEffect[];
   activeVFXList: ActiveVFXInstance[];
+  droppedLoot: DroppedItem[];
+  inventoryItems: CharacterInventoryItem[];
 
   // --- Overlay Modals ---
   activeModal: "inventory" | "shop" | "leaderboard" | "battleLog" | null;
@@ -98,12 +116,18 @@ export interface GameWorldState {
   // --- Callbacks for Database Sync ---
   onDefeatMonsterCallback: ((monsterId: string) => void) | null;
   onPlayerDefeatedCallback: (() => void) | null;
+  onItemAcquiredCallback: ((itemId: string) => void) | null;
 
   // --- Actions ---
   registerCombatCallbacks: (
     onDefeat: (monsterId: string) => void,
-    onPlayerDefeated: () => void
+    onPlayerDefeated: () => void,
+    onItemAcquired?: (itemId: string) => void
   ) => void;
+  spawnLoot: (items: DroppedItem[]) => void;
+  removeLoot: (id: string) => void;
+  pickUpLoot: (item: DroppedItem) => void;
+  equipItem: (id: string) => void;
   updatePlayerPosition: (
     pos: THREE.Vector3,
     facingLeft: boolean,
@@ -201,6 +225,23 @@ export const useGameWorldStore = create<GameWorldState>((set, get) => ({
   bullets: [],
   slashEffects: [],
   activeVFXList: [],
+  droppedLoot: [],
+  inventoryItems: [
+    {
+      id: "inv-init-1",
+      itemId: "iron_sword",
+      name: "Kiếm Sắt Khởi Đầu",
+      type: "weapon",
+      rarity: "common",
+      equipped: true,
+      hpBoost: 0,
+      atkBoost: 12,
+      defBoost: 2,
+      spdBoost: 0,
+      icon: "⚔️",
+      color: "#94a3b8",
+    },
+  ],
 
   // Modals
   activeModal: null,
@@ -208,12 +249,117 @@ export const useGameWorldStore = create<GameWorldState>((set, get) => ({
   // Callbacks
   onDefeatMonsterCallback: null,
   onPlayerDefeatedCallback: null,
+  onItemAcquiredCallback: null,
 
-  registerCombatCallbacks: (onDefeat, onPlayerDefeated) => {
+  registerCombatCallbacks: (onDefeat, onPlayerDefeated, onItemAcquired) => {
     set({
       onDefeatMonsterCallback: onDefeat,
       onPlayerDefeatedCallback: onPlayerDefeated,
+      onItemAcquiredCallback: onItemAcquired || null,
     });
+  },
+
+  spawnLoot: (items) => {
+    set((s) => ({
+      droppedLoot: [...s.droppedLoot, ...items],
+    }));
+  },
+
+  removeLoot: (id) => {
+    set((s) => ({
+      droppedLoot: s.droppedLoot.filter((item) => item.id !== id),
+    }));
+  },
+
+  pickUpLoot: (item) => {
+    const s = get();
+    // 1. Remove from ground
+    set((state) => ({
+      droppedLoot: state.droppedLoot.filter((x) => x.id !== item.id),
+    }));
+
+    // 2. Handle Pickup by Type
+    if (item.type === "gold") {
+      set((state) => ({
+        playerGold: state.playerGold + item.value,
+      }));
+      s.addFloatingText(`+${item.value} Vàng`, s.playerPosition.clone().add(new THREE.Vector3(0, 2.2, 0)), "#fbbf24");
+    } else if (item.type === "potion") {
+      const healAmt = item.value || 120;
+      set((state) => ({
+        playerHealth: Math.min(state.playerMaxHealth, state.playerHealth + healAmt),
+      }));
+      s.addFloatingText(`+${healAmt} HP`, s.playerPosition.clone().add(new THREE.Vector3(0, 2.2, 0)), "#22c55e");
+    } else {
+      // Equipment item (Weapon, Armor, Accessory)
+      const newInvItem: CharacterInventoryItem = {
+        id: `inv-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`,
+        itemId: item.itemId,
+        name: item.name,
+        type: item.type,
+        rarity: item.rarity,
+        equipped: false,
+        hpBoost: item.type === "armor" ? item.value * 2 : 0,
+        atkBoost: item.type === "weapon" ? item.value : 0,
+        defBoost: item.type === "armor" ? Math.round(item.value * 0.4) : 0,
+        spdBoost: item.type === "accessory" ? 0.4 : 0,
+        icon: item.icon,
+        color: item.color,
+      };
+
+      set((state) => ({
+        inventoryItems: [newInvItem, ...state.inventoryItems],
+      }));
+
+      s.addFloatingText(`✨ [${item.rarity.toUpperCase()}] ${item.name}`, s.playerPosition.clone().add(new THREE.Vector3(0, 2.6, 0)), item.color);
+
+      // Trigger backend database sync if callback registered
+      if (s.onItemAcquiredCallback) {
+        s.onItemAcquiredCallback(item.itemId);
+      }
+    }
+  },
+
+  equipItem: (id) => {
+    const s = get();
+    const target = s.inventoryItems.find((x) => x.id === id);
+    if (!target) return;
+
+    const willEquip = !target.equipped;
+
+    // Toggle equipment and adjust stats
+    set((state) => {
+      const updated = state.inventoryItems.map((it) => {
+        // Unequip any other item of same type if equipping
+        if (willEquip && it.type === target.type && it.id !== id) {
+          return { ...it, equipped: false };
+        }
+        if (it.id === id) {
+          return { ...it, equipped: willEquip };
+        }
+        return it;
+      });
+
+      // Recalculate bonuses from all equipped items
+      let bonusHp = 0;
+      let bonusDef = 0;
+      updated.filter((x) => x.equipped).forEach((x) => {
+        bonusHp += x.hpBoost;
+        bonusDef += x.defBoost;
+      });
+
+      const baseHp = 500;
+      const newMaxHp = baseHp + bonusHp;
+
+      return {
+        inventoryItems: updated,
+        playerMaxHealth: newMaxHp,
+        playerHealth: Math.min(newMaxHp, state.playerHealth),
+      };
+    });
+
+    s.addFloatingText(willEquip ? `Đã trang bị: ${target.name}` : `Đã tháo: ${target.name}`, s.playerPosition.clone().add(new THREE.Vector3(0, 2.2, 0)), willEquip ? "#38bdf8" : "#94a3b8");
+    playCombatSFX("blade_slash", 0.35);
   },
 
   updatePlayerPosition: (pos, facingLeft, animState) => {

@@ -18,6 +18,7 @@ import {
   type ActiveTelegraphZone,
   type AIState,
 } from "@/skills";
+import type { DroppedItem } from "../loot/loot.types";
 
 interface MonsterInstance {
   id: number;
@@ -163,6 +164,7 @@ export const MonsterManager25D = memo(function MonsterManager25D() {
   const setBossRaidState = useGameWorldStore((s) => s.setBossRaidState);
   const onDefeatMonsterCallback = useGameWorldStore((s) => s.onDefeatMonsterCallback);
   const spawnVFX = useGameWorldStore((s) => s.spawnVFX);
+  const spawnLoot = useGameWorldStore((s) => s.spawnLoot);
 
   const bullets = useGameWorldStore((s) => s.bullets);
   const slashEffects = useGameWorldStore((s) => s.slashEffects);
@@ -640,6 +642,207 @@ export const MonsterManager25D = memo(function MonsterManager25D() {
       m.currentPos.clone().add(new THREE.Vector3(0, 2.8, 0)),
       "#fbbf24"
     );
+
+    // ── Generate 3D Loot Drops ──────────────────────────────────────────────
+    const drops: DroppedItem[] = [];
+    const basePos = m.currentPos;
+
+    const createDropVelocity = (): [number, number, number] => {
+      const angle = Math.random() * Math.PI * 2;
+      const speed = 2.2 + Math.random() * 3.5;
+      return [
+        Math.cos(angle) * speed,
+        5.5 + Math.random() * 3.5,
+        Math.sin(angle) * speed,
+      ];
+    };
+
+    if (m.isBoss) {
+      // 1. World Boss Drops: Multiple Gold Bundles + Guaranteed Legendary + Epic Gear
+      for (let i = 0; i < 4; i++) {
+        drops.push({
+          id: `drop-${Date.now()}-gold-${i}`,
+          itemId: "gold_pile",
+          name: "Rương Vàng Khổng Lồ",
+          type: "gold",
+          rarity: "rare",
+          position: [basePos.x + (Math.random() - 0.5) * 2, 0.5, basePos.z + (Math.random() - 0.5) * 2],
+          velocity: createDropVelocity(),
+          value: 120 + Math.floor(Math.random() * 60),
+          icon: "🪙",
+          color: "#fbbf24",
+          bounceCount: 0,
+          isGrounded: false,
+          lifetime: 60,
+        });
+      }
+
+      // Guaranteed Legendary Dragon Blade
+      drops.push({
+        id: `drop-${Date.now()}-legendary`,
+        itemId: "dragon_blade",
+        name: "Long Thần Kiếm",
+        type: "weapon",
+        rarity: "legendary",
+        position: [basePos.x, 0.6, basePos.z],
+        velocity: createDropVelocity(),
+        value: 85,
+        icon: "🔥",
+        color: "#fbbf24",
+        statText: "ATK +85, MAG +35",
+        bounceCount: 0,
+        isGrounded: false,
+        lifetime: 120,
+      });
+
+      // Guaranteed Epic Dragon Armor
+      drops.push({
+        id: `drop-${Date.now()}-epic`,
+        itemId: "dragon_armor",
+        name: "Long Thần Hoàng Giáp",
+        type: "armor",
+        rarity: "epic",
+        position: [basePos.x, 0.6, basePos.z],
+        velocity: createDropVelocity(),
+        value: 65,
+        icon: "🛡️",
+        color: "#c084fc",
+        statText: "HP +180, DEF +26",
+        bounceCount: 0,
+        isGrounded: false,
+        lifetime: 120,
+      });
+
+      // Divine Healing Potions
+      drops.push({
+        id: `drop-${Date.now()}-potion`,
+        itemId: "potion_divine",
+        name: "Thánh Thủy Hồi Phục",
+        type: "potion",
+        rarity: "rare",
+        position: [basePos.x, 0.6, basePos.z],
+        velocity: createDropVelocity(),
+        value: 350,
+        icon: "🧪",
+        color: "#22c55e",
+        statText: "Hồi 350 HP",
+        bounceCount: 0,
+        isGrounded: false,
+        lifetime: 60,
+      });
+    } else if (m.level >= 5) {
+      // 2. Elite Monsters: 2 Gold Drops + Rare/Epic Equipment + Health Potion
+      for (let i = 0; i < 2; i++) {
+        drops.push({
+          id: `drop-${Date.now()}-gold-${i}`,
+          itemId: "gold_coin",
+          name: "Túi Vàng Tinh Anh",
+          type: "gold",
+          rarity: "common",
+          position: [basePos.x, 0.5, basePos.z],
+          velocity: createDropVelocity(),
+          value: 45 + Math.floor(Math.random() * 35),
+          icon: "🪙",
+          color: "#fbbf24",
+          bounceCount: 0,
+          isGrounded: false,
+          lifetime: 45,
+        });
+      }
+
+      // Rare/Epic Gear
+      drops.push({
+        id: `drop-${Date.now()}-elite-gear`,
+        itemId: "steel_sword",
+        name: "Kiếm Thép Tinh Luyện",
+        type: "weapon",
+        rarity: "rare",
+        position: [basePos.x, 0.6, basePos.z],
+        velocity: createDropVelocity(),
+        value: 28,
+        icon: "🗡️",
+        color: "#00f2ff",
+        statText: "ATK +28, SPD +0.3",
+        bounceCount: 0,
+        isGrounded: false,
+        lifetime: 90,
+      });
+
+      drops.push({
+        id: `drop-${Date.now()}-potion`,
+        itemId: "potion_hp",
+        name: "Bình Huyết Dược",
+        type: "potion",
+        rarity: "common",
+        position: [basePos.x, 0.5, basePos.z],
+        velocity: createDropVelocity(),
+        value: 160,
+        icon: "🧪",
+        color: "#22c55e",
+        statText: "Hồi 160 HP",
+        bounceCount: 0,
+        isGrounded: false,
+        lifetime: 45,
+      });
+    } else {
+      // 3. Minion Slime / Wolves: Gold Coin + Chance for Potion or Basic Weapon
+      drops.push({
+        id: `drop-${Date.now()}-gold`,
+        itemId: "gold_coin",
+        name: "Tiền Vàng",
+        type: "gold",
+        rarity: "common",
+        position: [basePos.x, 0.4, basePos.z],
+        velocity: createDropVelocity(),
+        value: 18 + Math.floor(Math.random() * 20),
+        icon: "🪙",
+        color: "#fbbf24",
+        bounceCount: 0,
+        isGrounded: false,
+        lifetime: 35,
+      });
+
+      if (Math.random() > 0.4) {
+        drops.push({
+          id: `drop-${Date.now()}-potion`,
+          itemId: "potion_hp",
+          name: "Bình Huyết Dược Nhỏ",
+          type: "potion",
+          rarity: "common",
+          position: [basePos.x, 0.4, basePos.z],
+          velocity: createDropVelocity(),
+          value: 100,
+          icon: "🧪",
+          color: "#22c55e",
+          statText: "Hồi 100 HP",
+          bounceCount: 0,
+          isGrounded: false,
+          lifetime: 35,
+        });
+      }
+
+      if (Math.random() > 0.7) {
+        drops.push({
+          id: `drop-${Date.now()}-common-gear`,
+          itemId: "iron_sword",
+          name: "Kiếm Sắt Rừng Sâu",
+          type: "weapon",
+          rarity: "common",
+          position: [basePos.x, 0.4, basePos.z],
+          velocity: createDropVelocity(),
+          value: 12,
+          icon: "⚔️",
+          color: "#94a3b8",
+          statText: "ATK +12",
+          bounceCount: 0,
+          isGrounded: false,
+          lifetime: 45,
+        });
+      }
+    }
+
+    // Spawn generated drops to 3D world scene
+    spawnLoot(drops);
 
     // Call backend mutation to sync database
     if (onDefeatMonsterCallback) {
