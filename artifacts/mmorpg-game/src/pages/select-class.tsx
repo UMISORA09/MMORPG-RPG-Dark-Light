@@ -23,8 +23,13 @@ export default function SelectClassPage() {
   useEffect(() => {
     if (!userLoading && !user) {
       setLocation('/');
+    } else if (classes && classes.length > 0 && !selectedClass) {
+      setSelectedClass(classes[0]);
+      if (!characterName) {
+        setCharacterName(`LongThan_${Math.floor(100 + Math.random() * 900)}`);
+      }
     }
-  }, [user, userLoading, setLocation]);
+  }, [user, userLoading, classes, selectedClass, characterName, setLocation]);
 
   const handleCreateCharacter = async (e: React.FormEvent) => {
     e.preventDefault();

@@ -1,0 +1,669 @@
+{
+  "meta": {
+    "image": "atlas.png",
+    "style": "pixel_chibi",
+    "scale_mode": "NEAREST",
+    "size": {
+      "w": 462,
+      "h": 300
+    }
+  },
+  "frames": {
+    "knight_idle_0": {
+      "frame": {
+        "x": 0,
+        "y": 0,
+        "w": 54,
+        "h": 56
+      },
+      "pivot": {
+        "x": 0.5,
+        "y": 1.0
+      },
+      "hitbox": {
+        "x": 0,
+        "y": 0,
+        "w": 0,
+        "h": 0,
+        "active": false
+      }
+    },
+    "knight_idle_1": {
+      "frame": {
+        "x": 66,
+        "y": 0,
+        "w": 54,
+        "h": 56
+      },
+      "pivot": {
+        "x": 0.5,
+        "y": 1.0
+      },
+      "hitbox": {
+        "x": 0,
+        "y": 0,
+        "w": 0,
+        "h": 0,
+        "active": false
+      }
+    },
+    "knight_idle_2": {
+      "frame": {
+        "x": 132,
+        "y": 0,
+        "w": 54,
+        "h": 56
+      },
+      "pivot": {
+        "x": 0.5,
+        "y": 1.0
+      },
+      "hitbox": {
+        "x": 0,
+        "y": 0,
+        "w": 0,
+        "h": 0,
+        "active": false
+      }
+    },
+    "knight_idle_3": {
+      "frame": {
+        "x": 198,
+        "y": 0,
+        "w": 54,
+        "h": 56
+      },
+      "pivot": {
+        "x": 0.5,
+        "y": 1.0
+      },
+      "hitbox": {
+        "x": 0,
+        "y": 0,
+        "w": 0,
+        "h": 0,
+        "active": false
+      }
+    },
+    "knight_run_0": {
+      "frame": {
+        "x": 264,
+        "y": 0,
+        "w": 54,
+        "h": 56
+      },
+      "pivot": {
+        "x": 0.5,
+        "y": 1.0
+      },
+      "hitbox": {
+        "x": 0,
+        "y": 0,
+        "w": 0,
+        "h": 0,
+        "active": false
+      }
+    },
+    "knight_run_1": {
+      "frame": {
+        "x": 330,
+        "y": 0,
+        "w": 54,
+        "h": 56
+      },
+      "pivot": {
+        "x": 0.5,
+        "y": 1.0
+      },
+      "hitbox": {
+        "x": 0,
+        "y": 0,
+        "w": 0,
+        "h": 0,
+        "active": false
+      }
+    },
+    "knight_run_2": {
+      "frame": {
+        "x": 396,
+        "y": 0,
+        "w": 54,
+        "h": 56
+      },
+      "pivot": {
+        "x": 0.5,
+        "y": 1.0
+      },
+      "hitbox": {
+        "x": 0,
+        "y": 0,
+        "w": 0,
+        "h": 0,
+        "active": false
+      }
+    },
+    "knight_run_3": {
+      "frame": {
+        "x": 0,
+        "y": 60,
+        "w": 54,
+        "h": 56
+      },
+      "pivot": {
+        "x": 0.5,
+        "y": 1.0
+      },
+      "hitbox": {
+        "x": 0,
+        "y": 0,
+        "w": 0,
+        "h": 0,
+        "active": false
+      }
+    },
+    "knight_run_4": {
+      "frame": {
+        "x": 66,
+        "y": 60,
+        "w": 54,
+        "h": 56
+      },
+      "pivot": {
+        "x": 0.5,
+        "y": 1.0
+      },
+      "hitbox": {
+        "x": 0,
+        "y": 0,
+        "w": 0,
+        "h": 0,
+        "active": false
+      }
+    },
+    "knight_run_5": {
+      "frame": {
+        "x": 132,
+        "y": 60,
+        "w": 54,
+        "h": 56
+      },
+      "pivot": {
+        "x": 0.5,
+        "y": 1.0
+      },
+      "hitbox": {
+        "x": 0,
+        "y": 0,
+        "w": 0,
+        "h": 0,
+        "active": false
+      }
+    },
+    "knight_attack_0": {
+      "frame": {
+        "x": 198,
+        "y": 60,
+        "w": 54,
+        "h": 56
+      },
+      "pivot": {
+        "x": 0.5,
+        "y": 1.0
+      },
+      "hitbox": {
+        "x": 0,
+        "y": 0,
+        "w": 0,
+        "h": 0,
+        "active": false
+      }
+    },
+    "knight_attack_1": {
+      "frame": {
+        "x": 264,
+        "y": 60,
+        "w": 54,
+        "h": 56
+      },
+      "pivot": {
+        "x": 0.5,
+        "y": 1.0
+      },
+      "hitbox": {
+        "x": 0,
+        "y": 0,
+        "w": 0,
+        "h": 0,
+        "active": false
+      }
+    },
+    "knight_attack_2": {
+      "frame": {
+        "x": 330,
+        "y": 60,
+        "w": 54,
+        "h": 56
+      },
+      "pivot": {
+        "x": 0.5,
+        "y": 1.0
+      },
+      "hitbox": {
+        "x": 26,
+        "y": -36,
+        "w": 38,
+        "h": 32,
+        "active": true
+      }
+    },
+    "knight_attack_3": {
+      "frame": {
+        "x": 396,
+        "y": 60,
+        "w": 54,
+        "h": 56
+      },
+      "pivot": {
+        "x": 0.5,
+        "y": 1.0
+      },
+      "hitbox": {
+        "x": 0,
+        "y": 0,
+        "w": 0,
+        "h": 0,
+        "active": false
+      }
+    },
+    "slime_idle_0": {
+      "frame": {
+        "x": 0,
+        "y": 120,
+        "w": 58,
+        "h": 60
+      },
+      "pivot": {
+        "x": 0.5,
+        "y": 1.0
+      },
+      "hitbox": {
+        "x": -16,
+        "y": -28,
+        "w": 32,
+        "h": 28,
+        "active": false
+      }
+    },
+    "slime_idle_1": {
+      "frame": {
+        "x": 66,
+        "y": 120,
+        "w": 58,
+        "h": 60
+      },
+      "pivot": {
+        "x": 0.5,
+        "y": 1.0
+      },
+      "hitbox": {
+        "x": -16,
+        "y": -28,
+        "w": 32,
+        "h": 28,
+        "active": false
+      }
+    },
+    "slime_idle_2": {
+      "frame": {
+        "x": 132,
+        "y": 120,
+        "w": 58,
+        "h": 60
+      },
+      "pivot": {
+        "x": 0.5,
+        "y": 1.0
+      },
+      "hitbox": {
+        "x": -16,
+        "y": -28,
+        "w": 32,
+        "h": 28,
+        "active": false
+      }
+    },
+    "slime_idle_3": {
+      "frame": {
+        "x": 198,
+        "y": 120,
+        "w": 58,
+        "h": 60
+      },
+      "pivot": {
+        "x": 0.5,
+        "y": 1.0
+      },
+      "hitbox": {
+        "x": -16,
+        "y": -28,
+        "w": 32,
+        "h": 28,
+        "active": false
+      }
+    },
+    "slime_hit_0": {
+      "frame": {
+        "x": 264,
+        "y": 120,
+        "w": 58,
+        "h": 60
+      },
+      "pivot": {
+        "x": 0.5,
+        "y": 1.0
+      },
+      "hitbox": {
+        "x": -16,
+        "y": -28,
+        "w": 32,
+        "h": 28,
+        "active": false
+      }
+    },
+    "slime_hit_1": {
+      "frame": {
+        "x": 330,
+        "y": 120,
+        "w": 58,
+        "h": 60
+      },
+      "pivot": {
+        "x": 0.5,
+        "y": 1.0
+      },
+      "hitbox": {
+        "x": -16,
+        "y": -28,
+        "w": 32,
+        "h": 28,
+        "active": false
+      }
+    },
+    "slime_die_0": {
+      "frame": {
+        "x": 396,
+        "y": 120,
+        "w": 58,
+        "h": 60
+      },
+      "pivot": {
+        "x": 0.5,
+        "y": 1.0
+      },
+      "hitbox": {
+        "x": -16,
+        "y": -28,
+        "w": 32,
+        "h": 28,
+        "active": false
+      }
+    },
+    "slime_die_1": {
+      "frame": {
+        "x": 0,
+        "y": 180,
+        "w": 58,
+        "h": 60
+      },
+      "pivot": {
+        "x": 0.5,
+        "y": 1.0
+      },
+      "hitbox": {
+        "x": -16,
+        "y": -28,
+        "w": 32,
+        "h": 28,
+        "active": false
+      }
+    },
+    "slime_die_2": {
+      "frame": {
+        "x": 66,
+        "y": 180,
+        "w": 58,
+        "h": 60
+      },
+      "pivot": {
+        "x": 0.5,
+        "y": 1.0
+      },
+      "hitbox": {
+        "x": -16,
+        "y": -28,
+        "w": 32,
+        "h": 28,
+        "active": false
+      }
+    },
+    "slime_die_3": {
+      "frame": {
+        "x": 132,
+        "y": 180,
+        "w": 58,
+        "h": 60
+      },
+      "pivot": {
+        "x": 0.5,
+        "y": 1.0
+      },
+      "hitbox": {
+        "x": -16,
+        "y": -28,
+        "w": 32,
+        "h": 28,
+        "active": false
+      }
+    },
+    "slash_vfx_0": {
+      "frame": {
+        "x": 198,
+        "y": 180,
+        "w": 66,
+        "h": 52
+      },
+      "pivot": {
+        "x": 0.5,
+        "y": 0.5
+      },
+      "hitbox": {
+        "x": 0,
+        "y": 0,
+        "w": 0,
+        "h": 0,
+        "active": false
+      }
+    },
+    "slash_vfx_1": {
+      "frame": {
+        "x": 264,
+        "y": 180,
+        "w": 66,
+        "h": 52
+      },
+      "pivot": {
+        "x": 0.5,
+        "y": 0.5
+      },
+      "hitbox": {
+        "x": 0,
+        "y": 0,
+        "w": 0,
+        "h": 0,
+        "active": false
+      }
+    },
+    "slash_vfx_2": {
+      "frame": {
+        "x": 330,
+        "y": 180,
+        "w": 66,
+        "h": 52
+      },
+      "pivot": {
+        "x": 0.5,
+        "y": 0.5
+      },
+      "hitbox": {
+        "x": 0,
+        "y": 0,
+        "w": 0,
+        "h": 0,
+        "active": false
+      }
+    },
+    "slash_vfx_3": {
+      "frame": {
+        "x": 396,
+        "y": 180,
+        "w": 66,
+        "h": 52
+      },
+      "pivot": {
+        "x": 0.5,
+        "y": 0.5
+      },
+      "hitbox": {
+        "x": 0,
+        "y": 0,
+        "w": 0,
+        "h": 0,
+        "active": false
+      }
+    },
+    "slash_vfx_4": {
+      "frame": {
+        "x": 0,
+        "y": 240,
+        "w": 66,
+        "h": 52
+      },
+      "pivot": {
+        "x": 0.5,
+        "y": 0.5
+      },
+      "hitbox": {
+        "x": 0,
+        "y": 0,
+        "w": 0,
+        "h": 0,
+        "active": false
+      }
+    },
+    "slash_vfx_5": {
+      "frame": {
+        "x": 66,
+        "y": 240,
+        "w": 66,
+        "h": 52
+      },
+      "pivot": {
+        "x": 0.5,
+        "y": 0.5
+      },
+      "hitbox": {
+        "x": 0,
+        "y": 0,
+        "w": 0,
+        "h": 0,
+        "active": false
+      }
+    }
+  },
+  "animations": {
+    "knight_idle": {
+      "frames": [
+        "knight_idle_0",
+        "knight_idle_1",
+        "knight_idle_2",
+        "knight_idle_3"
+      ],
+      "fps": 8,
+      "loop": true
+    },
+    "knight_run": {
+      "frames": [
+        "knight_run_0",
+        "knight_run_1",
+        "knight_run_2",
+        "knight_run_3",
+        "knight_run_4",
+        "knight_run_5"
+      ],
+      "fps": 12,
+      "loop": true
+    },
+    "knight_attack": {
+      "frames": [
+        "knight_attack_0",
+        "knight_attack_1",
+        "knight_attack_2",
+        "knight_attack_3"
+      ],
+      "fps": 14,
+      "loop": false,
+      "events": [
+        {
+          "frame_index": 2,
+          "action": "spawn_vfx",
+          "vfx_id": "slash_anime_01",
+          "offset": {
+            "x": 28,
+            "y": -24
+          }
+        }
+      ]
+    },
+    "slime_idle": {
+      "frames": [
+        "slime_idle_0",
+        "slime_idle_1",
+        "slime_idle_2",
+        "slime_idle_3"
+      ],
+      "fps": 6,
+      "loop": true
+    },
+    "slime_hit": {
+      "frames": [
+        "slime_hit_0",
+        "slime_hit_1"
+      ],
+      "fps": 8,
+      "loop": false
+    },
+    "slime_die": {
+      "frames": [
+        "slime_die_0",
+        "slime_die_1",
+        "slime_die_2",
+        "slime_die_3"
+      ],
+      "fps": 8,
+      "loop": false
+    },
+    "slash_anime_01": {
+      "frames": [
+        "slash_vfx_0",
+        "slash_vfx_1",
+        "slash_vfx_2",
+        "slash_vfx_3",
+        "slash_vfx_4",
+        "slash_vfx_5"
+      ],
+      "fps": 18,
+      "loop": false,
+      "blend_mode": "additive"
+    }
+  }
+}

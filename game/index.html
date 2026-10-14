@@ -1,0 +1,776 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>HD-2D Pixel Chibi Anime Animation Sandbox</title>
+  <style>
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      user-select: none;
+      -webkit-user-select: none;
+    }
+    body {
+      background-color: #0b0813;
+      color: #f1f5f9;
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      min-height: 100vh;
+      overflow: hidden;
+    }
+    #game-container {
+      position: relative;
+      border: 3px solid #3b2d54;
+      border-radius: 12px;
+      box-shadow: 0 10px 40px rgba(0, 0, 0, 0.8), 0 0 30px rgba(139, 92, 246, 0.25);
+      background: #110d1f;
+      overflow: hidden;
+    }
+    canvas {
+      display: block;
+      image-rendering: -moz-crisp-edges;
+      image-rendering: -webkit-crisp-edges;
+      image-rendering: pixelated;
+      image-rendering: crisp-edges;
+    }
+    .hud-header {
+      position: absolute;
+      top: 12px;
+      left: 14px;
+      right: 14px;
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      pointer-events: none;
+      z-index: 10;
+    }
+    .hud-card {
+      background: rgba(15, 12, 26, 0.85);
+      backdrop-filter: blur(6px);
+      border: 1px solid rgba(139, 92, 246, 0.4);
+      border-radius: 8px;
+      padding: 8px 14px;
+      font-size: 12px;
+    }
+    .hp-bar-container {
+      width: 130px;
+      height: 10px;
+      background: #231d33;
+      border-radius: 5px;
+      border: 1px solid #4a3e66;
+      overflow: hidden;
+      margin-top: 4px;
+    }
+    .hp-bar-fill {
+      height: 100%;
+      background: linear-gradient(90deg, #ec4899, #8b5cf6);
+      width: 100%;
+      transition: width 0.15s ease-out;
+    }
+    .debug-badge {
+      display: inline-block;
+      font-size: 11px;
+      padding: 2px 8px;
+      border-radius: 4px;
+      margin-left: 6px;
+    }
+    .badge-on { background: #22c55e; color: #000; font-weight: bold; }
+    .badge-off { background: #475569; color: #fff; }
+    .controls-overlay {
+      margin-top: 14px;
+      display: flex;
+      gap: 10px;
+      flex-wrap: wrap;
+      justify-content: center;
+      max-width: 640px;
+    }
+    .btn {
+      background: linear-gradient(135deg, #4f46e5, #7c3aed);
+      border: 1px solid #a78bfa;
+      color: white;
+      padding: 8px 16px;
+      border-radius: 6px;
+      font-size: 12px;
+      font-weight: bold;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      transition: all 0.15s;
+    }
+    .btn:hover {
+      background: linear-gradient(135deg, #6366f1, #9333ea);
+      transform: translateY(-1px);
+    }
+    .btn-secondary {
+      background: #1e1b2e;
+      border: 1px solid #3b3554;
+      color: #cbd5e1;
+    }
+    .btn-secondary:hover {
+      background: #2d2942;
+      color: #fff;
+    }
+    .keyboard-hint {
+      color: #94a3b8;
+      font-size: 11px;
+      margin-top: 8px;
+      text-align: center;
+    }
+    .keyboard-hint kbd {
+      background: #1e293b;
+      border: 1px solid #475569;
+      padding: 1px 5px;
+      border-radius: 4px;
+      color: #38bdf8;
+      font-weight: bold;
+    }
+  </style>
+</head>
+<body>
+
+  <div id="game-container">
+    <canvas id="stage" width="640" height="360"></canvas>
+
+    <!-- Top In-Game HUD -->
+    <div class="hud-header">
+      <div class="hud-card">
+        <div style="font-weight: bold; color: #38bdf8; display: flex; align-items: center; gap: 6px;">
+          <span>⚔️ CHIBI KNIGHT</span>
+          <span style="font-size: 10px; color: #94a3b8;">(Player)</span>
+        </div>
+        <div style="color: #cbd5e1; font-size: 11px; margin-top: 2px;">
+          Anim: <span id="hud-knight-anim" style="color: #facc15; font-weight: bold;">knight_idle</span>
+        </div>
+      </div>
+
+      <div class="hud-card" style="text-align: right;">
+        <div style="font-weight: bold; color: #f43f5e; display: flex; align-items: center; justify-content: flex-end; gap: 6px;">
+          <span>SLIME ONI BOSS 👹</span>
+        </div>
+        <div class="hp-bar-container">
+          <div id="slime-hp-fill" class="hp-bar-fill"></div>
+        </div>
+        <div style="font-size: 10px; color: #cbd5e1; margin-top: 2px;">
+          HP: <span id="slime-hp-text">100 / 100</span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Interactive Controls Bar -->
+  <div class="controls-overlay">
+    <button class="btn" id="btn-attack">⚔️ [J] Chém Đại Kiếm</button>
+    <button class="btn" id="btn-skill" style="background: linear-gradient(135deg, #ec4899, #8b5cf6);">✨ [K] Anime Skill VFX</button>
+    <button class="btn btn-secondary" id="btn-debug">🛠️ [F1] Debug Pivot & Hitbox <span id="debug-status" class="debug-badge badge-on">BẬT</span></button>
+    <button class="btn btn-secondary" id="btn-respawn">🔄 [R] Hồi Sinh Slime</button>
+  </div>
+
+  <div class="keyboard-hint">
+    Phím bấm: <kbd>A</kbd> / <kbd>D</kbd> hoặc <kbd>←</kbd> <kbd>→</kbd> Chạy · <kbd>J</kbd> Chém thường · <kbd>K</kbd> Skill Anime · <kbd>F1</kbd> Bật/Tắt Debug · <kbd>R</kbd> Hồi sinh quái
+  </div>
+
+  <script>
+    // ─── Configuration & Asset Path ─────────────────────────────────────────────
+    const CANVAS_WIDTH = 640;
+    const CANVAS_HEIGHT = 360;
+    const GROUND_Y = 270;
+    const PIXEL_SCALE = 3; // Phóng to 3x chuẩn pixel
+
+    const canvas = document.getElementById('stage');
+    const ctx = canvas.getContext('2d');
+    ctx.imageSmoothingEnabled = false; // Nearest-Neighbor Filtering
+
+    let debugMode = true;
+    let screenShake = 0;
+
+    // ─── Animation & Mapping State ──────────────────────────────────────────────
+    let atlasImage = new Image();
+    let atlasLoaded = false;
+    let mappingData = null;
+
+    // Try loading generated mapping from assets/exported
+    async function loadAssets() {
+      try {
+        const jsonRes = await fetch('/assets/exported/mapping.json');
+        if (jsonRes.ok) {
+          mappingData = await jsonRes.json();
+          atlasImage.src = '/assets/exported/atlas.png';
+          atlasImage.onload = () => { atlasLoaded = true; };
+          return;
+        }
+      } catch (e) {
+        // Fallback for direct file:// or relative paths
+      }
+
+      try {
+        const jsonRes = await fetch('../assets/exported/mapping.json');
+        if (jsonRes.ok) {
+          mappingData = await jsonRes.json();
+          atlasImage.src = '../assets/exported/atlas.png';
+          atlasImage.onload = () => { atlasLoaded = true; };
+          return;
+        }
+      } catch (e) {
+        console.warn('Relative fetch failed, generating runtime sprite atlas...');
+      }
+    }
+
+    loadAssets();
+
+    // ─── Game Objects ───────────────────────────────────────────────────────────
+    const knight = {
+      x: 180,
+      y: GROUND_Y,
+      facing: 1, // 1: right, -1: left
+      currentAnim: 'knight_idle',
+      frameIndex: 0,
+      animTimer: 0,
+      isAttacking: false,
+      speed: 120,
+      vfxSpawnedThisAttack: false,
+    };
+
+    const slime = {
+      x: 440,
+      y: GROUND_Y,
+      facing: -1,
+      currentAnim: 'slime_idle',
+      frameIndex: 0,
+      animTimer: 0,
+      maxHp: 100,
+      hp: 100,
+      hitTimer: 0,
+      isDead: false,
+      boundingW: 46 * PIXEL_SCALE,
+      boundingH: 42 * PIXEL_SCALE,
+    };
+
+    const activeVFX = [];
+    const damageTexts = [];
+
+    // ─── Input Handling ─────────────────────────────────────────────────────────
+    const keys = {};
+    window.addEventListener('keydown', (e) => {
+      keys[e.key.toLowerCase()] = true;
+      if (e.key === 'F1') {
+        e.preventDefault();
+        toggleDebug();
+      }
+      if (e.key.toLowerCase() === 'j' || e.key === ' ') {
+        e.preventDefault();
+        triggerKnightAttack();
+      }
+      if (e.key.toLowerCase() === 'k') {
+        e.preventDefault();
+        triggerKnightSkill();
+      }
+      if (e.key.toLowerCase() === 'r') {
+        e.preventDefault();
+        respawnSlime();
+      }
+    });
+
+    window.addEventListener('keyup', (e) => {
+      keys[e.key.toLowerCase()] = false;
+    });
+
+    document.getElementById('btn-attack').onclick = triggerKnightAttack;
+    document.getElementById('btn-skill').onclick = triggerKnightSkill;
+    document.getElementById('btn-debug').onclick = toggleDebug;
+    document.getElementById('btn-respawn').onclick = respawnSlime;
+
+    function toggleDebug() {
+      debugMode = !debugMode;
+      const badge = document.getElementById('debug-status');
+      badge.textContent = debugMode ? 'BẬT' : 'TẮT';
+      badge.className = `debug-badge ${debugMode ? 'badge-on' : 'badge-off'}`;
+    }
+
+    function triggerKnightAttack() {
+      if (knight.isAttacking) return;
+      knight.isAttacking = true;
+      knight.currentAnim = 'knight_attack';
+      knight.frameIndex = 0;
+      knight.animTimer = 0;
+      knight.vfxSpawnedThisAttack = false;
+    }
+
+    function triggerKnightSkill() {
+      if (knight.isAttacking) return;
+      triggerKnightAttack();
+      screenShake = 8;
+      // Add multiple slice slash VFX for Anime Style
+      setTimeout(() => {
+        spawnAnimeVFX(knight.x + 40 * knight.facing, GROUND_Y - 30, knight.facing);
+      }, 80);
+      setTimeout(() => {
+        spawnAnimeVFX(knight.x + 85 * knight.facing, GROUND_Y - 45, knight.facing);
+      }, 160);
+    }
+
+    function respawnSlime() {
+      slime.hp = slime.maxHp;
+      slime.isDead = false;
+      slime.currentAnim = 'slime_idle';
+      slime.frameIndex = 0;
+      slime.animTimer = 0;
+      updateSlimeUI();
+    }
+
+    function updateSlimeUI() {
+      const pct = Math.max(0, (slime.hp / slime.maxHp) * 100);
+      document.getElementById('slime-hp-fill').style.width = pct + '%';
+      document.getElementById('slime-hp-text').textContent = `${Math.max(0, slime.hp)} / ${slime.maxHp}`;
+    }
+
+    function spawnAnimeVFX(x, y, facing = 1) {
+      activeVFX.push({
+        x: x,
+        y: y,
+        facing: facing,
+        anim: 'slash_anime_01',
+        frameIndex: 0,
+        animTimer: 0,
+        fps: 18,
+        totalFrames: 6,
+      });
+    }
+
+    function spawnDamageText(x, y, amount, isCrit = false) {
+      damageTexts.push({
+        x: x + (Math.random() * 20 - 10),
+        y: y - 20,
+        text: isCrit ? `-${amount} CRIT!` : `-${amount}`,
+        color: isCrit ? '#facc15' : '#f43f5e',
+        fontSize: isCrit ? 18 : 14,
+        alpha: 1.0,
+        vy: -45,
+      });
+    }
+
+    // ─── Update Loop ────────────────────────────────────────────────────────────
+    let lastTime = performance.now();
+
+    function update(dt) {
+      if (screenShake > 0) {
+        screenShake = Math.max(0, screenShake - dt * 25);
+      }
+
+      // Knight Movement
+      if (!knight.isAttacking) {
+        let moving = false;
+        if (keys['a'] || keys['arrowleft']) {
+          knight.x -= knight.speed * dt;
+          knight.facing = -1;
+          moving = true;
+        } else if (keys['d'] || keys['arrowright']) {
+          knight.x += knight.speed * dt;
+          knight.facing = 1;
+          moving = true;
+        }
+
+        knight.x = Math.max(50, Math.min(CANVAS_WIDTH - 60, knight.x));
+
+        if (moving) {
+          if (knight.currentAnim !== 'knight_run') {
+            knight.currentAnim = 'knight_run';
+            knight.frameIndex = 0;
+            knight.animTimer = 0;
+          }
+        } else {
+          if (knight.currentAnim !== 'knight_idle') {
+            knight.currentAnim = 'knight_idle';
+            knight.frameIndex = 0;
+            knight.animTimer = 0;
+          }
+        }
+      }
+
+      // Update Knight Animation
+      if (mappingData && mappingData.animations[knight.currentAnim]) {
+        const animDef = mappingData.animations[knight.currentAnim];
+        const frameDuration = 1.0 / (animDef.fps || 10);
+        knight.animTimer += dt;
+
+        if (knight.animTimer >= frameDuration) {
+          knight.animTimer -= frameDuration;
+          knight.frameIndex++;
+
+          // Check Animation Events (e.g. spawn_vfx at frame_index: 2)
+          if (animDef.events) {
+            animDef.events.forEach((ev) => {
+              if (ev.frame_index === knight.frameIndex && !knight.vfxSpawnedThisAttack) {
+                knight.vfxSpawnedThisAttack = true;
+                const vfxX = knight.x + (ev.offset.x * knight.facing * (PIXEL_SCALE / 2));
+                const vfxY = knight.y + (ev.offset.y * (PIXEL_SCALE / 2));
+                spawnAnimeVFX(vfxX, vfxY, knight.facing);
+
+                // Hitbox Collision Check against Slime
+                checkHitboxCollision();
+              }
+            });
+          }
+
+          if (knight.frameIndex >= animDef.frames.length) {
+            if (animDef.loop) {
+              knight.frameIndex = 0;
+            } else {
+              knight.isAttacking = false;
+              knight.currentAnim = 'knight_idle';
+              knight.frameIndex = 0;
+            }
+          }
+        }
+      }
+
+      // Slime Animation
+      if (mappingData && mappingData.animations[slime.currentAnim]) {
+        const animDef = mappingData.animations[slime.currentAnim];
+        const frameDuration = 1.0 / (animDef.fps || 8);
+        slime.animTimer += dt;
+
+        if (slime.animTimer >= frameDuration) {
+          slime.animTimer -= frameDuration;
+          slime.frameIndex++;
+
+          if (slime.frameIndex >= animDef.frames.length) {
+            if (animDef.loop) {
+              slime.frameIndex = 0;
+            } else {
+              if (slime.currentAnim === 'slime_hit') {
+                slime.currentAnim = slime.isDead ? 'slime_die' : 'slime_idle';
+                slime.frameIndex = 0;
+              } else if (slime.currentAnim === 'slime_die') {
+                slime.frameIndex = animDef.frames.length - 1; // Stay on dissolved frame
+              }
+            }
+          }
+        }
+      }
+
+      // Update Active VFX
+      for (let i = activeVFX.length - 1; i >= 0; i--) {
+        const vfx = activeVFX[i];
+        vfx.animTimer += dt;
+        const frameDuration = 1.0 / vfx.fps;
+        if (vfx.animTimer >= frameDuration) {
+          vfx.animTimer -= frameDuration;
+          vfx.frameIndex++;
+          if (vfx.frameIndex >= vfx.totalFrames) {
+            activeVFX.splice(i, 1);
+          }
+        }
+      }
+
+      // Update Floating Damage Texts
+      for (let i = damageTexts.length - 1; i >= 0; i--) {
+        const dtObj = damageTexts[i];
+        dtObj.y += dtObj.vy * dt;
+        dtObj.alpha -= dt * 1.4;
+        if (dtObj.alpha <= 0) {
+          damageTexts.splice(i, 1);
+        }
+      }
+
+      // HUD text update
+      document.getElementById('hud-knight-anim').textContent = `${knight.currentAnim} [${knight.frameIndex}]`;
+    }
+
+    function checkHitboxCollision() {
+      if (slime.isDead) return;
+
+      // Calculate attack hitbox in world coordinates
+      const hbW = 42 * PIXEL_SCALE;
+      const hbH = 34 * PIXEL_SCALE;
+      const hbX = knight.facing === 1 ? knight.x + 8 : knight.x - hbW - 8;
+      const hbY = knight.y - hbH - 6;
+
+      // Slime bounding box
+      const sbW = 38 * PIXEL_SCALE;
+      const sbH = 36 * PIXEL_SCALE;
+      const sbX = slime.x - sbW / 2;
+      const sbY = slime.y - sbH;
+
+      // AABB Intersect
+      const isOverlap = !(
+        hbX + hbW < sbX ||
+        hbX > sbX + sbW ||
+        hbY + hbH < sbY ||
+        hbY > sbY + sbH
+      );
+
+      if (isOverlap) {
+        screenShake = 6;
+        const isCrit = Math.random() > 0.4;
+        const damage = isCrit ? Math.floor(40 + Math.random() * 25) : Math.floor(22 + Math.random() * 10);
+        slime.hp -= damage;
+        spawnDamageText(slime.x, slime.y - sbH / 2, damage, isCrit);
+
+        if (slime.hp <= 0) {
+          slime.hp = 0;
+          slime.isDead = true;
+          slime.currentAnim = 'slime_die';
+          slime.frameIndex = 0;
+        } else {
+          slime.currentAnim = 'slime_hit';
+          slime.frameIndex = 0;
+        }
+        updateSlimeUI();
+      }
+    }
+
+    // ─── Render Loop ────────────────────────────────────────────────────────────
+    function render() {
+      ctx.save();
+
+      // Screen shake
+      if (screenShake > 0) {
+        const sx = (Math.random() - 0.5) * screenShake;
+        const sy = (Math.random() - 0.5) * screenShake;
+        ctx.translate(sx, sy);
+      }
+
+      // 1. Draw HD-2D Background
+      renderBackground();
+
+      // 2. Draw Characters using Strict Bottom-Center Pivot (0.5, 1.0)
+      if (atlasLoaded && mappingData) {
+        renderSpriteEntity(knight, knight.currentAnim, knight.frameIndex, 'character');
+        renderSpriteEntity(slime, slime.currentAnim, slime.frameIndex, 'character');
+
+        // 3. Draw VFX with Center-Center Pivot (0.5, 0.5) and Additive Blending
+        ctx.save();
+        ctx.globalCompositeOperation = 'lighter'; // Additive blending for anime glow
+        activeVFX.forEach((vfx) => {
+          renderVFXEntity(vfx);
+        });
+        ctx.restore();
+      } else {
+        // Fallback loading indicator
+        ctx.fillStyle = '#a78bfa';
+        ctx.font = '16px monospace';
+        ctx.fillText('Loading Atlas & JSON Mapping...', 200, 180);
+      }
+
+      // 4. Draw Floating Damage Text
+      damageTexts.forEach((d) => {
+        ctx.save();
+        ctx.globalAlpha = Math.max(0, d.alpha);
+        ctx.fillStyle = d.color;
+        ctx.font = `bold ${d.fontSize}px 'Courier New', monospace`;
+        ctx.shadowColor = '#000';
+        ctx.shadowBlur = 4;
+        ctx.fillText(d.text, d.x, d.y);
+        ctx.restore();
+      });
+
+      // 5. Draw Debug Visualizer if F1 enabled
+      if (debugMode && atlasLoaded && mappingData) {
+        renderDebugVisualizer();
+      }
+
+      ctx.restore();
+    }
+
+    function renderBackground() {
+      // Sky gradient
+      const skyGrad = ctx.createLinearGradient(0, 0, 0, CANVAS_HEIGHT);
+      skyGrad.addColorStop(0, '#0a0614');
+      skyGrad.addColorStop(0.65, '#1e1435');
+      skyGrad.addColorStop(1, '#110a24');
+      ctx.fillStyle = skyGrad;
+      ctx.fillRect(0, 0, CANVAS_WIDTH, CANVAS_HEIGHT);
+
+      // Moon
+      ctx.fillStyle = '#fef08a';
+      ctx.beginPath();
+      ctx.arc(480, 70, 28, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.fillStyle = 'rgba(254, 240, 138, 0.15)';
+      ctx.beginPath();
+      ctx.arc(480, 70, 48, 0, Math.PI * 2);
+      ctx.fill();
+
+      // Distant Pillars / Gothic silhouette
+      ctx.fillStyle = '#181029';
+      for (let i = 0; i < 7; i++) {
+        const px = i * 100 + 20;
+        ctx.fillRect(px, 120, 24, GROUND_Y - 120);
+        ctx.fillRect(px - 4, 114, 32, 8);
+      }
+
+      // Ground Line & Stone Cobblestone platform
+      ctx.fillStyle = '#2d2244';
+      ctx.fillRect(0, GROUND_Y, CANVAS_WIDTH, CANVAS_HEIGHT - GROUND_Y);
+
+      ctx.fillStyle = '#4c3870';
+      ctx.fillRect(0, GROUND_Y, CANVAS_WIDTH, 4);
+
+      // Cobblestone patterns
+      ctx.fillStyle = '#211836';
+      for (let y = GROUND_Y + 12; y < CANVAS_HEIGHT; y += 18) {
+        for (let x = (y % 36 === 0 ? 0 : 20); x < CANVAS_WIDTH; x += 40) {
+          ctx.fillRect(x, y, 36, 12);
+        }
+      }
+    }
+
+    function renderSpriteEntity(entity, animName, frameIdx, type) {
+      const animDef = mappingData.animations[animName];
+      if (!animDef) return;
+
+      const frameKey = animDef.frames[frameIdx % animDef.frames.length];
+      const frameData = mappingData.frames[frameKey];
+      if (!frameData) return;
+
+      const f = frameData.frame;
+      const pivot = frameData.pivot; // {x: 0.5, y: 1.0}
+
+      const drawW = f.w * PIXEL_SCALE;
+      const drawH = f.h * PIXEL_SCALE;
+
+      ctx.save();
+      ctx.translate(entity.x, entity.y);
+      if (entity.facing === -1) {
+        ctx.scale(-1, 1);
+      }
+
+      // Strict Bottom-Center Pivot: (dx = -drawW * pivot.x, dy = -drawH * pivot.y)
+      const dx = -drawW * pivot.x;
+      const dy = -drawH * pivot.y;
+
+      ctx.drawImage(
+        atlasImage,
+        f.x, f.y, f.w, f.h,
+        dx, dy, drawW, drawH
+      );
+
+      ctx.restore();
+    }
+
+    function renderVFXEntity(vfx) {
+      const animDef = mappingData.animations[vfx.anim];
+      if (!animDef) return;
+
+      const frameKey = animDef.frames[vfx.frameIndex % animDef.frames.length];
+      const frameData = mappingData.frames[frameKey];
+      if (!frameData) return;
+
+      const f = frameData.frame;
+      const pivot = frameData.pivot; // {x: 0.5, y: 0.5}
+
+      const drawW = f.w * PIXEL_SCALE;
+      const drawH = f.h * PIXEL_SCALE;
+
+      ctx.save();
+      ctx.translate(vfx.x, vfx.y);
+      if (vfx.facing === -1) {
+        ctx.scale(-1, 1);
+      }
+
+      const dx = -drawW * pivot.x;
+      const dy = -drawH * pivot.y;
+
+      ctx.drawImage(
+        atlasImage,
+        f.x, f.y, f.w, f.h,
+        dx, dy, drawW, drawH
+      );
+
+      ctx.restore();
+    }
+
+    function renderDebugVisualizer() {
+      // 1. Knight Bounding Box & Pivot
+      drawEntityDebug(knight, knight.currentAnim, knight.frameIndex, '#22c55e');
+
+      // 2. Slime Bounding Box & Pivot
+      drawEntityDebug(slime, slime.currentAnim, slime.frameIndex, '#eab308');
+
+      // 3. Attack Hitbox (when Knight attacks at frame 2)
+      if (knight.currentAnim === 'knight_attack' && knight.frameIndex === 2) {
+        const hbW = 42 * PIXEL_SCALE;
+        const hbH = 34 * PIXEL_SCALE;
+        const hbX = knight.facing === 1 ? knight.x + 8 : knight.x - hbW - 8;
+        const hbY = knight.y - hbH - 6;
+
+        ctx.strokeStyle = '#ef4444';
+        ctx.lineWidth = 2;
+        ctx.strokeRect(hbX, hbY, hbW, hbH);
+
+        ctx.fillStyle = 'rgba(239, 68, 68, 0.25)';
+        ctx.fillRect(hbX, hbY, hbW, hbH);
+
+        ctx.fillStyle = '#ef4444';
+        ctx.font = 'bold 11px monospace';
+        ctx.fillText('HITBOX [ACTIVE]', hbX, hbY - 4);
+      }
+
+      // Ground Line Indicator
+      ctx.strokeStyle = 'rgba(56, 189, 248, 0.4)';
+      ctx.setLineDash([4, 4]);
+      ctx.beginPath();
+      ctx.moveTo(0, GROUND_Y);
+      ctx.lineTo(CANVAS_WIDTH, GROUND_Y);
+      ctx.stroke();
+      ctx.setLineDash([]);
+    }
+
+    function drawEntityDebug(entity, animName, frameIdx, color) {
+      const animDef = mappingData.animations[animName];
+      if (!animDef) return;
+      const frameKey = animDef.frames[frameIdx % animDef.frames.length];
+      const frameData = mappingData.frames[frameKey];
+      if (!frameData) return;
+
+      const f = frameData.frame;
+      const pivot = frameData.pivot;
+      const drawW = f.w * PIXEL_SCALE;
+      const drawH = f.h * PIXEL_SCALE;
+
+      const left = entity.facing === 1 ? entity.x - drawW * pivot.x : entity.x - drawW * (1.0 - pivot.x);
+      const top = entity.y - drawH * pivot.y;
+
+      // Green / Yellow Bounding Box
+      ctx.strokeStyle = color;
+      ctx.lineWidth = 1.5;
+      ctx.strokeRect(left, top, drawW, drawH);
+
+      // Red Pivot Dot at exact (x, y) = Bottom-Center Pivot (0.5, 1.0)
+      ctx.fillStyle = '#ef4444';
+      ctx.beginPath();
+      ctx.arc(entity.x, entity.y, 4, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.strokeStyle = '#ffffff';
+      ctx.lineWidth = 1;
+      ctx.stroke();
+
+      ctx.fillStyle = '#f8fafc';
+      ctx.font = '10px monospace';
+      ctx.fillText(`Pivot(0.5, 1.0)`, entity.x - 38, entity.y + 14);
+    }
+
+    // ─── Main Animation Loop ────────────────────────────────────────────────────
+    function gameLoop(now) {
+      const dt = Math.min((now - lastTime) / 1000, 0.05);
+      lastTime = now;
+
+      update(dt);
+      render();
+
+      requestAnimationFrame(gameLoop);
+    }
+
+    requestAnimationFrame((now) => {
+      lastTime = now;
+      gameLoop(now);
+    });
+  </script>
+</body>
+</html>

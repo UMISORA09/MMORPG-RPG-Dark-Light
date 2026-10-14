@@ -1,0 +1,38 @@
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: mmorpg-db
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: game_user
+      POSTGRES_PASSWORD: game_password_2026
+      POSTGRES_DB: game_mmorpg
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U game_user -d game_mmorpg"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+    ports:
+      - "5432:5432"
+
+  game:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: mmorpg-game
+    restart: unless-stopped
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      PORT: 8080
+      NODE_ENV: production
+      DATABASE_URL: postgresql://game_user:game_password_2026@postgres:5432/game_mmorpg
+      SESSION_SECRET: mmorpg_beta_secret_token_2026
+    ports:
+      - "8080:8080"
+
+volumes:
+  postgres_data:

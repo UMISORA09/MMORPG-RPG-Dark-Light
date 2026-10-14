@@ -1,25 +1,22 @@
 import app from "./app";
 import { logger } from "./lib/logger";
+import { initDatabase } from "@workspace/db";
 
-const rawPort = process.env["PORT"];
+const port = Number(process.env["PORT"] || "8080");
 
-if (!rawPort) {
-  throw new Error(
-    "PORT environment variable is required but was not provided.",
-  );
-}
-
-const port = Number(rawPort);
-
-if (Number.isNaN(port) || port <= 0) {
-  throw new Error(`Invalid PORT value: "${rawPort}"`);
-}
-
-app.listen(port, (err) => {
-  if (err) {
-    logger.error({ err }, "Error listening on port");
-    process.exit(1);
+async function startServer() {
+  try {
+    await initDatabase();
+  } catch (err) {
+    logger.error({ err }, "Database initialization error");
   }
 
-  logger.info({ port }, "Server listening");
+  app.listen(port, "0.0.0.0", () => {
+    logger.info({ port }, "MMORPG 2.5D Beta Server listening on http://0.0.0.0:" + port);
+  });
+}
+
+startServer().catch((err) => {
+  logger.error({ err }, "Fatal startup error");
+  process.exit(1);
 });

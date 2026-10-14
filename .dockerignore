@@ -1,0 +1,10 @@
+node_modules
+.git
+.agents
+*.log
+dist
+.cache
+.env
+.env.local
+Dragon-Game-Studio
+Heroic-Battleground

@@ -8,8 +8,14 @@ out-tsc
 .expo
 .expo-shared
 
+# environment variables
+.env
+.env.*
+!.env.example
+
 # dependencies
 node_modules
+
 
 # IDEs and editors
 /.idea
@@ -47,3 +53,8 @@ Thumbs.db
 # Replit
 .cache/
 .local/
+
+# Original source backups
+Dragon-Game-Studio/
+Heroic-Battleground/
+

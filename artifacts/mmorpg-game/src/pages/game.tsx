@@ -29,11 +29,15 @@ import { MonsterSprite } from '@/components/MonsterSprite';
 import { BattleModal } from '@/components/BattleModal';
 import { GameMenuSheet } from '@/components/GameMenuSheet';
 import { useToast } from '@/hooks/use-toast';
-import { Backpack, Swords, User, Trophy, Coins, Heart, Zap, Shield, Gauge, LogOut, Settings, Sparkles } from 'lucide-react';
+import Game from '@/game/Game';
+import { Backpack, Swords, User, Trophy, Coins, Heart, Zap, Shield, Gauge, LogOut, Settings, Sparkles, Compass } from 'lucide-react';
 
 export default function GamePage() {
   const [, setLocation] = useLocation();
   const [activeTab, setActiveTab] = useState('battle');
+  const [view3D, setView3D] = useState(true);
+  const [dungeonModalOpen, setDungeonModalOpen] = useState(false);
+  const [leaderboardModalOpen, setLeaderboardModalOpen] = useState(false);
   const [battleModalOpen, setBattleModalOpen] = useState(false);
   const [battleResult, setBattleResult] = useState<BattleResult | null>(null);
   const [selectedMonster, setSelectedMonster] = useState<{ id: string; name: string; hp: number } | null>(null);
@@ -83,6 +87,7 @@ export default function GamePage() {
       {
         onSuccess: async (result) => {
           setBattleResult(result);
+          setDungeonModalOpen(false);
           setBattleModalOpen(true);
           await queryClient.invalidateQueries({ queryKey: getGetCharacterQueryKey(character.id) });
           await queryClient.invalidateQueries({ queryKey: getGetBattleLogQueryKey(character.id) });
@@ -119,7 +124,7 @@ export default function GamePage() {
       <div className="min-h-[100dvh] w-full flex items-center justify-center bg-background">
         <div className="text-center">
           <div className="w-12 h-12 border-4 border-primary border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
-          <p className="text-muted-foreground">Đang tải...</p>
+          <p className="text-muted-foreground">Đang tải thế giới 3D...</p>
         </div>
       </div>
     );
@@ -129,6 +134,216 @@ export default function GamePage() {
     ? (characterDetail.experience / characterDetail.experienceToNextLevel) * 100 
     : 100;
   const hpPercent = (characterDetail.hp / characterDetail.maxHp) * 100;
+
+  if (view3D) {
+    return (
+      <div className="fixed inset-0 z-50 bg-black overflow-hidden select-none">
+        {/* Floating Top In-Game RPG Bar */}
+        <div className="absolute top-3 left-3 z-30 flex items-center gap-3 bg-slate-950/80 backdrop-blur-md border border-amber-500/40 rounded-xl px-4 py-2 shadow-2xl">
+          <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-amber-500/30 to-purple-600/30 border border-amber-400/50 flex items-center justify-center">
+            <ClassSprite classId={characterDetail.classId} className="w-8 h-8" />
+          </div>
+          <div>
+            <div className="flex items-center gap-2">
+              <span className="font-black text-sm text-amber-200 tracking-wide">{characterDetail.name}</span>
+              <span className="text-[10px] font-bold bg-amber-500/20 text-amber-300 px-1.5 py-0.5 rounded border border-amber-500/40">
+                Lv.{characterDetail.level} {characterDetail.className}
+              </span>
+            </div>
+            <div className="flex items-center gap-3 text-xs mt-0.5">
+              <span className="text-red-400 font-bold flex items-center gap-1">
+                ❤️ {characterDetail.hp}/{characterDetail.maxHp}
+              </span>
+              <span className="text-yellow-400 font-bold flex items-center gap-1">
+                💰 {characterDetail.gold}
+              </span>
+            </div>
+          </div>
+        </div>
+
+        {/* Floating Top Right Action Hub */}
+        <div className="absolute top-3 right-3 z-30 flex items-center gap-2">
+          <Button
+            size="sm"
+            onClick={() => setDungeonModalOpen(true)}
+            className="bg-red-600/90 hover:bg-red-500 text-white font-bold text-xs h-9 px-3 rounded-lg shadow-lg border border-red-400/40 flex items-center gap-1.5"
+          >
+            <span>⚔️</span> Phó Bản Boss
+          </Button>
+
+          <Button
+            size="sm"
+            onClick={() => setLeaderboardModalOpen(true)}
+            className="bg-purple-600/90 hover:bg-purple-500 text-white font-bold text-xs h-9 px-3 rounded-lg shadow-lg border border-purple-400/40 flex items-center gap-1.5"
+          >
+            <span>🏆</span> Xếp Hạng
+          </Button>
+
+          <Button
+            size="sm"
+            variant="outline"
+            onClick={() => setView3D(false)}
+            className="bg-slate-900/80 hover:bg-slate-800 text-slate-300 font-semibold text-xs h-9 px-2.5 rounded-lg border border-slate-700"
+            title="Chuyển sang Bảng Điều Khiển Web 2D"
+          >
+            <span>📋</span> Bảng 2D
+          </Button>
+
+          <Button
+            size="sm"
+            variant="ghost"
+            onClick={handleLogout}
+            className="text-slate-400 hover:text-red-400 h-9 w-9 p-0"
+            title="Đăng xuất"
+          >
+            <LogOut className="w-4 h-4" />
+          </Button>
+        </div>
+
+        {/* 3D Action Core */}
+        <Game
+          character={characterDetail}
+          onBackToDashboard={() => setView3D(false)}
+          onOpenCharacterSheet={() => {
+            setView3D(false);
+            setActiveTab('character');
+          }}
+          onSyncReward={async (reward) => {
+            try {
+              const res = await fetch(`/api/characters/${characterDetail.id}/3d-reward`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                credentials: 'include',
+                body: JSON.stringify(reward),
+              });
+              if (res.ok) {
+                const data = await res.json();
+                if (data.leveledUp) {
+                  toast({
+                    title: '🎉 CHÚC MỪNG LÊN CẤP!',
+                    description: `Nhân vật đã đạt Cấp ${data.character.level}!`,
+                  });
+                }
+                await queryClient.invalidateQueries({ queryKey: getGetCharacterQueryKey(characterDetail.id) });
+                await queryClient.invalidateQueries({ queryKey: getGetLeaderboardQueryKey() });
+              }
+            } catch (err) {
+              console.error('Failed to sync 3D reward:', err);
+            }
+          }}
+        />
+
+        {/* In-Game Dungeon Boss Modal */}
+        {dungeonModalOpen && (
+          <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4">
+            <div className="bg-slate-900 border border-red-500/50 rounded-2xl max-w-lg w-full p-6 shadow-2xl text-white">
+              <div className="flex items-center justify-between mb-4 pb-2 border-b border-slate-800">
+                <div className="flex items-center gap-2">
+                  <span className="text-2xl">🐉</span>
+                  <h3 className="text-lg font-black text-amber-300">PHÓ BẢN SĂN BOSS HUYỀN THOẠI</h3>
+                </div>
+                <button
+                  onClick={() => setDungeonModalOpen(false)}
+                  className="text-slate-400 hover:text-white text-lg font-bold px-2 py-1"
+                >
+                  ✕
+                </button>
+              </div>
+
+              <div className="space-y-3 max-h-[60vh] overflow-y-auto pr-1">
+                {monsters?.map((monster) => (
+                  <div
+                    key={monster.id}
+                    className="flex items-center justify-between p-3.5 bg-slate-950/70 border border-slate-800 hover:border-amber-500/50 rounded-xl transition-all"
+                  >
+                    <div className="flex items-center gap-3">
+                      <div className="w-12 h-12 bg-slate-800/80 rounded-lg p-1 flex items-center justify-center border border-slate-700">
+                        <MonsterSprite monsterId={monster.id} className="w-10 h-10" />
+                      </div>
+                      <div>
+                        <h4 className="font-bold text-sm text-slate-100">{monster.name}</h4>
+                        <div className="flex items-center gap-2 text-xs text-slate-400 mt-0.5">
+                          <span className="text-red-400 font-semibold">HP: {monster.hp}</span>
+                          <span>•</span>
+                          <span className="text-amber-400 font-semibold">Công: {monster.atk}</span>
+                          <span>•</span>
+                          <span className="text-yellow-400">+{monster.expReward} EXP</span>
+                        </div>
+                      </div>
+                    </div>
+                    <Button
+                      size="sm"
+                      onClick={() => handleBattle(monster.id)}
+                      disabled={startBattle.isPending}
+                      className="bg-gradient-to-r from-red-600 to-amber-600 hover:from-red-500 hover:to-amber-500 text-white font-bold text-xs px-3 py-1.5 rounded-lg shadow"
+                    >
+                      {startBattle.isPending ? 'Đang vào...' : '⚔️ Khiêu Chiến'}
+                    </Button>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* In-Game Leaderboard Modal */}
+        {leaderboardModalOpen && (
+          <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4">
+            <div className="bg-slate-900 border border-purple-500/50 rounded-2xl max-w-md w-full p-6 shadow-2xl text-white">
+              <div className="flex items-center justify-between mb-4 pb-2 border-b border-slate-800">
+                <div className="flex items-center gap-2">
+                  <span className="text-2xl">🏆</span>
+                  <h3 className="text-lg font-black text-purple-300">BẢNG VINH DANH CAO THỦ</h3>
+                </div>
+                <button
+                  onClick={() => setLeaderboardModalOpen(false)}
+                  className="text-slate-400 hover:text-white text-lg font-bold px-2 py-1"
+                >
+                  ✕
+                </button>
+              </div>
+
+              <div className="space-y-2 max-h-[50vh] overflow-y-auto pr-1">
+                {leaderboard?.map((hero, index) => (
+                  <div
+                    key={hero.id}
+                    className="flex items-center justify-between p-3 bg-slate-950/70 border border-slate-800 rounded-xl"
+                  >
+                    <div className="flex items-center gap-3">
+                      <span className="w-6 text-center font-black text-sm text-amber-400">
+                        {index === 0 ? '🥇' : index === 1 ? '🥈' : index === 2 ? '🥉' : `#${index + 1}`}
+                      </span>
+                      <div>
+                        <p className="font-bold text-sm text-slate-100">{hero.name}</p>
+                        <p className="text-[11px] text-slate-400">{hero.className}</p>
+                      </div>
+                    </div>
+                    <div className="text-right">
+                      <span className="text-xs font-bold bg-purple-500/20 text-purple-300 px-2 py-0.5 rounded border border-purple-500/30">
+                        Cấp {hero.level}
+                      </span>
+                      <p className="text-[10px] text-slate-400 mt-1">{hero.monstersDefeated} quái diệt</p>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Battle Modal Over 3D */}
+        <BattleModal
+          open={battleModalOpen}
+          onOpenChange={setBattleModalOpen}
+          battleResult={battleResult}
+          classId={characterDetail.classId}
+          monsterId={selectedMonster?.id}
+          monsterName={selectedMonster?.name}
+          monsterMaxHp={selectedMonster?.hp}
+        />
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-[100dvh] w-full bg-gradient-to-b from-background to-card pb-20">
@@ -227,15 +442,46 @@ export default function GamePage() {
           </div>
         </div>
 
+        {/* 3D World Gateway Hero Banner */}
+        <div className="relative overflow-hidden rounded-xl bg-gradient-to-r from-amber-600/30 via-purple-600/30 to-indigo-600/30 border-2 border-amber-500/50 p-4 mb-6 shadow-2xl backdrop-blur-sm">
+          <div className="flex items-center justify-between gap-3">
+            <div>
+              <div className="flex items-center gap-2 mb-1">
+                <span className="text-2xl animate-bounce">🐉</span>
+                <h3 className="text-base font-black tracking-wide text-amber-300">
+                  THẾ GIỚI 3D / ĐẤU TRƯỜNG 2.5D
+                </h3>
+              </div>
+              <p className="text-xs text-muted-foreground leading-relaxed">
+                Khám phá Làng Khởi Đầu, gặp gỡ NPC và chiến đấu quái vật thời gian thực!
+              </p>
+            </div>
+            <Button
+              onClick={() => setView3D(true)}
+              className="bg-gradient-to-r from-amber-500 via-orange-500 to-red-600 hover:from-amber-600 hover:to-red-700 text-white font-black px-4 py-3 text-xs uppercase tracking-wider rounded-lg shadow-lg shadow-amber-500/30 whitespace-nowrap animate-pulse"
+            >
+              ⚔️ Vào 3D
+            </Button>
+          </div>
+        </div>
+
         {/* Tabs */}
         <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-          <TabsList className="w-full grid grid-cols-3 bg-card border border-card-border h-12 mb-6">
+          <TabsList className="w-full grid grid-cols-4 bg-card border border-card-border h-12 mb-6">
+            <TabsTrigger 
+              value="3d" 
+              onClick={() => setView3D(true)}
+              className="font-semibold text-amber-400 hover:text-amber-300"
+            >
+              <Compass className="w-4 h-4 mr-1 text-amber-400" />
+              Thế Giới 3D
+            </TabsTrigger>
             <TabsTrigger 
               value="battle" 
               data-testid="tab-battle"
               className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground font-semibold"
             >
-              <Swords className="w-4 h-4 mr-2" />
+              <Swords className="w-4 h-4 mr-1" />
               Chiến đấu
             </TabsTrigger>
             <TabsTrigger 
@@ -243,7 +489,7 @@ export default function GamePage() {
               data-testid="tab-character"
               className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground font-semibold"
             >
-              <User className="w-4 h-4 mr-2" />
+              <User className="w-4 h-4 mr-1" />
               Nhân vật
             </TabsTrigger>
             <TabsTrigger 
@@ -251,7 +497,7 @@ export default function GamePage() {
               data-testid="tab-leaderboard"
               className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground font-semibold"
             >
-              <Trophy className="w-4 h-4 mr-2" />
+              <Trophy className="w-4 h-4 mr-1" />
               BXH
             </TabsTrigger>
           </TabsList>

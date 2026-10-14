@@ -121,6 +121,65 @@ router.get("/characters/:characterId/battle-log", requireAuth, async (req, res) 
   return res.status(200).json(logs);
 });
 
+router.post("/characters/:characterId/3d-reward", requireAuth, async (req, res) => {
+  const characterId = parseInt(req.params.characterId);
+  if (isNaN(characterId)) {
+    return res.status(400).json({ error: "ID không hợp lệ" });
+  }
+
+  const [character] = await db
+    .select()
+    .from(charactersTable)
+    .where(eq(charactersTable.id, characterId))
+    .limit(1);
+
+  if (!character || character.userId !== req.session.userId) {
+    return res.status(404).json({ error: "Không tìm thấy nhân vật" });
+  }
+
+  const expGained = Math.max(0, parseInt(req.body.expGained) || 0);
+  const goldGained = Math.max(0, parseInt(req.body.goldGained) || 0);
+  const killsGained = Math.max(0, parseInt(req.body.kills) || 0);
+
+  let newExp = character.experience + expGained;
+  let currentLevel = character.level;
+  let expToNext = getExpForLevel(currentLevel);
+  let leveledUp = false;
+
+  while (newExp >= expToNext) {
+    newExp -= expToNext;
+    currentLevel++;
+    leveledUp = true;
+    expToNext = getExpForLevel(currentLevel);
+  }
+
+  const newStats = getStatsForLevel(character.classId, currentLevel);
+
+  const [updated] = await db
+    .update(charactersTable)
+    .set({
+      level: currentLevel,
+      experience: newExp,
+      maxHp: newStats.hp,
+      hp: newStats.hp,
+      atk: newStats.atk,
+      def: newStats.def,
+      spd: newStats.spd,
+      gold: character.gold + goldGained,
+      kills: character.kills + killsGained,
+    })
+    .where(eq(charactersTable.id, characterId))
+    .returning();
+
+  return res.status(200).json({
+    leveledUp,
+    character: {
+      ...(await toCharacterResponse(updated)),
+      experienceToNextLevel: getExpForLevel(currentLevel),
+    },
+  });
+});
+
 function getExpForLevel(level: number): number {
   return Math.floor(100 * Math.pow(1.5, level - 1));
 }
