@@ -4,12 +4,16 @@
   "license": "MIT",
   "scripts": {
     "preinstall": "node -e \"if(process.env.npm_config_user_agent && !process.env.npm_config_user_agent.startsWith('pnpm')) { console.warn('Please use pnpm'); }\"",
-    "build": "pnpm run typecheck && pnpm -r --if-present run build",
+    "codegen": "pnpm --filter @workspace/api-spec run codegen",
+    "db:push": "pnpm --filter @workspace/db run push",
+    "db:seed": "pnpm --filter @workspace/db run seed",
+    "typecheck:libs": "tsc --build",
+    "typecheck": "pnpm run typecheck:libs && pnpm -r --filter \"./artifacts/**\" --filter \"./scripts\" --if-present run typecheck",
     "build:server": "pnpm --filter @workspace/api-server run build",
     "build:game": "pnpm --filter @workspace/mmorpg-game run build",
-    "start": "pnpm --filter @workspace/api-server run start",
-    "typecheck:libs": "tsc --build",
-    "typecheck": "pnpm run typecheck:libs && pnpm -r --filter \"./artifacts/**\" --filter \"./scripts\" --if-present run typecheck"
+    "build:all": "pnpm run typecheck && pnpm run build:server && pnpm run build:game",
+    "build": "pnpm run build:all",
+    "start": "pnpm --filter @workspace/api-server run start"
   },
   "private": true,
   "dependencies": {

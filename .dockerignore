@@ -1,10 +1,36 @@
-node_modules
+# VCS & IDE
 .git
+.gitignore
 .agents
-*.log
+.vscode
+.idea
+
+# Dependencies & Package Managers
+node_modules
+.pnpm-store
+.pnpm-workspace-state-v1.json
+
+# Build outputs & caches
 dist
+build
+out-tsc
+tmp
+*.tsbuildinfo
 .cache
+.vercel
+
+# Environment & Secrets
 .env
-.env.local
+.env.*
+!.env.example
+
+# Logs
+*.log
+npm-debug.log*
+yarn-debug.log*
+pnpm-debug.log*
+
+# Backups & Heavy Assets not needed for build
+raw_ai_sprites
 Dragon-Game-Studio
 Heroic-Battleground

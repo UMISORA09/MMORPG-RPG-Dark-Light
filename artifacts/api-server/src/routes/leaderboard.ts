@@ -20,7 +20,7 @@ router.get("/leaderboard", async (_req, res) => {
     .limit(20);
 
   const result = await Promise.all(
-    characters.map(async (c, idx) => {
+    characters.map(async (c: any, idx: number) => {
       const [user] = await db
         .select({ username: usersTable.username })
         .from(usersTable)

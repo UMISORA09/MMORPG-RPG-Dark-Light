@@ -6,6 +6,7 @@ import charactersRouter from "./characters";
 import battleRouter from "./battle";
 import leaderboardRouter from "./leaderboard";
 import inventoryRouter from "./inventory";
+import shopRouter from "./shop";
 
 const router: IRouter = Router();
 
@@ -16,5 +17,6 @@ router.use(charactersRouter);
 router.use(battleRouter);
 router.use(leaderboardRouter);
 router.use(inventoryRouter);
+router.use(shopRouter);
 
 export default router;

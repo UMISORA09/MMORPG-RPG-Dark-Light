@@ -306,7 +306,7 @@ export default function GamePage() {
               <div className="space-y-2 max-h-[50vh] overflow-y-auto pr-1">
                 {leaderboard?.map((hero, index) => (
                   <div
-                    key={hero.id}
+                    key={`${hero.characterName}-${index}`}
                     className="flex items-center justify-between p-3 bg-slate-950/70 border border-slate-800 rounded-xl"
                   >
                     <div className="flex items-center gap-3">
@@ -314,7 +314,7 @@ export default function GamePage() {
                         {index === 0 ? '🥇' : index === 1 ? '🥈' : index === 2 ? '🥉' : `#${index + 1}`}
                       </span>
                       <div>
-                        <p className="font-bold text-sm text-slate-100">{hero.name}</p>
+                        <p className="font-bold text-sm text-slate-100">{hero.characterName}</p>
                         <p className="text-[11px] text-slate-400">{hero.className}</p>
                       </div>
                     </div>
@@ -322,7 +322,7 @@ export default function GamePage() {
                       <span className="text-xs font-bold bg-purple-500/20 text-purple-300 px-2 py-0.5 rounded border border-purple-500/30">
                         Cấp {hero.level}
                       </span>
-                      <p className="text-[10px] text-slate-400 mt-1">{hero.monstersDefeated} quái diệt</p>
+                      <p className="text-[10px] text-slate-400 mt-1">{hero.kills} quái diệt</p>
                     </div>
                   </div>
                 ))}

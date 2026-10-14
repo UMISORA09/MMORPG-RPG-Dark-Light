@@ -1,22 +1,25 @@
-import { Canvas } from "@react-three/fiber";
-import { useFrame } from "@react-three/fiber";
+import { Canvas, useFrame } from "@react-three/fiber";
 import { useEffect, useRef, useState, useCallback } from "react";
-import Arena from "./components/Arena";
-import Village from "./components/Village";
-import VillageNPCs from "./components/VillageNPCs";
-import VillageHUD from "./components/VillageHUD";
-import CharacterMenu from "./components/CharacterMenu";
-import Player from "./components/Player";
-import Enemies from "./components/Enemies";
-import Bullets from "./components/Bullets";
-import SkillFX from "./components/SkillFX";
-import GameCamera from "./components/GameCamera";
-import MenuCamera from "./components/MenuCamera";
-import Stars from "./components/Particles";
-import HUD from "./components/HUD";
-import MenuScreen from "./components/MenuScreen";
-import MobileControls from "./components/MobileControls";
-import { useGameStore } from "./useGameStore";
+import {
+  Arena,
+  Village,
+  VillageNPCs,
+  Player,
+  Enemies,
+  Bullets,
+  SkillFX,
+  GameCamera,
+  MenuCamera,
+  Particles as Stars,
+} from "../canvas";
+import {
+  HUD,
+  VillageHUD,
+  CharacterMenu,
+  MenuScreen,
+  MobileControls,
+} from "../ui";
+import { useGameStore } from "../stores";
 import { mobileState } from "./mobileControls";
 import { cameraControls, PITCH_MIN, PITCH_MAX } from "./cameraControls";
 import { useDeviceType } from "./useDeviceDetect";

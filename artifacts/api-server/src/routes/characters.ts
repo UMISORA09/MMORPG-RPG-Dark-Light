@@ -27,7 +27,7 @@ router.get("/characters", requireAuth, async (req, res) => {
 
   await ensureItemCatalog();
   const expToNext = await Promise.all(
-    characters.map(async (character) => {
+    characters.map(async (character: any) => {
       await ensureStarterInventory(character.id, character.classId);
       return {
         ...(await toCharacterResponse(character)),

@@ -70,11 +70,11 @@ export async function getEquipmentBonuses(characterId: number): Promise<Equipmen
     );
 
   return rows.reduce(
-    (bonuses, item) => ({
-      hpBoost: bonuses.hpBoost + item.hpBoost,
-      atkBoost: bonuses.atkBoost + item.atkBoost,
-      defBoost: bonuses.defBoost + item.defBoost,
-      spdBoost: bonuses.spdBoost + item.spdBoost,
+    (bonuses: EquipmentBonuses, item: any) => ({
+      hpBoost: bonuses.hpBoost + (item.hpBoost || 0),
+      atkBoost: bonuses.atkBoost + (item.atkBoost || 0),
+      defBoost: bonuses.defBoost + (item.defBoost || 0),
+      spdBoost: bonuses.spdBoost + (item.spdBoost || 0),
     }),
     { hpBoost: 0, atkBoost: 0, defBoost: 0, spdBoost: 0 },
   );
@@ -107,7 +107,7 @@ export async function listInventory(characterId: number) {
     .innerJoin(itemsTable, eq(characterItemsTable.itemId, itemsTable.id))
     .where(eq(characterItemsTable.characterId, characterId));
 
-  return rows.map(({ item, ownershipId, equipped, acquiredAt }) => ({
+  return rows.map(({ item, ownershipId, equipped, acquiredAt }: any) => ({
     id: item.id,
     name: item.name,
     type: item.type,
@@ -157,7 +157,7 @@ export async function getItem(itemId: string): Promise<Item | undefined> {
   return item;
 }
 
-export async function getCharacterForUser(characterId: number, userId: number) {
+export async function getCharacterForUser(characterId: number, userId: number): Promise<Character | undefined> {
   const [character] = await db
     .select()
     .from(charactersTable)
@@ -176,7 +176,7 @@ export function canUseItem(item: Item, character: Character): string | null {
   return null;
 }
 
-export async function getCatalogItems() {
+export async function getCatalogItems(): Promise<Item[]> {
   await ensureItemCatalog();
   return db.select().from(itemsTable);
 }

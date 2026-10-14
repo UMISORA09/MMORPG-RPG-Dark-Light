@@ -18,9 +18,8 @@ COPY scripts ./scripts
 # Install dependencies
 RUN pnpm install --frozen-lockfile=false
 
-# Build all packages: DB types, API server, and MMORPG 3D Game Frontend
-RUN pnpm run build:server
-RUN pnpm run build:game
+# Build all packages with strict typing check
+RUN pnpm run build:all
 
 # ==============================================================================
 # Production Runtime Stage

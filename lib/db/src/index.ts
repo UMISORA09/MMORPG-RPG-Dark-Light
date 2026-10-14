@@ -1,6 +1,7 @@
 import { drizzle } from "drizzle-orm/node-postgres";
 import pg from "pg";
 import * as schema from "./schema";
+import { SEED_ITEMS } from "./seed-data";
 
 const { Pool } = pg;
 
@@ -20,7 +21,7 @@ interface MemoryStoreData {
 const memoryStore: MemoryStoreData = {
   users: [],
   characters: [],
-  items: [],
+  items: [...SEED_ITEMS],
   character_items: [],
   battle_logs: [],
 };
@@ -316,7 +317,16 @@ export async function initDatabase() {
         CREATE INDEX IF NOT EXISTS "IDX_session_expire" ON user_sessions ("expire");
       `);
 
-      console.log("[DB] PostgreSQL tables successfully verified and initialized.");
+      // Auto-seed default item catalog into PostgreSQL
+      for (const item of SEED_ITEMS) {
+        await pool.query(`
+          INSERT INTO items (id, name, type, description, rarity, hp_boost, atk_boost, def_boost, spd_boost, price, class_id, required_level, icon)
+          VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13)
+          ON CONFLICT (id) DO NOTHING;
+        `, [item.id, item.name, item.type, item.description, item.rarity, item.hpBoost, item.atkBoost, item.defBoost, item.spdBoost, item.price, item.classId, item.requiredLevel, item.icon]);
+      }
+
+      console.log("[DB] PostgreSQL tables & seed catalog successfully initialized.");
       return;
     } catch (err) {
       console.warn("[DB] PostgreSQL connection failed. Falling back to Standalone Memory DB:", (err as Error).message);
@@ -347,3 +357,5 @@ if (process.env.DATABASE_URL && process.env.DATABASE_URL !== "memory") {
 }
 
 export * from "./schema";
+export * from "./seed-data";
+export { seedDatabase } from "./seed";
