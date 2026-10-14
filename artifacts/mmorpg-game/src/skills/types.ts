@@ -87,7 +87,7 @@ export interface CombatSkillSpec {
   name: string;
   description: string;
   slot: SkillSlot;
-  keybind: "J" | "K" | "L" | "U" | "1" | "2" | "3" | "4";
+  keybind: "J" | "K" | "L" | "U" | "1" | "2" | "3" | "4" | "Q" | "E" | "R" | "F" | string;
   windupMs: number;
   activeMs: number;
   recoveryMs: number;
@@ -103,7 +103,7 @@ export interface SkillBlueprint {
   id: string;
   name: string;
   description: string;
-  keybind: "J" | "K" | "L" | "U" | "1" | "2" | "3" | "4";
+  keybind: "J" | "K" | "L" | "U" | "1" | "2" | "3" | "4" | "Q" | "E" | "R" | "F" | string;
   damageMultiplier: number;
   cooldown: number;
   range: number;

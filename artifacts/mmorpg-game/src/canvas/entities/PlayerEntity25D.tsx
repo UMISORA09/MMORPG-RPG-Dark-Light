@@ -14,18 +14,24 @@ const keys = new Set<string>();
 
 if (typeof window !== "undefined") {
   window.addEventListener("keydown", (e) => {
+    // If typing in input or textarea, ignore game hotkeys
+    if (["input", "textarea"].includes((e.target as HTMLElement)?.tagName?.toLowerCase())) {
+      return;
+    }
     const k = e.key.toLowerCase();
     keys.add(k);
     if ([" ", "arrowup", "arrowdown", "arrowleft", "arrowright"].includes(k)) {
       e.preventDefault();
     }
-    // Number and Action keys for skills
-    if (e.key === "1" || k === "k") useGameWorldStore.getState().triggerSkill(1);
-    if (e.key === "2" || k === "l") useGameWorldStore.getState().triggerSkill(2);
-    if (e.key === "3" || k === "u") useGameWorldStore.getState().triggerSkill(3);
-    if (k === "i") useGameWorldStore.getState().setActiveModal("inventory");
-    if (k === "b") useGameWorldStore.getState().setActiveModal("shop");
-    if (k === "l" && !e.ctrlKey) useGameWorldStore.getState().setActiveModal("leaderboard");
+    // Combat Skills: 1/Q (Skill 1), 2/E (Skill 2), 3/R (Skill 3) - Ergonomic Left Hand Layout
+    if (e.key === "1" || k === "q" || k === "k") useGameWorldStore.getState().triggerSkill(1);
+    if (e.key === "2" || k === "e") useGameWorldStore.getState().triggerSkill(2);
+    if (e.key === "3" || k === "r" || k === "u") useGameWorldStore.getState().triggerSkill(3);
+
+    // Interface Modals: B/I (Bag/Túi), P (Shop/Cửa hàng), O (BXH/Leaderboard), H (Chiến Báo), V (2.5D/3D Mode), ESC (Đóng)
+    if (k === "b" || k === "i") useGameWorldStore.getState().setActiveModal("inventory");
+    if (k === "p") useGameWorldStore.getState().setActiveModal("shop");
+    if (k === "o") useGameWorldStore.getState().setActiveModal("leaderboard");
     if (k === "h") useGameWorldStore.getState().setActiveModal("battleLog");
     if (k === "v") useGameWorldStore.getState().toggleCharacterRenderMode();
     if (e.key === "Escape") useGameWorldStore.getState().closeActiveModal();
@@ -87,28 +93,48 @@ export const PlayerEntity25D = memo(function PlayerEntity25D() {
     if (attackCooldown.current > 0) attackCooldown.current -= dt;
     if (animLockTimer.current > 0) animLockTimer.current -= dt;
 
-    // 2. Read Keyboard & Mobile Joystick inputs
+    // 2. Read Keyboard & Mobile Joystick inputs with Camera-Relative Orientation
     const joyX = mobileState.joystick.x;
     const joyY = mobileState.joystick.y;
     const deadzone = 0.15;
 
-    let moveX = 0;
-    let moveZ = 0;
+    let inputForward = 0; // +1 = Forward (Away from camera), -1 = Backward (Towards camera)
+    let inputRight = 0;   // +1 = Right, -1 = Left relative to screen view
 
-    if (keys.has("a") || keys.has("arrowleft") || joyX < -deadzone) moveX -= 1;
-    if (keys.has("d") || keys.has("arrowright") || joyX > deadzone) moveX += 1;
-    if (keys.has("w") || keys.has("arrowup") || joyY < -deadzone) moveZ -= 1;
-    if (keys.has("s") || keys.has("arrowdown") || joyY > deadzone) moveZ += 1;
+    // Keyboard Input (WASD & Arrow Keys)
+    if (keys.has("w") || keys.has("arrowup")) inputForward += 1;
+    if (keys.has("s") || keys.has("arrowdown")) inputForward -= 1;
+    if (keys.has("d") || keys.has("arrowright")) inputRight += 1;
+    if (keys.has("a") || keys.has("arrowleft")) inputRight -= 1;
 
-    // Normalize diagonal movement
-    const len = Math.sqrt(moveX * moveX + moveZ * moveZ);
-    if (len > 0) {
-      moveX /= len;
-      moveZ /= len;
+    // Mobile Virtual Joystick (joyY < 0 is dragging UP on screen)
+    if (joyY < -deadzone) inputForward += -joyY;
+    if (joyY > deadzone) inputForward += -joyY;
+    if (joyX > deadzone) inputRight += joyX;
+    if (joyX < -deadzone) inputRight += joyX;
+
+    // Normalize diagonal input vector
+    const inputMag = Math.hypot(inputForward, inputRight);
+    if (inputMag > 1) {
+      inputForward /= inputMag;
+      inputRight /= inputMag;
     }
 
-    // Determine facing direction (flip left/right)
-    if (moveX < -0.05) facingLeftRef.current = true;
+    // ── Calculate Camera-Relative Movement Vector ──
+    // cameraControls.yaw is camera orbit rotation angle around Y axis
+    const yaw = cameraControls.yaw;
+    const forwardX = -Math.sin(yaw);
+    const forwardZ = -Math.cos(yaw);
+    const rightX = Math.cos(yaw);
+    const rightZ = -Math.sin(yaw);
+
+    const moveX = forwardX * inputForward + rightX * inputRight;
+    const moveZ = forwardZ * inputForward + rightZ * inputRight;
+
+    // Determine facing direction (flip left/right sprite based on screen orientation)
+    if (inputRight < -0.05) facingLeftRef.current = true;
+    else if (inputRight > 0.05) facingLeftRef.current = false;
+    else if (moveX < -0.05) facingLeftRef.current = true;
     else if (moveX > 0.05) facingLeftRef.current = false;
 
     // 3. Jump Physics
@@ -128,12 +154,12 @@ export const PlayerEntity25D = memo(function PlayerEntity25D() {
       isGrounded.current = true;
     }
 
-    // Move in X/Z plane
+    // Move in X/Z plane smoothly
     pos.current.x += moveX * speed * dt;
     pos.current.z += moveZ * speed * dt;
 
     // 4. Attack Execution (3-step Combo Chain)
-    const wantsAttack = keys.has("j") || mobileState.attack || mobileState.shoot;
+    const wantsAttack = keys.has("j") || keys.has("f") || mobileState.attack || mobileState.shoot;
 
     let currentAnim: import("../sprites/SpriteBillboard25D").EntityAnimationState = "idle";
 
@@ -157,7 +183,7 @@ export const PlayerEntity25D = memo(function PlayerEntity25D() {
       }
     } else if (!isGrounded.current) {
       currentAnim = velocityY.current > 0 ? "jump" : "fall";
-    } else if (len > 0.1) {
+    } else if (inputMag > 0.1) {
       currentAnim = "run";
     }
 

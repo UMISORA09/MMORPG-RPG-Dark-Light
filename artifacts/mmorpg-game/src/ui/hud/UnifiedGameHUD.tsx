@@ -357,33 +357,34 @@ export const UnifiedGameHUD = memo(function UnifiedGameHUD({
           </button>
 
           {/* Inventory (I) */}
+          {/* Inventory (B / I) */}
           <button
             onClick={() => setActiveModal("inventory")}
             className="flex items-center gap-1.5 px-3 py-2 bg-slate-950/80 hover:bg-slate-900 border border-slate-700 hover:border-cyan-400 rounded-xl text-slate-200 hover:text-cyan-300 text-xs font-black uppercase tracking-wider transition shadow-lg backdrop-blur-md cursor-pointer"
-            title="Túi Đồ (Phím I)"
+            title="Túi Đồ (Phím B hoặc I)"
           >
             <Backpack className="w-4 h-4 text-cyan-400" />
-            <span className="hidden sm:inline">Túi Đồ (I)</span>
+            <span className="hidden sm:inline">Túi Đồ (B)</span>
           </button>
 
-          {/* Shop (B) */}
+          {/* Shop (P) */}
           <button
             onClick={() => setActiveModal("shop")}
             className="flex items-center gap-1.5 px-3 py-2 bg-slate-950/80 hover:bg-slate-900 border border-slate-700 hover:border-amber-400 rounded-xl text-slate-200 hover:text-amber-300 text-xs font-black uppercase tracking-wider transition shadow-lg backdrop-blur-md cursor-pointer"
-            title="Cửa Hàng (Phím B)"
+            title="Cửa Hàng (Phím P)"
           >
             <ShoppingBag className="w-4 h-4 text-amber-400" />
-            <span className="hidden sm:inline">Cửa Hàng (B)</span>
+            <span className="hidden sm:inline">Cửa Hàng (P)</span>
           </button>
 
-          {/* Leaderboard (L) */}
+          {/* Leaderboard (O) */}
           <button
             onClick={() => setActiveModal("leaderboard")}
             className="flex items-center gap-1.5 px-3 py-2 bg-slate-950/80 hover:bg-slate-900 border border-slate-700 hover:border-purple-400 rounded-xl text-slate-200 hover:text-purple-300 text-xs font-black uppercase tracking-wider transition shadow-lg backdrop-blur-md cursor-pointer"
-            title="Bảng Xếp Hạng (Phím L)"
+            title="Bảng Xếp Hạng (Phím O)"
           >
             <Trophy className="w-4 h-4 text-purple-400" />
-            <span className="hidden sm:inline">BXH (L)</span>
+            <span className="hidden sm:inline">BXH (O)</span>
           </button>
 
           {/* Battle Logs (H) */}
@@ -393,7 +394,7 @@ export const UnifiedGameHUD = memo(function UnifiedGameHUD({
             title="Lịch Sử Chiến Báo (Phím H)"
           >
             <ScrollText className="w-4 h-4 text-red-400" />
-            <span className="hidden sm:inline">Chiến Báo</span>
+            <span className="hidden sm:inline">Chiến Báo (H)</span>
           </button>
 
           {/* Logout */}
@@ -496,7 +497,7 @@ export const UnifiedGameHUD = memo(function UnifiedGameHUD({
 
                 <div className="w-px h-8 bg-slate-800" />
 
-                {/* Skill 1 (Phím K / 1) */}
+                {/* Skill 1 (Phím 1 / Q) */}
                 {s1 && (
                   <button
                     onClick={() => triggerSkill(1)}
@@ -506,11 +507,11 @@ export const UnifiedGameHUD = memo(function UnifiedGameHUD({
                         ? "bg-slate-900 border-slate-800 text-slate-500"
                         : "bg-amber-600/30 hover:bg-amber-600/50 border-amber-500/60 text-amber-200"
                     }`}
-                    title={`${s1.name}: ${s1.description}`}
+                    title={`${s1.name}: ${s1.description} (Phím 1 hoặc Q)`}
                   >
                     <Zap className="w-5 h-5 text-amber-400" />
                     <span className="text-[9px] font-mono font-bold truncate max-w-[64px]">
-                      {s1.keybind} / {s1.name.split(" ")[0]}
+                      1/Q · {s1.name.split(" ")[0]}
                     </span>
                     {(skillCooldowns.skill1 || 0) > 0 && (
                       <span className="absolute inset-0 bg-black/75 rounded-xl flex items-center justify-center text-xs font-mono font-black text-amber-300">
@@ -520,7 +521,7 @@ export const UnifiedGameHUD = memo(function UnifiedGameHUD({
                   </button>
                 )}
 
-                {/* Skill 2 (Phím L / 2) */}
+                {/* Skill 2 (Phím 2 / E) */}
                 {s2 && (
                   <button
                     onClick={() => triggerSkill(2)}
@@ -530,11 +531,11 @@ export const UnifiedGameHUD = memo(function UnifiedGameHUD({
                         ? "bg-slate-900 border-slate-800 text-slate-500"
                         : "bg-purple-600/30 hover:bg-purple-600/50 border-purple-500/60 text-purple-200"
                     }`}
-                    title={`${s2.name}: ${s2.description}`}
+                    title={`${s2.name}: ${s2.description} (Phím 2 hoặc E)`}
                   >
                     <Shield className="w-5 h-5 text-purple-400" />
                     <span className="text-[9px] font-mono font-bold truncate max-w-[64px]">
-                      {s2.keybind} / {s2.name.split(" ")[0]}
+                      2/E · {s2.name.split(" ")[0]}
                     </span>
                     {(skillCooldowns.skill2 || 0) > 0 && (
                       <span className="absolute inset-0 bg-black/75 rounded-xl flex items-center justify-center text-xs font-mono font-black text-purple-300">
@@ -544,7 +545,7 @@ export const UnifiedGameHUD = memo(function UnifiedGameHUD({
                   </button>
                 )}
 
-                {/* Skill 3 (Phím U / 3 - Nộ/Ultimate) */}
+                {/* Skill 3 (Phím 3 / R - Nộ/Ultimate) */}
                 {s3 && (
                   <button
                     onClick={() => triggerSkill(3)}
@@ -554,11 +555,11 @@ export const UnifiedGameHUD = memo(function UnifiedGameHUD({
                         ? "bg-slate-900 border-slate-800 text-slate-500"
                         : "bg-red-700/40 hover:bg-red-700/60 border-red-500/80 text-red-200 shadow-[0_0_15px_rgba(239,68,68,0.4)]"
                     }`}
-                    title={`${s3.name}: ${s3.description}`}
+                    title={`${s3.name}: ${s3.description} (Phím 3 hoặc R)`}
                   >
                     <Sparkles className="w-5 h-5 text-orange-400" />
                     <span className="text-[9px] font-mono font-bold truncate max-w-[64px]">
-                      {s3.keybind} / {s3.name.split(" ")[0]}
+                      3/R · {s3.name.split(" ")[0]}
                     </span>
                     {(skillCooldowns.skill3 || 0) > 0 && (
                       <span className="absolute inset-0 bg-black/75 rounded-xl flex items-center justify-center text-xs font-mono font-black text-red-400">

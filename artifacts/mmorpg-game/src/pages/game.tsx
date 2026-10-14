@@ -79,6 +79,12 @@ export default function GamePage() {
   const charRef = useRef<Character | null>(null);
   charRef.current = characterDetail || null;
 
+  // Track if game canvas has been mounted once to NEVER unmount 3D WebGL context on background refetch
+  const hasInitializedRef = useRef(false);
+  if (characterDetail) {
+    hasInitializedRef.current = true;
+  }
+
   // ── Real-Time Combat Sync with Backend PostgreSQL via useStartBattle ──
   useEffect(() => {
     const handleMonsterDefeat = (monsterId: string) => {
@@ -90,19 +96,25 @@ export default function GamePage() {
         { characterId: currentChar.id, data: { monsterId } },
         {
           onSuccess: async (result) => {
+            // Update React Query cache directly for instantaneous, seamless updates without re-triggering loading states
+            queryClient.setQueryData(getGetCharacterQueryKey(currentChar.id), result.character);
+
+            // Ensure safe HP so player is never locked at 0 HP
+            const safeHp = Math.max(1, result.character.hp);
+
             // Update both stores HUD with new gold, exp, level and health
             useGameWorldStore.getState().updateAfterBattle({
               exp: result.character.experience,
               gold: result.character.gold,
               level: result.character.level,
-              hp: result.character.hp,
+              hp: safeHp,
               maxHp: result.character.maxHp,
             });
             useGameStore.getState().updatePlayerStatsAfterBattle({
               exp: result.character.experience,
               gold: result.character.gold,
               level: result.character.level,
-              hp: result.character.hp,
+              hp: safeHp,
               maxHp: result.character.maxHp,
             });
 
@@ -114,21 +126,13 @@ export default function GamePage() {
               });
             }
 
-            // Invalidate cache to ensure UI and modals stay in sync
-            await Promise.all([
-              queryClient.invalidateQueries({
-                queryKey: getGetCharacterQueryKey(currentChar.id),
-              }),
-              queryClient.invalidateQueries({
-                queryKey: getGetCharactersQueryKey(),
-              }),
-              queryClient.invalidateQueries({
-                queryKey: getGetBattleLogQueryKey(currentChar.id),
-              }),
-              queryClient.invalidateQueries({
-                queryKey: getGetLeaderboardQueryKey(),
-              }),
-            ]);
+            // Invalidate logs & leaderboard without triggering character re-fetch
+            queryClient.invalidateQueries({
+              queryKey: getGetBattleLogQueryKey(currentChar.id),
+            });
+            queryClient.invalidateQueries({
+              queryKey: getGetLeaderboardQueryKey(),
+            });
           },
           onError: (err: any) => {
             console.error("Lỗi đồng bộ chiến đấu về cơ sở dữ liệu:", err);
@@ -159,8 +163,10 @@ export default function GamePage() {
     });
   };
 
-  // Loading state
-  if (userLoading || charactersLoading || characterLoading || !characterDetail) {
+  const activeCharacter = characterDetail || charRef.current;
+
+  // Loading state: Only show full-screen spinner on first initialization. NEVER unmount once mounted!
+  if (!hasInitializedRef.current && (userLoading || charactersLoading || characterLoading || !activeCharacter)) {
     return (
       <div className="min-h-screen w-full flex items-center justify-center bg-slate-950 text-white select-none">
         <div className="text-center space-y-4">
@@ -172,13 +178,17 @@ export default function GamePage() {
     );
   }
 
+  if (!activeCharacter) {
+    return null;
+  }
+
   return (
     <main className="fixed inset-0 w-full h-full overflow-hidden bg-black select-none">
       {/* ── 1 Single Unified 3D Real-Time World Canvas & HUD ── */}
       <Game onLogout={handleLogout} />
 
       {/* ── Glassmorphism Overlay Modals (Inventory, Shop, Leaderboard, Battle Logs) ── */}
-      <UnifiedOverlayModals character={characterDetail} />
+      <UnifiedOverlayModals character={activeCharacter} />
     </main>
   );
 }

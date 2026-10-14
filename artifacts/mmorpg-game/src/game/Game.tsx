@@ -19,28 +19,41 @@ const keysDown = new Set<string>();
 
 if (typeof window !== "undefined") {
   window.addEventListener("keydown", (e) => {
+    if (["input", "textarea"].includes((e.target as HTMLElement)?.tagName?.toLowerCase())) {
+      return;
+    }
     keysDown.add(e.key);
     if (["Space", "ArrowUp", "ArrowDown", "ArrowLeft", "ArrowRight"].includes(e.code)) {
       e.preventDefault();
     }
 
-    // Modal & Skill Shortcuts
-    if (e.key === "i" || e.key === "I") {
+    // Modal & Skill Shortcuts synchronized with useGameWorldStore
+    if (e.key === "b" || e.key === "B" || e.key === "i" || e.key === "I") {
       useGameStore.getState().setActiveModal("inventory");
-    } else if (e.key === "b" || e.key === "B") {
+      useGameWorldStore.getState().setActiveModal("inventory");
+    } else if (e.key === "p" || e.key === "P") {
       useGameStore.getState().setActiveModal("shop");
-    } else if (e.key === "l" || e.key === "L") {
+      useGameWorldStore.getState().setActiveModal("shop");
+    } else if (e.key === "o" || e.key === "O") {
       useGameStore.getState().setActiveModal("leaderboard");
+      useGameWorldStore.getState().setActiveModal("leaderboard");
     } else if (e.key === "h" || e.key === "H") {
       useGameStore.getState().setActiveModal("battle_logs");
-    } else if (e.key === "1") {
+      useGameWorldStore.getState().setActiveModal("battleLog");
+    } else if (e.key === "v" || e.key === "V") {
+      useGameWorldStore.getState().toggleCharacterRenderMode();
+    } else if (e.key === "1" || e.key === "q" || e.key === "Q") {
       useGameStore.getState().triggerSkill(1);
-    } else if (e.key === "2") {
+      useGameWorldStore.getState().triggerSkill(1);
+    } else if (e.key === "2" || e.key === "e" || e.key === "E") {
       useGameStore.getState().triggerSkill(2);
-    } else if (e.key === "3") {
+      useGameWorldStore.getState().triggerSkill(2);
+    } else if (e.key === "3" || e.key === "r" || e.key === "R") {
       useGameStore.getState().triggerSkill(3);
+      useGameWorldStore.getState().triggerSkill(3);
     } else if (e.key === "Escape") {
       useGameStore.getState().closeActiveModal();
+      useGameWorldStore.getState().closeActiveModal();
     }
   });
 
@@ -69,7 +82,7 @@ function buildControls(): Record<string, boolean | number> {
     left:     keysDown.has("ArrowLeft")  || keysDown.has("a") || keysDown.has("A") || jx < -dz,
     right:    keysDown.has("ArrowRight") || keysDown.has("d") || keysDown.has("D") || jx >  dz,
     jump:     keysDown.has(" ") || mobileState.jump,
-    attack:   keysDown.has("j") || keysDown.has("J") || keysDown.has("z") || keysDown.has("Z") || mobileState.attack,
+    attack:   keysDown.has("j") || keysDown.has("J") || keysDown.has("f") || keysDown.has("F") || keysDown.has("z") || keysDown.has("Z") || mobileState.attack,
     shoot:    keysDown.has("k") || keysDown.has("K") || keysDown.has("x") || keysDown.has("X") || mobileState.shoot,
     interact: keysDown.has("e") || keysDown.has("E"),
   };
@@ -98,8 +111,8 @@ function LockToast({ canvasRef }: { canvasRef: React.RefObject<HTMLCanvasElement
 
   if (menuOpen) return null;
 
-  const mobileHint  = "Joystick di chuyển · Nút J chém · Nút K bắn · 1/2/3 Chiêu thức · V Đổi 2.5D/3D";
-  const desktopHint = "Click 3D để xoay chuột · WASD di chuyển · J chém · K bắn · V Đổi 2.5D/3D RPG · I Túi đồ · B Shop";
+  const mobileHint  = "Joystick di chuyển · Nút J chém · 1/2/3 Chiêu thức · B Túi đồ · V Đổi 2.5D/3D";
+  const desktopHint = "WASD di chuyển · Chuột/J Chém · 1/Q, 2/E, 3/R Kỹ năng · B Túi đồ · P Shop · O BXH · V Đổi 2.5D/3D";
 
   return (
     <div
@@ -110,11 +123,12 @@ function LockToast({ canvasRef }: { canvasRef: React.RefObject<HTMLCanvasElement
       }}
     >
       <div style={{
-        background: "rgba(10,15,30,0.75)",
-        border: "1px solid rgba(255,255,255,0.12)",
-        borderRadius: 20, padding: "4px 16px",
-        color: "rgba(255,255,255,0.55)", fontSize: 11, letterSpacing: 0.5,
-        backdropFilter: "blur(4px)",
+        background: "rgba(10,15,30,0.85)",
+        border: "1px solid rgba(255,255,255,0.18)",
+        borderRadius: 20, padding: "5px 18px",
+        color: "rgba(255,255,255,0.8)", fontSize: 11, fontWeight: 600, letterSpacing: 0.5,
+        backdropFilter: "blur(6px)",
+        boxShadow: "0 4px 16px rgba(0,0,0,0.4)",
       }}>
         {device === "desktop" ? desktopHint : mobileHint}
       </div>
