@@ -92,18 +92,69 @@ Bất kỳ khi nào thiết kế giao diện mới (như Shop, Túi Đồ - Inve
 
 ---
 
-## 5. TÍCH HỢP TẠO HÌNH NHÂN VẬT ANIME PIXEL ART (CHARACTER ART SKILL)
+## 5. QUY CHUẨN THANH CUỘN ĐỒNG BỘ (CUSTOM SCROLLBAR SYSTEM)
+
+Toàn bộ các vùng cuộn trang (`overflow-y-auto`, `overflow-auto`, modal lists, bảng chat, kho đồ, dropdown) đều được đồng bộ hóa với hệ màu Dark Fantasy Mauve & Neon Cyan:
+
+### A. Thông Số Token & Màu Sắc
+| Thành Phần | Giá Trị CSS | Hiệu Ứng Thẩm Mỹ |
+| :--- | :--- | :--- |
+| **Độ Rộng (Width / Height)** | `7px` (Global) / `6px` (`.custom-scrollbar`) | Siêu mỏng, thanh thoát, không lấn át bố cục nội dung. |
+| **Rãnh Trượt (Scrollbar Track)** | `rgba(39, 31, 32, 0.45)` | Nền nâu than bán trong suốt, bo tròn tối đa `rounded-full`. |
+| **Con Trượt (Scrollbar Thumb)** | `#5d4648` | Màu viền khung đặc trưng của UI, bo tròn mềm mại `border-radius: 9999px`. |
+| **Trạng Thái Hover (Thumb Hover)** | `#8e7a7c` | Sáng lên màu xám ấm, có đổ bóng nhẹ `box-shadow: 0 0 10px rgba(142, 122, 124, 0.45)`. |
+| **Trạng Thái Kéo Giữ (Thumb Active)** | `#28c3e1` | Phát sáng rực rỡ màu Cyan ngọc, hiệu ứng hào quang `box-shadow: 0 0 14px rgba(40, 195, 225, 0.75)`. |
+| **Góc Giao (Corner)** | `transparent` | Hoàn toàn trong suốt để không bị vệt vuông thô ráp. |
+
+### B. Cấu Hình CSS Toàn Cục (`index.css`)
+```css
+/* Universal Scrollbar for Firefox */
+* {
+  scrollbar-width: thin;
+  scrollbar-color: #5d4648 rgba(39, 31, 32, 0.45);
+}
+
+/* WebKit Scrollbars (Chrome, Edge, Safari, Opera) */
+::-webkit-scrollbar {
+  width: 7px;
+  height: 7px;
+}
+::-webkit-scrollbar-track {
+  background: rgba(39, 31, 32, 0.45);
+  border-radius: 9999px;
+}
+::-webkit-scrollbar-thumb {
+  background: #5d4648;
+  border-radius: 9999px;
+  border: 1px solid rgba(255, 255, 255, 0.04);
+  transition: background-color 0.2s ease, box-shadow 0.2s ease;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: #8e7a7c;
+  box-shadow: 0 0 10px rgba(142, 122, 124, 0.45);
+}
+::-webkit-scrollbar-thumb:active {
+  background: #28c3e1;
+  box-shadow: 0 0 14px rgba(40, 195, 225, 0.75);
+}
+```
+
+---
+
+## 6. TÍCH HỢP TẠO HÌNH NHÂN VẬT ANIME PIXEL ART (CHARACTER ART SKILL)
 - Xem chi tiết tại: `c:\Cassavas\Game2.5D\.agents\skills\clb-character-art-style\SKILL.md`.
 - Toàn bộ ảnh nhân vật trong Modal / Sảnh chọn anh hùng tuân thủ chuẩn **Anime Action Pixel Art Sprite** (Nam đam mỹ 6 múi, Nữ quyến rũ sexy, tỷ lệ 3.5-4 đầu, outline 1px tối, 3-tone shading, `style={{ imageRendering: 'pixelated' }}`).
 
 ---
 
-## 6. CHECKLIST KIỂM DUYỆT TRƯỚC KHI BÀN GIAO GIAO DIỆN
+## 7. CHECKLIST KIỂM DUYỆT TRƯỚC KHI BÀN GIAO GIAO DIỆN
 1. [ ] Nền trang có đúng mã màu Slate Teal `#4c6e6f` với radial gradient không?
 2. [ ] Card hoặc Modal có sử dụng nền nâu đen than `#342a2b` với góc bo lớn `34px` không?
 3. [ ] Các ô nhập và khối phụ có sử dụng `#4a383a` với viền `#5d4648` không?
 4. [ ] Nút hành động chính có đúng chuẩn viên thuốc `rounded-full` màu cyan `#28c3e1` với chữ đậm `#1c161a` không?
-5. [ ] Tạo hình nhân vật sử dụng chuẩn Anime Pixel Art sắc nét từ `clb-character-art-style`?
-6. [ ] Font chữ tiêu đề rõ ràng, phụ đề dùng màu `#8e7a7c`?
-7. [ ] Chạy `pnpm run typecheck` đạt 0 lỗi?
+5. [ ] Thanh cuộn (Scrollbar) hiển thị chuẩn Dark Fantasy Mauve `#5d4648`, hover `#8e7a7c`, active phát sáng cyan `#28c3e1`?
+6. [ ] Tạo hình nhân vật sử dụng chuẩn Anime Pixel Art sắc nét từ `clb-character-art-style`?
+7. [ ] Font chữ tiêu đề rõ ràng, phụ đề dùng màu `#8e7a7c`?
+8. [ ] Chạy `pnpm run typecheck` đạt 0 lỗi?
+
 

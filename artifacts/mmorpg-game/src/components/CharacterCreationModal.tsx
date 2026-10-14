@@ -196,8 +196,7 @@ export function CharacterCreationModal({ isOpen, onClose, onCharacterCreated }: 
             initial={{ opacity: 0, scale: 0.94, y: 15 }}
             animate={{ opacity: 1, scale: 1, y: 0 }}
             exit={{ opacity: 0, scale: 0.94, y: 15 }}
-            transition={{ type: "spring", damping: 25, stiffness: 300 }}
-            className="relative w-full max-w-4xl max-h-[92vh] overflow-y-auto rounded-[34px] bg-[#342a2b] border border-[#5d4648] shadow-[0_30px_90px_rgba(0,0,0,0.7)] p-6 sm:p-9 text-white z-10"
+            className="relative w-full max-w-4xl max-h-[92vh] overflow-y-auto custom-scrollbar rounded-[34px] bg-[#342a2b] border border-[#5d4648] shadow-[0_30px_90px_rgba(0,0,0,0.7)] p-6 sm:p-9 text-white z-10"
           >
             {/* Close Button */}
             <button

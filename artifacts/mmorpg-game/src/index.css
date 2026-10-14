@@ -607,3 +607,75 @@
   text-shadow: 0 2px 4px rgba(0, 0, 0, 0.95);
 }
 
+/* ==============================================================================
+   CHIẾN LONG BÁ — DARK FANTASY CUSTOM SCROLLBAR SYSTEM
+   ============================================================================== */
+/* Universal Scrollbar for Firefox */
+* {
+  scrollbar-width: thin;
+  scrollbar-color: #5d4648 rgba(39, 31, 32, 0.45);
+}
+
+/* WebKit Scrollbars (Chrome, Edge, Safari, Opera) */
+::-webkit-scrollbar {
+  width: 7px;
+  height: 7px;
+}
+
+::-webkit-scrollbar-track {
+  background: rgba(39, 31, 32, 0.45);
+  border-radius: 9999px;
+}
+
+::-webkit-scrollbar-thumb {
+  background: #5d4648;
+  border-radius: 9999px;
+  border: 1px solid rgba(255, 255, 255, 0.04);
+  transition: background-color 0.2s ease, box-shadow 0.2s ease;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: #8e7a7c;
+  box-shadow: 0 0 10px rgba(142, 122, 124, 0.45);
+}
+
+::-webkit-scrollbar-thumb:active {
+  background: #28c3e1;
+  box-shadow: 0 0 14px rgba(40, 195, 225, 0.75);
+}
+
+::-webkit-scrollbar-corner {
+  background: transparent;
+}
+
+/* Custom scrollbar utility class for specific containers */
+.custom-scrollbar {
+  scrollbar-width: thin;
+  scrollbar-color: #5d4648 rgba(39, 31, 32, 0.35);
+}
+
+.custom-scrollbar::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+.custom-scrollbar::-webkit-scrollbar-track {
+  background: rgba(39, 31, 32, 0.35);
+  border-radius: 9999px;
+}
+
+.custom-scrollbar::-webkit-scrollbar-thumb {
+  background: #5d4648;
+  border-radius: 9999px;
+}
+
+.custom-scrollbar::-webkit-scrollbar-thumb:hover {
+  background: #8e7a7c;
+}
+
+.custom-scrollbar::-webkit-scrollbar-thumb:active {
+  background: #28c3e1;
+  box-shadow: 0 0 10px rgba(40, 195, 225, 0.65);
+}
+
+

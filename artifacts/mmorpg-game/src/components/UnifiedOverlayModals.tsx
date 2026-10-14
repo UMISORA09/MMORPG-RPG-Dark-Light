@@ -197,7 +197,7 @@ export const UnifiedOverlayModals = memo(function UnifiedOverlayModals({
         </div>
 
         {/* ── Modal Body (Scrollable) ── */}
-        <div className="flex-1 overflow-y-auto p-4 sm:p-6 space-y-4">
+        <div className="flex-1 overflow-y-auto custom-scrollbar p-4 sm:p-6 space-y-4">
           
           {/* 1. INVENTORY MODAL */}
           {activeModal === "inventory" && (

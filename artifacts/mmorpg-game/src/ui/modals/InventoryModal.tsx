@@ -80,7 +80,7 @@ export const InventoryModal = memo(function InventoryModal() {
         <div className="grid grid-cols-1 md:grid-cols-3 gap-0 flex-1 overflow-hidden">
           
           {/* Column 1 & 2: Items Inventory Grid */}
-          <div className="md:col-span-2 p-5 border-r border-slate-800 overflow-y-auto max-h-[60vh] space-y-3">
+          <div className="md:col-span-2 p-5 border-r border-slate-800 overflow-y-auto custom-scrollbar max-h-[60vh] space-y-3">
             <div className="flex items-center justify-between text-xs text-slate-400 font-bold mb-2">
               <span>Danh Sách Vật Phẩm ({inventoryItems.length} Món)</span>
               <span>Bấm vào ô để chọn & mặc đồ</span>
@@ -142,7 +142,7 @@ export const InventoryModal = memo(function InventoryModal() {
           </div>
 
           {/* Column 3: Selected Item Details & Player Stat Summary */}
-          <div className="p-5 flex flex-col justify-between bg-slate-900/30 overflow-y-auto">
+          <div className="p-5 flex flex-col justify-between bg-slate-900/30 overflow-y-auto custom-scrollbar">
             {currentSelection ? (
               <div className="space-y-4">
                 {/* Item Card */}

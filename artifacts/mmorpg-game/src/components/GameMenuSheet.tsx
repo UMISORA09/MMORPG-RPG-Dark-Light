@@ -289,7 +289,7 @@ export function GameMenuSheet({
                 Túi đồ đang trống.
               </div>
             ) : (
-              <div className="max-h-[36vh] space-y-2 overflow-y-auto pr-1">
+              <div className="max-h-[36vh] space-y-2 overflow-y-auto custom-scrollbar pr-1">
                 {ownedItems.map((item) => (
                   <div
                     key={item.ownershipId}
@@ -351,7 +351,7 @@ export function GameMenuSheet({
                   Chưa có vật phẩm mới phù hợp.
                 </p>
               ) : (
-                <div className="max-h-[30vh] space-y-2 overflow-y-auto pr-1">
+                <div className="max-h-[30vh] space-y-2 overflow-y-auto custom-scrollbar pr-1">
                   {availableShopItems.map((item) => {
                     const locked = character.level < item.requiredLevel;
                     const cannotAfford = character.gold < item.price;
@@ -392,7 +392,7 @@ export function GameMenuSheet({
                 {classInfo?.skills.length ?? 0} kỹ năng
               </span>
             </div>
-            <div className="max-h-[42vh] space-y-2 overflow-y-auto pr-1">
+            <div className="max-h-[42vh] space-y-2 overflow-y-auto custom-scrollbar pr-1">
               {classInfo?.skills.map((skill, index) => (
                 <div
                   key={skill.name}
