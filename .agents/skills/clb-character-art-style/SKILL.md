@@ -55,10 +55,10 @@ Bất kỳ khi nào tạo nhân vật mới, thêm NPC, trang bị thời trang 
 
 ## 4. HỆ THỐNG 4 NGHỀ NGHIỆP CHUẨN MỰC (THE 4 CLASS BLUEPRINTS)
 
-### 1. Hộ Vệ (Tank) — Thần Thuẫn Bất Tử
-- **Màu Chủ Đạo:** Vàng Hoàng Kim (`#eab308`) & Xanh Đá Thần (`#28c3e1`).
-- **Tạo Hình Nam:** Thánh Hiệp Sĩ tóc vàng kim bồng bềnh, cởi trần khoe cơ bắp 6 múi, giáp vai rồng hoàng kim, tay trái cầm Đại Khiên Thần Sư Tử chạm ngọc cyan, tay phải cầm Kiếm Ánh Sáng bản dày.
-- **Tạo Hình Nữ:** Nữ Thần Valkyrie tóc vàng óng, đội vương miện hoàng gia, áo giáp vàng cúp ngực khoét sâu tôn vòng 1 quyến rũ, khiên hộ mệnh lông vũ cánh én, kiếm lá liễu thanh mảnh.
+### 1. Hộ Vệ (Tank) — Xích Hỏa Thần Thuẫn / Huyết Kỵ Hiệp Sĩ (Chuẩn Theo Ảnh Mẫu Mới)
+- **Màu Chủ Đạo:** Thép Bạc Hắc Kim (`#2e3440`), Đỏ Rực Lửa Huyết Tộc (`#ff2a4b`, `#e11d48`) & Vàng Hào Quang (`#ffdd77`).
+- **Tạo Hình Nam (Ảnh Mẫu Chuẩn):** Huyết Kỵ Sĩ mặc bộ đại chiến giáp hắc kim đồ sộ, mũ trụ chiến binh có **cặp sừng lửa đỏ rực uốn lượn (Crimson Flame Horns)** phát sáng trên đỉnh đầu, biểu tượng **Mặt Trời Đỏ (Scarlet Sunburst)** rực cháy giữa ngực, choàng áo choàng rực lửa và khố chiến bào đỏ rách tả tơi đầy uy dũng; tay phải cầm Đại Kiếm Ánh Lửa (Flaming Broadsword) tỏa hào quang đỏ rực, tay trái cầm Khiên Tháp Hắc Kim (Kite Shield) khắc dấu ấn Mặt Trời Huyết Tộc kiên cố bất khả xâm phạm.
+- **Tạo Hình Nữ (Ảnh Mẫu Chuẩn):** Nữ Thần Chiến Binh Valkyrie Huyết Tộc tóc vàng óng lãng mạn, vương miện thép đính **cặp sừng lửa đỏ kiêu hãnh**, bộ giáp ngực hắc kim ôm trọn đường cong quyến rũ với lõi Mặt Trời Đỏ phát quang rực rỡ, váy chiến bào đỏ xẻ tà quyến rũ, tay cầm Khiên Tháp Mặt Trời Huyết Tộc cùng thanh kiếm lửa thần thánh.
 
 ### 2. Chiến Binh (Fighter) — Đại Kiếm Hộ Quốc (Chuẩn Theo Ảnh Mẫu Mới)
 - **Màu Chủ Đạo:** Thép Bạc Titan, Đỏ Thẫm Rực Lửa, Xanh Lục Bảo & Vàng Hoàng Gia.
