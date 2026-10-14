@@ -23,40 +23,54 @@ export interface PlayerState {
   score: number;
   isAttacking: boolean;
   attackCooldown: number;
+  skillCooldowns: { [skillKey: string]: number };
   isOnGround: boolean;
   facingDirection: number;
   isInvincible: boolean;
   invincibleTimer: number;
   name: string;
   colorHex: string;
+  classId: string;
+  className: string;
 
-  // Progression
+  // Progression & Stats
   level: number;
   exp: number;
   expToNext: number;
   gold: number;
+  kills: number;
+  deaths: number;
   statPoints: number;
   skillPoints: number;
   allocatedStats: AllocatedStats;
   equipment: Equipment;
-  inventory: string[];      // item IDs owned
-  learnedSkills: string[];  // skill IDs learned
+  inventory: string[];
+  learnedSkills: string[];
 }
 
 export interface EnemyState {
   id: number;
+  monsterId: string; // "slime" | "goblin" | "orc" | "wolf" | "skeleton" | "dragon"
+  name: string;
+  level: number;
   position: THREE.Vector3;
   velocity: THREE.Vector3;
+  spawnPosition: THREE.Vector3;
   health: number;
   maxHealth: number;
+  atk: number;
+  def: number;
   isAlive: boolean;
+  respawnTimer: number;
   alertRadius: number;
   attackRadius: number;
   attackCooldown: number;
   state: "patrol" | "chase" | "attack";
   patrolDirection: number;
   patrolTimer: number;
-  type: "goblin" | "orc" | "skeleton";
+  type: string;
+  isBoss: boolean;
+  emoji: string;
 }
 
 export interface BulletState {
@@ -66,14 +80,34 @@ export interface BulletState {
   fromPlayer: boolean;
   damage: number;
   lifetime: number;
+  color?: string;
 }
 
+export interface FloatingDamage {
+  id: number;
+  position: THREE.Vector3;
+  text: string;
+  color: string;
+  lifetime: number;
+  maxLifetime: number;
+}
+
+export type ZoneType = "village" | "wilderness" | "boss_raid";
+
 export interface GameState {
-  phase: "menu" | "village" | "playing" | "gameover" | "win";
-  wave: number;
-  score: number;
-  nearPortal: boolean;
+  phase: "playing" | "village" | "gameover" | "menu" | "win";
+  currentZone: ZoneType;
+  zoneNotification: string | null;
+  zoneNotificationTimer: number;
+  bossHealth: number;
+  bossMaxHealth: number;
+  bossName: string;
+  bossActive: boolean;
   menuOpen: boolean;
+  activeModal: "inventory" | "shop" | "leaderboard" | "battle_logs" | null;
+  nearPortal?: boolean;
+  score?: number;
+  wave?: number;
 }
 
 export interface RemotePlayer {

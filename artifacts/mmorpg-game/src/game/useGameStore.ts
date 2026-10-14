@@ -1,28 +1,26 @@
 import { create } from "zustand";
 import * as THREE from "three";
-import type { PlayerState, EnemyState, BulletState, GameState, AllocatedStats, Equipment } from "./types";
+import type {
+  PlayerState,
+  EnemyState,
+  BulletState,
+  FloatingDamage,
+  GameState,
+  AllocatedStats,
+  Equipment,
+  ZoneType,
+} from "./types";
 import { ITEM_MAP } from "./data/items";
-import { SKILL_MAP } from "./data/skills";
 import {
-  PLAYER_MAX_HEALTH,
   PLAYER_SPEED,
   PLAYER_JUMP_FORCE,
   GRAVITY,
   GROUND_Y,
-  PLAYER_ATTACK_COOLDOWN,
   PLAYER_ATTACK_RANGE,
-  PLAYER_ATTACK_DAMAGE,
-  PLAYER_INVINCIBLE_TIME,
-  ENEMY_SPEED,
-  ENEMY_ALERT_RADIUS,
-  ENEMY_ATTACK_RADIUS,
-  ENEMY_ATTACK_COOLDOWN,
-  ENEMY_DAMAGE,
-  ARENA_SIZE,
-  VILLAGE_SIZE,
+  SAFE_ZONE_RADIUS,
+  BOSS_ZONE_Z,
   VILLAGE_SPAWN,
-  PORTAL_POSITION,
-  PORTAL_ENTER_RADIUS,
+  BOSS_SPAWN,
   BULLET_SPEED,
   BULLET_LIFETIME,
   BULLET_DAMAGE,
@@ -31,24 +29,26 @@ import {
 // ── Computed stat bonuses from equipment + skills + allocated points ──────────
 export function computeBonus(player: PlayerState) {
   const a = player.allocatedStats;
-  let hp    = a.hp    * 20;
-  let atk   = a.atk   * 5;
-  let def   = a.def   * 3;
-  let spd   = a.spd   * 0.3;
-  let magic = a.magic * 5;
+  let hp    = (a?.hp ?? 0)    * 20;
+  let atk   = (a?.atk ?? 0)   * 5;
+  let def   = (a?.def ?? 0)   * 3;
+  let spd   = (a?.spd ?? 0)   * 0.3;
+  let magic = (a?.magic ?? 0) * 5;
 
-  for (const itemId of Object.values(player.equipment)) {
-    const item = itemId ? ITEM_MAP[itemId] : null;
-    if (!item) continue;
-    hp    += item.stats.hp    ?? 0;
-    atk   += item.stats.atk  ?? 0;
-    def   += item.stats.def  ?? 0;
-    spd   += item.stats.spd  ?? 0;
-    magic += item.stats.magic ?? 0;
+  if (player.equipment) {
+    for (const itemId of Object.values(player.equipment)) {
+      const item = itemId ? ITEM_MAP[itemId] : null;
+      if (!item) continue;
+      hp    += item.stats.hp    ?? 0;
+      atk   += item.stats.atk  ?? 0;
+      def   += item.stats.def  ?? 0;
+      spd   += item.stats.spd  ?? 0;
+      magic += item.stats.magic ?? 0;
+    }
   }
 
-  if (player.learnedSkills.includes("iron_body"))  def  += 20;
-  if (player.learnedSkills.includes("swift_foot"))  spd  += 1.5;
+  if (player.learnedSkills?.includes("iron_body"))  def  += 20;
+  if (player.learnedSkills?.includes("swift_foot"))  spd  += 1.5;
 
   return { hp, atk, def, spd, magic };
 }
@@ -57,91 +57,140 @@ interface GameStore {
   player: PlayerState;
   enemies: EnemyState[];
   bullets: BulletState[];
+  floatingDamages: FloatingDamage[];
   game: GameState;
-  nextEnemyId: number;
   nextBulletId: number;
+  nextDamageId: number;
+  regenTimer: number;
 
-  // navigation
+  // Callback to sync with backend when a monster is defeated
+  onDefeatMonsterCallback: ((monsterId: string) => void) | null;
+  onPlayerDefeatedCallback: (() => void) | null;
+  registerCombatCallbacks: (onDefeat: (monsterId: string) => void, onPlayerDefeated: () => void) => void;
+
+  // Single Unified Real-Time Game Loop
+  updateWorld: (delta: number, controls: Record<string, boolean | number>) => void;
+
+  // Modals & Overlay Windows
+  setActiveModal: (modal: GameState["activeModal"]) => void;
+  closeActiveModal: () => void;
+
+  // Trigger Skills
+  triggerSkill: (skillIndex: number) => void;
+
+  // Sync data from API Backend
+  syncFromCharacter: (char: any) => void;
+  updatePlayerStatsAfterBattle: (rewards: { exp: number; gold: number; level: number; hp?: number; maxHp?: number }) => void;
+
+  // Compatibility helpers
+  setMenuOpen: (open: boolean) => void;
+  toggleMenu: () => void;
   enterVillage: () => void;
   enterBattle: () => void;
-  startGame: () => void;
-  restartGame: () => void;
-
-  // loops
-  updateGame:    (delta: number, controls: Record<string, boolean | number>) => void;
-  updateVillage: (delta: number, controls: Record<string, boolean | number>) => void;
-  spawnWave: (wave: number) => void;
-
-  // character progression
-  allocateStat:  (stat: keyof AllocatedStats) => void;
-  learnSkill:    (skillId: string) => void;
-  equipItem:     (itemId: string) => void;
-  unequipItem:   (slot: keyof Equipment) => void;
-  buyItem:       (itemId: string) => void;
-  sellItem:      (itemId: string) => void;
-  buyPotion:     () => void;
-  toggleMenu:    () => void;
-  setMenuOpen:   (open: boolean) => void;
-  syncFromCharacter: (char: any) => void;
+  buyPotion: (type?: string) => void;
+  allocateStat: (stat: any) => void;
+  equipItem: (slot: any, id?: any) => void;
+  unequipItem: (slot: any) => void;
+  buyItem: (id: any) => void;
+  sellItem: (id: any) => void;
+  learnSkill: (id: any) => void;
 }
 
-const ENEMY_TYPES: Array<"goblin" | "orc" | "skeleton"> = ["goblin", "orc", "skeleton"];
+// ── Monster Seed Definitions for the 3 Zones ──────────────────────────────────
+const INITIAL_MONSTERS: Array<{
+  id: number;
+  monsterId: string;
+  name: string;
+  level: number;
+  type: string;
+  pos: [number, number];
+  health: number;
+  atk: number;
+  def: number;
+  isBoss?: boolean;
+  emoji: string;
+}> = [
+  // Wilderness: Slimes (Near Village Exit)
+  { id: 1, monsterId: "slime", name: "Ma Nhầy Xanh", level: 1, type: "slime", pos: [14, 14], health: 80, atk: 15, def: 5, emoji: "🟢" },
+  { id: 2, monsterId: "slime", name: "Ma Nhầy Xanh", level: 1, type: "slime", pos: [-14, 15], health: 80, atk: 15, def: 5, emoji: "🟢" },
 
-function makeEnemy(id: number, wave: number): EnemyState {
-  const angle = Math.random() * Math.PI * 2;
-  const radius = 12 + Math.random() * 8;
-  const type = ENEMY_TYPES[Math.floor(Math.random() * ENEMY_TYPES.length)];
-  const healthBonus = (wave - 1) * 10;
-  return {
-    id,
-    position: new THREE.Vector3(Math.cos(angle) * radius, GROUND_Y, Math.sin(angle) * radius),
+  // Wilderness: Goblins
+  { id: 3, monsterId: "goblin", name: "Yêu Tinh Rừng", level: 3, type: "goblin", pos: [22, -6], health: 150, atk: 30, def: 15, emoji: "👺" },
+  { id: 4, monsterId: "goblin", name: "Yêu Tinh Rừng", level: 3, type: "goblin", pos: [-22, -8], health: 150, atk: 30, def: 15, emoji: "👺" },
+
+  // Wilderness: Orcs
+  { id: 5, monsterId: "orc", name: "Người Orc Chiến Binh", level: 5, type: "orc", pos: [26, -24], health: 300, atk: 55, def: 30, emoji: "🗿" },
+  { id: 6, monsterId: "orc", name: "Người Orc Chiến Binh", level: 5, type: "orc", pos: [-26, -26], health: 300, atk: 55, def: 30, emoji: "🗿" },
+
+  // Wilderness: Wolves
+  { id: 7, monsterId: "wolf", name: "Sói Ma Băng Giá", level: 7, type: "wolf", pos: [12, -36], health: 400, atk: 75, def: 40, emoji: "🐺" },
+  { id: 8, monsterId: "wolf", name: "Sói Ma Băng Giá", level: 7, type: "wolf", pos: [-14, -38], health: 400, atk: 75, def: 40, emoji: "🐺" },
+
+  // Wilderness: Skeletons (Guardians at entrance of Boss Zone)
+  { id: 9, monsterId: "skeleton", name: "Xương Sống Lính Chết", level: 10, type: "skeleton", pos: [10, -44], health: 500, atk: 90, def: 55, emoji: "💀" },
+  { id: 10, monsterId: "skeleton", name: "Xương Sống Lính Chết", level: 10, type: "skeleton", pos: [-10, -44], health: 500, atk: 90, def: 55, emoji: "💀" },
+
+  // Boss Raid Zone: Ancient Flame Dragon (Boss Altar)
+  { id: 11, monsterId: "dragon", name: "Rồng Lửa Cổ Đại", level: 20, type: "dragon", pos: [BOSS_SPAWN.x, BOSS_SPAWN.z], health: 1200, atk: 180, def: 100, isBoss: true, emoji: "🐉" },
+];
+
+function createInitialEnemies(): EnemyState[] {
+  return INITIAL_MONSTERS.map((m) => ({
+    id: m.id,
+    monsterId: m.monsterId,
+    name: m.name,
+    level: m.level,
+    position: new THREE.Vector3(m.pos[0], GROUND_Y, m.pos[1]),
+    spawnPosition: new THREE.Vector3(m.pos[0], GROUND_Y, m.pos[1]),
     velocity: new THREE.Vector3(),
-    health: 50 + healthBonus,
-    maxHealth: 50 + healthBonus,
+    health: m.health,
+    maxHealth: m.health,
+    atk: m.atk,
+    def: m.def,
     isAlive: true,
-    alertRadius: ENEMY_ALERT_RADIUS,
-    attackRadius: ENEMY_ATTACK_RADIUS,
+    respawnTimer: 0,
+    alertRadius: m.isBoss ? 16 : 8.5,
+    attackRadius: m.isBoss ? 4.5 : 2.0,
     attackCooldown: 0,
     state: "patrol",
     patrolDirection: Math.random() * Math.PI * 2,
     patrolTimer: 2 + Math.random() * 2,
-    type,
-  };
+    type: m.type,
+    isBoss: !!m.isBoss,
+    emoji: m.emoji,
+  }));
 }
 
 const ZERO_STATS: AllocatedStats = { hp: 0, atk: 0, def: 0, spd: 0, magic: 0 };
 const ZERO_EQ: Equipment = { weapon: null, armor: null, helmet: null, accessory: null };
 
-function expToNext(level: number) {
-  return Math.floor(100 * Math.pow(level, 1.4));
-}
-
-function makeInitialPlayer(inVillage = false): PlayerState {
+function makeInitialPlayer(): PlayerState {
   return {
-    position: new THREE.Vector3(
-      inVillage ? VILLAGE_SPAWN.x : 0,
-      GROUND_Y,
-      inVillage ? VILLAGE_SPAWN.z : 0,
-    ),
+    position: new THREE.Vector3(VILLAGE_SPAWN.x, GROUND_Y, VILLAGE_SPAWN.z),
     velocity: new THREE.Vector3(),
-    health: PLAYER_MAX_HEALTH,
-    maxHealth: PLAYER_MAX_HEALTH,
+    health: 600,
+    maxHealth: 600,
     score: 0,
     isAttacking: false,
     attackCooldown: 0,
+    skillCooldowns: { skill1: 0, skill2: 0, skill3: 0 },
     isOnGround: true,
     facingDirection: Math.PI,
     isInvincible: false,
     invincibleTimer: 0,
-    name: "Dragon Hero",
+    name: "Chiến Binh Long Tộc",
     colorHex: "#e74c3c",
+    classId: "fighter",
+    className: "Đấu Sĩ",
 
     level: 1,
     exp: 0,
-    expToNext: expToNext(1),
-    gold: 120,
-    statPoints: 5,
-    skillPoints: 1,
+    expToNext: 100,
+    gold: 100,
+    kills: 0,
+    deaths: 0,
+    statPoints: 0,
+    skillPoints: 0,
     allocatedStats: { ...ZERO_STATS },
     equipment: { ...ZERO_EQ },
     inventory: [],
@@ -149,532 +198,595 @@ function makeInitialPlayer(inVillage = false): PlayerState {
   };
 }
 
-// ── Camera-relative movement (shared by village + battle) ─────────────────────
-function applyMovement(
-  player: PlayerState,
-  controls: Record<string, boolean | number>,
-  delta: number,
-  bounds: number,
-  speedOverride?: number,
-) {
-  const cameraYaw = typeof controls["cameraYaw"] === "number" ? controls["cameraYaw"] : 0;
-  const camForwardX =  Math.sin(cameraYaw);
-  const camForwardZ =  Math.cos(cameraYaw);
-  const camRightX   =  Math.cos(cameraYaw);
-  const camRightZ   = -Math.sin(cameraYaw);
-
-  const jx = typeof controls["joystickX"] === "number" ? controls["joystickX"] : 0;
-  const jy = typeof controls["joystickY"] === "number" ? controls["joystickY"] : 0;
-  const jMag = Math.sqrt(jx * jx + jy * jy);
-
-  let localX = 0;
-  let localZ = 0;
-  if (jMag > 0.15) {
-    localX = jx; localZ = jy;
-  } else {
-    if (controls["forward"]) localZ -= 1;
-    if (controls["back"])    localZ += 1;
-    if (controls["left"])    localX -= 1;
-    if (controls["right"])   localX += 1;
-  }
-  const len = Math.sqrt(localX * localX + localZ * localZ);
-  if (len > 1) { localX /= len; localZ /= len; }
-
-  const worldX = localX * camRightX + localZ * camForwardX;
-  const worldZ = localX * camRightZ + localZ * camForwardZ;
-
-  const bonus = computeBonus(player);
-  const speed = speedOverride ?? (PLAYER_SPEED + bonus.spd);
-
-  player.velocity.x = worldX * speed;
-  player.velocity.z = worldZ * speed;
-
-  if (worldX !== 0 || worldZ !== 0) {
-    player.facingDirection = Math.atan2(worldX, worldZ);
-  }
-
-  if (controls["jump"] && player.isOnGround) {
-    player.velocity.y = PLAYER_JUMP_FORCE;
-    player.isOnGround = false;
-  }
-
-  player.velocity.y += GRAVITY * delta;
-  player.position.x += player.velocity.x * delta;
-  player.position.y += player.velocity.y * delta;
-  player.position.z += player.velocity.z * delta;
-
-  if (player.position.y <= GROUND_Y) {
-    player.position.y = GROUND_Y;
-    player.velocity.y = 0;
-    player.isOnGround = true;
-  }
-
-  const half = bounds / 2;
-  player.position.x = Math.max(-half, Math.min(half, player.position.x));
-  player.position.z = Math.max(-half, Math.min(half, player.position.z));
-}
-
 export const useGameStore = create<GameStore>((set, get) => ({
-  player: makeInitialPlayer(false),
-  enemies: [],
+  player: makeInitialPlayer(),
+  enemies: createInitialEnemies(),
   bullets: [],
-  game: { phase: "menu", wave: 1, score: 0, nearPortal: false, menuOpen: false },
-  nextEnemyId: 1,
+  floatingDamages: [],
+  game: {
+    phase: "playing",
+    currentZone: "village",
+    zoneNotification: "🛡️ Làng Long Tộc — Khu Vực An Toàn (Hồi Máu)",
+    zoneNotificationTimer: 4.0,
+    bossHealth: 1200,
+    bossMaxHealth: 1200,
+    bossName: "Rồng Lửa Cổ Đại",
+    bossActive: false,
+    menuOpen: false,
+    activeModal: null,
+  },
   nextBulletId: 1,
+  nextDamageId: 1,
+  regenTimer: 0,
+  onDefeatMonsterCallback: null,
+  onPlayerDefeatedCallback: null,
 
-  // ── Enter village ────────────────────────────────────────────────────────
-  enterVillage: () => {
-    set({
-      player: makeInitialPlayer(true),
-      enemies: [],
-      bullets: [],
-      nextEnemyId: 1,
-      nextBulletId: 1,
-      game: { phase: "village", wave: 1, score: 0, nearPortal: false, menuOpen: false },
-    });
+  registerCombatCallbacks: (onDefeat, onPlayerDefeated) => {
+    set({ onDefeatMonsterCallback: onDefeat, onPlayerDefeatedCallback: onPlayerDefeated });
   },
 
-  syncFromCharacter: (char: any) => {
-    if (!char) return;
-    const classColors: Record<string, string> = {
-      gunner: "#3b82f6",
-      assassin: "#a855f7",
-      fighter: "#ef4444",
-      tank: "#10b981",
-    };
+  setActiveModal: (modal) => {
     set((state) => ({
-      player: {
-        ...state.player,
-        name: char.name || state.player.name,
-        colorHex: classColors[char.classId] || state.player.colorHex,
-        level: char.level || state.player.level,
-        health: char.hp || state.player.health,
-        maxHealth: char.maxHp || state.player.maxHealth,
-        gold: char.gold !== undefined ? char.gold : state.player.gold,
-        allocatedStats: {
-          hp: Math.max(0, Math.floor(((char.maxHp || 100) - 100) / 20)),
-          atk: Math.max(0, Math.floor(((char.atk || 20) - 20) / 5)),
-          def: Math.max(0, Math.floor(((char.def || 10) - 10) / 3)),
-          spd: Math.max(0, Math.floor(((char.spd || 5) - 5) / 0.3)),
-          magic: 5,
-        },
+      game: {
+        ...state.game,
+        activeModal: modal,
+        menuOpen: modal !== null,
       },
     }));
   },
 
-  // ── Village → battle ─────────────────────────────────────────────────────
-  enterBattle: () => {
-    const state = get();
-    if (state.game.phase !== "village") return;
-    const wave = 1;
-    const enemies = Array.from({ length: 3 + wave }, (_, i) => makeEnemy(i + 1, wave));
-    const bonus = computeBonus(state.player);
-    const battlePlayer: PlayerState = {
-      ...state.player,
-      position: new THREE.Vector3(0, GROUND_Y, 0),
-      velocity: new THREE.Vector3(),
-      health: PLAYER_MAX_HEALTH + bonus.hp,
-      maxHealth: PLAYER_MAX_HEALTH + bonus.hp,
-      isOnGround: true,
-      isAttacking: false,
-      attackCooldown: 0,
-      isInvincible: false,
-      invincibleTimer: 0,
-    };
-    set({
-      player: battlePlayer,
-      enemies,
-      bullets: [],
-      nextEnemyId: enemies.length + 1,
-      nextBulletId: 1,
-      game: { phase: "playing", wave, score: state.player.score, nearPortal: false, menuOpen: false },
+  closeActiveModal: () => {
+    set((state) => ({
+      game: {
+        ...state.game,
+        activeModal: null,
+        menuOpen: false,
+      },
+    }));
+  },
+
+  setMenuOpen: (open) => {
+    set((state) => ({
+      game: {
+        ...state.game,
+        menuOpen: open,
+        activeModal: open ? (state.game.activeModal || "inventory") : null,
+      },
+    }));
+  },
+
+  toggleMenu: () => {
+    set((state) => {
+      const next = !state.game.menuOpen;
+      return {
+        game: {
+          ...state.game,
+          menuOpen: next,
+          activeModal: next ? (state.game.activeModal || "inventory") : null,
+        },
+      };
     });
   },
 
-  startGame: () => { get().enterVillage(); },
+  enterVillage: () => {
+    set((state) => ({
+      game: {
+        ...state.game,
+        currentZone: "village",
+        phase: "playing",
+      },
+    }));
+  },
 
-  // ── Restart: giữ lại toàn bộ nhân vật, chỉ hồi máu và về làng ───────────
-  restartGame: () => {
+  enterBattle: () => {
+    set((state) => ({
+      game: {
+        ...state.game,
+        currentZone: "wilderness",
+        phase: "playing",
+      },
+    }));
+  },
+
+  buyPotion: () => {},
+  allocateStat: () => {},
+  equipItem: () => {},
+  unequipItem: () => {},
+  buyItem: () => {},
+  sellItem: () => {},
+  learnSkill: () => {},
+
+  syncFromCharacter: (char: any) => {
+    if (!char) return;
+    const classColors: Record<string, string> = {
+      gunner: "#00b4ff",
+      assassin: "#9b59b6",
+      fighter: "#e74c3c",
+      tank: "#f39c12",
+    };
+
+    set((state) => {
+      const maxHp = char.maxHp || state.player.maxHealth;
+      const currentHp = Math.min(char.hp || state.player.health, maxHp);
+
+      return {
+        player: {
+          ...state.player,
+          name: char.name || state.player.name,
+          classId: char.classId || state.player.classId,
+          className: char.className || state.player.className,
+          colorHex: classColors[char.classId] || state.player.colorHex,
+          level: char.level || state.player.level,
+          exp: char.experience || state.player.exp,
+          expToNext: char.experienceToNextLevel || 100,
+          health: currentHp > 0 ? currentHp : maxHp,
+          maxHealth: maxHp,
+          gold: char.gold !== undefined ? char.gold : state.player.gold,
+          kills: char.kills !== undefined ? char.kills : state.player.kills,
+          deaths: char.deaths !== undefined ? char.deaths : state.player.deaths,
+          allocatedStats: {
+            hp: Math.max(0, Math.floor((maxHp - 500) / 20)),
+            atk: Math.max(0, Math.floor(((char.atk || 50) - 50) / 5)),
+            def: Math.max(0, Math.floor(((char.def || 20) - 20) / 3)),
+            spd: Math.max(0, Math.floor(((char.spd || 5) - 5) / 0.3)),
+            magic: 5,
+          },
+        },
+      };
+    });
+  },
+
+  updatePlayerStatsAfterBattle: (rewards) => {
+    set((state) => ({
+      player: {
+        ...state.player,
+        exp: rewards.exp,
+        gold: rewards.gold,
+        level: rewards.level,
+        kills: state.player.kills + 1,
+        health: rewards.hp !== undefined ? rewards.hp : state.player.health,
+        maxHealth: rewards.maxHp !== undefined ? rewards.maxHp : state.player.maxHealth,
+      },
+    }));
+  },
+
+  triggerSkill: (skillIndex: number) => {
+    const state = get();
+    const p = state.player;
+    const skillKey = `skill${skillIndex}`;
+    const cd = p.skillCooldowns[skillKey] || 0;
+    if (cd > 0) return; // Still cooling down
+
+    const skillDamage = skillIndex === 1 ? 70 : skillIndex === 2 ? 120 : 250;
+    const cooldownTime = skillIndex === 1 ? 3 : skillIndex === 2 ? 6 : 12;
+
+    // Apply skill cooldown
+    set((s) => ({
+      player: {
+        ...s.player,
+        skillCooldowns: {
+          ...s.player.skillCooldowns,
+          [skillKey]: cooldownTime,
+        },
+      },
+    }));
+
+    // Spawn skill projectile or area effect
+    if (p.classId === "gunner" || skillIndex === 2) {
+      // Multishot / Beam
+      const angle = p.facingDirection;
+      const count = skillIndex === 2 ? 5 : 3;
+      const newBullets: BulletState[] = [];
+      for (let i = 0; i < count; i++) {
+        const spread = (i - (count - 1) / 2) * 0.18;
+        const curAngle = angle + spread;
+        newBullets.push({
+          id: s_nextBulletId++,
+          position: p.position.clone().add(new THREE.Vector3(0, 1.2, 0)),
+          velocity: new THREE.Vector3(Math.sin(curAngle) * BULLET_SPEED, 0, Math.cos(curAngle) * BULLET_SPEED),
+          fromPlayer: true,
+          damage: skillDamage,
+          color: skillIndex === 3 ? "#ffaa00" : "#00f2ff",
+          lifetime: BULLET_LIFETIME,
+        });
+      }
+      set((s) => ({ bullets: [...s.bullets, ...newBullets] }));
+    } else {
+      // Area / Burst strike
+      const hitRadius = skillIndex === 3 ? 6.5 : 4.0;
+      const hitEnemies: number[] = [];
+
+      state.enemies.forEach((enemy) => {
+        if (!enemy.isAlive) return;
+        const dist = enemy.position.distanceTo(p.position);
+        if (dist <= hitRadius) {
+          hitEnemies.push(enemy.id);
+        }
+      });
+
+      if (hitEnemies.length > 0) {
+        set((s) => {
+          const updated = s.enemies.map((e) => {
+            if (!hitEnemies.includes(e.id)) return e;
+            const newHp = Math.max(0, e.health - skillDamage);
+            return { ...e, health: newHp };
+          });
+          return { enemies: updated };
+        });
+
+        hitEnemies.forEach((eid) => {
+          const target = state.enemies.find((e) => e.id === eid);
+          if (target) {
+            get().floatingDamages.push({
+              id: s_nextDamageId++,
+              position: target.position.clone().add(new THREE.Vector3(0, 2.2, 0)),
+              text: `-${skillDamage} CRIT!`,
+              color: "#ff3366",
+              lifetime: 1.2,
+              maxLifetime: 1.2,
+            });
+          }
+        });
+      }
+    }
+  },
+
+  // ==============================================================================
+  // Unified 3-Zone Real-Time World Loop (60 FPS Optimized)
+  // ==============================================================================
+  updateWorld: (delta: number, controls: Record<string, boolean | number>) => {
+    const dt = Math.min(delta, 0.05);
     const state = get();
     const p = state.player;
     const bonus = computeBonus(p);
-    const newMaxHP = PLAYER_MAX_HEALTH + bonus.hp;
-    set({
-      player: {
-        ...p,
-        position: new THREE.Vector3(VILLAGE_SPAWN.x, GROUND_Y, VILLAGE_SPAWN.z),
-        velocity: new THREE.Vector3(),
-        health: newMaxHP,
-        maxHealth: newMaxHP,
-        isOnGround: true,
-        isAttacking: false,
-        attackCooldown: 0,
-        isInvincible: false,
-        invincibleTimer: 0,
-      },
-      enemies: [],
-      bullets: [],
-      nextEnemyId: 1,
-      nextBulletId: 1,
-      game: { phase: "village", wave: 1, score: p.score, nearPortal: false, menuOpen: false },
-    });
-  },
 
-  spawnWave: (wave: number) => {
-    const state = get();
-    const count = 3 + wave;
-    let id = state.nextEnemyId;
-    const newEnemies = Array.from({ length: count }, () => { const e = makeEnemy(id, wave); id++; return e; });
-    set((s) => ({ enemies: newEnemies, nextEnemyId: id, game: { ...s.game, wave } }));
-  },
+    // ── 1. Calculate Player Movement ──────────────────────────────────────────
+    const effectiveSpeed = (PLAYER_SPEED + bonus.spd);
+    let mx = 0;
+    let mz = 0;
 
-  // ── Character menu ────────────────────────────────────────────────────────
-  toggleMenu: () => {
-    set((s) => ({ game: { ...s.game, menuOpen: !s.game.menuOpen } }));
-  },
-  setMenuOpen: (open: boolean) => {
-    set((s) => ({ game: { ...s.game, menuOpen: open } }));
-  },
+    const jx = (controls.joystickX as number) || 0;
+    const jy = (controls.joystickY as number) || 0;
 
-  // ── Allocate stat point ───────────────────────────────────────────────────
-  allocateStat: (stat: keyof AllocatedStats) => {
-    const state = get();
-    if (state.player.statPoints <= 0) return;
-    const newStats = { ...state.player.allocatedStats, [stat]: state.player.allocatedStats[stat] + 1 };
-    const bonus = computeBonus({ ...state.player, allocatedStats: newStats });
-    const newMaxHealth = PLAYER_MAX_HEALTH + bonus.hp;
-    set({
-      player: {
-        ...state.player,
-        statPoints: state.player.statPoints - 1,
-        allocatedStats: newStats,
-        maxHealth: newMaxHealth,
-        health: Math.min(state.player.health + 20, newMaxHealth),
-      },
-    });
-  },
+    if (controls.forward) mz -= 1;
+    if (controls.back)    mz += 1;
+    if (controls.left)    mx -= 1;
+    if (controls.right)   mx += 1;
 
-  // ── Learn skill ───────────────────────────────────────────────────────────
-  learnSkill: (skillId: string) => {
-    const state = get();
-    const skill = SKILL_MAP[skillId];
-    if (!skill) return;
-    if (state.player.learnedSkills.includes(skillId)) return;
-    if (state.player.skillPoints < skill.cost) return;
-    if (skill.requires && !state.player.learnedSkills.includes(skill.requires)) return;
-
-    const newSkills = [...state.player.learnedSkills, skillId];
-    const newPlayer = {
-      ...state.player,
-      skillPoints: state.player.skillPoints - skill.cost,
-      learnedSkills: newSkills,
-    };
-    // Recalculate bonuses after learning passive skills
-    const bonus = computeBonus(newPlayer);
-    const newMaxHealth = PLAYER_MAX_HEALTH + bonus.hp;
-    set({
-      player: {
-        ...newPlayer,
-        maxHealth: newMaxHealth,
-        health: Math.min(newPlayer.health, newMaxHealth),
-      },
-    });
-  },
-
-  // ── Equip item from inventory ─────────────────────────────────────────────
-  equipItem: (itemId: string) => {
-    const state = get();
-    const item = ITEM_MAP[itemId];
-    if (!item || !state.player.inventory.includes(itemId)) return;
-    const newEquip = { ...state.player.equipment, [item.slot]: itemId };
-    const newPlayer = { ...state.player, equipment: newEquip };
-    const bonus = computeBonus(newPlayer);
-    const newMaxHealth = PLAYER_MAX_HEALTH + bonus.hp;
-    set({
-      player: {
-        ...newPlayer,
-        maxHealth: newMaxHealth,
-        health: Math.min(newPlayer.health, newMaxHealth),
-      },
-    });
-  },
-
-  // ── Unequip item back to inventory ───────────────────────────────────────
-  unequipItem: (slot: keyof Equipment) => {
-    const state = get();
-    if (!state.player.equipment[slot]) return;
-    const newEquip = { ...state.player.equipment, [slot]: null };
-    const newPlayer = { ...state.player, equipment: newEquip };
-    const bonus = computeBonus(newPlayer);
-    const newMaxHealth = PLAYER_MAX_HEALTH + bonus.hp;
-    set({
-      player: {
-        ...newPlayer,
-        maxHealth: newMaxHealth,
-        health: Math.min(newPlayer.health, newMaxHealth),
-      },
-    });
-  },
-
-  // ── Buy item (village shop) ───────────────────────────────────────────────
-  buyItem: (itemId: string) => {
-    const state = get();
-    const item = ITEM_MAP[itemId];
-    if (!item) return;
-    if (state.player.gold < item.price) return;
-    if (state.player.inventory.includes(itemId)) return;
-    set({
-      player: {
-        ...state.player,
-        gold: state.player.gold - item.price,
-        inventory: [...state.player.inventory, itemId],
-      },
-    });
-  },
-
-  // ── Sell item (50% price) ─────────────────────────────────────────────────
-  sellItem: (itemId: string) => {
-    const state = get();
-    const item = ITEM_MAP[itemId];
-    if (!item || !state.player.inventory.includes(itemId)) return;
-    // Auto-unequip first
-    const newEquip = { ...state.player.equipment };
-    if (newEquip[item.slot] === itemId) newEquip[item.slot] = null;
-    const newInventory = state.player.inventory.filter((id) => id !== itemId);
-    const newPlayer = {
-      ...state.player,
-      gold: state.player.gold + Math.floor(item.price / 2),
-      inventory: newInventory,
-      equipment: newEquip,
-    };
-    const bonus = computeBonus(newPlayer);
-    const newMaxHealth = PLAYER_MAX_HEALTH + bonus.hp;
-    set({
-      player: {
-        ...newPlayer,
-        maxHealth: newMaxHealth,
-        health: Math.min(newPlayer.health, newMaxHealth),
-      },
-    });
-  },
-
-  // ── Buy HP potion ─────────────────────────────────────────────────────────
-  buyPotion: () => {
-    const state = get();
-    const POTION_COST = 30;
-    const POTION_HEAL = 50;
-    if (state.player.gold < POTION_COST) return;
-    const newHealth = Math.min(state.player.health + POTION_HEAL, state.player.maxHealth);
-    set({
-      player: {
-        ...state.player,
-        gold: state.player.gold - POTION_COST,
-        health: newHealth,
-      },
-    });
-  },
-
-  // ── Village update ────────────────────────────────────────────────────────
-  updateVillage: (delta: number, controls: Record<string, boolean | number>) => {
-    const state = get();
-    if (state.game.phase !== "village") return;
-    if (state.game.menuOpen) return;
-
-    const player = { ...state.player, position: state.player.position.clone(), velocity: state.player.velocity.clone() };
-    applyMovement(player, controls, delta, VILLAGE_SIZE - 8);
-
-    if (player.attackCooldown > 0) player.attackCooldown -= delta;
-    if (player.isAttacking) player.isAttacking = false;
-
-    const dx = player.position.x - PORTAL_POSITION.x;
-    const dz = player.position.z - PORTAL_POSITION.z;
-    const nearPortal = Math.sqrt(dx * dx + dz * dz) < PORTAL_ENTER_RADIUS;
-
-    if (nearPortal && controls["interact"]) {
-      get().enterBattle();
-      return;
+    // Mobile joystick override if active
+    if (Math.abs(jx) > 0.1 || Math.abs(jy) > 0.1) {
+      mx = jx;
+      mz = jy;
     }
 
-    set({ player, game: { ...state.game, nearPortal } });
-  },
+    const inputLen = Math.sqrt(mx * mx + mz * mz);
+    if (inputLen > 0.05) {
+      const normX = mx / Math.max(1, inputLen);
+      const normZ = mz / Math.max(1, inputLen);
+      p.velocity.x = normX * effectiveSpeed;
+      p.velocity.z = normZ * effectiveSpeed;
+      p.facingDirection = Math.atan2(normX, normZ);
+    } else {
+      p.velocity.x = 0;
+      p.velocity.z = 0;
+    }
 
-  // ── Battle update ─────────────────────────────────────────────────────────
-  updateGame: (delta: number, controls: Record<string, boolean | number>) => {
-    const state = get();
-    if (state.game.phase !== "playing") return;
-    if (state.game.menuOpen) return;
+    // Jump
+    if (controls.jump && p.isOnGround) {
+      p.velocity.y = PLAYER_JUMP_FORCE;
+      p.isOnGround = false;
+    }
 
-    const player = { ...state.player, position: state.player.position.clone(), velocity: state.player.velocity.clone() };
-    let enemies = state.enemies.map((e) => ({ ...e, position: e.position.clone(), velocity: e.velocity.clone() }));
-    let bullets = state.bullets.map((b) => ({ ...b, position: b.position.clone(), velocity: b.velocity.clone() }));
-    const newBullets: BulletState[] = [];
-    let nextBulletId = state.nextBulletId;
-    const half = ARENA_SIZE / 2;
+    // Gravity & Position integrate
+    p.velocity.y += GRAVITY * dt;
+    p.position.x += p.velocity.x * dt;
+    p.position.y += p.velocity.y * dt;
+    p.position.z += p.velocity.z * dt;
 
-    const bonus = computeBonus(player);
-    const attackDamage = PLAYER_ATTACK_DAMAGE + bonus.atk;
-    const magicDamage  = BULLET_DAMAGE + bonus.magic;
-    const defReduction = Math.min(50, bonus.def); // % damage reduction
-    const barrierBonus = player.learnedSkills.includes("magic_barrier") ? 0.25 : 0;
+    if (p.position.y <= GROUND_Y) {
+      p.position.y = GROUND_Y;
+      p.velocity.y = 0;
+      p.isOnGround = true;
+    }
 
-    applyMovement(player, controls, delta, ARENA_SIZE);
+    // Map Boundaries: x from -55 to 55, z from -90 to 45
+    p.position.x = Math.max(-55, Math.min(55, p.position.x));
+    p.position.z = Math.max(-90, Math.min(45, p.position.z));
 
-    if (player.attackCooldown > 0) player.attackCooldown -= delta;
-    if (player.isAttacking) player.isAttacking = false;
+    // ── 2. Determine Current Zone & Transition Banner ────────────────────────
+    const distFromOrigin = Math.sqrt(p.position.x * p.position.x + p.position.z * p.position.z);
+    let zone: ZoneType = "wilderness";
+    let zoneName = "⚔️ Đấu Trường Hoang Dã — Quái Cấp 1-10";
 
-    if (controls["attack"] && player.attackCooldown <= 0) {
-      player.isAttacking = true;
-      player.attackCooldown = PLAYER_ATTACK_COOLDOWN;
+    if (p.position.z < BOSS_ZONE_Z) {
+      zone = "boss_raid";
+      zoneName = "🔥 Cấm Địa Săn Boss — Rồng Lửa Cổ Đại (Cực Nguy Hiểm)";
+    } else if (distFromOrigin < SAFE_ZONE_RADIUS) {
+      zone = "village";
+      zoneName = "🛡️ Làng Long Tộc — Khu Vực An Toàn (Hồi Máu)";
+    }
 
-      const isTriple = player.learnedSkills.includes("triple_strike");
-      const isDragonFury = player.learnedSkills.includes("dragon_fury");
+    const zoneChanged = state.game.currentZone !== zone;
+    let newNotification = state.game.zoneNotification;
+    let newNotifTimer = state.game.zoneNotificationTimer - dt;
 
-      enemies = enemies.map((e) => {
-        if (!e.isAlive) return e;
-        const dist = e.position.distanceTo(player.position);
-        const range = isDragonFury ? 3.5 : PLAYER_ATTACK_RANGE;
-        if (dist <= range) {
-          const ne = { ...e };
-          const mult = isTriple ? 1.5 : 1;
-          ne.health -= attackDamage * mult;
-          if (ne.health <= 0) {
-            ne.isAlive = false;
-            const goldDrop = ne.type === "orc" ? 20 : ne.type === "skeleton" ? 15 : 10;
-            const expDrop  = ne.type === "orc" ? 30 : ne.type === "skeleton" ? 25 : 20;
-            player.score += ne.type === "orc" ? 30 : ne.type === "skeleton" ? 25 : 20;
-            player.gold  += goldDrop;
-            player.exp   += expDrop;
-          }
-          return ne;
+    if (zoneChanged) {
+      newNotification = zoneName;
+      newNotifTimer = 3.5;
+    } else if (newNotifTimer <= 0) {
+      newNotification = null;
+    }
+
+    // ── 3. Safe Zone Health Regeneration (5% per second) ─────────────────────
+    let newRegenTimer = state.regenTimer + dt;
+    if (zone === "village" && p.health < p.maxHealth) {
+      if (newRegenTimer >= 1.0) {
+        newRegenTimer = 0;
+        const healAmount = Math.max(15, Math.round(p.maxHealth * 0.05));
+        p.health = Math.min(p.maxHealth, p.health + healAmount);
+        state.floatingDamages.push({
+          id: s_nextDamageId++,
+          position: p.position.clone().add(new THREE.Vector3(0, 2.0, 0)),
+          text: `+${healAmount} HP`,
+          color: "#00ff88",
+          lifetime: 1.0,
+          maxLifetime: 1.0,
+        });
+      }
+    }
+
+    // ── 4. Cooldowns & Timers ────────────────────────────────────────────────
+    if (p.invincibleTimer > 0) {
+      p.invincibleTimer -= dt;
+      if (p.invincibleTimer <= 0) p.isInvincible = false;
+    }
+
+    if (p.attackCooldown > 0) p.attackCooldown -= dt;
+
+    for (const key of Object.keys(p.skillCooldowns)) {
+      if (p.skillCooldowns[key] > 0) {
+        p.skillCooldowns[key] = Math.max(0, p.skillCooldowns[key] - dt);
+      }
+    }
+
+    // ── 5. Player Attacks (Melee / Normal Attack) ─────────────────────────────
+    if (controls.attack && p.attackCooldown <= 0) {
+      p.isAttacking = true;
+      p.attackCooldown = 0.35;
+      const baseAtk = (p.allocatedStats.atk * 5 + 35) + bonus.atk;
+
+      // Check hit against alive enemies within attack range & front arc
+      state.enemies.forEach((enemy) => {
+        if (!enemy.isAlive) return;
+        const dist = enemy.position.distanceTo(p.position);
+        if (dist <= PLAYER_ATTACK_RANGE) {
+          const dmg = Math.max(10, baseAtk - Math.floor(enemy.def * 0.35));
+          enemy.health = Math.max(0, enemy.health - dmg);
+
+          state.floatingDamages.push({
+            id: s_nextDamageId++,
+            position: enemy.position.clone().add(new THREE.Vector3(0, 2.0, 0)),
+            text: `-${dmg}`,
+            color: "#ffcc00",
+            lifetime: 1.0,
+            maxLifetime: 1.0,
+          });
+
+          // Knockback enemy slightly away from player
+          const knockDir = enemy.position.clone().sub(p.position).normalize();
+          enemy.position.addScaledVector(knockDir, 0.4);
         }
-        return e;
       });
+    } else {
+      p.isAttacking = false;
     }
 
-    if (controls["shoot"] && player.attackCooldown <= 0) {
-      player.attackCooldown = PLAYER_ATTACK_COOLDOWN;
-      const isInferno = player.learnedSkills.includes("inferno");
-      const dir = new THREE.Vector3(Math.sin(player.facingDirection), 0, Math.cos(player.facingDirection)).normalize();
-      newBullets.push({
-        id: nextBulletId++,
-        position: player.position.clone().add(new THREE.Vector3(0, 0.5, 0)),
-        velocity: dir.multiplyScalar(isInferno ? BULLET_SPEED * 0.7 : BULLET_SPEED),
+    // ── 6. Player Shoot (Ranged Energy Blast) ─────────────────────────────────
+    if (controls.shoot && p.attackCooldown <= 0) {
+      p.attackCooldown = 0.45;
+      const baseAtk = (p.allocatedStats.atk * 5 + 30) + bonus.atk;
+      const bulletVel = new THREE.Vector3(
+        Math.sin(p.facingDirection) * BULLET_SPEED,
+        0,
+        Math.cos(p.facingDirection) * BULLET_SPEED
+      );
+
+      state.bullets.push({
+        id: s_nextBulletId++,
+        position: p.position.clone().add(new THREE.Vector3(0, 1.2, 0)),
+        velocity: bulletVel,
         fromPlayer: true,
-        damage: isInferno ? magicDamage * 3 : magicDamage,
+        damage: baseAtk,
+        color: p.classId === "gunner" ? "#00f2ff" : "#ff3366",
         lifetime: BULLET_LIFETIME,
       });
     }
 
-    if (player.isInvincible) {
-      player.invincibleTimer -= delta;
-      if (player.invincibleTimer <= 0) { player.isInvincible = false; player.invincibleTimer = 0; }
-    }
+    // ── 7. Bullets Movement & Collision ──────────────────────────────────────
+    const updatedBullets: BulletState[] = [];
+    state.bullets.forEach((b) => {
+      b.lifetime -= dt;
+      if (b.lifetime <= 0) return;
 
-    // Bullet update
-    const updatedBullets: BulletState[] = [...bullets, ...newBullets]
-      .map((b) => {
-        const nb = { ...b };
-        nb.position = b.position.clone().add(b.velocity.clone().multiplyScalar(delta));
-        nb.lifetime -= delta;
-        return nb;
-      })
-      .filter((b) => b.lifetime > 0);
+      b.position.addScaledVector(b.velocity, dt);
 
-    const finalBullets: BulletState[] = [];
-    for (const bullet of updatedBullets) {
-      if (!bullet.fromPlayer) { finalBullets.push(bullet); continue; }
+      // Check collision with alive enemies
       let hit = false;
-      enemies = enemies.map((e) => {
-        if (!e.isAlive || hit) return e;
-        if (bullet.position.distanceTo(e.position) < 1.0) {
+      for (const enemy of state.enemies) {
+        if (!enemy.isAlive) continue;
+        const dist = b.position.distanceTo(enemy.position);
+        const hitRadius = enemy.isBoss ? 2.8 : 1.2;
+        if (dist <= hitRadius) {
+          enemy.health = Math.max(0, enemy.health - b.damage);
           hit = true;
-          const ne = { ...e };
-          ne.health -= bullet.damage;
-          if (ne.health <= 0) {
-            ne.isAlive = false;
-            const goldDrop = ne.type === "orc" ? 20 : ne.type === "skeleton" ? 15 : 10;
-            const expDrop  = ne.type === "orc" ? 30 : ne.type === "skeleton" ? 25 : 20;
-            player.score += ne.type === "orc" ? 30 : ne.type === "skeleton" ? 25 : 20;
-            player.gold  += goldDrop;
-            player.exp   += expDrop;
-          }
-          return ne;
+
+          state.floatingDamages.push({
+            id: s_nextDamageId++,
+            position: enemy.position.clone().add(new THREE.Vector3(0, 2.2, 0)),
+            text: `-${b.damage}`,
+            color: "#00f2ff",
+            lifetime: 1.0,
+            maxLifetime: 1.0,
+          });
+          break;
         }
-        return e;
-      });
-      if (!hit) finalBullets.push(bullet);
-    }
-
-    // Level up
-    while (player.exp >= player.expToNext) {
-      player.exp -= player.expToNext;
-      player.level += 1;
-      player.expToNext = expToNext(player.level);
-      player.statPoints  += 2;
-      player.skillPoints += 1;
-    }
-
-    // Enemy AI
-    enemies = enemies.map((e) => {
-      if (!e.isAlive) return e;
-      const ne = { ...e };
-      ne.attackCooldown = Math.max(0, ne.attackCooldown - delta);
-      ne.patrolTimer = Math.max(0, ne.patrolTimer - delta);
-      const distToPlayer = ne.position.distanceTo(player.position);
-
-      if (distToPlayer < ne.alertRadius) {
-        if (distToPlayer < ne.attackRadius) {
-          ne.state = "attack";
-          ne.velocity.set(0, 0, 0);
-          if (ne.attackCooldown <= 0 && !player.isInvincible) {
-            ne.attackCooldown = ENEMY_ATTACK_COOLDOWN;
-            const rawDmg  = ENEMY_DAMAGE;
-            const reduced = rawDmg * (1 - defReduction / 100) * (1 - barrierBonus);
-            player.health -= Math.max(1, Math.round(reduced));
-            player.isInvincible = true;
-            player.invincibleTimer = PLAYER_INVINCIBLE_TIME;
-          }
-        } else {
-          ne.state = "chase";
-          const dir = player.position.clone().sub(ne.position).normalize();
-          ne.velocity.set(dir.x * ENEMY_SPEED, 0, dir.z * ENEMY_SPEED);
-        }
-      } else {
-        ne.state = "patrol";
-        if (ne.patrolTimer <= 0) { ne.patrolDirection = Math.random() * Math.PI * 2; ne.patrolTimer = 2 + Math.random() * 2; }
-        ne.velocity.set(Math.sin(ne.patrolDirection) * ENEMY_SPEED * 0.4, 0, Math.cos(ne.patrolDirection) * ENEMY_SPEED * 0.4);
       }
 
-      ne.position.x += ne.velocity.x * delta;
-      ne.position.z += ne.velocity.z * delta;
-      ne.position.x = Math.max(-half, Math.min(half, ne.position.x));
-      ne.position.z = Math.max(-half, Math.min(half, ne.position.z));
-      return ne;
+      if (!hit) updatedBullets.push(b);
     });
 
-    if (player.health <= 0) {
-      player.health = 0;
-      set({ player, enemies, bullets: finalBullets, nextBulletId, game: { ...state.game, phase: "gameover", score: player.score } });
-      return;
-    }
+    // ── 8. Floating Damage Numbers Update ────────────────────────────────────
+    const updatedFloating: FloatingDamage[] = [];
+    state.floatingDamages.forEach((fd) => {
+      fd.lifetime -= dt;
+      fd.position.y += dt * 1.5; // Float upwards
+      if (fd.lifetime > 0) updatedFloating.push(fd);
+    });
 
-    const aliveEnemies = enemies.filter((e) => e.isAlive);
-    let game = { ...state.game, score: player.score };
-    if (aliveEnemies.length === 0) {
-      const nextWave = game.wave + 1;
-      if (nextWave > 5) {
-        set({ player, enemies, bullets: finalBullets, nextBulletId, game: { ...game, phase: "win" } });
+    // ── 9. Enemies AI & Collision with Player ────────────────────────────────
+    let bossHp = state.game.bossHealth;
+    let bossMaxHp = state.game.bossMaxHealth;
+    let bossIsActive = false;
+
+    state.enemies.forEach((enemy) => {
+      if (enemy.isBoss) {
+        bossHp = enemy.health;
+        bossMaxHp = enemy.maxHealth;
+        bossIsActive = enemy.isAlive && zone === "boss_raid";
+      }
+
+      // ── Respawn dead enemies ──
+      if (!enemy.isAlive) {
+        enemy.respawnTimer -= dt;
+        if (enemy.respawnTimer <= 0) {
+          enemy.isAlive = true;
+          enemy.health = enemy.maxHealth;
+          enemy.position.copy(enemy.spawnPosition);
+          enemy.state = "patrol";
+        }
         return;
+      }
+
+      // ── Check if enemy was defeated this frame ──
+      if (enemy.health <= 0) {
+        enemy.isAlive = false;
+        enemy.respawnTimer = enemy.isBoss ? 12 : 7;
+
+        state.floatingDamages.push({
+          id: s_nextDamageId++,
+          position: enemy.position.clone().add(new THREE.Vector3(0, 2.5, 0)),
+          text: `+EXP +VÀNG!`,
+          color: "#ffd700",
+          lifetime: 1.8,
+          maxLifetime: 1.8,
+        });
+
+        // Trigger database sync via backend mutation!
+        if (state.onDefeatMonsterCallback) {
+          state.onDefeatMonsterCallback(enemy.monsterId);
+        }
+        return;
+      }
+
+      // ── AI Behaviors ──
+      if (enemy.attackCooldown > 0) enemy.attackCooldown -= dt;
+
+      const distToPlayer = enemy.position.distanceTo(p.position);
+      const isPlayerInSafeZone = distFromOrigin < SAFE_ZONE_RADIUS;
+
+      // If player is inside Safe Zone, enemies never chase or attack
+      if (isPlayerInSafeZone) {
+        enemy.state = "patrol";
+      } else if (distToPlayer <= enemy.attackRadius) {
+        enemy.state = "attack";
+      } else if (distToPlayer <= enemy.alertRadius) {
+        enemy.state = "chase";
       } else {
-        game = { ...game, wave: nextWave };
-        const count = 3 + nextWave;
-        let id = state.nextEnemyId;
-        const newWaveEnemies = Array.from({ length: count }, () => { const e = makeEnemy(id, nextWave); id++; return e; });
-        set({ player, enemies: newWaveEnemies, bullets: finalBullets, nextBulletId, nextEnemyId: id, game });
-        return;
+        enemy.state = "patrol";
+      }
+
+      // Chase movement
+      if (enemy.state === "chase") {
+        const dir = p.position.clone().sub(enemy.position).normalize();
+        enemy.position.x += dir.x * (enemy.isBoss ? 3.0 : 3.2) * dt;
+        enemy.position.z += dir.z * (enemy.isBoss ? 3.0 : 3.2) * dt;
+      } else if (enemy.state === "attack") {
+        // Attack player if off cooldown and player not in safe zone
+        if (enemy.attackCooldown <= 0 && !p.isInvincible && !isPlayerInSafeZone) {
+          enemy.attackCooldown = 1.4;
+          const playerDef = (p.allocatedStats.def * 3 + 10) + bonus.def;
+          const enemyDamage = Math.max(8, enemy.atk - Math.floor(playerDef * 0.4));
+
+          p.health = Math.max(0, p.health - enemyDamage);
+          p.isInvincible = true;
+          p.invincibleTimer = 0.8;
+
+          state.floatingDamages.push({
+            id: s_nextDamageId++,
+            position: p.position.clone().add(new THREE.Vector3(0, 2.0, 0)),
+            text: `-${enemyDamage}`,
+            color: "#ff3333",
+            lifetime: 1.0,
+            maxLifetime: 1.0,
+          });
+
+          // Knockback player slightly
+          const kb = p.position.clone().sub(enemy.position).normalize();
+          p.position.addScaledVector(kb, 0.5);
+        }
+      } else {
+        // Patrol around spawn
+        enemy.patrolTimer -= dt;
+        if (enemy.patrolTimer <= 0) {
+          enemy.patrolDirection = Math.random() * Math.PI * 2;
+          enemy.patrolTimer = 2.5 + Math.random() * 2;
+        }
+        // Keep within 6m of spawn position
+        const distFromSpawn = enemy.position.distanceTo(enemy.spawnPosition);
+        if (distFromSpawn > 6) {
+          const returnDir = enemy.spawnPosition.clone().sub(enemy.position).normalize();
+          enemy.position.addScaledVector(returnDir, 1.5 * dt);
+        } else {
+          enemy.position.x += Math.cos(enemy.patrolDirection) * 1.2 * dt;
+          enemy.position.z += Math.sin(enemy.patrolDirection) * 1.2 * dt;
+        }
+      }
+    });
+
+    // ── 10. Player Defeated Handling (Respawn at Safe Zone) ───────────────────
+    if (p.health <= 0) {
+      p.health = p.maxHealth;
+      p.position.set(VILLAGE_SPAWN.x, GROUND_Y, VILLAGE_SPAWN.z);
+      p.velocity.set(0, 0, 0);
+      p.deaths += 1;
+      p.isInvincible = true;
+      p.invincibleTimer = 2.0;
+
+      newNotification = "💀 Bạn đã hồi sinh tại Làng Long Tộc!";
+      newNotifTimer = 4.0;
+
+      if (state.onPlayerDefeatedCallback) {
+        state.onPlayerDefeatedCallback();
       }
     }
 
-    set({ player, enemies, bullets: finalBullets, nextBulletId, game });
+    // ── Commit State Updates ─────────────────────────────────────────────────
+    set({
+      bullets: updatedBullets,
+      floatingDamages: updatedFloating,
+      regenTimer: newRegenTimer,
+      game: {
+        ...state.game,
+        currentZone: zone,
+        zoneNotification: newNotification,
+        zoneNotificationTimer: newNotifTimer,
+        bossHealth: bossHp,
+        bossMaxHealth: bossMaxHp,
+        bossActive: bossIsActive,
+      },
+    });
   },
 }));
+
+let s_nextBulletId = 100;
+let s_nextDamageId = 1000;

@@ -11,6 +11,7 @@ export { default as VillageNPCs } from "./entities/VillageNPCs";
 
 export { default as Arena } from "./scenes/Arena";
 export { default as Village } from "./scenes/Village";
+export { default as SeamlessWorld } from "./scenes/SeamlessWorld";
 
 export { default as Bullets } from "./vfx/Bullets";
 export { default as Particles } from "./vfx/Particles";
