@@ -2,7 +2,7 @@ import app from "./app";
 import { logger } from "./lib/logger";
 import { initDatabase } from "@workspace/db";
 
-const port = Number(process.env["PORT"] || "8080");
+const port = Number(process.env["PORT"] || "3001");
 
 async function startServer() {
   try {
