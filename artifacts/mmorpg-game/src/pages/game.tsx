@@ -36,8 +36,9 @@ export default function GamePage() {
     query: { queryKey: getGetCharactersQueryKey() },
   });
 
+  const charList = Array.isArray(characters) ? characters : [];
   const selectedCharId = typeof window !== "undefined" ? Number(localStorage.getItem("selectedCharacterId")) : null;
-  const character = (characters && selectedCharId ? characters.find((c) => c.id === selectedCharId) : null) || characters?.[0];
+  const character = (charList.length > 0 && selectedCharId ? charList.find((c) => c.id === selectedCharId) : null) || charList[0];
 
   const { data: characterDetail, isLoading: characterLoading } = useGetCharacter(
     character?.id || 0,

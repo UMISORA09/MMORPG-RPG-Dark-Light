@@ -123,7 +123,7 @@ export default function CharacterSelectScreen() {
     );
   }
 
-  const charList = characters || [];
+  const charList = Array.isArray(characters) ? characters : [];
 
   return (
     <div className="min-h-[100dvh] w-full bg-[#030108] text-white relative overflow-x-hidden flex flex-col justify-between selection:bg-[#ff3366] selection:text-white">
