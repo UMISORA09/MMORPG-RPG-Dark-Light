@@ -150,9 +150,10 @@ function LandscapeControls() {
         const dx = t.clientX - lookLast.current.x;
         const dy = t.clientY - lookLast.current.y;
         lookLast.current = { x: t.clientX, y: t.clientY };
-        cameraControls.yaw  -= dx * YAW_SENS;
+        cameraControls.yaw  -= dx * YAW_SENS * cameraControls.sensitivityX;
+        const invertY = cameraControls.invertY ? -1 : 1;
         cameraControls.pitch = Math.max(PITCH_MIN, Math.min(PITCH_MAX,
-          cameraControls.pitch + dy * PITCH_SENS));
+          cameraControls.pitch + dy * PITCH_SENS * cameraControls.sensitivityY * invertY));
       }
     };
     const onEnd = (e: TouchEvent) => {

@@ -126,7 +126,7 @@ export interface GameWorldState {
   inventoryItems: CharacterInventoryItem[];
 
   // --- Overlay Modals ---
-  activeModal: "inventory" | "shop" | "leaderboard" | "battleLog" | null;
+  activeModal: "inventory" | "shop" | "leaderboard" | "battleLog" | "settings" | null;
 
   // --- Callbacks for Database Sync ---
   onDefeatMonsterCallback: ((monsterId: string) => void) | null;
@@ -182,7 +182,7 @@ export interface GameWorldState {
   }) => void;
   setZone: (zone: WorldZone, notification?: string) => void;
   toggleCharacterRenderMode: () => void;
-  setActiveModal: (modal: "inventory" | "shop" | "leaderboard" | "battleLog" | null) => void;
+  setActiveModal: (modal: "inventory" | "shop" | "leaderboard" | "battleLog" | "settings" | null) => void;
   closeActiveModal: () => void;
   syncFromBackendCharacter: (char: any) => void;
   updateAfterBattle: (rewards: {

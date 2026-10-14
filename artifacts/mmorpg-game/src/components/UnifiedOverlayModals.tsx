@@ -1,4 +1,6 @@
 import { memo } from "react";
+import { InventoryEquipmentPanel } from "./InventoryEquipmentPanel";
+import { GameSettingsPanel } from "./GameSettingsPanel";
 import {
   useGetInventory,
   getGetInventoryQueryKey,
@@ -26,15 +28,10 @@ import {
   ShoppingBag, 
   Trophy, 
   ScrollText, 
-  Shield, 
-  Zap, 
-  Heart, 
-  Gauge, 
   Coins, 
-  CheckCircle, 
-  Sparkles,
   Sword,
-  Clock
+  Clock,
+  Settings,
 } from "lucide-react";
 
 interface UnifiedOverlayModalsProps {
@@ -64,7 +61,7 @@ export const UnifiedOverlayModals = memo(function UnifiedOverlayModals({
   );
 
   const { data: shopItems = [], isLoading: shopLoading } = useGetItems({
-    query: { queryKey: getGetItemsQueryKey(), enabled: activeModal === "shop" },
+    query: { queryKey: getGetItemsQueryKey(), enabled: activeModal === "shop" || activeModal === "inventory" },
   });
 
   const { data: leaderboard = [], isLoading: leaderboardLoading } = useGetLeaderboard({
@@ -168,7 +165,7 @@ export const UnifiedOverlayModals = memo(function UnifiedOverlayModals({
         if (e.target === e.currentTarget) closeActiveModal();
       }}
     >
-      <div className="relative w-full max-w-2xl max-h-[85vh] flex flex-col bg-slate-950/90 border border-slate-700/80 rounded-3xl shadow-[0_0_50px_rgba(0,0,0,0.8)] overflow-hidden text-slate-100 backdrop-blur-2xl">
+      <div className="relative w-full max-w-5xl max-h-[90vh] flex flex-col bg-[#342a2b] border border-[#5d4648] rounded-[28px] shadow-[0_30px_90px_rgba(0,0,0,0.7)] overflow-hidden text-slate-100">
         
         {/* ── Modal Header ── */}
         <div className="flex items-center justify-between px-6 py-4 border-b border-slate-800/80 bg-slate-900/40">
@@ -177,6 +174,7 @@ export const UnifiedOverlayModals = memo(function UnifiedOverlayModals({
             {activeModal === "shop" && <ShoppingBag className="w-6 h-6 text-amber-400" />}
             {activeModal === "leaderboard" && <Trophy className="w-6 h-6 text-purple-400" />}
             {isLogOpen && <ScrollText className="w-6 h-6 text-red-400" />}
+            {activeModal === "settings" && <Settings className="w-6 h-6 text-cyan-400" />}
 
             <div>
               <h2 className="text-lg font-black tracking-wide text-white flex items-center gap-2">
@@ -184,12 +182,14 @@ export const UnifiedOverlayModals = memo(function UnifiedOverlayModals({
                 {activeModal === "shop" && "CỬA HÀNG THƯƠNG GIA LONG TỘC"}
                 {activeModal === "leaderboard" && "BẢNG VINH DANH LONG TỘC"}
                 {isLogOpen && "LỊCH SỬ CHIẾN BÁO"}
+                {activeModal === "settings" && "CÀI ĐẶT ĐIỀU KHIỂN"}
               </h2>
               <p className="text-xs text-slate-400">
                 {activeModal === "inventory" && "Quản lý trang bị để gia tăng sức mạnh chiến đấu thời gian thực"}
                 {activeModal === "shop" && "Mua sắm thần binh, giáp trụ và phụ kiện gia tăng chỉ số"}
                 {activeModal === "leaderboard" && "Top những chiến binh mạnh nhất đại lục Long Tộc"}
                 {isLogOpen && "Ghi nhận các chiến tích tiêu diệt quái vật và Boss rồng"}
+                {activeModal === "settings" && "Tinh chỉnh camera và hiệu ứng theo cách chơi của bạn"}
               </p>
             </div>
           </div>
@@ -204,92 +204,23 @@ export const UnifiedOverlayModals = memo(function UnifiedOverlayModals({
         </div>
 
         {/* ── Modal Body (Scrollable) ── */}
-        <div className="flex-1 overflow-y-auto custom-scrollbar p-4 sm:p-6 space-y-4">
+        <div className="flex-1 overflow-y-auto custom-scrollbar p-3 sm:p-4 space-y-4">
           
           {/* 1. INVENTORY MODAL */}
           {activeModal === "inventory" && (
-            <div>
-              {inventoryLoading ? (
-                <div className="text-center py-12 text-slate-400">Đang tải túi đồ...</div>
-              ) : inventory.length === 0 ? (
-                <div className="text-center py-12 space-y-3">
-                  <Backpack className="w-12 h-12 text-slate-600 mx-auto" />
-                  <p className="text-slate-400 font-semibold">Túi đồ của bạn đang trống!</p>
-                  <p className="text-xs text-slate-500">Hãy ghé qua Cửa Hàng (phím B) để sắm thêm thần khí.</p>
-                </div>
-              ) : (
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                  {inventory.map((item) => (
-                    <div
-                      key={item.ownershipId}
-                      className={`p-3.5 rounded-2xl border transition-all flex flex-col justify-between ${
-                        item.equipped
-                          ? "bg-cyan-950/30 border-cyan-500/50 shadow-[0_0_15px_rgba(6,182,212,0.15)]"
-                          : "bg-slate-900/60 border-slate-800 hover:border-slate-700"
-                      }`}
-                    >
-                      <div>
-                        <div className="flex items-start justify-between gap-2 mb-1.5">
-                          <div>
-                            <span className="font-bold text-sm text-slate-100 flex items-center gap-1.5">
-                              {item.icon || "⚔️"} {item.name}
-                            </span>
-                            <span className="text-[10px] font-mono text-cyan-400 uppercase tracking-wider">
-                              {item.type === "weapon" ? "Vũ Khí" : item.type === "armor" ? "Giáp Trụ" : "Phụ Kiện"}
-                            </span>
-                          </div>
-                          {item.equipped && (
-                            <span className="px-2 py-0.5 rounded-full text-[10px] font-black bg-cyan-500/20 text-cyan-300 border border-cyan-400/30 flex items-center gap-1">
-                              <CheckCircle className="w-3 h-3" /> Đang Mặc
-                            </span>
-                          )}
-                        </div>
-
-                        <p className="text-xs text-slate-400 line-clamp-2 mb-2">{item.description}</p>
-
-                        {/* Stat boosts */}
-                        <div className="flex flex-wrap gap-2 text-xs mb-3">
-                          {item.atkBoost > 0 && (
-                            <span className="text-amber-400 flex items-center gap-0.5 font-mono">
-                              <Zap className="w-3 h-3" /> +{item.atkBoost} Công
-                            </span>
-                          )}
-                          {item.defBoost > 0 && (
-                            <span className="text-blue-400 flex items-center gap-0.5 font-mono">
-                              <Shield className="w-3 h-3" /> +{item.defBoost} Thủ
-                            </span>
-                          )}
-                          {item.hpBoost > 0 && (
-                            <span className="text-emerald-400 flex items-center gap-0.5 font-mono">
-                              <Heart className="w-3 h-3" /> +{item.hpBoost} Máu
-                            </span>
-                          )}
-                          {item.spdBoost > 0 && (
-                            <span className="text-purple-400 flex items-center gap-0.5 font-mono">
-                              <Gauge className="w-3 h-3" /> +{item.spdBoost} Tốc
-                            </span>
-                          )}
-                        </div>
-                      </div>
-
-                      {/* Equip / Unequip Button */}
-                      <button
-                        onClick={() => handleEquip(item)}
-                        disabled={equipItem.isPending || unequipItem.isPending}
-                        className={`w-full py-1.5 px-3 rounded-xl text-xs font-bold transition flex items-center justify-center gap-1.5 ${
-                          item.equipped
-                            ? "bg-slate-800 hover:bg-slate-700 text-slate-300 border border-slate-700"
-                            : "bg-gradient-to-r from-cyan-600 to-blue-600 hover:from-cyan-500 hover:to-blue-500 text-white shadow-md shadow-cyan-900/30"
-                        }`}
-                      >
-                        {item.equipped ? "Tháo Ra" : "Trang Bị"}
-                      </button>
-                    </div>
-                  ))}
-                </div>
-              )}
-            </div>
+            <InventoryEquipmentPanel
+              character={character}
+              inventory={inventory}
+              shopItems={shopItems}
+              inventoryLoading={inventoryLoading}
+              shopLoading={shopLoading}
+              busy={equipItem.isPending || unequipItem.isPending || buyItem.isPending}
+              onEquip={handleEquip}
+              onBuy={(item) => handleBuy(item.id, item.price, item.name)}
+            />
           )}
+
+          {activeModal === "settings" && <GameSettingsPanel />}
 
           {/* 2. SHOP MODAL */}
           {activeModal === "shop" && (

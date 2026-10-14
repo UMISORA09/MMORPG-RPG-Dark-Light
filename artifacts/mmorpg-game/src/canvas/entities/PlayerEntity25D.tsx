@@ -8,38 +8,11 @@ import { useGameWorldStore } from "@/stores/useGameWorldStore";
 import { mobileState } from "@/game/mobileControls";
 import { cameraControls } from "@/game/cameraControls";
 import { getCharacterBlueprint } from "@/skills";
+import { initInputRouter, getInputState } from "@/game/input/InputRouter";
 
-// ── Keyboard State Tracker ──
-const keys = new Set<string>();
-
+// Ensure global InputRouter listeners are mounted
 if (typeof window !== "undefined") {
-  window.addEventListener("keydown", (e) => {
-    // If typing in input or textarea, ignore game hotkeys
-    if (["input", "textarea"].includes((e.target as HTMLElement)?.tagName?.toLowerCase())) {
-      return;
-    }
-    const k = e.key.toLowerCase();
-    keys.add(k);
-    if ([" ", "arrowup", "arrowdown", "arrowleft", "arrowright"].includes(k)) {
-      e.preventDefault();
-    }
-    // Combat Skills: 1/Q (Skill 1), 2/E (Skill 2), 3/R (Skill 3) - Ergonomic Left Hand Layout
-    if (e.key === "1" || k === "q" || k === "k") useGameWorldStore.getState().triggerSkill(1);
-    if (e.key === "2" || k === "e") useGameWorldStore.getState().triggerSkill(2);
-    if (e.key === "3" || k === "r" || k === "u") useGameWorldStore.getState().triggerSkill(3);
-
-    // Interface Modals: B/I (Bag/Túi), P (Shop/Cửa hàng), O (BXH/Leaderboard), H (Chiến Báo), V (2.5D/3D Mode), ESC (Đóng)
-    if (k === "b" || k === "i") useGameWorldStore.getState().setActiveModal("inventory");
-    if (k === "p") useGameWorldStore.getState().setActiveModal("shop");
-    if (k === "o") useGameWorldStore.getState().setActiveModal("leaderboard");
-    if (k === "h") useGameWorldStore.getState().setActiveModal("battleLog");
-    if (k === "v") useGameWorldStore.getState().toggleCharacterRenderMode();
-    if (e.key === "Escape") useGameWorldStore.getState().closeActiveModal();
-  });
-
-  window.addEventListener("keyup", (e) => {
-    keys.delete(e.key.toLowerCase());
-  });
+  initInputRouter();
 }
 
 export const PlayerEntity25D = memo(function PlayerEntity25D() {
@@ -105,6 +78,7 @@ export const PlayerEntity25D = memo(function PlayerEntity25D() {
     if (animLockTimer.current > 0) animLockTimer.current -= dt;
 
     // 2. Read Keyboard & Mobile Joystick inputs with Camera-Relative Orientation
+    const input = getInputState();
     const joyX = mobileState.joystick.x;
     const joyY = mobileState.joystick.y;
     const deadzone = 0.15;
@@ -112,11 +86,11 @@ export const PlayerEntity25D = memo(function PlayerEntity25D() {
     let inputForward = 0; // +1 = Forward (Away from camera), -1 = Backward (Towards camera)
     let inputRight = 0;   // +1 = Right, -1 = Left relative to screen view
 
-    // Keyboard Input (WASD & Arrow Keys)
-    if (keys.has("w") || keys.has("arrowup")) inputForward += 1;
-    if (keys.has("s") || keys.has("arrowdown")) inputForward -= 1;
-    if (keys.has("d") || keys.has("arrowright")) inputRight += 1;
-    if (keys.has("a") || keys.has("arrowleft")) inputRight -= 1;
+    // Keyboard Input (WASD & Arrow Keys) via InputRouter
+    if (input.forward) inputForward += 1;
+    if (input.back) inputForward -= 1;
+    if (input.right) inputRight += 1;
+    if (input.left) inputRight -= 1;
 
     // Mobile Virtual Joystick (joyY < 0 is dragging UP on screen)
     if (joyY < -deadzone) inputForward += -joyY;
@@ -149,7 +123,7 @@ export const PlayerEntity25D = memo(function PlayerEntity25D() {
     else if (moveX > 0.05) facingLeftRef.current = false;
 
     // 3. Jump Physics
-    const wantsJump = (keys.has(" ") || mobileState.jump) && isGrounded.current;
+    const wantsJump = (input.jump || mobileState.jump) && isGrounded.current;
     if (wantsJump) {
       velocityY.current = jumpForce;
       isGrounded.current = false;
@@ -169,8 +143,8 @@ export const PlayerEntity25D = memo(function PlayerEntity25D() {
     pos.current.x += moveX * speed * dt;
     pos.current.z += moveZ * speed * dt;
 
-    // 4. Attack Execution (3-step Combo Chain)
-    const wantsAttack = keys.has("j") || keys.has("f") || mobileState.attack || mobileState.shoot;
+    // 4. Attack Execution (Left Mouse Click or J Combo Chain)
+    const wantsAttack = input.attack || mobileState.attack || mobileState.shoot;
 
     let currentAnim: import("../sprites/SpriteBillboard25D").EntityAnimationState = "idle";
 
@@ -207,7 +181,7 @@ export const PlayerEntity25D = memo(function PlayerEntity25D() {
 
     // Camera Shake jitter
     if (cameraShakeIntensity > 0.02) {
-      const shakeAmt = cameraShakeIntensity * 0.45;
+      const shakeAmt = cameraShakeIntensity * 0.45 * (cameraControls.reduceShake ? 0.2 : 1);
       camOffset.x += (Math.random() - 0.5) * shakeAmt;
       camOffset.y += (Math.random() - 0.5) * shakeAmt;
       camOffset.z += (Math.random() - 0.5) * shakeAmt;
