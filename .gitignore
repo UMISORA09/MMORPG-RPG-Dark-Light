@@ -1,0 +1,5 @@
+# Keep main branch completely clean & empty of source code
+*
+!README.md
+!header-banner.svg
+!.gitignore
