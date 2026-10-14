@@ -19,12 +19,17 @@
    - 🥊 **Đấu Sĩ (Berserk Fighter)**: Quyền cước sấm sét, nộ long quyền.
    - 🛡️ **Đỡ Đòn (Holy Guardian Tank)**: Khiên thần thánh, địa chấn, pháo đài bất tử.
 3. **Tích Hợp Hệ Thống MMORPG Trực Tiếp Trong 3D**:
+   - **Đồng Bộ Nhiều Người Chơi Realtime**: Gặp gỡ các anh hùng khác đang cùng phiêu lưu trong thế giới thông qua kiến trúc mạng WebSocket (20Hz Tick).
    - **Thanh trạng thái Game RPG**: Level, HP, EXP, Vàng, Chức nghiệp hiển thị mượt mà.
-   - **Phó Bản Săn Boss (Dungeon Raids)**: Khiêu chiến Boss trực tiếp từ trong 3D thông qua Sứ Giả hoặc phím tắt.
+   - **Phó Bản Săn Boss (Dungeon Raids)**: Khiêu chiến Boss Rồng Lửa Cổ Đại tại Altar cùng đồng đội.
    - **Bảng Vinh Danh Toàn Cầu**: Theo dõi thứ hạng cao thủ server ngay trong game.
-   - **Túi Đồ & Nâng Cấp Chỉ Số**: Nâng cấp vũ khí, giáp, cộng điểm tiềm năng (ATK, DEF, SPD, HP, Magic).
+   - **Túi Đồ & Nâng Cấp Chỉ Số**: Nâng cấp vũ khí, giáp, cộng điểm tiềm năng (ATK, DEF, SPD, HP).
    - **Tự Động Đồng Bộ**: Diệt quái, nhặt vàng, tăng cấp trong 3D được đồng bộ hóa tức thì vào cơ sở dữ liệu máy chủ.
-4. **Trải Nghiệm Nhanh 1-Click (Quick Play)**:
+4. **Tài Liệu Đặc Tả & Kiến Trúc**:
+   - Xem chi tiết bản đặc tả đầy đủ tại: [docs/PRODUCT_BRIEF.md](file:///c:/Cassavas/Game2.5D/docs/PRODUCT_BRIEF.md)
+   - Quy chuẩn điều khiển công thái học: [.agents/skills/clb-control-scheme/SKILL.md](file:///c:/Cassavas/Game2.5D/.agents/skills/clb-control-scheme/SKILL.md)
+   - Quy chuẩn tạo hình 2.5D Pixel: [.agents/skills/clb-character-art-style/SKILL.md](file:///c:/Cassavas/Game2.5D/.agents/skills/clb-character-art-style/SKILL.md)
+5. **Trải Nghiệm Nhanh 1-Click (Quick Play)**:
    - Hỗ trợ nút **"⚡ Vào Chơi Ngay"** không cần đăng ký phức tạp.
 
 ---

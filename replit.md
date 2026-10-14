@@ -1,6 +1,6 @@
-# Chiến Trường — Dark Fantasy MMORPG
+# Chiến Long Bí Sử (Chiến Long Bá) — 2.5D Real-Time Action MMORPG
 
-Web game MMORPG 2D mobile với 4 chức nghiệp: Xạ Thủ, Sát Thủ, Đấu Sĩ, Đỡ Đòn. Người chơi đăng ký tài khoản, chọn chức nghiệp, chiến đấu với quái vật, lên level và cạnh tranh trên bảng xếp hạng.
+Web game 2.5D Action MMORPG thời gian thực với 4 chức nghiệp: Xạ Thủ, Sát Thủ, Đấu Sĩ, Đỡ Đòn. Người chơi điều khiển nhân vật trong không gian 3D mở liên thông (Làng Long Tộc, Đấu Trường Hoang Dã, Cấm Địa Boss), chiến đấu combo thời gian thực (chém kiếm, né đòn, nộ chiêu), đồng bộ nhiều người chơi qua WebSocket và lưu trữ tiến trình bền vững trên PostgreSQL.
 
 ## Run & Operate
 
@@ -15,8 +15,8 @@ Web game MMORPG 2D mobile với 4 chức nghiệp: Xạ Thủ, Sát Thủ, Đấ
 ## Stack
 
 - pnpm workspaces, Node.js 24, TypeScript 5.9
-- Frontend: React + Vite, wouter routing, Tailwind CSS, TanStack Query, Framer Motion
-- API: Express 5 + express-session + connect-pg-simple
+- Frontend: React + Three.js / React Three Fiber, 2.5D Billboard Sprites (optional 3D RPG Model), wouter routing, Tailwind CSS, TanStack Query, Zustand
+- API & Realtime: Express 5 + WebSocket (`ws`) + express-session + connect-pg-simple
 - Auth: bcryptjs password hashing, PostgreSQL session store
 - DB: PostgreSQL + Drizzle ORM
 - Validation: Zod (v3), drizzle-zod
@@ -25,27 +25,30 @@ Web game MMORPG 2D mobile với 4 chức nghiệp: Xạ Thủ, Sát Thủ, Đấ
 
 ## Where things live
 
+- `docs/PRODUCT_BRIEF.md` — Product Brief & Kiến trúc chuẩn hóa MMORPG
 - `lib/api-spec/openapi.yaml` — OpenAPI spec (source of truth for API contracts)
-- `lib/db/src/schema/` — Drizzle schema: users, characters, battle_logs
+- `lib/db/src/schema/` — Drizzle schema: users, characters, battle_logs, items
 - `artifacts/api-server/src/routes/` — auth, classes, characters, battle, leaderboard
 - `artifacts/api-server/src/data/classes.ts` — static data: character classes, monsters, stat formulas
-- `artifacts/mmorpg-game/src/` — React frontend
+- `artifacts/mmorpg-game/src/` — React Three Fiber 2.5D frontend
 
 ## Architecture decisions
 
 - Sessions stored in PostgreSQL via connect-pg-simple (table: user_sessions, created automatically)
 - All integer fields in OpenAPI spec use `type: number` (not `type: integer`) because Orval v8 generates `zod.int()` which doesn't exist in Zod v3 — `zod.number()` is the correct call
-- Battle system is turn-based simulation: player attacks first if SPD >= monsterAtk/2, ±15% damage variance, 15% crit rate at 1.8x
+- Combat is 100% Real-Time Action in 3D scene (hitbox, combo timing, telegraph dodging, boss raid mechanics)
+- Server validates combat victories, level ups, loot generation and stores battle history authoritatively
+- Realtime Multiplayer: WebSocket netcode synchronizes remote player coordinates, animation states, and combat events in 20Hz ticks
 - EXP formula: `floor(100 * 1.5^(level-1))` per level
 - Character stats scale linearly: `baseStats * (1 + (level-1) * 0.1)`
 
 ## Product
 
-- Register/login with username + password
-- Choose 1 of 4 character classes (Xạ Thủ, Sát Thủ, Đấu Sĩ, Đỡ Đòn) — each with unique stats and skills
-- Fight monsters of increasing difficulty for EXP and gold
+- Register/login with username + password (supports 1-click Quick Play)
+- Choose 1 of 4 character classes (Xạ Thủ, Sát Thủ, Đấu Sĩ, Đỡ Đòn) — each with unique anatomy, stats, and 3-hit combo + 3 active skills
+- Fight monsters (Slime, Wolf, Goblin, Orc, Skeleton, Ancient Dragon Boss) in real-time for EXP, Gold, and 3D Loot drops
 - Level up to gain stronger stats automatically
-- View battle history, character stats, and global leaderboard
+- View battle history, character equipment inventory, store purchases, and global leaderboard
 
 ## User preferences
 
