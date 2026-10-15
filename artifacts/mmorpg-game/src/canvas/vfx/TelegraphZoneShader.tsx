@@ -174,7 +174,7 @@ export const TelegraphZoneItem = memo(function TelegraphZoneItem({
   // Calculate position offset: For LINE_BOX and CONE, the origin is at the caster's foot
   const offsetPosition = useMemo(() => {
     const p = new THREE.Vector3(...zone.position);
-    p.y = 0.035; // Slightly elevated above terrain to avoid z-fighting
+    p.y = 0.04; // Distinct Y level for boss danger telegraph decal
     if (pattern.shape === "LINE_BOX") {
       const len = pattern.length || 8.0;
       const dirVec = new THREE.Vector3(Math.sin(zone.direction), 0, Math.cos(zone.direction));
@@ -197,6 +197,8 @@ export const TelegraphZoneItem = memo(function TelegraphZoneItem({
         uniforms={uniforms}
         transparent
         depthWrite={false}
+        polygonOffset={true}
+        polygonOffsetFactor={-1}
         side={THREE.DoubleSide}
       />
     </mesh>

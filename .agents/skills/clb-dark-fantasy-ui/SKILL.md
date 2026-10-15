@@ -147,14 +147,72 @@ Toàn bộ các vùng cuộn trang (`overflow-y-auto`, `overflow-auto`, modal li
 
 ---
 
-## 7. CHECKLIST KIỂM DUYỆT TRƯỚC KHI BÀN GIAO GIAO DIỆN
-1. [ ] Nền trang có đúng mã màu Slate Teal `#4c6e6f` với radial gradient không?
-2. [ ] Card hoặc Modal có sử dụng nền nâu đen than `#342a2b` với góc bo lớn `34px` không?
-3. [ ] Các ô nhập và khối phụ có sử dụng `#4a383a` với viền `#5d4648` không?
-4. [ ] Nút hành động chính có đúng chuẩn viên thuốc `rounded-full` màu cyan `#28c3e1` với chữ đậm `#1c161a` không?
-5. [ ] Thanh cuộn (Scrollbar) hiển thị chuẩn Dark Fantasy Mauve `#5d4648`, hover `#8e7a7c`, active phát sáng cyan `#28c3e1`?
-6. [ ] Tạo hình nhân vật sử dụng chuẩn Anime Pixel Art sắc nét từ `clb-character-art-style`?
-7. [ ] Font chữ tiêu đề rõ ràng, phụ đề dùng màu `#8e7a7c`?
-8. [ ] Chạy `pnpm run typecheck` đạt 0 lỗi?
+---
+
+## 8. QUY CHUẨN GIAO DIỆN HÀNH TRANG & TRANG BỊ CHIẾN ĐẤU (INVENTORY & EQUIPMENT SYSTEM STANDARD)
+
+Quy chuẩn này chuẩn hóa toàn bộ giao diện **Hành Trang** (trước đây là Túi đồ) áp dụng phong cách Dark Slate Cinema Slate & Indigo (`#11141c` / `#161922` / `#273044`) đồng bộ với màn hình chiến đấu thời gian thực:
+
+```
+┌────────────────────────────────────────────────────────────────────────────────────────┐
+│  ❤️ 500 Sinh lực   ⚔️ 65.0 Sát thương   🛡️ 0.0% Phòng thủ   ⚡ 170.0 Tốc độ đánh   🪙 Vàng  ✕ │
+├───────────────────────────────────┬────────────────────────────────────────────────────┤
+│      Lực chiến trang bị: 60       │             TÚI HÀNH TRANG (24 Ô)                  │
+│                                   │  ┌───┬───┬───┬───┬───┬───┐                         │
+│  [Mũ]         ▲           [V.Cổ]  │  │ ⚔ │ 🗡 │ ✦ │ ✦ │ ✦ │ ✦ │                         │
+│  [Giáp]      /█\          [HoaTai]│  ├───┼───┼───┼───┼───┼───┤                         │
+│  [Găng]     /███\         [Nhẫn]  │  │ ✦ │ ✦ │ ✦ │ ✦ │ ✦ │ ✦ │                         │
+│  [Quần]     (Hero)        [VũKhí] │  ├───┼───┼───┼───┼───┼───┤                         │
+│  [Giày]    [======]       [Khiên] │  │ ✦ │ ✦ │ ✦ │ ✦ │ ✦ │ ✦ │                         │
+│  [ThắtLưng](Rune Pedestal)[ÁoChog]│  └───┴───┴───┴───┴───┴───┘                         │
+│                                   ├────────────────────────────────────────────────────┤
+│                                   │ [Nhân vật]  [Phụ bản]   [Nhiệm vụ]  [Ưu đãi]       │
+│                                   │ [Cường hóa] [Chế tạo]   [Cộng đồng] [Cài đặt]      │
+└───────────────────────────────────┴────────────────────────────────────────────────────┘
+```
+
+### A. Thanh Chỉ Số Header (Top Stat Bar)
+- Bốn chỉ số cốt lõi nằm ngang góc trên bên trái:
+  - **Sinh lực (HP):** Biểu tượng Heart màu hồng đỏ `#fb7185`, nền `rgba(244,63,94,0.1)`.
+  - **Sát thương (ATK):** Biểu tượng Song Kiếm màu hổ phách `#fbbf24`, nền `rgba(245,158,11,0.1)`.
+  - **Phòng thủ (DEF):** Biểu tượng Khiên màu lam thiên thanh `#38bdf8`, nền `rgba(14,165,233,0.1)`.
+  - **Tốc độ (SPD):** Biểu tượng Tia Sét màu ngọc lục bảo `#34d399`, nền `rgba(16,185,129,0.1)`.
+- Góc phải: Huy hiệu vàng `🪙 Vàng` bo tròn `rounded-full` và nút đóng `X`.
+
+### B. Cột Trái: Đài Phong Ấn Hero & 12 Ô Trang Bị Tiêu Chuẩn RPG
+- **Điểm Lực Chiến Trang Bị (Equipment Rating):** Tiêu đề trung tâm, công thức tổng hợp từ chỉ số trang bị với hiệu ứng chữ Cyan ngọc phát sáng `drop-shadow-[0_0_8px_rgba(40,195,225,0.6)]`.
+- **Đài Sen Ma Thuật (Rune Pedestal Floor):** Nền elip gradient hướng lên `bg-gradient-to-t from-cyan-950/60 to-transparent` viền ánh hào quang neon cyan.
+- **Tạo hình Anh Hùng:** Đứng hiên ngang ở trung tâm, load sprite pixelated sắc nét theo class từ `ClassSprite`.
+- **12 Ô Trang Bị Bố Trí Đối Xứng:**
+  - **6 Ô Cột Trái:** Mũ/Nón (Helmet), Áo Giáp (Armor), Găng Tay (Gloves), Quần Giáp (Pants), Giày Chiến (Boots), Thắt Lưng/Ấn Ký (Belt).
+  - **6 Ô Cột Phải:** Dây Chuyền (Necklace), Hoa Tai/Ngọc Bội (Earring), Nhẫn Giới Chỉ (Ring), Vũ Khí Chính (Weapon), Khiên/Pháp Bảo (Shield), Áo Choàng/Lệnh Kỳ (Banner).
+  - Khi ô trống: Hiển thị Silhouette vector SVG tối giản màu `#586580` độ mờ 45%.
+  - Khi đã trang bị: Hiển thị icon vật phẩm, viền phát sáng theo độ hiếm, chấm ngọc Cyan ở góc phải.
+
+### C. Cột Phải: Lưới Hành Trang 6x4 & 8 Nút Điều Hướng Hệ Thống
+- **Lưới Vật Phẩm 24 Ô (6 Cột x 4 Hàng):**
+  - Ô trống: Hiển thị ký hiệu ngôi sao 4 cánh `✦` màu chìm `#404a62`.
+  - Ô có đồ: Thẻ bo tròn `rounded-xl`, viền phát sáng tương ứng độ hiếm:
+    - **Thần Thoại (Legendary):** Viền Vàng `#f59e0b`, phát sáng vàng hổ phách.
+    - **Sử Thi (Epic):** Viền Tím `#a855f7`, phát sáng tím huyền ảo.
+    - **Hiếm (Rare):** Viền Cyan `#28c3e1`, phát sáng xanh ngọc.
+    - **Không Phổ Biến (Uncommon):** Viền Lục `#10b981`.
+    - **Phổ Biến (Common):** Viền Xám Đen `#475569`.
+  - Món đang mặc có huy hiệu checkmark nhỏ góc trên.
+- **Thanh 8 Nút Chức Năng Nhanh (2 hàng x 4 cột):**
+  1. `Nhân vật`: Xem bảng thuộc tính chi tiết nhân vật (HP, MP, Công, Thủ, Tốc, Lực chiến).
+  2. `Phụ bản`: Mở Cấm Địa Săn Quái & Khiêu chiến Boss Cổ Long.
+  3. `Nhiệm vụ`: Mở bảng chiến tích & nhiệm vụ nhận vàng hàng ngày.
+  4. `Ưu đãi`: Mở Cửa Hàng trang bị thần binh.
+  5. `Cường hóa`: Nâng cấp tăng chỉ số ATK/DEF cho trang bị.
+  6. `Chế tạo`: Lò rèn thần binh từ nguyên liệu rơi của Boss.
+  7. `Cộng đồng`: Bảng Vinh Danh Long Tộc (Leaderboard).
+  8. `Cài đặt`: Cài đặt điều khiển và đồ họa game.
+
+### D. Đồng Bộ Toàn Thể Trang Chiến Đấu
+- Phím tắt bàn phím: Nhấn `B` hoặc `I` mở/đóng Hành Trang.
+- HUD: Nút chức năng hiển thị nhãn **Hành Trang (B)** kèm icon `Backpack`.
+- Dòng nhắc lệnh: Cập nhật đồng bộ sang "B Hành trang".
+
 
 

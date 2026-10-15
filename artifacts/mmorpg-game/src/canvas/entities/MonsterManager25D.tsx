@@ -203,6 +203,7 @@ export const MonsterManager25D = memo(function MonsterManager25D() {
   activeTelegraphsRef.current = activeTelegraphs;
 
   const [, setRenderTrigger] = useState(0);
+  const markerSyncTimer = useRef(0);
 
   // Sync initial Boss state
   useEffect(() => {
@@ -572,6 +573,22 @@ export const MonsterManager25D = memo(function MonsterManager25D() {
         stagger: (boss.staggerGauge / boss.staggerMax) * 100,
         isStaggered: boss.aiState === "STAGGERED",
       });
+    }
+
+    // Periodically sync alive monster markers to MinimapRadar (every ~0.15s)
+    markerSyncTimer.current += dt;
+    if (markerSyncTimer.current >= 0.15) {
+      markerSyncTimer.current = 0;
+      const markers = monsters
+        .filter((m) => m.isAlive)
+        .map((m) => ({
+          id: m.id,
+          x: m.currentPos.x,
+          z: m.currentPos.z,
+          isBoss: m.isBoss,
+          name: m.name,
+        }));
+      useGameWorldStore.getState().updateMonsterMarkers(markers);
     }
 
     if (stateChanged) {

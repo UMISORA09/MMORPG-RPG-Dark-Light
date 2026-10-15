@@ -6,7 +6,8 @@ import { RPGCharacterModel3D } from "./RPGCharacterModel3D";
 import { createMultiLayerCanvasTexture } from "../sprites/MultiLayerSpriteGenerator";
 import { useGameWorldStore } from "@/stores/useGameWorldStore";
 import { mobileState } from "@/game/mobileControls";
-import { cameraControls } from "@/game/cameraControls";
+import { cameraControls, PITCH_MIN, PITCH_MAX } from "@/game/cameraControls";
+import { resolveWorldCollisions } from "../world/worldColliders";
 import { getCharacterBlueprint } from "@/skills";
 import { initInputRouter, getInputState } from "@/game/input/InputRouter";
 
@@ -172,12 +173,23 @@ export const PlayerEntity25D = memo(function PlayerEntity25D() {
       currentAnim = "run";
     }
 
+    // Solid Obstacle and World Boundary Collisions Resolution
+    resolveWorldCollisions(pos.current, 0.45);
+
     // Push coordinates to Zustand store
     updatePlayerPosition(pos.current, facingLeftRef.current, currentAnim);
 
-    // 5. Smooth 2.5D Isometric Action Camera Follow with Shake Impulse
-    const camOffset = new THREE.Vector3(0, 8.5, 13.5);
-    camOffset.applyAxisAngle(new THREE.Vector3(0, 1, 0), cameraControls.yaw);
+    // 5. Smooth 2.5D Action RPG Camera Follow with Locked Polar Angle (35°-55°) & Wheel Zoom
+    cameraControls.zoom += (cameraControls.targetZoom - cameraControls.zoom) * cameraControls.dampingFactor;
+
+    const clampedPitch = Math.max(PITCH_MIN, Math.min(PITCH_MAX, cameraControls.pitch));
+    const radius = cameraControls.zoom;
+    const camY = radius * Math.sin(clampedPitch);
+    const horizDist = radius * Math.cos(clampedPitch);
+    const camX = horizDist * Math.sin(cameraControls.yaw);
+    const camZ = horizDist * Math.cos(cameraControls.yaw);
+
+    const camOffset = new THREE.Vector3(camX, camY, camZ);
 
     // Camera Shake jitter
     if (cameraShakeIntensity > 0.02) {

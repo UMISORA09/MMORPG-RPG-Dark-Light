@@ -209,6 +209,19 @@ export const SpriteBillboard25D = memo(function SpriteBillboard25D({
   const hpColor =
     hpPct > 0.5 ? "#10b981" : hpPct > 0.25 ? "#f59e0b" : "#ef4444";
 
+  // Bottom-anchored plane geometry (pivot at bottom feet)
+  const planeGeom = useMemo(() => {
+    const geom = new THREE.PlaneGeometry(entityWidth, entityHeight);
+    geom.translate(0, entityHeight * 0.5, 0);
+    return geom;
+  }, [entityWidth, entityHeight]);
+
+  useEffect(() => {
+    return () => {
+      planeGeom.dispose();
+    };
+  }, [planeGeom]);
+
   // Position vector
   const posArray: [number, number, number] = Array.isArray(position)
     ? position
@@ -216,21 +229,33 @@ export const SpriteBillboard25D = memo(function SpriteBillboard25D({
 
   return (
     <group position={posArray} onClick={onClick}>
+      {/* Contact Ground Shadow decal (z-fighting free) */}
+      <mesh position={[0, 0.02, 0]} rotation={[-Math.PI / 2, 0, 0]} receiveShadow>
+        <circleGeometry args={[entityWidth * 0.35, 20]} />
+        <meshBasicMaterial
+          color="#000000"
+          transparent
+          opacity={0.35}
+          depthWrite={false}
+          polygonOffset={true}
+          polygonOffsetFactor={-1}
+        />
+      </mesh>
+
       {/* 2.5D Billboard Mesh that always faces the camera */}
       <Billboard
         follow={true}
         lockX={false}
         lockY={false}
         lockZ={false}
-        position={[0, entityHeight * 0.5, 0]}
+        position={[0, 0, 0]}
       >
-        <mesh ref={meshRef} castShadow receiveShadow>
-          <planeGeometry args={[entityWidth, entityHeight]} />
+        <mesh ref={meshRef} geometry={planeGeom} castShadow receiveShadow>
           <meshStandardMaterial
             ref={materialRef}
             map={texture}
             transparent={true}
-            alphaTest={0.4}
+            alphaTest={0.45}
             side={THREE.DoubleSide}
             roughness={0.7}
             metalness={0.1}
@@ -238,7 +263,7 @@ export const SpriteBillboard25D = memo(function SpriteBillboard25D({
         </mesh>
 
         {/* --- Overhead Floating HUD: Name, Level, and HP Bar --- */}
-        <group position={[0, entityHeight * 0.5 + 0.35, 0]}>
+        <group position={[0, entityHeight + 0.35, 0]}>
           {/* Entity Name & Level */}
           {name && (
             <Text

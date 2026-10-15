@@ -1,24 +1,29 @@
+// ==============================================================================
+// Dark-Light RPG HUD — UnifiedGameHUD
+// Integrates:
+// 1. PlayerStatusFrame (Beveled metallic gold-bronze frame, delayed HP bar, EXP & passives)
+// 2. MinimapRadar (Live compass bezel, player arrow, sanctuary ring, monsters, boss & loot)
+// 3. ActionCombatBar (Hexagonal/beveled skill slots, Combo 1-2-3, conic-gradient cooldown sweeps)
+// 4. Boss Raid Health Bar & Smooth Zone Notice
+// 5. Strict Pointer-Events isolation preventing unintended click-through
+// ==============================================================================
+
 import { memo, useRef, useState, useEffect } from "react";
 import { useGameWorldStore } from "@/stores/useGameWorldStore";
+import { useGameStore } from "@/game/useGameStore";
 import { mobileState } from "@/game/mobileControls";
-import { getCharacterBlueprint } from "@/skills";
+import { PlayerStatusFrame } from "./PlayerStatusFrame";
+import { MinimapRadar } from "./MinimapRadar";
+import { ActionCombatBar } from "./ActionCombatBar";
 import { 
   Backpack, 
   ShoppingBag, 
   Trophy, 
   ScrollText, 
   LogOut, 
-  Flame, 
-  Sparkles, 
-  Shield, 
-  Zap, 
-  Sword,
-  Target,
-  ChevronRight,
-  Box,
-  Settings
+  Box, 
+  Settings 
 } from "lucide-react";
-
 
 export interface UnifiedGameHUDProps {
   onLogout?: () => void;
@@ -27,25 +32,6 @@ export interface UnifiedGameHUDProps {
 export const UnifiedGameHUD = memo(function UnifiedGameHUD({
   onLogout,
 }: UnifiedGameHUDProps) {
-  // Store values
-  const playerName = useGameWorldStore((s) => s.playerName);
-  const playerClassName = useGameWorldStore((s) => s.playerClassName);
-  const playerClassId = useGameWorldStore((s) => s.playerClassId);
-  const playerColorHex = useGameWorldStore((s) => s.playerColorHex);
-  const playerLevel = useGameWorldStore((s) => s.playerLevel);
-  const playerHealth = useGameWorldStore((s) => s.playerHealth);
-  const playerMaxHealth = useGameWorldStore((s) => s.playerMaxHealth);
-  const playerExp = useGameWorldStore((s) => s.playerExp);
-  const playerExpToNext = useGameWorldStore((s) => s.playerExpToNext);
-  const playerGold = useGameWorldStore((s) => s.playerGold);
-  const playerKills = useGameWorldStore((s) => s.playerKills);
-
-  const comboIndex = useGameWorldStore((s) => s.comboIndex);
-  const comboTimer = useGameWorldStore((s) => s.comboTimer);
-  const passiveCounter = useGameWorldStore((s) => s.passiveCounter);
-  const passiveActive = useGameWorldStore((s) => s.passiveActive);
-  const passiveFuryPercent = useGameWorldStore((s) => s.passiveFuryPercent);
-
   const currentZone = useGameWorldStore((s) => s.currentZone);
   const zoneNotification = useGameWorldStore((s) => s.zoneNotification);
   const bossName = useGameWorldStore((s) => s.bossName);
@@ -58,16 +44,18 @@ export const UnifiedGameHUD = memo(function UnifiedGameHUD({
   const bossCastingSpell = useGameWorldStore((s) => s.bossCastingSpell);
   const bossCastingTimer = useGameWorldStore((s) => s.bossCastingTimer);
 
-  const skillCooldowns = useGameWorldStore((s) => s.skillCooldowns);
-  const triggerComboAttack = useGameWorldStore((s) => s.triggerComboAttack);
-  const triggerSkill = useGameWorldStore((s) => s.triggerSkill);
-  const setActiveModal = useGameWorldStore((s) => s.setActiveModal);
   const characterRenderMode = useGameWorldStore((s) => s.characterRenderMode);
   const toggleCharacterRenderMode = useGameWorldStore((s) => s.toggleCharacterRenderMode);
 
-  // Compute percentages
-  const hpPct = Math.max(0, Math.min(1, playerHealth / Math.max(1, playerMaxHealth)));
-  const expPct = playerExpToNext > 0 ? Math.min(100, (playerExp / playerExpToNext) * 100) : 0;
+  const openModal = (modal: "inventory" | "shop" | "leaderboard" | "battleLog" | "settings") => {
+    useGameWorldStore.getState().setActiveModal(modal);
+    if (modal === "battleLog") {
+      useGameStore.getState().setActiveModal("battle_logs");
+    } else if (modal !== "settings") {
+      useGameStore.getState().setActiveModal(modal);
+    }
+  };
+
   const bossHpPct = Math.max(0, Math.min(1, bossHealth / Math.max(1, bossMaxHealth)));
 
   // Smooth Delayed Damage Bar for Boss HP
@@ -79,8 +67,6 @@ export const UnifiedGameHUD = memo(function UnifiedGameHUD({
     return () => clearTimeout(timer);
   }, [bossHpPct]);
 
-  const blueprint = getCharacterBlueprint(playerClassId);
-
   // Touch joystick handling for Mobile
   const joystickAreaRef = useRef<HTMLDivElement>(null);
   const [knobPos, setKnobPos] = useState({ x: 0, y: 0 });
@@ -91,6 +77,7 @@ export const UnifiedGameHUD = memo(function UnifiedGameHUD({
   }, []);
 
   const handleTouchStart = (e: React.TouchEvent) => {
+    e.stopPropagation();
     const touch = e.touches[0];
     const rect = joystickAreaRef.current?.getBoundingClientRect();
     if (!rect) return;
@@ -110,10 +97,12 @@ export const UnifiedGameHUD = memo(function UnifiedGameHUD({
   };
 
   const handleTouchMove = (e: React.TouchEvent) => {
+    e.stopPropagation();
     handleTouchStart(e);
   };
 
-  const handleTouchEnd = () => {
+  const handleTouchEnd = (e: React.TouchEvent) => {
+    e.stopPropagation();
     setKnobPos({ x: 0, y: 0 });
     mobileState.joystick.x = 0;
     mobileState.joystick.y = 0;
@@ -122,182 +111,55 @@ export const UnifiedGameHUD = memo(function UnifiedGameHUD({
   return (
     <div className="fixed inset-0 pointer-events-none z-20 flex flex-col justify-between p-3 select-none font-sans">
       
-      {/* ── TOP SECTION: Character Card (Left), Boss Bar / Zone Banner (Center), Menu Buttons (Right) ── */}
+      {/* ── TOP SECTION: Player Status (Left), Boss Bar / Zone Banner (Center), Minimap & Menu (Right) ── */}
       <div className="flex items-start justify-between w-full">
         
-        {/* Top-Left: Character Card & Passive Indicator */}
-        <div className="flex flex-col gap-1.5 pointer-events-auto">
-          <div className="bg-slate-950/85 backdrop-blur-md border border-slate-800/90 rounded-2xl p-3 shadow-2xl flex items-center gap-3 min-w-[280px] max-w-sm">
-            <div
-              className="w-12 h-12 rounded-xl flex items-center justify-center font-black text-xl text-white shadow-inner border border-white/20 shrink-0"
-              style={{ backgroundColor: playerColorHex }}
-            >
-              {playerClassId === "gunner" ? "🎯" : playerClassId === "assassin" ? "🗡️" : playerClassId === "fighter" ? "🥊" : "🛡️"}
-            </div>
+        {/* Top-Left: Player Status Frame */}
+        <PlayerStatusFrame />
 
-            <div className="flex-1 min-w-0">
-              <div className="flex items-center justify-between gap-2 mb-1">
-                <span className="font-sans font-black text-sm text-slate-100 truncate tracking-wide">{playerName}</span>
-                <span className="font-mono text-[10px] font-black px-1.5 py-0.5 rounded border border-cyan-500/40 bg-cyan-500/10 text-cyan-300">
-                  Lv.{playerLevel} {playerClassName}
-                </span>
-              </div>
-
-              {/* Health Bar */}
-              <div className="w-full bg-slate-900 rounded-full h-3 border border-slate-700/60 overflow-hidden relative mb-1">
-                <div
-                  className="h-full rounded-full transition-all duration-300"
-                  style={{
-                    width: `${hpPct * 100}%`,
-                    background: hpPct > 0.5 ? "linear-gradient(90deg, #10b981, #34d399)" : hpPct > 0.25 ? "linear-gradient(90deg, #f59e0b, #fbbf24)" : "linear-gradient(90deg, #ef4444, #f87171)",
-                  }}
-                />
-                <span className="font-mono absolute inset-0 flex items-center justify-center text-[9px] font-black text-white drop-shadow">
-                  {playerHealth} / {playerMaxHealth} HP
-                </span>
-              </div>
-
-              {/* EXP Bar */}
-              <div className="flex items-center justify-between text-[10px] text-slate-400 gap-1.5">
-                <div className="flex-1 bg-slate-900 rounded-full h-1.5 border border-slate-700/40 overflow-hidden">
-                  <div
-                    className="h-full bg-gradient-to-r from-blue-500 to-purple-500 transition-all duration-300"
-                    style={{ width: `${expPct}%` }}
-                  />
-                </div>
-                <span className="font-mono text-[9px] font-bold">{Math.floor(expPct)}%</span>
-              </div>
-
-              {/* Gold & Kills Badge */}
-              <div className="font-mono flex items-center gap-3 mt-1 text-[11px] font-bold">
-                <span className="text-amber-400 flex items-center gap-1">
-                  🪙 {playerGold.toLocaleString()} Vàng
-                </span>
-                <span className="text-red-400 flex items-center gap-1">
-                  ⚔️ {playerKills} Quái
-                </span>
-              </div>
-            </div>
-          </div>
-
-          {/* ── Class Passive Status Tracker ── */}
-          <div className="bg-slate-950/80 backdrop-blur-md border border-slate-800 rounded-xl px-2.5 py-1.5 shadow-lg flex items-center justify-between gap-2 text-xs min-w-[280px]">
-            <div className="flex items-center gap-1.5 truncate">
-              <span className="text-base">{blueprint.passive.icon}</span>
-              <span className="font-bold text-slate-200 text-[11px] truncate">{blueprint.passive.name.split(" (")[0]}</span>
-            </div>
-
-            {/* Class-Specific Passive Display */}
-            {playerClassId === "gunner" && (
-              <div className="flex items-center gap-1">
-                {[0, 1, 2, 3].map((step) => {
-                  const isFilled = passiveCounter > step || (passiveActive && step === 3);
-                  return (
-                    <div
-                      key={step}
-                      className={`w-3 h-3 rounded-full border transition-all ${
-                        isFilled
-                          ? step === 3
-                            ? "bg-red-500 border-red-300 shadow-[0_0_8px_#ef4444]"
-                            : "bg-cyan-400 border-cyan-200 shadow-[0_0_6px_#00f2ff]"
-                          : "bg-slate-800 border-slate-700"
-                      }`}
-                      title={step === 3 ? "Phát 4: CHÍ MẠNG 200%" : `Đạn nạp ${step + 1}`}
-                    />
-                  );
-                })}
-              </div>
-            )}
-
-            {playerClassId === "fighter" && (
-              <div className="flex items-center gap-1.5">
-                <div className="w-16 bg-slate-900 rounded-full h-2 border border-orange-500/50 overflow-hidden">
-                  <div
-                    className="h-full bg-gradient-to-r from-amber-500 to-red-500 transition-all duration-300"
-                    style={{ width: `${passiveFuryPercent}%` }}
-                  />
-                </div>
-                <span className="text-[10px] font-mono font-bold text-orange-400">+{Math.round(passiveFuryPercent * 0.6)}% ATK</span>
-              </div>
-            )}
-
-            {playerClassId === "assassin" && (
-              <span className="text-[10px] font-bold px-1.5 py-0.5 rounded bg-rose-500/20 text-rose-300 border border-rose-500/40">
-                +50% DMG Lướt/Lưng
-              </span>
-            )}
-
-            {playerClassId === "tank" && (
-              <span className="text-[10px] font-bold px-1.5 py-0.5 rounded bg-amber-500/20 text-amber-300 border border-amber-500/40">
-                -30% DMG / Phản Kích
-              </span>
-            )}
-          </div>
-        </div>
-
-        {/* Top-Center: Zone Notification Banner & Boss Health Bar */}
+        {/* Top-Center: Zone Notification Banner & Boss Raid Health Bar */}
         <div className="flex flex-col items-center flex-1 max-w-md mx-3">
-          {/* ── Boss Raid Health Bar (Delayed Damage, Stagger Bar, 2-Phase Enrage) ── */}
-          {(bossActive || currentZone === "BOSS_ALTAR") && (
+          {/* Boss Raid Health Bar */}
+          {bossActive && (
             <div
-              className={`pointer-events-auto w-full bg-slate-950/95 backdrop-blur-md rounded-2xl p-3 mb-2 transition-all ${
-                bossIsStaggered
-                  ? "border-2 border-amber-400 shadow-[0_0_35px_rgba(251,191,36,0.7)] animate-pulse"
-                  : bossPhase === 2
-                  ? "border-2 border-red-500 shadow-[0_0_30px_rgba(239,68,68,0.6)]"
-                  : "border-2 border-red-900/80 shadow-[0_0_20px_rgba(239,68,68,0.3)]"
-              }`}
+              className="w-full bg-[#0a0514]/90 backdrop-blur-md border border-red-500/50 rounded-2xl p-2.5 shadow-[0_0_25px_rgba(239,68,68,0.35)] animate-in fade-in duration-300 pointer-events-auto"
+              onPointerDown={(e) => e.stopPropagation()}
             >
-              {/* Header: Name, Phase Badge, HP */}
-              <div className="flex items-center justify-between text-xs font-black mb-1.5">
-                <div className="flex items-center gap-1.5 truncate">
-                  <Flame
-                    className={`w-4 h-4 ${
-                      bossPhase === 2 ? "text-red-500 animate-bounce" : "text-orange-500 animate-spin"
-                    }`}
-                  />
-                  <span className="font-display text-slate-100 text-xs font-black uppercase tracking-wider truncate text-glow-red">{bossName}</span>
-                  <span
-                    className={`font-sans text-[9px] font-black px-1.5 py-0.5 rounded border transition-colors ${
-                      bossPhase === 2
-                        ? "bg-red-600/30 border-red-500 text-red-300 animate-pulse"
-                        : "bg-slate-800 border-slate-700 text-slate-300"
-                    }`}
-                  >
-                    {bossPhase === 2 ? "🔥 PHASE 2: CUỒNG NỘ" : "PHASE 1"}
-                  </span>
-                </div>
-
-                <span className="text-amber-400 font-mono text-xs font-black">
+              <div className="flex items-center justify-between text-xs mb-1">
+                <span className="font-serif font-black text-rose-300 flex items-center gap-1.5 drop-shadow">
+                  <span>🐉</span>
+                  <span className="truncate">{bossName}</span>
+                  {bossPhase === 2 && (
+                    <span className="px-1.5 py-0.2 rounded bg-red-600 text-white font-mono text-[9px] animate-pulse">
+                      PHASE 2: CUỒNG NỘ
+                    </span>
+                  )}
+                </span>
+                <span className="font-mono text-[10px] text-amber-300 font-bold">
                   {bossHealth} / {bossMaxHealth}
                 </span>
               </div>
 
-              {/* Delayed Damage Health Bar */}
-              <div className="w-full bg-red-950/90 rounded-full h-4 border border-red-900/60 overflow-hidden relative mb-1.5">
-                {/* Delayed ghost bar */}
+              {/* Boss HP Bar */}
+              <div className="w-full bg-[#160b1e] rounded-full h-3 border border-red-900/60 overflow-hidden relative">
                 <div
-                  className="absolute inset-y-0 left-0 bg-amber-200/50 transition-all duration-500 ease-out"
+                  className="h-full bg-white/70 absolute inset-0 transition-all duration-500"
                   style={{ width: `${delayedBossHpPct * 100}%` }}
                 />
-                {/* Active real HP bar */}
                 <div
-                  className={`relative h-full transition-all duration-150 ${
+                  className={`h-full absolute inset-0 transition-all duration-200 ${
                     bossPhase === 2
-                      ? "bg-gradient-to-r from-red-600 via-rose-500 to-yellow-400 shadow-[0_0_12px_#ef4444]"
-                      : "bg-gradient-to-r from-red-700 via-orange-600 to-amber-500"
+                      ? "bg-gradient-to-r from-red-600 via-orange-500 to-amber-400"
+                      : "bg-gradient-to-r from-rose-700 to-red-500"
                   }`}
                   style={{ width: `${bossHpPct * 100}%` }}
                 />
-                <span className="font-mono absolute inset-0 flex items-center justify-center text-[10px] font-black text-white drop-shadow">
-                  {Math.round(bossHpPct * 100)}% HP
-                </span>
               </div>
 
-              {/* Stagger Gauge (Phá Giáp) */}
-              <div className="flex items-center gap-1.5">
-                <span className="text-[9px] font-mono font-bold text-amber-400/90 shrink-0">STAGGER</span>
-                <div className="flex-1 bg-slate-900 rounded-full h-1.5 border border-amber-600/40 overflow-hidden">
+              {/* Stagger Armor Bar */}
+              <div className="flex items-center gap-2 mt-1">
+                <span className="text-[9px] font-mono text-amber-400 font-bold shrink-0">GIÁP</span>
+                <div className="flex-1 bg-slate-950 rounded-full h-1.5 border border-amber-600/40 overflow-hidden">
                   <div
                     className={`h-full transition-all duration-200 ${
                       bossIsStaggered
@@ -307,25 +169,23 @@ export const UnifiedGameHUD = memo(function UnifiedGameHUD({
                     style={{ width: `${bossStagger}%` }}
                   />
                 </div>
-                <span className="text-[9px] font-mono font-bold text-amber-300 shrink-0">{Math.round(bossStagger)}%</span>
+                <span className="text-[9px] font-mono font-bold text-amber-300 shrink-0">
+                  {Math.round(bossStagger)}%
+                </span>
               </div>
 
               {/* Stagger Alert Banner */}
               {bossIsStaggered && (
-                <div className="font-sans mt-1 text-center text-[10px] font-black tracking-wider text-amber-300 bg-amber-500/20 border border-amber-400/50 rounded py-0.5 animate-bounce">
-                  ⚡ BOSS BỊ PHÁ GIÁP! CHOÁNG VÁNG — TẤN CÔNG GÂY 1.5X SÁT THƯƠNG!
+                <div className="mt-1 text-center text-[10px] font-black tracking-wider text-amber-300 bg-amber-500/20 border border-amber-400/50 rounded py-0.5 animate-bounce">
+                  ⚡ BOSS BỊ PHÁ GIÁP! CHOÁNG VÁNG — SÁT THƯƠNG 1.5X!
                 </div>
               )}
 
               {/* Casting Spell Alert */}
               {!bossIsStaggered && bossCastingSpell && (
-                <div className="font-sans mt-1 flex items-center justify-between text-[10px] font-bold text-rose-300 bg-rose-950/60 border border-rose-500/50 rounded px-2 py-0.5 animate-pulse">
-                  <span className="flex items-center gap-1">
-                    ⚠️ ĐANG NIỆM: <span className="font-display text-white font-black">{bossCastingSpell}</span>
-                  </span>
-                  <span className="font-mono text-yellow-300">
-                    {Math.max(0, bossCastingTimer).toFixed(1)}s
-                  </span>
+                <div className="mt-1 flex items-center justify-between text-[10px] font-bold text-rose-300 bg-rose-950/60 border border-rose-500/50 rounded px-2 py-0.5 animate-pulse">
+                  <span>⚠️ NIỆM: <span className="text-white font-black">{bossCastingSpell}</span></span>
+                  <span className="font-mono text-yellow-300">{Math.max(0, bossCastingTimer).toFixed(1)}s</span>
                 </div>
               )}
             </div>
@@ -333,261 +193,126 @@ export const UnifiedGameHUD = memo(function UnifiedGameHUD({
 
           {/* Smooth Zone Transition Notice */}
           {zoneNotification && (
-            <div className="font-display bg-slate-950/90 backdrop-blur-lg border border-cyan-500/50 rounded-full px-5 py-1.5 shadow-[0_0_15px_rgba(6,182,212,0.4)] text-xs font-black tracking-widest uppercase text-cyan-300 animate-bounce text-glow-cyan">
+            <div className="mt-2 bg-[#0a0514]/90 backdrop-blur-lg border border-cyan-500/50 rounded-full px-5 py-1.5 shadow-[0_0_15px_rgba(6,182,212,0.4)] text-xs font-black tracking-widest uppercase text-cyan-300 animate-bounce">
               {zoneNotification}
             </div>
           )}
         </div>
 
-        {/* Top-Right: Glassmorphism Modals Navigation */}
-        <div className="font-sans pointer-events-auto flex items-center gap-2">
-          {/* Mode Toggle (2.5D Sprite <-> 3D Model) */}
-          <button
-            onClick={toggleCharacterRenderMode}
-            className={`flex items-center gap-1.5 px-3 py-2 border rounded-xl text-xs font-black uppercase tracking-wider transition shadow-lg backdrop-blur-md cursor-pointer ${
-              characterRenderMode === "3d_model"
-                ? "bg-emerald-950/80 border-emerald-500/80 text-emerald-300 shadow-[0_0_12px_rgba(16,185,129,0.3)]"
-                : "bg-slate-950/80 border-slate-700 text-slate-300 hover:text-white"
-            }`}
-            title="Chuyển chế độ hiển thị 2.5D Billboard / 3D Model (Phím V)"
-          >
-            <Box className="w-4 h-4 text-emerald-400" />
-            <span className="hidden sm:inline">
-              {characterRenderMode === "3d_model" ? "Mode: 3D RPG (V)" : "Mode: 2.5D (V)"}
-            </span>
-          </button>
+        {/* Top-Right: Minimap Radar + Quick Action Navigation Icons */}
+        <div className="flex flex-col items-end gap-2">
+          {/* Real-Time Minimap Radar */}
+          <MinimapRadar />
 
-          {/* Inventory (I) */}
-          {/* Inventory (B / I) */}
-          <button
-            onClick={() => setActiveModal("inventory")}
-            className="flex items-center gap-1.5 px-3 py-2 bg-slate-950/80 hover:bg-slate-900 border border-slate-700 hover:border-cyan-400 rounded-xl text-slate-200 hover:text-cyan-300 text-xs font-black uppercase tracking-wider transition shadow-lg backdrop-blur-md cursor-pointer"
-            title="Túi Đồ (Phím B hoặc I)"
+          {/* Quick Action Navigation Icons */}
+          <div
+            className="pointer-events-auto flex items-center gap-1.5 p-1 rounded-2xl bg-[#0a0514]/85 backdrop-blur-md border border-slate-800 shadow-xl"
+            onPointerDown={(e) => e.stopPropagation()}
+            onClick={(e) => e.stopPropagation()}
           >
-            <Backpack className="w-4 h-4 text-cyan-400" />
-            <span className="hidden sm:inline">Túi Đồ (B)</span>
-          </button>
-
-          <button
-            onClick={() => setActiveModal("settings")}
-            className="flex items-center gap-1.5 px-3 py-2 bg-slate-950/80 hover:bg-slate-900 border border-slate-700 hover:border-cyan-400 rounded-xl text-slate-200 hover:text-cyan-300 text-xs font-black uppercase tracking-wider transition shadow-lg backdrop-blur-md cursor-pointer"
-            title="Cài đặt điều khiển và hiệu ứng"
-            aria-label="Mở cài đặt"
-          >
-            <Settings className="w-4 h-4 text-cyan-400" />
-            <span className="hidden sm:inline">Cài đặt</span>
-          </button>
-
-          {/* Shop (P) */}
-          <button
-            onClick={() => setActiveModal("shop")}
-            className="flex items-center gap-1.5 px-3 py-2 bg-slate-950/80 hover:bg-slate-900 border border-slate-700 hover:border-amber-400 rounded-xl text-slate-200 hover:text-amber-300 text-xs font-black uppercase tracking-wider transition shadow-lg backdrop-blur-md cursor-pointer"
-            title="Cửa Hàng (Phím P)"
-          >
-            <ShoppingBag className="w-4 h-4 text-amber-400" />
-            <span className="hidden sm:inline">Cửa Hàng (P)</span>
-          </button>
-
-          {/* Leaderboard (O) */}
-          <button
-            onClick={() => setActiveModal("leaderboard")}
-            className="flex items-center gap-1.5 px-3 py-2 bg-slate-950/80 hover:bg-slate-900 border border-slate-700 hover:border-purple-400 rounded-xl text-slate-200 hover:text-purple-300 text-xs font-black uppercase tracking-wider transition shadow-lg backdrop-blur-md cursor-pointer"
-            title="Bảng Xếp Hạng (Phím O)"
-          >
-            <Trophy className="w-4 h-4 text-purple-400" />
-            <span className="hidden sm:inline">BXH (O)</span>
-          </button>
-
-          {/* Battle Logs (H) */}
-          <button
-            onClick={() => setActiveModal("battleLog")}
-            className="flex items-center gap-1.5 px-3 py-2 bg-slate-950/80 hover:bg-slate-900 border border-slate-700 hover:border-red-400 rounded-xl text-slate-200 hover:text-red-300 text-xs font-black uppercase tracking-wider transition shadow-lg backdrop-blur-md cursor-pointer"
-            title="Lịch Sử Chiến Báo (Phím H)"
-          >
-            <ScrollText className="w-4 h-4 text-red-400" />
-            <span className="hidden sm:inline">Chiến Báo (H)</span>
-          </button>
-
-          {/* Logout */}
-          {onLogout && (
+            {/* Mode Toggle (2.5D Sprite <-> 3D Model) */}
             <button
-              onClick={onLogout}
-              className="p-2 bg-slate-950/80 hover:bg-red-950/80 border border-slate-700 hover:border-red-500 rounded-xl text-slate-400 hover:text-red-300 transition shadow-lg backdrop-blur-md cursor-pointer"
-              title="Đăng xuất"
+              onClick={toggleCharacterRenderMode}
+              className={`p-2 border rounded-xl transition cursor-pointer ${
+                characterRenderMode === "3d_model"
+                  ? "bg-emerald-950/80 border-emerald-500 text-emerald-300 shadow-[0_0_10px_rgba(16,185,129,0.3)]"
+                  : "bg-slate-900 border-slate-700 text-slate-300 hover:text-white"
+              }`}
+              title="Chuyển chế độ 2.5D Sprite / 3D Model (Phím V)"
             >
-              <LogOut className="w-4 h-4" />
+              <Box className="w-4 h-4" />
             </button>
-          )}
+
+            {/* Hành Trang (B / I) */}
+            <button
+              onClick={() => openModal("inventory")}
+              className="p-2 bg-slate-900 hover:bg-slate-800 border border-slate-700 hover:border-cyan-400 rounded-xl text-cyan-300 transition cursor-pointer"
+              title="Hành Trang & Trang Bị (Phím B hoặc I)"
+            >
+              <Backpack className="w-4 h-4" />
+            </button>
+
+            {/* Cửa Hàng (P) */}
+            <button
+              onClick={() => openModal("shop")}
+              className="p-2 bg-slate-900 hover:bg-slate-800 border border-slate-700 hover:border-amber-400 rounded-xl text-amber-300 transition cursor-pointer"
+              title="Cửa Hàng (Phím P)"
+            >
+              <ShoppingBag className="w-4 h-4" />
+            </button>
+
+            {/* Bảng Xếp Hạng (L / O) */}
+            <button
+              onClick={() => openModal("leaderboard")}
+              className="p-2 bg-slate-900 hover:bg-slate-800 border border-slate-700 hover:border-purple-400 rounded-xl text-purple-300 transition cursor-pointer"
+              title="Bảng Vinh Danh Long Tộc (Phím L hoặc O)"
+            >
+              <Trophy className="w-4 h-4" />
+            </button>
+
+            {/* Chiến Báo (H) */}
+            <button
+              onClick={() => openModal("battleLog")}
+              className="p-2 bg-slate-900 hover:bg-slate-800 border border-slate-700 hover:border-red-400 rounded-xl text-red-300 transition cursor-pointer"
+              title="Chiến Báo & Lịch Sử (Phím H)"
+            >
+              <ScrollText className="w-4 h-4" />
+            </button>
+
+            {/* Cài Đặt */}
+            <button
+              onClick={() => openModal("settings")}
+              className="p-2 bg-slate-900 hover:bg-slate-800 border border-slate-700 hover:border-cyan-400 rounded-xl text-slate-300 hover:text-white transition cursor-pointer"
+              title="Cài Đặt Game"
+            >
+              <Settings className="w-4 h-4" />
+            </button>
+
+            {/* Logout */}
+            {onLogout && (
+              <button
+                onClick={onLogout}
+                className="p-2 bg-slate-900 hover:bg-red-950 border border-slate-700 hover:border-red-500 rounded-xl text-slate-400 hover:text-red-300 transition cursor-pointer"
+                title="Đăng Xuất"
+              >
+                <LogOut className="w-4 h-4" />
+              </button>
+            )}
+          </div>
         </div>
       </div>
 
-      {/* ── BOTTOM SECTION: Virtual Joystick (Left) & Combo Chain + Action Bar (Center) ── */}
-      <div className="flex items-end justify-between w-full pb-2">
+      {/* ── BOTTOM SECTION: Action Combat Bar & Mobile Virtual Controls ── */}
+      <div className="flex items-end justify-between w-full">
         
-        {/* Mobile Virtual Joystick */}
+        {/* Mobile Virtual Joystick (Left) */}
         {isMobile ? (
           <div
             ref={joystickAreaRef}
+            className="pointer-events-auto relative w-28 h-28 rounded-full bg-[#0a0514]/70 border-2 border-cyan-500/40 backdrop-blur-md flex items-center justify-center touch-none select-none shadow-[0_0_20px_rgba(6,182,212,0.25)]"
             onTouchStart={handleTouchStart}
             onTouchMove={handleTouchMove}
             onTouchEnd={handleTouchEnd}
-            className="pointer-events-auto relative w-28 h-28 rounded-full bg-slate-900/60 border-2 border-slate-700/80 backdrop-blur-md flex items-center justify-center shadow-2xl ml-2 touch-none"
+            onTouchCancel={handleTouchEnd}
           >
             <div
-              className="w-12 h-12 rounded-full bg-gradient-to-tr from-cyan-600 to-blue-500 border-2 border-white/40 shadow-lg transform transition-transform"
+              className="w-12 h-12 rounded-full bg-cyan-500/50 border border-cyan-300 shadow-[0_0_15px_#00f2ff] pointer-events-none"
               style={{
                 transform: `translate(${knobPos.x}px, ${knobPos.y}px)`,
+                transition: knobPos.x === 0 && knobPos.y === 0 ? "transform 0.15s ease-out" : "none",
               }}
             />
           </div>
         ) : (
-          <div className="w-28" /> // Spacer for desktop layout balance
+          <div className="w-28" />
         )}
 
-        {/* Center: 3-Hit Combo Flow Indicator + Action Skills Bar */}
-        <div className="flex flex-col items-center gap-1.5 pointer-events-auto">
-          
-          {/* ── 3-Hit Combo Flow Tracker ── */}
-          <div className="font-sans bg-slate-950/85 backdrop-blur-md border border-slate-800/90 rounded-full px-3 py-1 flex items-center gap-1.5 shadow-xl">
-            {blueprint.comboAttacks.map((combo, idx) => {
-              const isCurrent = comboIndex === idx;
-              const isPast = comboIndex > idx && comboTimer > 0;
-              return (
-                <div key={combo.id} className="flex items-center gap-1">
-                  <div
-                    className={`px-2 py-0.5 rounded-full text-[10px] font-bold transition-all flex items-center gap-1 ${
-                      isCurrent
-                        ? "bg-amber-500 text-slate-950 font-black shadow-[0_0_10px_#f59e0b] scale-105"
-                        : isPast
-                        ? "bg-slate-800 text-slate-400"
-                        : "bg-slate-900/60 text-slate-500"
-                    }`}
-                  >
-                    <span>{idx + 1}.</span>
-                    <span>{combo.name.split(" ")[0]}</span>
-                    {isCurrent && comboTimer > 0 && (
-                      <span className="w-1.5 h-1.5 rounded-full bg-red-600 animate-ping ml-0.5" />
-                    )}
-                  </div>
-                  {idx < 2 && <ChevronRight className="w-3 h-3 text-slate-600" />}
-                </div>
-              );
-            })}
-          </div>
+        {/* Center: Action Combat Bar (Combo 1-2-3 & Skills 1, 2, 3 with conic-gradient cooldowns) */}
+        <ActionCombatBar />
 
-          {/* Action Buttons: Combo Attack (J), Skills 1, 2, 3 */}
-          {(() => {
-            const currentComboSpec = blueprint.comboAttacks[comboIndex] || blueprint.comboAttacks[0];
-            const s1 = blueprint.skills[0];
-            const s2 = blueprint.skills[1];
-            const s3 = blueprint.skills[2];
-
-            return (
-              <div className="bg-slate-950/85 backdrop-blur-md border border-slate-800/90 rounded-2xl p-2.5 shadow-2xl flex items-center gap-2.5">
-                {/* 3-Hit Combo Attack Button (J / Attack) */}
-                <button
-                  onClick={() => triggerComboAttack()}
-                  className="relative flex flex-col items-center justify-center min-w-[62px] h-12 px-2 rounded-xl bg-red-600/30 hover:bg-red-600/50 border border-red-500/60 text-red-200 transition active:scale-95 cursor-pointer shadow-[0_0_12px_rgba(239,68,68,0.25)]"
-                  title={`Chuỗi Combo 3 Nhịp: ${currentComboSpec.name} (Phím J)`}
-                >
-                  {playerClassId === "gunner" ? (
-                    <Target className="w-5 h-5 text-cyan-400" />
-                  ) : (
-                    <Sword className="w-5 h-5 text-red-400" />
-                  )}
-                  <span className="font-mono text-[9px] font-bold text-red-300 truncate max-w-[64px]">
-                    J / Đòn {comboIndex + 1}
-                  </span>
-                  {comboTimer > 0 && (
-                    <div
-                      className="absolute bottom-0 left-1 right-1 h-0.5 bg-amber-400 rounded-full transition-all"
-                      style={{ width: `${(comboTimer / 0.85) * 100}%` }}
-                    />
-                  )}
-                </button>
-
-                <div className="w-px h-8 bg-slate-800" />
-
-                {/* Skill 1 (Phím 1 / Q) */}
-                {s1 && (
-                  <button
-                    onClick={() => triggerSkill(1)}
-                    disabled={(skillCooldowns.skill1 || 0) > 0}
-                    className={`relative flex flex-col items-center justify-center min-w-[56px] h-12 px-2 rounded-xl border transition active:scale-95 cursor-pointer ${
-                      (skillCooldowns.skill1 || 0) > 0
-                        ? "bg-slate-900 border-slate-800 text-slate-500"
-                        : "bg-amber-600/30 hover:bg-amber-600/50 border-amber-500/60 text-amber-200"
-                    }`}
-                    title={`${s1.name}: ${s1.description} (Phím 1 hoặc Q)`}
-                  >
-                    <Zap className="w-5 h-5 text-amber-400" />
-                    <span className="text-[9px] font-mono font-bold truncate max-w-[64px]">
-                      1/Q · {s1.name.split(" ")[0]}
-                    </span>
-                    {(skillCooldowns.skill1 || 0) > 0 && (
-                      <span className="absolute inset-0 bg-black/75 rounded-xl flex items-center justify-center text-xs font-mono font-black text-amber-300">
-                        {Math.ceil(skillCooldowns.skill1)}s
-                      </span>
-                    )}
-                  </button>
-                )}
-
-                {/* Skill 2 (Phím 2 / E) */}
-                {s2 && (
-                  <button
-                    onClick={() => triggerSkill(2)}
-                    disabled={(skillCooldowns.skill2 || 0) > 0}
-                    className={`relative flex flex-col items-center justify-center min-w-[56px] h-12 px-2 rounded-xl border transition active:scale-95 cursor-pointer ${
-                      (skillCooldowns.skill2 || 0) > 0
-                        ? "bg-slate-900 border-slate-800 text-slate-500"
-                        : "bg-purple-600/30 hover:bg-purple-600/50 border-purple-500/60 text-purple-200"
-                    }`}
-                    title={`${s2.name}: ${s2.description} (Phím 2 hoặc E)`}
-                  >
-                    <Shield className="w-5 h-5 text-purple-400" />
-                    <span className="text-[9px] font-mono font-bold truncate max-w-[64px]">
-                      2/E · {s2.name.split(" ")[0]}
-                    </span>
-                    {(skillCooldowns.skill2 || 0) > 0 && (
-                      <span className="absolute inset-0 bg-black/75 rounded-xl flex items-center justify-center text-xs font-mono font-black text-purple-300">
-                        {Math.ceil(skillCooldowns.skill2)}s
-                      </span>
-                    )}
-                  </button>
-                )}
-
-                {/* Skill 3 (Phím 3 / R - Nộ/Ultimate) */}
-                {s3 && (
-                  <button
-                    onClick={() => triggerSkill(3)}
-                    disabled={(skillCooldowns.skill3 || 0) > 0}
-                    className={`relative flex flex-col items-center justify-center min-w-[56px] h-12 px-2 rounded-xl border transition active:scale-95 cursor-pointer ${
-                      (skillCooldowns.skill3 || 0) > 0
-                        ? "bg-slate-900 border-slate-800 text-slate-500"
-                        : "bg-red-700/40 hover:bg-red-700/60 border-red-500/80 text-red-200 shadow-[0_0_15px_rgba(239,68,68,0.4)]"
-                    }`}
-                    title={`${s3.name}: ${s3.description} (Phím 3 hoặc R)`}
-                  >
-                    <Sparkles className="w-5 h-5 text-orange-400" />
-                    <span className="text-[9px] font-mono font-bold truncate max-w-[64px]">
-                      3/R · {s3.name.split(" ")[0]}
-                    </span>
-                    {(skillCooldowns.skill3 || 0) > 0 && (
-                      <span className="absolute inset-0 bg-black/75 rounded-xl flex items-center justify-center text-xs font-mono font-black text-red-400">
-                        {Math.ceil(skillCooldowns.skill3)}s
-                      </span>
-                    )}
-                  </button>
-                )}
-              </div>
-            );
-          })()}
-        </div>
-
-        {/* Right Space */}
+        {/* Right Balance Spacer */}
         <div className="w-28" />
       </div>
-
 
     </div>
   );

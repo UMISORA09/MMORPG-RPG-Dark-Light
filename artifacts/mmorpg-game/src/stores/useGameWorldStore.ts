@@ -124,6 +124,7 @@ export interface GameWorldState {
   activeVFXList: ActiveVFXInstance[];
   droppedLoot: DroppedItem[];
   inventoryItems: CharacterInventoryItem[];
+  monsterMarkers: { id: number; x: number; z: number; isBoss: boolean; name: string }[];
 
   // --- Overlay Modals ---
   activeModal: "inventory" | "shop" | "leaderboard" | "battleLog" | "settings" | null;
@@ -184,6 +185,7 @@ export interface GameWorldState {
   toggleCharacterRenderMode: () => void;
   setActiveModal: (modal: "inventory" | "shop" | "leaderboard" | "battleLog" | "settings" | null) => void;
   closeActiveModal: () => void;
+  updateMonsterMarkers: (markers: { id: number; x: number; z: number; isBoss: boolean; name: string }[]) => void;
   syncFromBackendCharacter: (char: any) => void;
   updateAfterBattle: (rewards: {
     exp: number;
@@ -274,6 +276,9 @@ export const useGameWorldStore = create<GameWorldState>((set, get) => ({
       color: "#94a3b8",
     },
   ],
+
+  monsterMarkers: [],
+  updateMonsterMarkers: (markers) => set({ monsterMarkers: markers }),
 
   // Modals
   activeModal: null,

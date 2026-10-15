@@ -158,6 +158,31 @@ export const UnifiedOverlayModals = memo(function UnifiedOverlayModals({
 
   if (!activeModal) return null;
 
+  // 1. HÀNH TRANG & TRANG BỊ (Custom Dark Slate Cinema Card)
+  if (activeModal === "inventory" || activeModal === "shop") {
+    return (
+      <div
+        className="fixed inset-0 z-50 flex items-center justify-center p-2 sm:p-4 bg-black/75 backdrop-blur-md animate-in fade-in duration-200"
+        onClick={(e) => {
+          if (e.target === e.currentTarget) closeActiveModal();
+        }}
+      >
+        <InventoryEquipmentPanel
+          character={character}
+          inventory={inventory}
+          shopItems={shopItems}
+          inventoryLoading={inventoryLoading}
+          shopLoading={shopLoading}
+          busy={equipItem.isPending || unequipItem.isPending || buyItem.isPending}
+          initialSection={activeModal === "shop" ? "shop" : "storage"}
+          onEquip={handleEquip}
+          onBuy={(item) => handleBuy(item.id, item.price, item.name)}
+          onClose={closeActiveModal}
+        />
+      </div>
+    );
+  }
+
   return (
     <div
       className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-6 bg-black/60 backdrop-blur-md animate-in fade-in duration-200"
@@ -170,23 +195,17 @@ export const UnifiedOverlayModals = memo(function UnifiedOverlayModals({
         {/* ── Modal Header ── */}
         <div className="flex items-center justify-between px-6 py-4 border-b border-slate-800/80 bg-slate-900/40">
           <div className="flex items-center gap-3">
-            {activeModal === "inventory" && <Backpack className="w-6 h-6 text-cyan-400" />}
-            {activeModal === "shop" && <ShoppingBag className="w-6 h-6 text-amber-400" />}
             {activeModal === "leaderboard" && <Trophy className="w-6 h-6 text-purple-400" />}
             {isLogOpen && <ScrollText className="w-6 h-6 text-red-400" />}
             {activeModal === "settings" && <Settings className="w-6 h-6 text-cyan-400" />}
 
             <div>
               <h2 className="text-lg font-black tracking-wide text-white flex items-center gap-2">
-                {activeModal === "inventory" && "TÚI ĐỒ & TRANG BỊ"}
-                {activeModal === "shop" && "NHÂN VẬT · CỬA HÀNG"}
                 {activeModal === "leaderboard" && "BẢNG VINH DANH LONG TỘC"}
                 {isLogOpen && "LỊCH SỬ CHIẾN BÁO"}
                 {activeModal === "settings" && "CÀI ĐẶT ĐIỀU KHIỂN"}
               </h2>
               <p className="text-xs text-slate-400">
-                {activeModal === "inventory" && "Quản lý trang bị để gia tăng sức mạnh chiến đấu thời gian thực"}
-                {activeModal === "shop" && "Chọn vật phẩm phù hợp; chỉ số và trang bị luôn hiển thị bên trái"}
                 {activeModal === "leaderboard" && "Top những chiến binh mạnh nhất đại lục Long Tộc"}
                 {isLogOpen && "Ghi nhận các chiến tích tiêu diệt quái vật và Boss rồng"}
                 {activeModal === "settings" && "Tinh chỉnh camera và hiệu ứng theo cách chơi của bạn"}
@@ -205,22 +224,6 @@ export const UnifiedOverlayModals = memo(function UnifiedOverlayModals({
 
         {/* ── Modal Body (Scrollable) ── */}
         <div className="flex-1 overflow-y-auto custom-scrollbar p-3 sm:p-4 space-y-4">
-          
-          {/* 1. INVENTORY MODAL */}
-          {(activeModal === "inventory" || activeModal === "shop") && (
-            <InventoryEquipmentPanel
-              character={character}
-              inventory={inventory}
-              shopItems={shopItems}
-              inventoryLoading={inventoryLoading}
-              shopLoading={shopLoading}
-              busy={equipItem.isPending || unequipItem.isPending || buyItem.isPending}
-              initialSection={activeModal === "shop" ? "shop" : "storage"}
-              onEquip={handleEquip}
-              onBuy={(item) => handleBuy(item.id, item.price, item.name)}
-            />
-          )}
-
           {activeModal === "settings" && <GameSettingsPanel characterId={character.id} />}
 
           {/* 3. LEADERBOARD MODAL */}

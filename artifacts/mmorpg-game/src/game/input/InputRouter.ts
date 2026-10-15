@@ -105,14 +105,14 @@ export function initInputRouter() {
       wantsAttackEdge = true;
     }
 
-    // Interface Modals: B/I (Inventory), P (Shop), O (Leaderboard), H (Battle Log), V (2.5D/3D Mode)
+    // Interface Modals: B/I (Inventory), P (Shop), L/O (Leaderboard), H (Battle Log), V (2.5D/3D Mode)
     if (code === "KeyB" || code === "KeyI") {
       worldStore.setActiveModal("inventory");
       gameStore.setActiveModal("inventory");
     } else if (code === "KeyP") {
       worldStore.setActiveModal("shop");
       gameStore.setActiveModal("shop");
-    } else if (code === "KeyO") {
+    } else if (code === "KeyL" || code === "KeyO") {
       worldStore.setActiveModal("leaderboard");
       gameStore.setActiveModal("leaderboard");
     } else if (code === "KeyH") {
@@ -192,14 +192,25 @@ export function bindCanvasMouseControls(canvas: HTMLElement) {
     }
   };
 
+  const onWheel = (e: WheelEvent) => {
+    e.preventDefault();
+    const zoomDelta = e.deltaY > 0 ? 1.5 : -1.5;
+    cameraControls.targetZoom = Math.max(
+      cameraControls.minZoom,
+      Math.min(cameraControls.maxZoom, cameraControls.targetZoom + zoomDelta)
+    );
+  };
+
   canvas.addEventListener("contextmenu", onContextMenu);
   canvas.addEventListener("mousedown", onMouseDown);
+  canvas.addEventListener("wheel", onWheel, { passive: false });
   window.addEventListener("mouseup", onMouseUp);
   window.addEventListener("mousemove", onMouseMove);
 
   return () => {
     canvas.removeEventListener("contextmenu", onContextMenu);
     canvas.removeEventListener("mousedown", onMouseDown);
+    canvas.removeEventListener("wheel", onWheel);
     window.removeEventListener("mouseup", onMouseUp);
     window.removeEventListener("mousemove", onMouseMove);
   };
