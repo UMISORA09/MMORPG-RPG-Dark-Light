@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import type { Character, InventoryItem, Item } from "@workspace/api-client-react";
 import { Backpack, Check, Coins, Heart, Shield, ShoppingBag, Sparkles, Sword, Wind, Zap } from "lucide-react";
 
@@ -9,14 +9,16 @@ interface InventoryEquipmentPanelProps {
   inventoryLoading: boolean;
   shopLoading: boolean;
   busy: boolean;
+  initialSection?: "storage" | "shop";
   onEquip: (item: InventoryItem) => void;
   onBuy: (item: Item) => void;
 }
 
 const slotLabels: Record<string, string> = { weapon: "Vũ khí", armor: "Giáp trụ", accessory: "Phụ kiện" };
 
-export function InventoryEquipmentPanel({ character, inventory, shopItems, inventoryLoading, shopLoading, busy, onEquip, onBuy }: InventoryEquipmentPanelProps) {
-  const [section, setSection] = useState<"storage" | "shop">("storage");
+export function InventoryEquipmentPanel({ character, inventory, shopItems, inventoryLoading, shopLoading, busy, initialSection = "storage", onEquip, onBuy }: InventoryEquipmentPanelProps) {
+  const [section, setSection] = useState<"storage" | "shop">(initialSection);
+  useEffect(() => setSection(initialSection), [initialSection]);
   const equipped = inventory.filter((item) => item.equipped);
   const ownedIds = new Set(inventory.map((item) => item.id));
   const availableItems = shopItems.filter((item) => !ownedIds.has(item.id) && (item.classId === null || item.classId === character.classId));

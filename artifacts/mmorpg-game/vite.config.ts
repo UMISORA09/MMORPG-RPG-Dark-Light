@@ -32,16 +32,17 @@ export default defineConfig({
   server: {
     port,
     strictPort: true,
-    host: '0.0.0.0',
+    host: true,
     allowedHosts: true,
     proxy: {
       '/api': {
-        target: `http://localhost:${process.env.API_PORT || '3001'}`,
+        target: `http://127.0.0.1:${process.env.API_PORT || '3001'}`,
         changeOrigin: true,
         secure: false,
+        ws: true,
       },
       '/assets/exported': {
-        target: `http://localhost:${process.env.API_PORT || '3001'}`,
+        target: `http://127.0.0.1:${process.env.API_PORT || '3001'}`,
         changeOrigin: true,
         secure: false,
       },
@@ -52,7 +53,7 @@ export default defineConfig({
   },
   preview: {
     port,
-    host: '0.0.0.0',
+    host: true,
     allowedHosts: true,
   },
 });

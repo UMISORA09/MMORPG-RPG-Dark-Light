@@ -165,7 +165,7 @@ function createMemoryDb() {
             const joinData = getTableData(joinTable);
             rows = rows.map((r: any) => {
               const match = joinData.find((j: any) => j.id === r.itemId || j.id === r.item_id);
-              return match ? { hpBoost: 0, atkBoost: 0, defBoost: 0, spdBoost: 0, ...match, ...r } : r;
+              return match ? { hpBoost: 0, atkBoost: 0, defBoost: 0, spdBoost: 0, ...match, ...r, item: match } : r;
             });
             return builder;
           },
@@ -173,7 +173,7 @@ function createMemoryDb() {
             const joinData = getTableData(joinTable);
             rows = rows.map((r: any) => {
               const match = joinData.find((j: any) => j.id === r.itemId || j.id === r.item_id);
-              return match ? { hpBoost: 0, atkBoost: 0, defBoost: 0, spdBoost: 0, ...match, ...r } : r;
+              return match ? { hpBoost: 0, atkBoost: 0, defBoost: 0, spdBoost: 0, ...match, ...r, item: match } : r;
             });
             return builder;
           },

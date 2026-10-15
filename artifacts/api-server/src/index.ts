@@ -16,8 +16,9 @@ async function startServer() {
   const server = http.createServer(app);
   setupRealtimeGateway(server);
 
-  server.listen(port, "0.0.0.0", () => {
-    logger.info({ port }, "MMORPG 2.5D Beta Server & WebSocket Gateway listening on http://0.0.0.0:" + port);
+  const host = process.env["HOST"] || "::";
+  server.listen(port, host, () => {
+    logger.info({ port, host }, "MMORPG 2.5D Beta Server & WebSocket Gateway listening on port " + port);
   });
 }
 

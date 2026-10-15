@@ -28,7 +28,6 @@ import {
   ShoppingBag, 
   Trophy, 
   ScrollText, 
-  Coins, 
   Sword,
   Clock,
   Settings,
@@ -143,6 +142,7 @@ export const UnifiedOverlayModals = memo(function UnifiedOverlayModals({
             description: `${item.name} đã được cập nhật vào chỉ số chiến đấu.`,
           });
           useGameStore.getState().syncFromCharacter(updatedChar);
+          useGameWorldStore.getState().syncFromBackendCharacter(updatedChar);
           await refreshUserData();
         },
         onError: (err: any) => {
@@ -179,14 +179,14 @@ export const UnifiedOverlayModals = memo(function UnifiedOverlayModals({
             <div>
               <h2 className="text-lg font-black tracking-wide text-white flex items-center gap-2">
                 {activeModal === "inventory" && "TÚI ĐỒ & TRANG BỊ"}
-                {activeModal === "shop" && "CỬA HÀNG THƯƠNG GIA LONG TỘC"}
+                {activeModal === "shop" && "NHÂN VẬT · CỬA HÀNG"}
                 {activeModal === "leaderboard" && "BẢNG VINH DANH LONG TỘC"}
                 {isLogOpen && "LỊCH SỬ CHIẾN BÁO"}
                 {activeModal === "settings" && "CÀI ĐẶT ĐIỀU KHIỂN"}
               </h2>
               <p className="text-xs text-slate-400">
                 {activeModal === "inventory" && "Quản lý trang bị để gia tăng sức mạnh chiến đấu thời gian thực"}
-                {activeModal === "shop" && "Mua sắm thần binh, giáp trụ và phụ kiện gia tăng chỉ số"}
+                {activeModal === "shop" && "Chọn vật phẩm phù hợp; chỉ số và trang bị luôn hiển thị bên trái"}
                 {activeModal === "leaderboard" && "Top những chiến binh mạnh nhất đại lục Long Tộc"}
                 {isLogOpen && "Ghi nhận các chiến tích tiêu diệt quái vật và Boss rồng"}
                 {activeModal === "settings" && "Tinh chỉnh camera và hiệu ứng theo cách chơi của bạn"}
@@ -207,7 +207,7 @@ export const UnifiedOverlayModals = memo(function UnifiedOverlayModals({
         <div className="flex-1 overflow-y-auto custom-scrollbar p-3 sm:p-4 space-y-4">
           
           {/* 1. INVENTORY MODAL */}
-          {activeModal === "inventory" && (
+          {(activeModal === "inventory" || activeModal === "shop") && (
             <InventoryEquipmentPanel
               character={character}
               inventory={inventory}
@@ -215,80 +215,13 @@ export const UnifiedOverlayModals = memo(function UnifiedOverlayModals({
               inventoryLoading={inventoryLoading}
               shopLoading={shopLoading}
               busy={equipItem.isPending || unequipItem.isPending || buyItem.isPending}
+              initialSection={activeModal === "shop" ? "shop" : "storage"}
               onEquip={handleEquip}
               onBuy={(item) => handleBuy(item.id, item.price, item.name)}
             />
           )}
 
-          {activeModal === "settings" && <GameSettingsPanel />}
-
-          {/* 2. SHOP MODAL */}
-          {activeModal === "shop" && (
-            <div>
-              <div className="flex items-center justify-between mb-3 px-1 text-xs text-slate-400">
-                <span>Vàng hiện có: <strong className="text-amber-400 font-mono text-sm">{character.gold} 🪙</strong></span>
-                <span>Thương nhân uy tín Làng Long Tộc</span>
-              </div>
-
-              {shopLoading ? (
-                <div className="text-center py-12 text-slate-400">Đang tải cửa hàng...</div>
-              ) : (
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                  {shopItems.map((item) => {
-                    const isOwned = inventory.some((inv) => inv.id === item.id);
-                    const canAfford = character.gold >= item.price;
-
-                    return (
-                      <div
-                        key={item.id}
-                        className="p-3.5 rounded-2xl bg-slate-900/60 border border-slate-800 hover:border-amber-500/40 transition-all flex flex-col justify-between"
-                      >
-                        <div>
-                          <div className="flex items-start justify-between gap-2 mb-1.5">
-                            <div>
-                              <span className="font-bold text-sm text-slate-100 flex items-center gap-1.5">
-                                {item.icon || "⚔️"} {item.name}
-                              </span>
-                              <span className="text-[10px] font-mono text-amber-400 uppercase tracking-wider">
-                                {item.type === "weapon" ? "Vũ Khí" : item.type === "armor" ? "Giáp Trụ" : "Phụ Kiện"}
-                              </span>
-                            </div>
-                            <span className="text-amber-400 font-bold font-mono text-xs flex items-center gap-1">
-                              <Coins className="w-3.5 h-3.5" /> {item.price}
-                            </span>
-                          </div>
-
-                          <p className="text-xs text-slate-400 line-clamp-2 mb-2">{item.description}</p>
-
-                          {/* Stats */}
-                          <div className="flex flex-wrap gap-2 text-xs mb-3">
-                            {item.atkBoost > 0 && <span className="text-amber-400 font-mono">+{item.atkBoost} ATK</span>}
-                            {item.defBoost > 0 && <span className="text-blue-400 font-mono">+{item.defBoost} DEF</span>}
-                            {item.hpBoost > 0 && <span className="text-emerald-400 font-mono">+{item.hpBoost} HP</span>}
-                            {item.spdBoost > 0 && <span className="text-purple-400 font-mono">+{item.spdBoost} SPD</span>}
-                          </div>
-                        </div>
-
-                        <button
-                          onClick={() => handleBuy(item.id, item.price, item.name)}
-                          disabled={buyItem.isPending || isOwned || !canAfford}
-                          className={`w-full py-1.5 px-3 rounded-xl text-xs font-bold transition flex items-center justify-center gap-1.5 ${
-                            isOwned
-                              ? "bg-slate-800/80 text-slate-500 border border-slate-700/60 cursor-not-allowed"
-                              : canAfford
-                              ? "bg-gradient-to-r from-amber-600 to-yellow-600 hover:from-amber-500 hover:to-yellow-500 text-slate-950 font-black shadow-md shadow-amber-900/30"
-                              : "bg-slate-800/60 text-slate-500 cursor-not-allowed"
-                          }`}
-                        >
-                          {isOwned ? "Đã Sở Hữu" : canAfford ? `Mua Với ${item.price} Vàng` : "Không Đủ Vàng"}
-                        </button>
-                      </div>
-                    );
-                  })}
-                </div>
-              )}
-            </div>
-          )}
+          {activeModal === "settings" && <GameSettingsPanel characterId={character.id} />}
 
           {/* 3. LEADERBOARD MODAL */}
           {activeModal === "leaderboard" && (

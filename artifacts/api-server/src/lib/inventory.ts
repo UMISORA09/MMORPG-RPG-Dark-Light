@@ -107,24 +107,35 @@ export async function listInventory(characterId: number) {
     .innerJoin(itemsTable, eq(characterItemsTable.itemId, itemsTable.id))
     .where(eq(characterItemsTable.characterId, characterId));
 
-  return rows.map(({ item, ownershipId, equipped, acquiredAt }: any) => ({
-    id: item.id,
-    name: item.name,
-    type: item.type,
-    description: item.description,
-    rarity: item.rarity,
-    hpBoost: item.hpBoost,
-    atkBoost: item.atkBoost,
-    defBoost: item.defBoost,
-    spdBoost: item.spdBoost,
-    price: item.price,
-    classId: item.classId,
-    requiredLevel: item.requiredLevel,
-    icon: item.icon,
-    ownershipId,
-    equipped,
-    acquiredAt,
-  }));
+  return rows
+    .map((row: any) => {
+      const it = row.item || row;
+      const ownershipId = row.ownershipId ?? row.id;
+      const equipped = Boolean(row.equipped);
+      const acquiredAt = row.acquiredAt ?? row.acquired_at ?? new Date();
+
+      if (!it || !it.id) return null;
+
+      return {
+        id: it.id,
+        name: it.name || "Vật phẩm",
+        type: it.type || "weapon",
+        description: it.description || "",
+        rarity: it.rarity || "common",
+        hpBoost: it.hpBoost ?? it.hp_boost ?? 0,
+        atkBoost: it.atkBoost ?? it.atk_boost ?? 0,
+        defBoost: it.defBoost ?? it.def_boost ?? 0,
+        spdBoost: it.spdBoost ?? it.spd_boost ?? 0,
+        price: it.price ?? 0,
+        classId: it.classId ?? it.class_id ?? null,
+        requiredLevel: it.requiredLevel ?? it.required_level ?? 1,
+        icon: it.icon || "◇",
+        ownershipId,
+        equipped,
+        acquiredAt: typeof acquiredAt === "string" ? acquiredAt : acquiredAt.toISOString(),
+      };
+    })
+    .filter(Boolean);
 }
 
 export async function getOwnedItem(characterId: number, itemId: string) {
@@ -145,7 +156,14 @@ export async function getOwnedItem(characterId: number, itemId: string) {
     )
     .limit(1);
 
-  return owned;
+  if (!owned) return undefined;
+  const item = owned.item || owned;
+  return {
+    ownershipId: owned.ownershipId ?? owned.id,
+    equipped: Boolean(owned.equipped),
+    characterId: owned.characterId ?? characterId,
+    item,
+  };
 }
 
 export async function getItem(itemId: string): Promise<Item | undefined> {
