@@ -4,7 +4,7 @@
   "outputDirectory": "artifacts/mmorpg-game/dist/public",
   "framework": "vite",
   "functions": {
-    "api/index.ts": {
+    "api/index.js": {
       "memory": 1024,
       "maxDuration": 15
     }
@@ -12,7 +12,7 @@
   "rewrites": [
     {
       "source": "/api/(.*)",
-      "destination": "/api/index.ts"
+      "destination": "/api/index.js"
     },
     {
       "source": "/(.*)",

@@ -1,4 +1,4 @@
-import app from "../artifacts/api-server/src/app";
+import app from "./app";
 import { initDatabase } from "@workspace/db";
 
 let isDbInitialized = false;
@@ -13,5 +13,5 @@ export default async function handler(req: any, res: any) {
     }
   }
 
-  return app(req, res);
+  return (app as any)(req, res);
 }
