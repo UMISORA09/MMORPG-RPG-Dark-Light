@@ -55,58 +55,73 @@ export async function seedDatabase() {
     await upsertById(questsTable, questsTable.id, quest as Record<string, unknown>);
   }
 
-  let [demoUser] = await db.select().from(usersTable).where(eq(usersTable.username, DEMO_USERNAME)).limit(1);
-  if (!demoUser) {
-    const [inserted] = await db.insert(usersTable).values({
-      username: DEMO_USERNAME,
-      passwordHash: DEMO_PASSWORD_HASH,
-      forumTitle: "Chiến Thần Đại Lục",
-      selectedRegion: "VN",
-      selectedServerId: "s1_long_vuong",
-    }).returning();
-    demoUser = inserted;
-  }
+  const DEFAULT_SEED_ACCOUNTS = [
+    { username: DEMO_USERNAME, forumTitle: "Chiến Thần Đại Lục", charName: "LongThuVe", gender: "male" as const, classId: "tank", className: "Hộ Vệ", level: 11, hp: 850, mp: 250, atk: 75, def: 55, spd: 15, gold: 500 },
+    { username: "admin", forumTitle: "Đại Tông Sư", charName: "ThầnLong_Admin", gender: "male" as const, classId: "fighter", className: "Chiến Binh", level: 50, hp: 4200, mp: 1200, atk: 880, def: 560, spd: 28, gold: 99999 },
+    { username: "xuanhoa", forumTitle: "Chiến Thần Long Tộc", charName: "HuyềnVũ_XuanHoa", gender: "male" as const, classId: "tank", className: "Hộ Vệ", level: 45, hp: 5500, mp: 950, atk: 620, def: 780, spd: 22, gold: 88888 },
+    { username: "player", forumTitle: "Hiệp Khách", charName: "PháoThần_Player", gender: "female" as const, classId: "gunner", className: "Xạ Thủ", level: 35, hp: 2800, mp: 1600, atk: 750, def: 380, spd: 32, gold: 50000 },
+  ];
 
-  let [demoCharacter] = await db.select().from(charactersTable)
-    .where(and(eq(charactersTable.userId, demoUser.id), eq(charactersTable.name, "LongThuVe")))
-    .limit(1);
+  let demoCharacter: any = null;
 
-  if (!demoCharacter) {
-    const [inserted] = await db.insert(charactersTable).values({
-      userId: demoUser.id,
-      serverId: "s1_long_vuong",
-      name: "LongThuVe",
-      gender: "male",
-      classId: "tank",
-      className: "Hộ Vệ",
-      title: "Tân Thủ Long Tộc",
-      zoneId: "SAFE_VILLAGE",
-      level: 11,
-      experience: 650,
-      hp: 850,
-      maxHp: 850,
-      mp: 250,
-      maxMp: 250,
-      str: 24,
-      dex: 15,
-      intel: 12,
-      luk: 10,
-      vit: 28,
-      atk: 75,
-      matk: 20,
-      def: 55,
-      mdef: 30,
-      spd: 15,
-      critRate: 13,
-      critDmg: 150,
-      accuracy: 95,
-      evasion: 8,
-      combatPower: 850,
-      gold: 500,
-      kills: 42,
-      deaths: 3,
-    }).returning();
-    demoCharacter = inserted;
+  for (const acc of DEFAULT_SEED_ACCOUNTS) {
+    let [accUser] = await db.select().from(usersTable).where(eq(usersTable.username, acc.username)).limit(1);
+    if (!accUser) {
+      const [inserted] = await db.insert(usersTable).values({
+        username: acc.username,
+        passwordHash: DEMO_PASSWORD_HASH,
+        forumTitle: acc.forumTitle,
+        selectedRegion: "VN",
+        selectedServerId: "s1_long_vuong",
+      }).returning();
+      accUser = inserted;
+    }
+
+    let [accChar] = await db.select().from(charactersTable)
+      .where(and(eq(charactersTable.userId, accUser.id), eq(charactersTable.name, acc.charName)))
+      .limit(1);
+
+    if (!accChar) {
+      const [inserted] = await db.insert(charactersTable).values({
+        userId: accUser.id,
+        serverId: "s1_long_vuong",
+        name: acc.charName,
+        gender: acc.gender,
+        classId: acc.classId,
+        className: acc.className,
+        title: acc.forumTitle,
+        zoneId: "SAFE_VILLAGE",
+        level: acc.level,
+        experience: acc.level * 1000,
+        hp: acc.hp,
+        maxHp: acc.hp,
+        mp: acc.mp,
+        maxMp: acc.mp,
+        str: 50,
+        dex: 50,
+        intel: 30,
+        luk: 25,
+        vit: 60,
+        atk: acc.atk,
+        matk: 80,
+        def: acc.def,
+        mdef: 50,
+        spd: acc.spd,
+        critRate: 25,
+        critDmg: 175,
+        accuracy: 98,
+        evasion: 15,
+        combatPower: acc.atk * 3 + acc.def * 2 + acc.hp * 0.1,
+        gold: acc.gold,
+        kills: 100,
+        deaths: 2,
+      }).returning();
+      accChar = inserted;
+    }
+
+    if (acc.username === DEMO_USERNAME) {
+      demoCharacter = accChar;
+    }
   }
 
   const demoInventory = [

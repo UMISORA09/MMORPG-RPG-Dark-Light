@@ -1,8 +1,9 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useLocation } from "wouter";
 import {
   useLogin,
   useRegister,
+  useGetMe,
   getGetMeQueryKey,
   getGetCharactersQueryKey,
 } from "@workspace/api-client-react";
@@ -25,20 +26,31 @@ export default function AuthScreen() {
   const loginMutation = useLogin();
   const registerMutation = useRegister();
 
+  // Kiểm tra nếu đã có token và phiên hợp lệ thì tự động vào thẳng portal
+  const { data: user, isLoading: userLoading } = useGetMe({
+    query: { queryKey: getGetMeQueryKey() },
+  });
+
+  useEffect(() => {
+    if (!userLoading && user) {
+      setLocation("/portal");
+    }
+  }, [user, userLoading, setLocation]);
+
   // Form Validation
   const validateForm = () => {
     const errors: { username?: string; password?: string; confirm?: string } = {};
 
     if (!username.trim()) {
-      errors.username = "Vui lòng nhập email hoặc tài khoản";
-    } else if (username.length < 3 || username.length > 30) {
-      errors.username = "Tài khoản phải từ 3 đến 30 ký tự";
+      errors.username = "Vui lòng nhập tài khoản hoặc email";
+    } else if (username.trim().length < 2) {
+      errors.username = "Tài khoản tối thiểu 2 ký tự";
     }
 
     if (!password) {
       errors.password = "Vui lòng nhập mật khẩu";
-    } else if (password.length < 6) {
-      errors.password = "Mật khẩu tối thiểu 6 ký tự";
+    } else if (mode === "register" && password.length < 4) {
+      errors.password = "Mật khẩu tối thiểu 4 ký tự khi đăng ký";
     }
 
     if (mode === "register" && password !== confirmPassword) {
@@ -64,6 +76,33 @@ export default function AuthScreen() {
     setLocation("/portal");
   };
 
+  // Guest Login Handler (1-click play)
+  const handleGuestLogin = () => {
+    const guestUser = `HiepSi_${Math.floor(1000 + Math.random() * 9000)}`;
+    const guestPass = "123456";
+    setUsername(guestUser);
+    setPassword(guestPass);
+    loginMutation.mutate(
+      { data: { username: guestUser, password: guestPass } },
+      {
+        onSuccess: (data: any) => {
+          toast({
+            title: "⚡ Vào game thành công!",
+            description: `Chào mừng ${guestUser} bước vào Chiến Long Bá!`,
+          });
+          handleAuthSuccess(data);
+        },
+        onError: (err: any) => {
+          toast({
+            variant: "destructive",
+            title: "Đăng nhập thất bại",
+            description: err?.message || "Không thể kết nối máy chủ",
+          });
+        },
+      }
+    );
+  };
+
   // Submit Handler
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -71,12 +110,12 @@ export default function AuthScreen() {
 
     if (mode === "login") {
       loginMutation.mutate(
-        { data: { username, password } },
+        { data: { username: username.trim(), password } },
         {
           onSuccess: (data: any) => {
             toast({
               title: "⚡ Đăng nhập thành công!",
-              description: `Chào mừng ${username} bước vào Chiến Long Bá!`,
+              description: `Chào mừng ${username.trim()} bước vào Chiến Long Bá!`,
             });
             handleAuthSuccess(data);
           },
@@ -91,12 +130,12 @@ export default function AuthScreen() {
       );
     } else {
       registerMutation.mutate(
-        { data: { username, password } },
+        { data: { username: username.trim(), password } },
         {
           onSuccess: (data: any) => {
             toast({
               title: "✨ Khởi tạo tài khoản thành công!",
-              description: `Tài khoản ${username} đã sẵn sàng khởi tạo nhân vật!`,
+              description: `Tài khoản ${username.trim()} đã sẵn sàng khởi tạo nhân vật!`,
             });
             handleAuthSuccess(data);
           },
@@ -165,7 +204,32 @@ export default function AuthScreen() {
               </div>
 
               {/* Form Inputs */}
-              <form onSubmit={handleSubmit} className="space-y-3.5 mb-5">
+              <form onSubmit={handleSubmit} className="space-y-3 mb-3">
+                {/* Quick Test Accounts Chip Bar */}
+                {mode === "login" && (
+                  <div className="flex items-center gap-1.5 flex-wrap pb-0.5">
+                    <span className="text-[11px] text-[#8e7a7c] font-medium">Tài khoản mẫu:</span>
+                    {[
+                      { label: "admin", u: "admin", p: "123456" },
+                      { label: "xuanhoa", u: "xuanhoa", p: "123456" },
+                      { label: "player", u: "player", p: "123456" },
+                    ].map((item) => (
+                      <button
+                        key={item.u}
+                        type="button"
+                        onClick={() => {
+                          setUsername(item.u);
+                          setPassword(item.p);
+                          setFormErrors({});
+                        }}
+                        className="px-2 py-0.5 rounded-full bg-[#4a383a] hover:bg-[#5e4749] text-[#28c3e1] text-[10px] font-bold tracking-wide border border-[#5d4648] transition-all cursor-pointer"
+                      >
+                        {item.label}
+                      </button>
+                    ))}
+                  </div>
+                )}
+
                 {/* Email / Username Field */}
                 <div>
                   <input
@@ -251,7 +315,7 @@ export default function AuthScreen() {
                 <button
                   type="submit"
                   disabled={loginMutation.isPending || registerMutation.isPending}
-                  className="w-full h-11 rounded-full bg-[#28c3e1] hover:bg-[#3cd3f1] text-[#1c161a] font-extrabold text-xs sm:text-sm tracking-wide shadow-[0_4px_16px_rgba(40,195,225,0.35)] transition-all active:scale-[0.99] disabled:opacity-60 flex items-center justify-center cursor-pointer mt-4"
+                  className="w-full h-11 rounded-full bg-[#28c3e1] hover:bg-[#3cd3f1] text-[#1c161a] font-extrabold text-xs sm:text-sm tracking-wide shadow-[0_4px_16px_rgba(40,195,225,0.35)] transition-all active:scale-[0.99] disabled:opacity-60 flex items-center justify-center cursor-pointer mt-3"
                 >
                   {loginMutation.isPending || registerMutation.isPending ? (
                     <div className="w-5 h-5 border-2 border-[#1c161a] border-t-transparent rounded-full animate-spin" />
@@ -259,6 +323,21 @@ export default function AuthScreen() {
                     <span>{mode === "login" ? "Log in" : "Register"}</span>
                   )}
                 </button>
+
+                {/* Guest Play Button (⚡ Chơi Ngay (Khách)) */}
+                <button
+                  type="button"
+                  onClick={handleGuestLogin}
+                  disabled={loginMutation.isPending || registerMutation.isPending}
+                  className="w-full h-10 rounded-full bg-[#3d2f31] hover:bg-[#4d3c3e] text-[#28c3e1] border border-[#28c3e1]/50 font-bold text-xs tracking-wide shadow-[0_2px_10px_rgba(0,0,0,0.25)] transition-all active:scale-[0.99] disabled:opacity-60 flex items-center justify-center cursor-pointer mt-2"
+                >
+                  <span>⚡ Chơi Ngay (Khách / Guest)</span>
+                </button>
+
+                {/* Helpful Auto-Provision Notice */}
+                <p className="text-center text-[10.5px] text-[#a08d8f] mt-2 leading-tight">
+                  💡 Nhập <span className="text-[#28c3e1] font-medium">bất kỳ tài khoản & mật khẩu nào</span> để đăng nhập hoặc bấm <span className="text-[#28c3e1] font-medium">Chơi Ngay</span>.
+                </p>
               </form>
 
               {/* Footer Switch (Don't have account? Sign up / Log in) */}

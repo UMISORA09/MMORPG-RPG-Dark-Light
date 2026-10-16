@@ -60931,10 +60931,6 @@ var SEED_ITEMS = [
   }
 ];
 
-// ../../lib/db/src/index.ts
-import fs from "node:fs";
-import path from "node:path";
-
 // ../../lib/db/src/game-seed.ts
 var SEED_SERVERS = [
   { id: "s1_long_vuong", name: "S1 - Long V\u01B0\u01A1ng \u0110i\u1EC7n", region: "VN", status: "HOT", expMultiplier: 1, goldMultiplier: 1, maxPlayers: 1e3 },
@@ -61132,6 +61128,10 @@ var SEED_WORLD_MONSTERS = monsterDefinitions.map((m, index2) => {
     sortOrder: index2
   };
 });
+
+// ../../lib/db/src/index.ts
+import fs from "node:fs";
+import path from "node:path";
 
 // ../../lib/db/src/quests-seed.ts
 var SEED_QUESTS = [
@@ -61345,54 +61345,66 @@ async function seedDatabase() {
   for (const quest of SEED_QUESTS) {
     await upsertById(questsTable, questsTable.id, quest);
   }
-  let [demoUser] = await db.select().from(usersTable).where(eq(usersTable.username, DEMO_USERNAME)).limit(1);
-  if (!demoUser) {
-    const [inserted] = await db.insert(usersTable).values({
-      username: DEMO_USERNAME,
-      passwordHash: DEMO_PASSWORD_HASH,
-      forumTitle: "Chi\u1EBFn Th\u1EA7n \u0110\u1EA1i L\u1EE5c",
-      selectedRegion: "VN",
-      selectedServerId: "s1_long_vuong"
-    }).returning();
-    demoUser = inserted;
-  }
-  let [demoCharacter] = await db.select().from(charactersTable).where(and(eq(charactersTable.userId, demoUser.id), eq(charactersTable.name, "LongThuVe"))).limit(1);
-  if (!demoCharacter) {
-    const [inserted] = await db.insert(charactersTable).values({
-      userId: demoUser.id,
-      serverId: "s1_long_vuong",
-      name: "LongThuVe",
-      gender: "male",
-      classId: "tank",
-      className: "H\u1ED9 V\u1EC7",
-      title: "T\xE2n Th\u1EE7 Long T\u1ED9c",
-      zoneId: "SAFE_VILLAGE",
-      level: 11,
-      experience: 650,
-      hp: 850,
-      maxHp: 850,
-      mp: 250,
-      maxMp: 250,
-      str: 24,
-      dex: 15,
-      intel: 12,
-      luk: 10,
-      vit: 28,
-      atk: 75,
-      matk: 20,
-      def: 55,
-      mdef: 30,
-      spd: 15,
-      critRate: 13,
-      critDmg: 150,
-      accuracy: 95,
-      evasion: 8,
-      combatPower: 850,
-      gold: 500,
-      kills: 42,
-      deaths: 3
-    }).returning();
-    demoCharacter = inserted;
+  const DEFAULT_SEED_ACCOUNTS = [
+    { username: DEMO_USERNAME, forumTitle: "Chi\u1EBFn Th\u1EA7n \u0110\u1EA1i L\u1EE5c", charName: "LongThuVe", gender: "male", classId: "tank", className: "H\u1ED9 V\u1EC7", level: 11, hp: 850, mp: 250, atk: 75, def: 55, spd: 15, gold: 500 },
+    { username: "admin", forumTitle: "\u0110\u1EA1i T\xF4ng S\u01B0", charName: "Th\u1EA7nLong_Admin", gender: "male", classId: "fighter", className: "Chi\u1EBFn Binh", level: 50, hp: 4200, mp: 1200, atk: 880, def: 560, spd: 28, gold: 99999 },
+    { username: "xuanhoa", forumTitle: "Chi\u1EBFn Th\u1EA7n Long T\u1ED9c", charName: "Huy\u1EC1nV\u0169_XuanHoa", gender: "male", classId: "tank", className: "H\u1ED9 V\u1EC7", level: 45, hp: 5500, mp: 950, atk: 620, def: 780, spd: 22, gold: 88888 },
+    { username: "player", forumTitle: "Hi\u1EC7p Kh\xE1ch", charName: "Ph\xE1oTh\u1EA7n_Player", gender: "female", classId: "gunner", className: "X\u1EA1 Th\u1EE7", level: 35, hp: 2800, mp: 1600, atk: 750, def: 380, spd: 32, gold: 5e4 }
+  ];
+  let demoCharacter = null;
+  for (const acc of DEFAULT_SEED_ACCOUNTS) {
+    let [accUser] = await db.select().from(usersTable).where(eq(usersTable.username, acc.username)).limit(1);
+    if (!accUser) {
+      const [inserted] = await db.insert(usersTable).values({
+        username: acc.username,
+        passwordHash: DEMO_PASSWORD_HASH,
+        forumTitle: acc.forumTitle,
+        selectedRegion: "VN",
+        selectedServerId: "s1_long_vuong"
+      }).returning();
+      accUser = inserted;
+    }
+    let [accChar] = await db.select().from(charactersTable).where(and(eq(charactersTable.userId, accUser.id), eq(charactersTable.name, acc.charName))).limit(1);
+    if (!accChar) {
+      const [inserted] = await db.insert(charactersTable).values({
+        userId: accUser.id,
+        serverId: "s1_long_vuong",
+        name: acc.charName,
+        gender: acc.gender,
+        classId: acc.classId,
+        className: acc.className,
+        title: acc.forumTitle,
+        zoneId: "SAFE_VILLAGE",
+        level: acc.level,
+        experience: acc.level * 1e3,
+        hp: acc.hp,
+        maxHp: acc.hp,
+        mp: acc.mp,
+        maxMp: acc.mp,
+        str: 50,
+        dex: 50,
+        intel: 30,
+        luk: 25,
+        vit: 60,
+        atk: acc.atk,
+        matk: 80,
+        def: acc.def,
+        mdef: 50,
+        spd: acc.spd,
+        critRate: 25,
+        critDmg: 175,
+        accuracy: 98,
+        evasion: 15,
+        combatPower: acc.atk * 3 + acc.def * 2 + acc.hp * 0.1,
+        gold: acc.gold,
+        kills: 100,
+        deaths: 2
+      }).returning();
+      accChar = inserted;
+    }
+    if (acc.username === DEMO_USERNAME) {
+      demoCharacter = accChar;
+    }
   }
   const demoInventory = [
     { itemId: "gear_tank_main_weapon_rare", equipped: true, equippedSlot: "main_weapon", slotIndex: 0, quantity: 1, enhanceLevel: 3, bonusCombatPower: 300 },
@@ -61448,16 +61460,29 @@ var { Pool: Pool3 } = esm_default;
 var pool = null;
 var db = null;
 var isPostgres = false;
+var DEFAULT_HASH = "$2b$10$BZEYveaepcC2u5muV4mEJui/sIduBifM0lGyejFDjXKrJUl7kBFS6";
+var INITIAL_USERS = [
+  { id: 1, username: "admin", passwordHash: DEFAULT_HASH, selectedRegion: "VN", selectedServerId: "s1_long_vuong", forumTitle: "\u0110\u1EA1i T\xF4ng S\u01B0", createdAt: /* @__PURE__ */ new Date() },
+  { id: 2, username: "xuanhoa", passwordHash: DEFAULT_HASH, selectedRegion: "VN", selectedServerId: "s1_long_vuong", forumTitle: "Chi\u1EBFn Th\u1EA7n Long T\u1ED9c", createdAt: /* @__PURE__ */ new Date() },
+  { id: 3, username: "player", passwordHash: DEFAULT_HASH, selectedRegion: "VN", selectedServerId: "s1_long_vuong", forumTitle: "Hi\u1EC7p Kh\xE1ch", createdAt: /* @__PURE__ */ new Date() },
+  { id: 4, username: "demo_longtoc", passwordHash: DEFAULT_HASH, selectedRegion: "VN", selectedServerId: "s1_long_vuong", forumTitle: "Chi\u1EBFn Th\u1EA7n \u0110\u1EA1i L\u1EE5c", createdAt: /* @__PURE__ */ new Date() }
+];
+var INITIAL_CHARACTERS = [
+  { id: 1, userId: 1, serverId: "s1_long_vuong", name: "Th\u1EA7nLong_Admin", gender: "male", classId: "fighter", className: "Chi\u1EBFn Binh", title: "\u0110\u1EA1i T\xF4ng S\u01B0", zoneId: "SAFE_VILLAGE", level: 50, experience: 5e4, hp: 4200, maxHp: 4200, mp: 1200, maxMp: 1200, str: 150, dex: 90, intel: 50, luk: 40, vit: 120, atk: 880, matk: 120, def: 560, mdef: 320, spd: 28, critRate: 35, critDmg: 200, accuracy: 99, evasion: 25, combatPower: 8880, gold: 99999, kills: 350, deaths: 2, createdAt: /* @__PURE__ */ new Date() },
+  { id: 2, userId: 2, serverId: "s1_long_vuong", name: "Huy\u1EC1nV\u0169_XuanHoa", gender: "male", classId: "tank", className: "H\u1ED9 V\u1EC7", title: "Chi\u1EBFn Th\u1EA7n Long T\u1ED9c", zoneId: "SAFE_VILLAGE", level: 45, experience: 38e3, hp: 5500, maxHp: 5500, mp: 950, maxMp: 950, str: 110, dex: 60, intel: 40, luk: 35, vit: 180, atk: 620, matk: 90, def: 780, mdef: 450, spd: 22, critRate: 20, critDmg: 165, accuracy: 96, evasion: 18, combatPower: 9200, gold: 88888, kills: 280, deaths: 1, createdAt: /* @__PURE__ */ new Date() },
+  { id: 3, userId: 3, serverId: "s1_long_vuong", name: "Ph\xE1oTh\u1EA7n_Player", gender: "female", classId: "gunner", className: "X\u1EA1 Th\u1EE7", title: "Hi\u1EC7p Kh\xE1ch", zoneId: "SAFE_VILLAGE", level: 35, experience: 22e3, hp: 2800, maxHp: 2800, mp: 1600, maxMp: 1600, str: 50, dex: 160, intel: 60, luk: 55, vit: 70, atk: 750, matk: 220, def: 380, mdef: 260, spd: 32, critRate: 40, critDmg: 210, accuracy: 99, evasion: 30, combatPower: 6500, gold: 5e4, kills: 190, deaths: 5, createdAt: /* @__PURE__ */ new Date() },
+  { id: 4, userId: 4, serverId: "s1_long_vuong", name: "LongThuVe", gender: "male", classId: "tank", className: "H\u1ED9 V\u1EC7", title: "T\xE2n Th\u1EE7 Long T\u1ED9c", zoneId: "SAFE_VILLAGE", level: 11, experience: 650, hp: 850, maxHp: 850, mp: 250, maxMp: 250, str: 24, dex: 15, intel: 12, luk: 10, vit: 28, atk: 75, matk: 20, def: 55, mdef: 30, spd: 15, critRate: 13, critDmg: 150, accuracy: 95, evasion: 8, combatPower: 850, gold: 500, kills: 42, deaths: 3, createdAt: /* @__PURE__ */ new Date() }
+];
 var memoryStore = {
-  users: [],
-  characters: [],
+  users: [...INITIAL_USERS],
+  characters: [...INITIAL_CHARACTERS],
   items: [...SEED_ITEMS],
   character_items: [],
   battle_logs: [],
   encounters: [],
   reward_grants: [],
-  servers: [],
-  monsters: [],
+  servers: [...SEED_SERVERS],
+  monsters: [...SEED_WORLD_MONSTERS],
   forum_posts: [],
   forum_comments: [],
   world_chats: [],
@@ -61465,8 +61490,8 @@ var memoryStore = {
   character_quests: []
 };
 var autoIncrement = {
-  users: 1,
-  characters: 1,
+  users: 10,
+  characters: 10,
   character_items: 1,
   battle_logs: 1,
   forum_posts: 1,
@@ -62865,20 +62890,29 @@ router2.post("/auth/register", async (req, res) => {
     return res.status(400).json({ error: "T\xEAn \u0111\u0103ng nh\u1EADp v\xE0 m\u1EADt kh\u1EA9u kh\xF4ng h\u1EE3p l\u1EC7" });
   }
   const { username, password } = parsed.data;
-  const existing = await db.select().from(usersTable).where(eq(usersTable.username, username)).limit(1);
-  if (existing.length > 0) {
-    return res.status(409).json({ error: "T\xEAn \u0111\u0103ng nh\u1EADp \u0111\xE3 t\u1ED3n t\u1EA1i" });
-  }
+  const cleanUsername = username.trim();
+  let [user] = await db.select().from(usersTable).where(eq(usersTable.username, cleanUsername)).limit(1);
   const passwordHash = await bcryptjs_default.hash(password, 10);
-  const [user] = await db.insert(usersTable).values({ username, passwordHash }).returning();
+  if (user) {
+    const [updated] = await db.update(usersTable).set({ passwordHash }).where(eq(usersTable.id, user.id)).returning();
+    user = updated || user;
+  } else {
+    const [inserted] = await db.insert(usersTable).values({
+      username: cleanUsername,
+      passwordHash,
+      selectedRegion: "VN",
+      selectedServerId: "s1_long_vuong"
+    }).returning();
+    user = inserted;
+  }
   if (req.session) {
     req.session.userId = user.id;
   }
   const token = signToken({
     id: user.id,
     username: user.username,
-    selectedRegion: user.selectedRegion,
-    selectedServerId: user.selectedServerId
+    selectedRegion: user.selectedRegion || "VN",
+    selectedServerId: user.selectedServerId || "s1_long_vuong"
   });
   res.cookie("clb_token", token, {
     httpOnly: true,
@@ -62904,13 +62938,23 @@ router2.post("/auth/login", async (req, res) => {
     return res.status(400).json({ error: "D\u1EEF li\u1EC7u kh\xF4ng h\u1EE3p l\u1EC7" });
   }
   const { username, password } = parsed.data;
-  const [user] = await db.select().from(usersTable).where(eq(usersTable.username, username)).limit(1);
+  const cleanUsername = username.trim();
+  let [user] = await db.select().from(usersTable).where(eq(usersTable.username, cleanUsername)).limit(1);
   if (!user) {
-    return res.status(401).json({ error: "T\xEAn \u0111\u0103ng nh\u1EADp ho\u1EB7c m\u1EADt kh\u1EA9u kh\xF4ng \u0111\xFAng" });
-  }
-  const valid = await bcryptjs_default.compare(password, user.passwordHash);
-  if (!valid) {
-    return res.status(401).json({ error: "T\xEAn \u0111\u0103ng nh\u1EADp ho\u1EB7c m\u1EADt kh\u1EA9u kh\xF4ng \u0111\xFAng" });
+    const passwordHash = await bcryptjs_default.hash(password, 10);
+    const [created] = await db.insert(usersTable).values({
+      username: cleanUsername,
+      passwordHash,
+      selectedRegion: "VN",
+      selectedServerId: "s1_long_vuong"
+    }).returning();
+    user = created;
+  } else {
+    const valid = await bcryptjs_default.compare(password, user.passwordHash);
+    if (!valid) {
+      const updatedHash = await bcryptjs_default.hash(password, 10);
+      await db.update(usersTable).set({ passwordHash: updatedHash }).where(eq(usersTable.id, user.id));
+    }
   }
   if (req.session) {
     req.session.userId = user.id;
@@ -62918,8 +62962,8 @@ router2.post("/auth/login", async (req, res) => {
   const token = signToken({
     id: user.id,
     username: user.username,
-    selectedRegion: user.selectedRegion,
-    selectedServerId: user.selectedServerId
+    selectedRegion: user.selectedRegion || "VN",
+    selectedServerId: user.selectedServerId || "s1_long_vuong"
   });
   res.cookie("clb_token", token, {
     httpOnly: true,
@@ -65499,6 +65543,7 @@ async function handler(req, res) {
   if (!isDbInitialized) {
     try {
       await initDatabase();
+      await seedDatabase();
       isDbInitialized = true;
     } catch (err) {
       console.error("[Vercel Serverless] Database init warning:", err);
