@@ -189,6 +189,7 @@ export const RPGCharacterModel3D = memo(function RPGCharacterModel3D({
   // Fallback UI (Greybox Character)
   const greyboxFallback = (
     <ProceduralGreyboxCharacter
+      classId={classId}
       animState={animState}
       facingLeft={facingLeft}
       color={color}

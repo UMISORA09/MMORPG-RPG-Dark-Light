@@ -3,16 +3,16 @@
 // Clamped polar angle (35° to 55°), smooth zoom interpolation & shake reduction
 // ==============================================================================
 
-export const PITCH_MIN = (35 * Math.PI) / 180; // 35°: prevents looking horizontally/under ground
-export const PITCH_MAX = (55 * Math.PI) / 180; // 55°: prevents going completely overhead
+export const PITCH_MIN = (42 * Math.PI) / 180; // 42°: prevents horizontal horizon exposure
+export const PITCH_MAX = (55 * Math.PI) / 180; // 55°: classic top-down angle
 
 export const cameraControls = {
   yaw: 0,                   // Horizontal orbit angle around Y axis
-  pitch: (45 * Math.PI) / 180, // Default 45° classic isometric Action RPG angle
-  zoom: 14,                 // Current camera distance
-  targetZoom: 14,           // Desired zoom distance (mouse wheel)
-  minZoom: 8,               // Close-up combat zoom
-  maxZoom: 24,              // Wide tactical view
+  pitch: (48 * Math.PI) / 180, // Default 48° top-down 3/4 RPG angle
+  zoom: 18,                 // Current camera distance
+  targetZoom: 18,           // Desired zoom distance (mouse wheel)
+  minZoom: 12,              // Close-up combat zoom
+  maxZoom: 22,              // Wide tactical view
   dampingFactor: 0.08,      // Smooth lerp damping
   locked: false,            // Pointer lock status
   sensitivityX: 1,

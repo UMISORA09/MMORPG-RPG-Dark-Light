@@ -10,4 +10,7 @@ export interface User {
   id: number;
   username: string;
   createdAt: Date;
+  forumTitle?: string;
+  selectedRegion?: string;
+  selectedServerId?: string;
 }

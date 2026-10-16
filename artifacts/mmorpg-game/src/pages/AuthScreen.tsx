@@ -52,24 +52,8 @@ export default function AuthScreen() {
   // Auth Success Navigation
   const handleAuthSuccess = async () => {
     await queryClient.invalidateQueries({ queryKey: getGetMeQueryKey() });
-
-    try {
-      const chars = await queryClient.fetchQuery({
-        queryKey: getGetCharactersQueryKey(),
-        queryFn: async () => {
-          const { getCharacters } = await import("@workspace/api-client-react");
-          return getCharacters();
-        },
-      });
-
-      if (chars && Array.isArray(chars) && chars.length > 0) {
-        setLocation("/characters");
-      } else {
-        setLocation("/characters");
-      }
-    } catch {
-      setLocation("/characters");
-    }
+    await queryClient.invalidateQueries({ queryKey: getGetCharactersQueryKey() });
+    setLocation("/portal");
   };
 
   // Submit Handler
@@ -120,40 +104,6 @@ export default function AuthScreen() {
     }
   };
 
-  // Quick Play / Sign in later handler
-  const handleQuickPlay = async () => {
-    const randNum = Math.floor(1000 + Math.random() * 9000);
-    const guestUser = `HiepSi_${randNum}`;
-    const guestPass = `pass_${randNum}`;
-
-    try {
-      const res = await fetch("/api/auth/register", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        credentials: "include",
-        body: JSON.stringify({ username: guestUser, password: guestPass }),
-      });
-
-      if (res.ok) {
-        await queryClient.invalidateQueries({ queryKey: getGetMeQueryKey() });
-        toast({
-          title: "⚡ Vào chơi ngay!",
-          description: `Khởi tạo khách: ${guestUser}`,
-        });
-        setLocation("/characters");
-      } else {
-        loginMutation.mutate(
-          { data: { username: guestUser, password: guestPass } },
-          {
-            onSuccess: () => setLocation("/characters"),
-          }
-        );
-      }
-    } catch {
-      toast({ variant: "destructive", title: "Lỗi kết nối máy chủ" });
-    }
-  };
-
   return (
     <div
       className="min-h-screen w-full flex items-center justify-center p-4 sm:p-8 relative overflow-hidden"
@@ -169,28 +119,18 @@ export default function AuthScreen() {
         transition={{ duration: 0.45, ease: "easeOut" }}
         className="relative w-full max-w-[860px] min-h-[510px] md:h-[515px] rounded-[34px] bg-[#342a2b] shadow-[0_30px_90px_rgba(0,0,0,0.55),0_10px_30px_rgba(0,0,0,0.4)] flex flex-col md:flex-row items-stretch"
       >
-        {/* ── CỘT TRÁI: ARTWORK PANEL (Pop-out character illustration) ── */}
-        <div className="relative md:w-[57.4%] flex items-end justify-center rounded-t-[34px] md:rounded-t-none md:rounded-l-[34px] min-h-[280px] md:min-h-full">
-          {/* Background Illustration Artwork with 2.5D Pop-Out Effect */}
-          <div className="absolute inset-0 pointer-events-none">
-            <img
-              src="/auth-character-art-2x.png"
-              alt="Chiến Long Bá Assassin"
-              className="absolute top-0 bottom-0 left-[-34.3%] w-[134.3%] h-full object-cover md:object-fill max-w-none pointer-events-none select-none drop-shadow-[0_15px_30px_rgba(0,0,0,0.4)]"
-            />
-          </div>
+        {/* ── CỘT TRÁI: ARTWORK PANEL (Chiến Long Bá Key Art Illustration) ── */}
+        <div className="relative md:w-[57.4%] flex items-end justify-center rounded-t-[34px] md:rounded-t-none md:rounded-l-[34px] overflow-hidden min-h-[280px] md:min-h-full bg-[#1e1718]">
+          {/* Background Illustration Artwork */}
+          <img
+            src="/auth-character-art-2x.png"
+            alt="Chiến Long Bá - Hành Trình Huyền Thoại"
+            className="w-full h-full object-cover object-top select-none pointer-events-none drop-shadow-[0_15px_30px_rgba(0,0,0,0.4)]"
+          />
 
-          {/* Watermark Logo subtly placed on bottom-left of artwork */}
-          <div className="relative z-10 p-6 w-full flex items-center justify-between pointer-events-none">
-            <div className="flex flex-col">
-              <span className="font-display text-white/95 text-sm font-black tracking-wider uppercase drop-shadow-[0_2px_4px_rgba(0,0,0,0.9)]">
-                CHIẾN LONG BÁ
-              </span>
-              <span className="font-sans text-[9px] text-[#28c3e1] font-bold tracking-widest uppercase drop-shadow-[0_1px_2px_rgba(0,0,0,0.9)]">
-                Realm of Legends
-              </span>
-            </div>
-          </div>
+          {/* Subtle gradient blend on right/bottom edge */}
+          <div className="absolute inset-y-0 right-0 w-14 bg-gradient-to-r from-transparent to-[#342a2b] pointer-events-none hidden md:block" />
+          <div className="absolute inset-x-0 bottom-0 h-14 bg-gradient-to-t from-[#342a2b] to-transparent pointer-events-none md:hidden" />
         </div>
 
         {/* ── CỘT PHẢI: FORM PANEL (Dark charcoal/mauve tone #342a2b) ── */}
@@ -313,74 +253,8 @@ export default function AuthScreen() {
                 </button>
               </form>
 
-              {/* Social / Quick Login Icon Buttons */}
-              <div className="flex items-center justify-center gap-3 mb-6">
-                {/* Google */}
-                <button
-                  type="button"
-                  onClick={handleQuickPlay}
-                  title="Đăng nhập bằng Google"
-                  className="w-12 h-10 rounded-xl bg-[#4a383a] hover:bg-[#584346] border border-[#5d4648] flex items-center justify-center transition-all hover:scale-105 active:scale-95 cursor-pointer shadow-sm"
-                >
-                  <svg className="w-4 h-4" viewBox="0 0 24 24">
-                    <path
-                      fill="#EA4335"
-                      d="M12 5c1.6 0 3 .6 4.1 1.7l3.1-3.1C17.3 1.8 14.8 1 12 1 7.5 1 3.7 3.6 1.9 7.3l3.7 2.9C6.5 7.4 9 5 12 5z"
-                    />
-                    <path
-                      fill="#4285F4"
-                      d="M23.5 12.3c0-.8-.1-1.7-.2-2.3H12v4.6h6.5c-.3 1.5-1.1 2.8-2.4 3.7l3.7 2.9c2.2-2 3.7-5 3.7-8.9z"
-                    />
-                    <path
-                      fill="#FBBC05"
-                      d="M5.6 14.8c-.2-.7-.4-1.5-.4-2.8s.2-2.1.4-2.8L1.9 6.3C.7 8.7 0 10.3 0 12s.7 3.3 1.9 5.7l3.7-2.9z"
-                    />
-                    <path
-                      fill="#34A853"
-                      d="M12 23c3.2 0 6-1.1 8-3l-3.7-2.9c-1.1.7-2.5 1.2-4.3 1.2-3 0-5.5-2-6.4-4.8L1.9 16.4C3.7 20.1 7.5 23 12 23z"
-                    />
-                  </svg>
-                </button>
-
-                {/* Facebook */}
-                <button
-                  type="button"
-                  onClick={handleQuickPlay}
-                  title="Đăng nhập bằng Facebook"
-                  className="w-12 h-10 rounded-xl bg-[#4a383a] hover:bg-[#584346] border border-[#5d4648] flex items-center justify-center transition-all hover:scale-105 active:scale-95 cursor-pointer shadow-sm"
-                >
-                  <svg className="w-4 h-4 fill-[#1877F2]" viewBox="0 0 24 24">
-                    <path d="M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.47h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.47h-2.796v8.385C19.612 23.027 24 18.062 24 12.073z" />
-                  </svg>
-                </button>
-
-                {/* Steam */}
-                <button
-                  type="button"
-                  onClick={handleQuickPlay}
-                  title="Đăng nhập qua Steam Launcher"
-                  className="w-12 h-10 rounded-xl bg-[#4a383a] hover:bg-[#584346] border border-[#5d4648] flex items-center justify-center transition-all hover:scale-105 active:scale-95 cursor-pointer shadow-sm"
-                >
-                  <svg className="w-4 h-4 fill-[#d2d2d2]" viewBox="0 0 24 24">
-                    <path d="M11.979 0C5.678 0 .511 4.86.022 11.037l6.432 2.658c.545-.371 1.203-.59 1.912-.59.063 0 .125.004.188.006l2.861-4.142V8.91c0-2.495 2.028-4.524 4.524-4.524 2.494 0 4.524 2.031 4.524 4.527s-2.03 4.525-4.524 4.525h-.105l-4.076 2.911c0 .052.005.105.005.159 0 1.875-1.515 3.396-3.39 3.396-1.635 0-3.016-1.173-3.331-2.727L.436 15.27C1.862 20.307 6.486 24 11.979 24c6.627 0 12-5.373 12-12S18.606 0 11.979 0zM7.545 14.802l-.527-.217c.414-.426 1-.689 1.649-.689.444 0 .854.125 1.205.342l-.528.377c-.201-.06-.414-.094-.635-.094-.658 0-1.208.432-1.388 1.026l-.224-.093c.125-.401.448-.718.868-.847l-.42-.175v.37z" />
-                  </svg>
-                </button>
-
-                {/* Apple */}
-                <button
-                  type="button"
-                  onClick={handleQuickPlay}
-                  title="Đăng nhập bằng Apple ID"
-                  className="w-12 h-10 rounded-xl bg-[#4a383a] hover:bg-[#584346] border border-[#5d4648] flex items-center justify-center transition-all hover:scale-105 active:scale-95 cursor-pointer shadow-sm"
-                >
-                  <svg className="w-4 h-4 fill-white" viewBox="0 0 24 24">
-                    <path d="M18.71 19.5c-.83 1.24-1.71 2.45-3.05 2.47-1.34.03-1.77-.79-3.29-.79-1.53 0-2 .77-3.27.82-1.31.05-2.3-1.32-3.14-2.53C4.25 17 2.94 12.45 4.7 9.39c.87-1.52 2.43-2.48 4.12-2.51 1.28-.02 2.5.87 3.29.87.78 0 2.26-1.07 3.81-.91.65.03 2.47.26 3.64 1.98-.09.06-2.17 1.28-2.15 3.81.03 3.02 2.65 4.03 2.68 4.04-.03.07-.42 1.44-1.38 2.83M15.97 6.37c.62-.75 1.04-1.8 0.92-2.85-.9.04-1.99.6-2.64 1.35-.57.65-1.07 1.72-.94 2.74 1.01.08 2.04-.49 2.66-1.24z" />
-                  </svg>
-                </button>
-              </div>
-
-              {/* Footer Switch (Don't have account? Sign up or Sign in later) */}
-              <div className="text-center text-xs text-[#8e7a7c] pt-2 border-t border-[#463537]">
+              {/* Footer Switch (Don't have account? Sign up / Log in) */}
+              <div className="text-center text-xs text-[#8e7a7c] pt-4 border-t border-[#463537] mt-6">
                 {mode === "login" ? (
                   <span>
                     Don&apos;t have account?{" "}
@@ -393,14 +267,6 @@ export default function AuthScreen() {
                       className="text-[#28c3e1] font-semibold hover:underline cursor-pointer"
                     >
                       Sign up
-                    </button>
-                    {" or "}
-                    <button
-                      type="button"
-                      onClick={handleQuickPlay}
-                      className="text-[#28c3e1] font-semibold hover:underline cursor-pointer"
-                    >
-                      Sign in later
                     </button>
                   </span>
                 ) : (
@@ -415,14 +281,6 @@ export default function AuthScreen() {
                       className="text-[#28c3e1] font-semibold hover:underline cursor-pointer"
                     >
                       Log in
-                    </button>
-                    {" or "}
-                    <button
-                      type="button"
-                      onClick={handleQuickPlay}
-                      className="text-[#28c3e1] font-semibold hover:underline cursor-pointer"
-                    >
-                      Sign in later
                     </button>
                   </span>
                 )}

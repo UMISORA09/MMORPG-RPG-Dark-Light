@@ -20,6 +20,10 @@ tags:
     description: Battle operations
   - name: leaderboard
     description: Leaderboard operations
+  - name: inventory
+    description: Inventory, equipment, and item operations
+  - name: community
+    description: Forum and world chat operations
 
 paths:
   /healthz:
@@ -116,6 +120,37 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/User"
+        "401":
+          description: Not authenticated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /auth/server:
+    post:
+      operationId: selectServer
+      tags: [auth]
+      summary: Save the current account's region and server
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ServerSelectionInput"
+      responses:
+        "200":
+          description: Selected server saved
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ServerSelection"
+        "400":
+          description: Server or region is invalid
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
         "401":
           description: Not authenticated
           content:
@@ -451,6 +486,302 @@ paths:
               schema:
                 $ref: "#/components/schemas/ErrorResponse"
 
+  /characters/{characterId}/inventory/{ownershipId}/enhance:
+    post:
+      operationId: enhanceItem
+      tags: [inventory]
+      summary: Enhance an owned equipment item
+      parameters:
+        - name: characterId
+          in: path
+          required: true
+          schema:
+            type: number
+        - name: ownershipId
+          in: path
+          required: true
+          schema:
+            type: number
+      responses:
+        "200":
+          description: Enhanced item and updated character resources
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EnhanceInventoryResponse"
+        "400":
+          description: Item cannot be enhanced or resources are insufficient
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "401":
+          description: Not authenticated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "404":
+          description: Character or owned item not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /characters/{characterId}/inventory/{ownershipId}/use:
+    post:
+      operationId: useItem
+      tags: [inventory]
+      summary: Use an owned consumable item
+      parameters:
+        - name: characterId
+          in: path
+          required: true
+          schema:
+            type: number
+        - name: ownershipId
+          in: path
+          required: true
+          schema:
+            type: number
+      responses:
+        "200":
+          description: Applied item effect and remaining quantity
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/UseInventoryResponse"
+        "400":
+          description: Item cannot be used
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "401":
+          description: Not authenticated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "404":
+          description: Character or owned item not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /community/posts:
+    get:
+      operationId: getCommunityPosts
+      tags: [community]
+      summary: List forum posts
+      parameters:
+        - name: serverId
+          in: query
+          schema:
+            type: string
+        - name: category
+          in: query
+          schema:
+            type: string
+            enum: [general, build, boss, notice]
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 100
+      responses:
+        "200":
+          description: Forum posts
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/ForumPost"
+    post:
+      operationId: createCommunityPost
+      tags: [community]
+      summary: Create a forum post
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateForumPostInput"
+      responses:
+        "201":
+          description: Post created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ForumPost"
+        "400":
+          description: Invalid content or ownership
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "401":
+          description: Not authenticated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /community/posts/{postId}/like:
+    post:
+      operationId: setCommunityPostLike
+      tags: [community]
+      summary: Set the current user's like state on a post
+      parameters:
+        - name: postId
+          in: path
+          required: true
+          schema:
+            type: number
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ForumLikeInput"
+      responses:
+        "200":
+          description: Like state updated
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [postId, liked, likesCount]
+                properties:
+                  postId: { type: number }
+                  liked: { type: boolean }
+                  likesCount: { type: number }
+        "404":
+          description: Post not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /community/posts/{postId}/comments:
+    get:
+      operationId: getCommunityPostComments
+      tags: [community]
+      summary: List comments on a post
+      parameters:
+        - name: postId
+          in: path
+          required: true
+          schema:
+            type: number
+      responses:
+        "200":
+          description: Post comments
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/ForumComment"
+        "404":
+          description: Post not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+    post:
+      operationId: createCommunityPostComment
+      tags: [community]
+      summary: Comment on a post
+      parameters:
+        - name: postId
+          in: path
+          required: true
+          schema:
+            type: number
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ForumCommentInput"
+      responses:
+        "201":
+          description: Comment created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ForumComment"
+        "404":
+          description: Post not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /community/chats:
+    get:
+      operationId: getWorldChats
+      tags: [community]
+      summary: List world, server, or party chat messages
+      parameters:
+        - name: serverId
+          in: query
+          schema:
+            type: string
+        - name: channel
+          in: query
+          schema:
+            type: string
+            enum: [world, server, party]
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 100
+      responses:
+        "200":
+          description: Chat messages
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/WorldChatMessage"
+    post:
+      operationId: createWorldChat
+      tags: [community]
+      summary: Send a world, server, or party chat message
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateWorldChatInput"
+      responses:
+        "201":
+          description: Chat message created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/WorldChatMessage"
+        "400":
+          description: Invalid message or ownership
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "401":
+          description: Not authenticated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
   /monsters:
     get:
       operationId: getMonsters
@@ -539,6 +870,31 @@ components:
         createdAt:
           type: string
           format: date-time
+        forumTitle:
+          type: string
+        selectedRegion:
+          type: string
+        selectedServerId:
+          type: string
+
+    ServerSelectionInput:
+      type: object
+      required: [serverId, region]
+      properties:
+        serverId:
+          type: string
+        region:
+          type: string
+          enum: [VN, SEA, TEST]
+
+    ServerSelection:
+      type: object
+      required: [selectedRegion, selectedServerId]
+      properties:
+        selectedRegion:
+          type: string
+        selectedServerId:
+          type: string
 
     AuthResponse:
       type: object
@@ -637,34 +993,82 @@ components:
           type: number
         deaths:
           type: number
+        serverId:
+          type: string
+        title:
+          type: string
+        mp:
+          type: number
+        maxMp:
+          type: number
+        matk:
+          type: number
+        mdef:
+          type: number
+        combatPower:
+          type: number
         createdAt:
           type: string
           format: date-time
 
     Item:
       type: object
-      required: [id, name, type, description, rarity, hpBoost, atkBoost, defBoost, spdBoost, price, classId, requiredLevel]
+      required: [id, name, category, type, equipSlot, description, lore, rarity, hpBoost, mpBoost, atkBoost, matkBoost, defBoost, mdefBoost, spdBoost, strBoost, dexBoost, intBoost, lukBoost, vitBoost, critRateBoost, healHpPercent, healMpPercent, price, maxStack, classId, requiredLevel, icon]
       properties:
         id:
           type: string
         name:
           type: string
+        category:
+          type: string
+          enum: [equipment, consumable, material, quest]
         type:
           type: string
-          description: "weapon | armor | accessory"
+          enum: [weapon, armor, accessory, potion, scroll, food, stone, chest]
+        equipSlot:
+          type: string
+          enum: [helm, armor, greaves, boots, pauldrons, gauntlets, main_weapon, off_weapon, earring, amulet, ring, relic, none]
         description:
+          type: string
+        lore:
           type: string
         rarity:
           type: string
         hpBoost:
           type: number
+        mpBoost:
+          type: number
         atkBoost:
+          type: number
+        matkBoost:
           type: number
         defBoost:
           type: number
+        mdefBoost:
+          type: number
         spdBoost:
           type: number
+        strBoost:
+          type: number
+        dexBoost:
+          type: number
+        intBoost:
+          type: number
+        lukBoost:
+          type: number
+        vitBoost:
+          type: number
+        critRateBoost:
+          type: number
+        healHpPercent:
+          type: number
+        healMpPercent:
+          type: number
+        buffType:
+          type: [string, "null"]
         price:
+          type: number
+        maxStack:
           type: number
         classId:
           type: ["string", "null"]
@@ -673,16 +1077,67 @@ components:
         icon:
           type: string
 
+    EnhanceInventoryResponse:
+      type: object
+      required: [character, item]
+      properties:
+        character:
+          type: object
+          required: [id, gold, combatPower]
+          properties:
+            id: { type: number }
+            gold: { type: number }
+            combatPower: { type: number }
+        item:
+          type: object
+          required: [ownershipId, itemId, enhanceLevel, bonusCombatPower]
+          properties:
+            ownershipId: { type: number }
+            itemId: { type: string }
+            enhanceLevel: { type: number }
+            bonusCombatPower: { type: number }
+
+    UseInventoryResponse:
+      type: object
+      required: [character, consumed]
+      properties:
+        character:
+          type: object
+          required: [id, hp, maxHp, mp, maxMp]
+          properties:
+            id: { type: number }
+            hp: { type: number }
+            maxHp: { type: number }
+            mp: { type: number }
+            maxMp: { type: number }
+        consumed:
+          type: object
+          required: [ownershipId, itemId, quantityRemaining]
+          properties:
+            ownershipId: { type: number }
+            itemId: { type: string }
+            quantityRemaining: { type: number }
+
     InventoryItem:
       allOf:
         - $ref: "#/components/schemas/Item"
         - type: object
-          required: [ownershipId, equipped, acquiredAt]
+          required: [ownershipId, equipped, equippedSlot, slotIndex, quantity, enhanceLevel, bonusCombatPower, acquiredAt]
           properties:
             ownershipId:
               type: number
             equipped:
               type: boolean
+            equippedSlot:
+              type: [string, "null"]
+            slotIndex:
+              type: number
+            quantity:
+              type: number
+            enhanceLevel:
+              type: number
+            bonusCombatPower:
+              type: number
             acquiredAt:
               type: string
               format: date-time
@@ -808,3 +1263,95 @@ components:
           type: number
         username:
           type: string
+
+    CreateForumPostInput:
+      type: object
+      required: [title, body]
+      properties:
+        title:
+          type: string
+          minLength: 4
+          maxLength: 120
+        category:
+          type: string
+          enum: [general, build, boss, notice]
+        body:
+          type: string
+          minLength: 1
+          maxLength: 5000
+        characterId:
+          type: number
+        serverId:
+          type: string
+
+    ForumLikeInput:
+      type: object
+      required: [liked]
+      properties:
+        liked:
+          type: boolean
+
+    ForumCommentInput:
+      type: object
+      required: [comment]
+      properties:
+        comment:
+          type: string
+          minLength: 1
+          maxLength: 1000
+
+    CreateWorldChatInput:
+      type: object
+      required: [message]
+      properties:
+        message:
+          type: string
+          minLength: 1
+          maxLength: 240
+        channel:
+          type: string
+          enum: [world, server, party]
+        characterId:
+          type: number
+        serverId:
+          type: string
+
+    ForumPost:
+      type: object
+      required: [id, userId, serverId, title, category, body, likes, createdAt, updatedAt]
+      properties:
+        id: { type: number }
+        userId: { type: number }
+        characterId: { type: [number, "null"] }
+        serverId: { type: string }
+        title: { type: string }
+        category: { type: string }
+        body: { type: string }
+        likes:
+          type: array
+          items: { type: number }
+        createdAt: { type: string, format: date-time }
+        updatedAt: { type: string, format: date-time }
+
+    ForumComment:
+      type: object
+      required: [id, postId, userId, comment, createdAt]
+      properties:
+        id: { type: number }
+        postId: { type: number }
+        userId: { type: number }
+        characterId: { type: [number, "null"] }
+        comment: { type: string }
+        createdAt: { type: string, format: date-time }
+
+    WorldChatMessage:
+      type: object
+      required: [id, userId, serverId, channel, message, createdAt]
+      properties:
+        id: { type: number }
+        userId: { type: number }
+        characterId: { type: [number, "null"] }
+        serverId: { type: string }
+        channel: { type: string, enum: [world, server, party] }
+        message: { type: string }
+        createdAt: { type: string, format: date-time }

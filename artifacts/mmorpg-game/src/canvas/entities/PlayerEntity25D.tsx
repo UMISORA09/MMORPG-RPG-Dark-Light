@@ -1,15 +1,18 @@
-import { memo, useRef, useEffect, useMemo } from "react";
+import { memo, useRef, useEffect } from "react";
 import * as THREE from "three";
 import { useFrame, useThree } from "@react-three/fiber";
+import { Text } from "@react-three/drei";
 import { SpriteBillboard25D } from "../sprites/SpriteBillboard25D";
 import { RPGCharacterModel3D } from "./RPGCharacterModel3D";
-import { createMultiLayerCanvasTexture } from "../sprites/MultiLayerSpriteGenerator";
 import { useGameWorldStore } from "@/stores/useGameWorldStore";
 import { mobileState } from "@/game/mobileControls";
 import { cameraControls, PITCH_MIN, PITCH_MAX } from "@/game/cameraControls";
 import { resolveWorldCollisions } from "../world/worldColliders";
-import { getCharacterBlueprint } from "@/skills";
 import { initInputRouter, getInputState } from "@/game/input/InputRouter";
+import { MountVisual25D } from "./MountVisual25D";
+import { BattlePetCompanion } from "./BattlePetCompanion";
+import { OverheadChatBubble } from "./OverheadChatBubble";
+import { WeaponEnhanceAura } from "./WeaponEnhanceAura";
 
 // Ensure global InputRouter listeners are mounted
 if (typeof window !== "undefined") {
@@ -33,6 +36,17 @@ export const PlayerEntity25D = memo(function PlayerEntity25D() {
   const isInvincible = useGameWorldStore((s) => s.isInvincible);
   const characterRenderMode = useGameWorldStore((s) => s.characterRenderMode);
   const cameraShakeIntensity = useGameWorldStore((s) => s.cameraShakeIntensity);
+  const isStunned = useGameWorldStore((s) => s.isStunned);
+  const slowSpeedMultiplier = useGameWorldStore((s) => s.slowSpeedMultiplier);
+  const hitFlashTimer = useGameWorldStore((s) => s.hitFlashTimer);
+  const playerDebuffs = useGameWorldStore((s) => s.playerDebuffs);
+
+  // Mount, Pet, Aura & Chat
+  const isMounted = useGameWorldStore((s) => s.isMounted);
+  const mountSpeedMultiplier = useGameWorldStore((s) => s.mountSpeedMultiplier);
+  const dismount = useGameWorldStore((s) => s.dismount);
+  const highestEnhanceLevel = useGameWorldStore((s) => s.highestEnhanceLevel);
+  const overheadChatBubble = useGameWorldStore((s) => s.overheadChatBubble);
 
   const updatePlayerPosition = useGameWorldStore((s) => s.updatePlayerPosition);
   const triggerComboAttack = useGameWorldStore((s) => s.triggerComboAttack);
@@ -49,25 +63,6 @@ export const PlayerEntity25D = memo(function PlayerEntity25D() {
   const speed = 7.0;
   const jumpForce = 9.0;
   const gravity = -22.0;
-
-  // Multi-layer procedural texture from blueprint anatomy & gender identity
-  const blueprint = useMemo(() => getCharacterBlueprint(playerClassId), [playerClassId]);
-  const customAnatomyTexture = useMemo(() => {
-    const isFemale = playerGender === "female";
-    const silhouette =
-      isFemale && (blueprint.anatomy.silhouette === "colossus_armored" || blueprint.anatomy.silhouette === "muscular_heavy")
-        ? ("tactical_medium" as const)
-        : blueprint.anatomy.silhouette;
-
-    const anatomy = {
-      ...blueprint.anatomy,
-      silhouette,
-    };
-    return createMultiLayerCanvasTexture({
-      anatomy,
-      frameSize: 128,
-    });
-  }, [blueprint, playerGender]);
 
   useFrame((_, delta) => {
     const dt = Math.min(delta, 0.05);
@@ -92,12 +87,29 @@ export const PlayerEntity25D = memo(function PlayerEntity25D() {
     if (input.back) inputForward -= 1;
     if (input.right) inputRight += 1;
     if (input.left) inputRight -= 1;
+    // If stunned, lock movement and inputs
+    if (isStunned) {
+      mobileState.jump = false;
+      mobileState.attack = false;
+      mobileState.shoot = false;
+    } else {
+      // Keyboard Input (WASD & Arrow Keys) via InputRouter
+      if (input.forward) inputForward += 1;
+      if (input.back) inputForward -= 1;
+      if (input.right) inputRight += 1;
+      if (input.left) inputRight -= 1;
 
     // Mobile Virtual Joystick (joyY < 0 is dragging UP on screen)
     if (joyY < -deadzone) inputForward += -joyY;
     if (joyY > deadzone) inputForward += -joyY;
     if (joyX > deadzone) inputRight += joyX;
     if (joyX < -deadzone) inputRight += joyX;
+      // Mobile Virtual Joystick (joyY < 0 is dragging UP on screen)
+      if (joyY < -deadzone) inputForward += -joyY;
+      if (joyY > deadzone) inputForward += -joyY;
+      if (joyX > deadzone) inputRight += joyX;
+      if (joyX < -deadzone) inputRight += joyX;
+    }
 
     // Normalize diagonal input vector
     const inputMag = Math.hypot(inputForward, inputRight);
@@ -124,7 +136,7 @@ export const PlayerEntity25D = memo(function PlayerEntity25D() {
     else if (moveX > 0.05) facingLeftRef.current = false;
 
     // 3. Jump Physics
-    const wantsJump = (input.jump || mobileState.jump) && isGrounded.current;
+    const wantsJump = !isStunned && (input.jump || mobileState.jump) && isGrounded.current;
     if (wantsJump) {
       velocityY.current = jumpForce;
       isGrounded.current = false;
@@ -140,12 +152,18 @@ export const PlayerEntity25D = memo(function PlayerEntity25D() {
       isGrounded.current = true;
     }
 
-    // Move in X/Z plane smoothly
-    pos.current.x += moveX * speed * dt;
-    pos.current.z += moveZ * speed * dt;
+    // Move in X/Z plane smoothly with slow speed multiplier and Mount Speed (+70%)
+    const effectiveSpeed = speed * (isStunned ? 0 : slowSpeedMultiplier) * (isMounted ? mountSpeedMultiplier : 1.0);
+    pos.current.x += moveX * effectiveSpeed * dt;
+    pos.current.z += moveZ * effectiveSpeed * dt;
 
     // 4. Attack Execution (Left Mouse Click or J Combo Chain)
-    const wantsAttack = input.attack || mobileState.attack || mobileState.shoot;
+    const wantsAttack = !isStunned && (input.attack || mobileState.attack || mobileState.shoot);
+
+    // Auto-dismount when attacking or taking damage
+    if (isMounted && (wantsAttack || hitFlashTimer > 0)) {
+      dismount();
+    }
 
     let currentAnim: import("../sprites/SpriteBillboard25D").EntityAnimationState = "idle";
 
@@ -160,7 +178,9 @@ export const PlayerEntity25D = memo(function PlayerEntity25D() {
       }
     }
 
-    if (animLockTimer.current > 0) {
+    if (isStunned) {
+      currentAnim = "hurt";
+    } else if (animLockTimer.current > 0) {
       if (!isGrounded.current) {
         currentAnim = "air_attack";
       } else {
@@ -206,6 +226,51 @@ export const PlayerEntity25D = memo(function PlayerEntity25D() {
 
   return (
     <group>
+      {/* Mount Visual (Horse / Wolf / Dragon) when Mounted */}
+      {isMounted && (
+        <MountVisual25D
+          position={playerPosition}
+          facingLeft={playerFacingLeft}
+          isRunning={playerAnimState === "run"}
+        />
+      )}
+
+      {/* Auto-Magnet Loot Pet Companion */}
+      <BattlePetCompanion />
+
+      {/* Weapon Enhancement Particle Aura (+7 to +15) */}
+      {highestEnhanceLevel >= 7 && (
+        <WeaponEnhanceAura
+          enhanceLevel={highestEnhanceLevel}
+          position={playerPosition}
+        />
+      )}
+
+      {/* Overhead Chat Speech Bubble */}
+      {overheadChatBubble && (
+        <OverheadChatBubble
+          message={overheadChatBubble}
+          position={playerPosition}
+        />
+      )}
+
+      {/* Slow Ground Frost Swirl */}
+      {slowSpeedMultiplier < 0.95 && (
+        <mesh position={[playerPosition.x, 0.03, playerPosition.z]} rotation={[-Math.PI / 2, 0, 0]}>
+          <ringGeometry args={[0.6, 1.4, 24]} />
+          <meshBasicMaterial color="#38bdf8" transparent opacity={0.65} depthWrite={false} side={THREE.DoubleSide} />
+        </mesh>
+      )}
+
+      {/* Stun Overhead Spinning Stars */}
+      {isStunned && (
+        <group position={[playerPosition.x, playerPosition.y + 2.35, playerPosition.z]}>
+          <Text fontSize={0.28} anchorX="center" anchorY="middle" outlineWidth={0.03} outlineColor="#000000">
+            💫 ✨ 💫
+          </Text>
+        </group>
+      )}
+
       {characterRenderMode === "3d_model" ? (
         <group position={playerPosition}>
           <RPGCharacterModel3D
@@ -225,13 +290,12 @@ export const PlayerEntity25D = memo(function PlayerEntity25D() {
           />
         </group>
       ) : (
-        /* 2.5D Billboard Sprite for Player with Multi-Layer Cel-Shading */
+        /* 2.5D Billboard Sprite for Player with High-Contrast Pixel Chibi Art & Foot Halo */
         <SpriteBillboard25D
           position={playerPosition}
           state={playerAnimState}
           facingLeft={playerFacingLeft}
           textureKey={`player_${playerClassId}`}
-          customTexture={customAnatomyTexture}
           color={playerColorHex}
           weaponType={
             playerClassId === "gunner"
@@ -248,6 +312,8 @@ export const PlayerEntity25D = memo(function PlayerEntity25D() {
           maxHp={playerMaxHealth}
           isPlayer={true}
           isInvincible={isInvincible}
+          hitFlash={hitFlashTimer > 0}
+          debuffBadges={playerDebuffs.map((d) => d.icon)}
         />
       )}
     </group>

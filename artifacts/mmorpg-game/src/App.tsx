@@ -4,6 +4,7 @@ import { TooltipProvider } from '@/components/ui/tooltip';
 import NotFound from '@/pages/not-found';
 import AuthScreen from '@/pages/AuthScreen';
 import CharacterSelectScreen from '@/pages/CharacterSelectScreen';
+import CommunityPortalScreen from '@/pages/CommunityPortalScreen';
 import GamePage from '@/pages/game';
 import { Route, Switch, Router as WouterRouter } from 'wouter';
 
@@ -22,6 +23,7 @@ function Router() {
       <Route path="/" component={AuthScreen} />
       <Route path="/login" component={AuthScreen} />
       <Route path="/register" component={AuthScreen} />
+      <Route path="/portal" component={CommunityPortalScreen} />
       <Route path="/characters" component={CharacterSelectScreen} />
       <Route path="/select-class" component={CharacterSelectScreen} />
       <Route path="/game" component={GamePage} />

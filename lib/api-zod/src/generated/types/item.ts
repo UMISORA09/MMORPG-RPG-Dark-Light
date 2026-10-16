@@ -5,21 +5,40 @@
  * 2D Mobile MMORPG API
  * OpenAPI spec version: 0.1.0
  */
+import type { ItemCategory } from './itemCategory';
+import type { ItemEquipSlot } from './itemEquipSlot';
+import type { ItemType } from './itemType';
 
 export interface Item {
   id: string;
   name: string;
-  /** weapon | armor | accessory */
-  type: string;
+  category: ItemCategory;
+  type: ItemType;
+  equipSlot: ItemEquipSlot;
   description: string;
+  lore: string;
   rarity: string;
   hpBoost: number;
+  mpBoost: number;
   atkBoost: number;
+  matkBoost: number;
   defBoost: number;
+  mdefBoost: number;
   spdBoost: number;
+  strBoost: number;
+  dexBoost: number;
+  intBoost: number;
+  lukBoost: number;
+  vitBoost: number;
+  critRateBoost: number;
+  healHpPercent: number;
+  healMpPercent: number;
+  /** @nullable */
+  buffType?: string | null;
   price: number;
+  maxStack: number;
   /** @nullable */
   classId: string | null;
   requiredLevel: number;
-  icon?: string;
+  icon: string;
 }

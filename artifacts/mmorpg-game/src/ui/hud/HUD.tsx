@@ -124,10 +124,10 @@ const HUD = memo(function HUD({ onLogout }: HUDProps) {
           <button
             onClick={() => setActiveModal("inventory")}
             className="flex items-center gap-1.5 px-3 py-2 bg-slate-950/80 hover:bg-slate-900 border border-slate-700 hover:border-cyan-400 rounded-xl text-slate-200 hover:text-cyan-300 text-xs font-bold transition shadow-lg backdrop-blur-md cursor-pointer"
-            title="Túi Đồ (Phím I)"
+            title="Hành Trang (Phím B hoặc I)"
           >
             <Backpack className="w-4 h-4 text-cyan-400" />
-            <span className="hidden sm:inline">Túi Đồ</span>
+            <span className="hidden sm:inline">Hành Trang</span>
           </button>
 
           {/* Shop Button */}
@@ -200,12 +200,12 @@ const HUD = memo(function HUD({ onLogout }: HUDProps) {
 
           <div className="w-[1px] h-10 bg-slate-800 mx-1" />
 
-          {/* Skill 1 [1] */}
+          {/* Skill 1 [1/Q] */}
           <div className="flex flex-col items-center">
             <button
               onClick={() => triggerSkill(1)}
               className="w-12 h-12 bg-purple-950/60 hover:bg-purple-900/80 border border-purple-500/60 rounded-xl flex items-center justify-center text-purple-300 font-black text-sm relative transition shadow-md active:scale-95 cursor-pointer"
-              title="Chiêu 1 [1]"
+              title="Chiêu 1 [1 / Q]"
             >
               {player.skillCooldowns?.skill1 > 0 ? (
                 <span className="text-amber-400 font-mono font-extrabold text-base">
@@ -215,15 +215,15 @@ const HUD = memo(function HUD({ onLogout }: HUDProps) {
                 <Zap className="w-5 h-5 text-purple-400" />
               )}
             </button>
-            <span className="text-[10px] text-slate-400 mt-1 font-mono font-bold">[1] Chiêu 1</span>
+            <span className="text-[10px] text-slate-400 mt-1 font-mono font-bold">[1/Q] Chiêu 1</span>
           </div>
 
-          {/* Skill 2 [2] */}
+          {/* Skill 2 [2/E] */}
           <div className="flex flex-col items-center">
             <button
               onClick={() => triggerSkill(2)}
               className="w-12 h-12 bg-blue-950/60 hover:bg-blue-900/80 border border-blue-500/60 rounded-xl flex items-center justify-center text-blue-300 font-black text-sm relative transition shadow-md active:scale-95 cursor-pointer"
-              title="Chiêu 2 [2]"
+              title="Chiêu 2 [2 / E]"
             >
               {player.skillCooldowns?.skill2 > 0 ? (
                 <span className="text-amber-400 font-mono font-extrabold text-base">
@@ -233,15 +233,15 @@ const HUD = memo(function HUD({ onLogout }: HUDProps) {
                 <Shield className="w-5 h-5 text-blue-400" />
               )}
             </button>
-            <span className="text-[10px] text-slate-400 mt-1 font-mono font-bold">[2] Chiêu 2</span>
+            <span className="text-[10px] text-slate-400 mt-1 font-mono font-bold">[2/E] Chiêu 2</span>
           </div>
 
-          {/* Skill 3 [3] Ultimate */}
+          {/* Skill 3 [3/R] Ultimate */}
           <div className="flex flex-col items-center">
             <button
               onClick={() => triggerSkill(3)}
               className="w-12 h-12 bg-amber-950/60 hover:bg-amber-900/80 border border-amber-500/60 rounded-xl flex items-center justify-center text-amber-300 font-black text-sm relative transition shadow-md active:scale-95 cursor-pointer"
-              title="Nộ Long Tuyệt Kỹ [3]"
+              title="Nộ Long Tuyệt Kỹ [3 / R]"
             >
               {player.skillCooldowns?.skill3 > 0 ? (
                 <span className="text-amber-400 font-mono font-extrabold text-base">
@@ -251,7 +251,7 @@ const HUD = memo(function HUD({ onLogout }: HUDProps) {
                 <Sparkles className="w-5 h-5 text-amber-400 animate-spin" />
               )}
             </button>
-            <span className="text-[10px] text-amber-400 mt-1 font-mono font-bold">[3] Nộ Tuyệt</span>
+            <span className="text-[10px] text-amber-400 mt-1 font-mono font-bold">[3/R] Nộ Tuyệt</span>
           </div>
         </div>
       </div>

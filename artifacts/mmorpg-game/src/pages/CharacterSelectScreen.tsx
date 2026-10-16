@@ -27,7 +27,9 @@ import {
   Coins,
   Skull,
   Award,
+  Globe2,
 } from "lucide-react";
+import { REGIONS, SERVERS, useCommunityPortalStore } from "@/stores/useCommunityPortalStore";
 
 const CLASS_CONFIG: Record<string, { name: string; color: string; border: string; glow: string; icon: any }> = {
   tank: {
@@ -64,6 +66,13 @@ export default function CharacterSelectScreen() {
   const [, setLocation] = useLocation();
   const { toast } = useToast();
   const queryClient = useQueryClient();
+  const assignCharacterToRealm = useCommunityPortalStore((state) => state.assignCharacterToRealm);
+  const launchRequested = useCommunityPortalStore((state) => state.launchRequested);
+  const setLaunchRequested = useCommunityPortalStore((state) => state.setLaunchRequested);
+  const selectedRegion = useCommunityPortalStore((state) => state.selectedRegion);
+  const selectedServer = useCommunityPortalStore((state) => state.selectedServer);
+  const regionInfo = REGIONS.find((region) => region.id === selectedRegion) ?? REGIONS[0];
+  const serverInfo = SERVERS.find((server) => server.id === selectedServer) ?? SERVERS[0];
 
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [hoveredCharId, setHoveredCharId] = useState<number | null>(null);
@@ -83,11 +92,15 @@ export default function CharacterSelectScreen() {
   useEffect(() => {
     if (!userLoading && !user) {
       setLocation("/");
+    } else if (!userLoading && user && !launchRequested) {
+      setLocation("/portal");
     }
-  }, [user, userLoading, setLocation]);
+  }, [user, userLoading, launchRequested, setLocation]);
 
   // Action: Enter game with specific character
   const handleSelectCharacter = (char: Character) => {
+    assignCharacterToRealm(char.id);
+    setLaunchRequested(false);
     if (typeof window !== "undefined") {
       localStorage.setItem("selectedCharacterId", String(char.id));
       const gender = (char as any).gender || "male";
@@ -159,6 +172,20 @@ export default function CharacterSelectScreen() {
 
         {/* User Info & Actions */}
         <div className="flex items-center gap-3 sm:gap-4">
+          <div className="hidden border border-[#5d4648] bg-[#4a383a] px-3 py-1.5 text-[10px] sm:block">
+            <span className="text-[#8e7a7c]">{regionInfo.shortName}</span>
+            <span className="mx-1 text-[#28c3e1]">/</span>
+            <span className="font-bold text-white">{serverInfo.code} · {serverInfo.name}</span>
+          </div>
+          <button
+            type="button"
+            onClick={() => setLocation("/portal")}
+            className="font-sans flex items-center gap-1.5 rounded-full border border-[#5d4648] bg-[#4a383a] px-3 py-2 text-[10px] font-bold text-white transition hover:border-[#28c3e1] hover:text-[#28c3e1]"
+          >
+            <Globe2 className="h-3.5 w-3.5" />
+            <span className="hidden md:inline">Về Trang Chủ / Đổi Server</span>
+            <span className="md:hidden">Đổi Server</span>
+          </button>
           <div className="font-sans hidden sm:flex items-center gap-2 px-3.5 py-1.5 rounded-xl bg-[#4a383a] border border-[#5d4648] text-xs">
             <User className="w-3.5 h-3.5 text-[#28c3e1]" />
             <span className="text-[#8e7a7c]">Đại hiệp:</span>
@@ -225,7 +252,7 @@ export default function CharacterSelectScreen() {
               {/* Subtle badge on bottom */}
               <div className="absolute bottom-4 left-4 z-10 pointer-events-none">
                 <span className="font-sans text-[10px] text-[#28c3e1] font-bold tracking-widest uppercase drop-shadow-[0_1px_2px_rgba(0,0,0,0.9)]">
-                  ⚔️ Sát Thủ Bóng Tối (Assassin)
+                  🐉 Chiến Long Bá — Hành Trình Huyền Thoại
                 </span>
               </div>
             </div>

@@ -1,0 +1,15 @@
+{
+	"version": "2.0.0",
+	"tasks": [
+		{
+			"label": "Build all project",
+			"type": "shell",
+			"command": "cd \"c:/Cassavas/Game2.5D\" && pnpm run build:all",
+			"isBackground": false,
+			"problemMatcher": [
+				"$tsc"
+			],
+			"group": "build"
+		}
+	]
+}

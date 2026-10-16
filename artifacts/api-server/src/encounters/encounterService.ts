@@ -12,13 +12,12 @@ import {
   rewardGrantsTable,
 } from "@workspace/db";
 import { eq, and } from "drizzle-orm";
-import { MONSTERS } from "../data/classes";
 import {
-  getAuthoritativeMonsterReward,
   calculateLevelProgression,
   getStatsForLevel,
 } from "../rules/combatRules";
-import { toCharacterResponse } from "../lib/inventory";
+import { getMonster } from "../lib/inventory";
+import { recalculateCharacterStats } from "../services/CharacterInventoryService";
 import { EncounterEngine } from "./encounterEngine";
 import type {
   EncounterSnapshotPacket,
@@ -62,9 +61,8 @@ export class EncounterService {
     }
 
     // 2. Tra cứu quái vật hợp lệ
-    const monsterReward = getAuthoritativeMonsterReward(monsterId);
-    const rawMonster = MONSTERS.find((m) => m.id === monsterId);
-    if (!monsterReward || !rawMonster) {
+    const rawMonster = await getMonster(monsterId);
+    if (!rawMonster) {
       const err: any = new Error("Quái vật không tồn tại trong danh mục hệ thống");
       err.statusCode = 422;
       throw err;
@@ -269,7 +267,8 @@ export class EncounterService {
       .where(eq(charactersTable.id, encounter.characterId))
       .limit(1);
 
-    const monsterReward = getAuthoritativeMonsterReward(encounter.monsterId)!;
+    const monsterReward = await getMonster(encounter.monsterId);
+    if (!monsterReward) throw new Error("Không tìm thấy quái vật của encounter");
     const isVictory = outcome === "victory";
 
     let expGained = 0;
@@ -296,7 +295,7 @@ export class EncounterService {
     const newStats = getStatsForLevel(character.classId, newLevel);
 
     // 1. Cập nhật nhân vật
-    const [updatedChar] = await db
+    const [updatedBaseCharacter] = await db
       .update(charactersTable)
       .set({
         level: newLevel,
@@ -312,6 +311,8 @@ export class EncounterService {
       })
       .where(eq(charactersTable.id, character.id))
       .returning();
+    if (!updatedBaseCharacter) throw new Error("Không thể cập nhật nhân vật sau encounter");
+    const updatedChar = await recalculateCharacterStats(updatedBaseCharacter.id);
 
     // 2. Ghi nhận Battle Log liên kết với encounterId
     const [battleLog] = await db
@@ -320,7 +321,7 @@ export class EncounterService {
         characterId: character.id,
         encounterId,
         monsterId: encounter.monsterId,
-        monsterName: monsterReward.monsterName,
+        monsterName: monsterReward.name,
         victory: isVictory,
         expGained,
         goldGained,

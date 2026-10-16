@@ -4,24 +4,28 @@ import {
   characterItemsTable,
   charactersTable,
   itemsTable,
+  monstersTable,
+  serversTable,
+  SEED_WORLD_MONSTERS,
+  SEED_SERVERS,
   type Character,
   type Item,
 } from "@workspace/db";
-import { getStatsForLevel } from "../data/classes";
 import { ITEM_CATALOG } from "../data/items";
+import { recalculateCharacterStats } from "../services/CharacterInventoryService";
 
-export type EquipmentBonuses = {
-  hpBoost: number;
-  atkBoost: number;
-  defBoost: number;
-  spdBoost: number;
-};
+let itemCatalogReady = false;
+let monsterCatalogReady = false;
+let serverCatalogReady = false;
 
 export async function ensureItemCatalog(): Promise<void> {
-  await db
-    .insert(itemsTable)
-    .values(ITEM_CATALOG)
-    .onConflictDoNothing({ target: itemsTable.id });
+  if (itemCatalogReady) return;
+  for (const item of ITEM_CATALOG) {
+    const { id, ...updates } = item;
+    await db.insert(itemsTable).values(item)
+      .onConflictDoUpdate({ target: itemsTable.id, set: updates });
+  }
+  itemCatalogReady = true;
 }
 
 export async function ensureStarterInventory(characterId: number, classId: string): Promise<void> {
@@ -35,8 +39,8 @@ export async function ensureStarterInventory(characterId: number, classId: strin
     return;
   }
 
-  const starterItems = ITEM_CATALOG.filter(
-    (item) => item.classId === classId && item.requiredLevel === 1 && item.price === 0,
+  const starterItems = ITEM_CATALOG.filter((item) =>
+    item.id.startsWith("starter-") && item.classId === classId && item.requiredLevel === 1,
   );
 
   if (starterItems.length === 0) {
@@ -44,55 +48,19 @@ export async function ensureStarterInventory(characterId: number, classId: strin
   }
 
   await db.insert(characterItemsTable).values(
-    starterItems.map((item) => ({
+    starterItems.map((item, slotIndex) => ({
       characterId,
       itemId: item.id,
       equipped: true,
+      equippedSlot: item.equipSlot ?? "none",
+      slotIndex,
+      quantity: 1,
     })),
   ).onConflictDoNothing();
 }
 
-export async function getEquipmentBonuses(characterId: number): Promise<EquipmentBonuses> {
-  const rows = await db
-    .select({
-      hpBoost: itemsTable.hpBoost,
-      atkBoost: itemsTable.atkBoost,
-      defBoost: itemsTable.defBoost,
-      spdBoost: itemsTable.spdBoost,
-    })
-    .from(characterItemsTable)
-    .innerJoin(itemsTable, eq(characterItemsTable.itemId, itemsTable.id))
-    .where(
-      and(
-        eq(characterItemsTable.characterId, characterId),
-        eq(characterItemsTable.equipped, true),
-      ),
-    );
-
-  return rows.reduce(
-    (bonuses: EquipmentBonuses, item: any) => ({
-      hpBoost: bonuses.hpBoost + (item.hpBoost || 0),
-      atkBoost: bonuses.atkBoost + (item.atkBoost || 0),
-      defBoost: bonuses.defBoost + (item.defBoost || 0),
-      spdBoost: bonuses.spdBoost + (item.spdBoost || 0),
-    }),
-    { hpBoost: 0, atkBoost: 0, defBoost: 0, spdBoost: 0 },
-  );
-}
-
 export async function toCharacterResponse(character: Character) {
-  const baseStats = getStatsForLevel(character.classId, character.level);
-  const bonuses = await getEquipmentBonuses(character.id);
-  const maxHp = baseStats.hp + bonuses.hpBoost;
-
-  return {
-    ...character,
-    hp: Math.min(Math.max(character.hp + bonuses.hpBoost, 0), maxHp),
-    maxHp,
-    atk: baseStats.atk + bonuses.atkBoost,
-    def: baseStats.def + bonuses.defBoost,
-    spd: Math.max(1, baseStats.spd + bonuses.spdBoost),
-  };
+  return recalculateCharacterStats(character.id);
 }
 
 export async function listInventory(characterId: number) {
@@ -119,19 +87,40 @@ export async function listInventory(characterId: number) {
       return {
         id: it.id,
         name: it.name || "Vật phẩm",
+        category: it.category ?? "equipment",
         type: it.type || "weapon",
+        equipSlot: it.equipSlot ?? it.equip_slot ?? "none",
         description: it.description || "",
+        lore: it.lore ?? "",
         rarity: it.rarity || "common",
         hpBoost: it.hpBoost ?? it.hp_boost ?? 0,
+        mpBoost: it.mpBoost ?? it.mp_boost ?? 0,
         atkBoost: it.atkBoost ?? it.atk_boost ?? 0,
+        matkBoost: it.matkBoost ?? it.matk_boost ?? 0,
         defBoost: it.defBoost ?? it.def_boost ?? 0,
+        mdefBoost: it.mdefBoost ?? it.mdef_boost ?? 0,
         spdBoost: it.spdBoost ?? it.spd_boost ?? 0,
+        strBoost: it.strBoost ?? it.str_boost ?? 0,
+        dexBoost: it.dexBoost ?? it.dex_boost ?? 0,
+        intBoost: it.intBoost ?? it.int_boost ?? 0,
+        lukBoost: it.lukBoost ?? it.luk_boost ?? 0,
+        vitBoost: it.vitBoost ?? it.vit_boost ?? 0,
+        critRateBoost: it.critRateBoost ?? it.crit_rate_boost ?? 0,
+        healHpPercent: it.healHpPercent ?? it.heal_hp_percent ?? 0,
+        healMpPercent: it.healMpPercent ?? it.heal_mp_percent ?? 0,
+        buffType: it.buffType ?? it.buff_type ?? null,
         price: it.price ?? 0,
+        maxStack: it.maxStack ?? it.max_stack ?? 99,
         classId: it.classId ?? it.class_id ?? null,
         requiredLevel: it.requiredLevel ?? it.required_level ?? 1,
         icon: it.icon || "◇",
         ownershipId,
         equipped,
+        equippedSlot: row.equippedSlot ?? row.equipped_slot ?? null,
+        slotIndex: row.slotIndex ?? row.slot_index ?? 0,
+        quantity: row.quantity ?? 1,
+        enhanceLevel: row.enhanceLevel ?? row.enhance_level ?? 0,
+        bonusCombatPower: row.bonusCombatPower ?? row.bonus_combat_power ?? 0,
         acquiredAt: typeof acquiredAt === "string" ? acquiredAt : acquiredAt.toISOString(),
       };
     })
@@ -191,10 +180,76 @@ export function canUseItem(item: Item, character: Character): string | null {
   if (item.requiredLevel > character.level) {
     return `Cần đạt cấp ${item.requiredLevel} để sử dụng`;
   }
+  if (item.category === "equipment" && item.equipSlot === "none") {
+    return "Trang bị chưa được gán ô mặc hợp lệ";
+  }
   return null;
 }
 
 export async function getCatalogItems(): Promise<Item[]> {
   await ensureItemCatalog();
-  return db.select().from(itemsTable);
+  const rows = await db.select().from(itemsTable);
+  return rows.map((it: any) => ({
+    ...it,
+    category: it.category ?? (it.type === "weapon" || it.type === "armor" || it.type === "accessory" ? "equipment" : "consumable"),
+    type: it.type || "weapon",
+    equipSlot: it.equipSlot ?? it.equip_slot ?? (it.type === "weapon" ? "main_weapon" : it.type === "armor" ? "armor" : "none"),
+    description: it.description || "",
+    lore: it.lore ?? it.description ?? "",
+    rarity: it.rarity || "common",
+    hpBoost: it.hpBoost ?? it.hp_boost ?? 0,
+    mpBoost: it.mpBoost ?? it.mp_boost ?? 0,
+    atkBoost: it.atkBoost ?? it.atk_boost ?? 0,
+    matkBoost: it.matkBoost ?? it.matk_boost ?? 0,
+    defBoost: it.defBoost ?? it.def_boost ?? 0,
+    mdefBoost: it.mdefBoost ?? it.mdef_boost ?? 0,
+    spdBoost: it.spdBoost ?? it.spd_boost ?? 0,
+    strBoost: it.strBoost ?? it.str_boost ?? 0,
+    dexBoost: it.dexBoost ?? it.dex_boost ?? 0,
+    intBoost: it.intBoost ?? it.int_boost ?? 0,
+    lukBoost: it.lukBoost ?? it.luk_boost ?? 0,
+    vitBoost: it.vitBoost ?? it.vit_boost ?? 0,
+    critRateBoost: it.critRateBoost ?? it.crit_rate_boost ?? 0,
+    healHpPercent: it.healHpPercent ?? it.heal_hp_percent ?? 0,
+    healMpPercent: it.healMpPercent ?? it.heal_mp_percent ?? 0,
+    buffType: it.buffType ?? it.buff_type ?? null,
+    price: it.price ?? 0,
+    maxStack: it.maxStack ?? it.max_stack ?? 99,
+    classId: it.classId ?? it.class_id ?? null,
+    requiredLevel: it.requiredLevel ?? it.required_level ?? 1,
+    icon: it.icon || "◇",
+  })) as Item[];
+}
+
+export async function ensureMonsterCatalog(): Promise<void> {
+  if (monsterCatalogReady) return;
+  for (const monster of SEED_WORLD_MONSTERS) {
+    const { sortOrder: _sortOrder, ...row } = monster;
+    await db.insert(monstersTable).values(row)
+      .onConflictDoUpdate({ target: monstersTable.id, set: row });
+  }
+  monsterCatalogReady = true;
+}
+
+export async function getMonster(monsterId: string) {
+  await ensureMonsterCatalog();
+  const [monster] = await db.select().from(monstersTable)
+    .where(eq(monstersTable.id, monsterId)).limit(1);
+  return monster;
+}
+
+export async function getCatalogMonsters() {
+  await ensureMonsterCatalog();
+  const monsters = await db.select().from(monstersTable);
+  return monsters.sort((left: any, right: any) => left.level - right.level);
+}
+
+export async function ensureServerCatalog(): Promise<void> {
+  if (serverCatalogReady) return;
+  for (const server of SEED_SERVERS) {
+    const { id, ...updates } = server;
+    await db.insert(serversTable).values(server)
+      .onConflictDoUpdate({ target: serversTable.id, set: updates });
+  }
+  serverCatalogReady = true;
 }

@@ -23,8 +23,27 @@ class CombatSoundSynthesizer {
     return this.ctx;
   }
 
+  constructor() {
+    if (typeof window !== "undefined") {
+      this.isMuted = localStorage.getItem("game_sound_muted") === "true";
+    }
+  }
+
   public setMuted(muted: boolean) {
     this.isMuted = muted;
+    if (typeof window !== "undefined") {
+      localStorage.setItem("game_sound_muted", muted ? "true" : "false");
+    }
+  }
+
+  public toggleMute(): boolean {
+    const next = !this.isMuted;
+    this.setMuted(next);
+    return next;
+  }
+
+  public isMutedState(): boolean {
+    return this.isMuted;
   }
 
   public play(preset: SFXSynthPreset, volume: number = 0.35) {
@@ -52,6 +71,12 @@ class CombatSoundSynthesizer {
           break;
         case "coin_chime":
           this.synthesizeCoinChime(ctx, now, volume);
+          break;
+        case "loot_drop":
+          this.synthesizeLootDrop(ctx, now, volume);
+          break;
+        case "rarity_chime":
+          this.synthesizeRarityChime(ctx, now, volume);
           break;
         case "level_up_fanfare":
           this.synthesizeLevelUpFanfare(ctx, now, volume);
@@ -245,10 +270,72 @@ class CombatSoundSynthesizer {
       osc.stop(startT + 0.65);
     });
   }
+
+  // ── Loot Drop: Metallic item ground impact & resonance ────────────────────
+  private synthesizeLootDrop(ctx: AudioContext, t: number, vol: number) {
+    const osc1 = ctx.createOscillator();
+    const gain1 = ctx.createGain();
+    osc1.type = "sine";
+    osc1.frequency.setValueAtTime(1480, t);
+    osc1.frequency.exponentialRampToValueAtTime(880, t + 0.12);
+    gain1.gain.setValueAtTime(vol * 0.75, t);
+    gain1.gain.exponentialRampToValueAtTime(0.001, t + 0.14);
+    osc1.connect(gain1);
+    gain1.connect(ctx.destination);
+    osc1.start(t);
+    osc1.stop(t + 0.15);
+
+    const osc2 = ctx.createOscillator();
+    const gain2 = ctx.createGain();
+    osc2.type = "triangle";
+    osc2.frequency.setValueAtTime(1175, t + 0.05);
+    osc2.frequency.exponentialRampToValueAtTime(660, t + 0.18);
+    gain2.gain.setValueAtTime(vol * 0.6, t + 0.05);
+    gain2.gain.exponentialRampToValueAtTime(0.001, t + 0.22);
+    osc2.connect(gain2);
+    gain2.connect(ctx.destination);
+    osc2.start(t + 0.05);
+    osc2.stop(t + 0.23);
+  }
+
+  // ── Rarity Chime: Shimmering celestial harmony for Epic / Legendary ────────
+  private synthesizeRarityChime(ctx: AudioContext, t: number, vol: number) {
+    const notes = [1046.5, 1318.5, 1567.98, 2093.0, 2637.0]; // C6, E6, G6, C7, E7
+    notes.forEach((freq, idx) => {
+      const startT = t + idx * 0.05;
+      const osc = ctx.createOscillator();
+      const gain = ctx.createGain();
+
+      osc.type = "sine";
+      osc.frequency.setValueAtTime(freq, startT);
+
+      const decay = 0.65 + idx * 0.15;
+      gain.gain.setValueAtTime((vol * 0.7) / (1 + idx * 0.2), startT);
+      gain.gain.exponentialRampToValueAtTime(0.001, startT + decay);
+
+      osc.connect(gain);
+      gain.connect(ctx.destination);
+
+      osc.start(startT);
+      osc.stop(startT + decay + 0.05);
+    });
+  }
 }
 
 export const combatSoundSynth = new CombatSoundSynthesizer();
 
 export function playCombatSFX(preset: SFXSynthPreset, volume: number = 0.35) {
   combatSoundSynth.play(preset, volume);
+}
+
+export function isAudioMuted(): boolean {
+  return combatSoundSynth.isMutedState();
+}
+
+export function toggleAudioMute(): boolean {
+  return combatSoundSynth.toggleMute();
+}
+
+export function setAudioMuted(muted: boolean): void {
+  combatSoundSynth.setMuted(muted);
 }

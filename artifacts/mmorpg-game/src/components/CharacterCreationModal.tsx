@@ -40,10 +40,10 @@ const CLASS_ROLES = [
     bgGradient: "from-amber-600/30 to-yellow-900/40",
     borderColor: "border-amber-500/50",
     glowColor: "rgba(255, 215, 0, 0.4)",
-    baseHp: 1400,
-    baseAtk: 60,
-    baseDef: 120,
-    baseSpd: 55,
+    baseHp: 320,
+    baseAtk: 16,
+    baseDef: 14,
+    baseSpd: 10,
     passive: "Giáp Long Cốt: Giảm 30% sát thương nhận vào, tự động kích hoạt làn sóng thần thánh phản đòn khi bị tấn công.",
   },
   {
@@ -56,10 +56,10 @@ const CLASS_ROLES = [
     bgGradient: "from-rose-600/30 to-red-900/40",
     borderColor: "border-rose-500/50",
     glowColor: "rgba(255, 51, 102, 0.4)",
-    baseHp: 950,
-    baseAtk: 95,
-    baseDef: 70,
-    baseSpd: 70,
+    baseHp: 260,
+    baseAtk: 22,
+    baseDef: 10,
+    baseSpd: 11,
     passive: "Nộ Huyết: Đòn đánh liên hoàn thứ 3 kích hoạt cú đấm lôi đình bộc phá diện rộng và hồi phục sinh lực.",
   },
   {
@@ -72,10 +72,10 @@ const CLASS_ROLES = [
     bgGradient: "from-purple-600/30 to-indigo-950/40",
     borderColor: "border-purple-500/50",
     glowColor: "rgba(157, 78, 221, 0.4)",
-    baseHp: 650,
-    baseAtk: 125,
-    baseDef: 40,
-    baseSpd: 110,
+    baseHp: 200,
+    baseAtk: 26,
+    baseDef: 6,
+    baseSpd: 13,
     passive: "Bộ Pháp Bóng Tối: Tăng 20% tốc độ di chuyển cơ bản và 40% tỷ lệ sát thương chí mạng khi tấn công từ phía sau.",
   },
   {
@@ -88,10 +88,10 @@ const CLASS_ROLES = [
     bgGradient: "from-cyan-600/30 to-blue-950/40",
     borderColor: "border-cyan-500/50",
     glowColor: "rgba(0, 242, 255, 0.4)",
-    baseHp: 750,
-    baseAtk: 110,
-    baseDef: 45,
-    baseSpd: 85,
+    baseHp: 210,
+    baseAtk: 24,
+    baseDef: 7,
+    baseSpd: 12,
     passive: "Hỏa Lực Kép: Bắn đạn kép tự động đẩy lùi kẻ địch khi tấn công thường và sạc thanh năng lượng công nghệ.",
   },
 ];
@@ -334,7 +334,7 @@ export function CharacterCreationModal({ isOpen, onClose, onCharacterCreated }: 
                         <motion.div
                           className="h-full bg-gradient-to-r from-rose-500 to-red-400"
                           initial={{ width: 0 }}
-                          animate={{ width: `${Math.min(100, (currentClass.baseHp / 1500) * 100)}%` }}
+                          animate={{ width: `${Math.min(100, (currentClass.baseHp / 360) * 100)}%` }}
                         />
                       </div>
                     </div>
@@ -351,7 +351,7 @@ export function CharacterCreationModal({ isOpen, onClose, onCharacterCreated }: 
                         <motion.div
                           className="h-full bg-gradient-to-r from-amber-500 to-yellow-400"
                           initial={{ width: 0 }}
-                          animate={{ width: `${Math.min(100, (currentClass.baseAtk / 130) * 100)}%` }}
+                          animate={{ width: `${Math.min(100, (currentClass.baseAtk / 30) * 100)}%` }}
                         />
                       </div>
                     </div>
@@ -368,7 +368,7 @@ export function CharacterCreationModal({ isOpen, onClose, onCharacterCreated }: 
                         <motion.div
                           className="h-full bg-gradient-to-r from-blue-500 to-cyan-400"
                           initial={{ width: 0 }}
-                          animate={{ width: `${Math.min(100, (currentClass.baseDef / 130) * 100)}%` }}
+                          animate={{ width: `${Math.min(100, (currentClass.baseDef / 18) * 100)}%` }}
                         />
                       </div>
                     </div>
@@ -385,7 +385,7 @@ export function CharacterCreationModal({ isOpen, onClose, onCharacterCreated }: 
                         <motion.div
                           className="h-full bg-gradient-to-r from-emerald-500 to-teal-400"
                           initial={{ width: 0 }}
-                          animate={{ width: `${Math.min(100, (currentClass.baseSpd / 120) * 100)}%` }}
+                          animate={{ width: `${Math.min(100, (currentClass.baseSpd / 15) * 100)}%` }}
                         />
                       </div>
                     </div>

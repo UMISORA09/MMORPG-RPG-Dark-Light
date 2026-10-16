@@ -1,0 +1,47 @@
+// ==============================================================================
+// Chiến Long Bá — Live Combat Log Stream Styles
+// ==============================================================================
+
+@import './variables';
+@import './mixins';
+
+.combat-log-container {
+  position: absolute;
+  bottom: 12px;
+  left: 14px;
+  width: 220px;
+  max-height: 85px;
+  @include glassmorphism($bg: rgba(9, 6, 18, 0.75), $blur: 6px, $border: rgba(139, 92, 246, 0.25));
+  padding: 6px 10px;
+  overflow-y: hidden;
+  pointer-events: none;
+  z-index: 10;
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-end;
+  font-family: $font-mono;
+  font-size: 10px;
+
+  .log-line {
+    line-height: 1.4;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    opacity: 0.95;
+
+    &.log-damage { color: #f87171; }
+    &.log-crit { color: $gold-accent; font-weight: bold; }
+    &.log-skill { color: #c084fc; font-weight: bold; }
+    &.log-dodge { color: $cyan-primary; }
+    &.log-stagger { color: #f43f5e; font-weight: 800; }
+    &.log-boss { color: #fb923c; }
+    &.log-exp { color: #4ade80; font-weight: bold; }
+
+    .log-time {
+      color: #64748b;
+      margin-right: 4px;
+      font-size: 9px;
+    }
+  }
+}
+

@@ -1,28 +1,17 @@
 import { Router } from "express";
-import { db, charactersTable, battleLogsTable } from "@workspace/db";
+import { db, charactersTable } from "@workspace/db";
 import { eq } from "drizzle-orm";
 import { StartBattleBody } from "@workspace/api-zod";
-import { MONSTERS } from "../data/classes";
-import {
-  calculateLevelProgression,
-  getExpForLevel,
-  getStatsForLevel,
-  getAuthoritativeMonsterReward,
-} from "../rules/combatRules";
 import {
   ensureItemCatalog,
   ensureStarterInventory,
+  getMonster,
   toCharacterResponse,
 } from "../lib/inventory";
+import { requireAuth } from "../middlewares/requireAuth";
+import { CombatService } from "../services/CombatService";
 
 const router = Router();
-
-function requireAuth(req: any, res: any, next: any) {
-  if (!req.session.userId) {
-    return res.status(401).json({ error: "Chưa đăng nhập" });
-  }
-  next();
-}
 
 function simulateBattle(
   playerAtk: number,
@@ -117,7 +106,7 @@ router.post("/characters/:characterId/battle", requireAuth, async (req, res) => 
   await ensureStarterInventory(character.id, character.classId);
   const effectiveCharacter = await toCharacterResponse(character);
 
-  const monsterReward = getAuthoritativeMonsterReward(monsterId);
+  const monsterReward = await getMonster(monsterId);
   if (!monsterReward) {
     return res.status(400).json({ error: "Quái vật không tồn tại" });
   }
@@ -130,7 +119,7 @@ router.post("/characters/:characterId/battle", requireAuth, async (req, res) => 
 
   if (mode === "simulate") {
     // Chế độ mô phỏng theo lượt phụ (dành cho prototype/arena test nếu cần)
-    const rawMonster = MONSTERS.find((m) => m.id === monsterId)!;
+    const rawMonster = monsterReward;
     const simResult = simulateBattle(
       effectiveCharacter.atk,
       effectiveCharacter.def,
@@ -159,7 +148,7 @@ router.post("/characters/:characterId/battle", requireAuth, async (req, res) => 
         round: 1,
         playerHp: character.hp,
         monsterHp: 0,
-        playerDmg: monsterReward.baseHp,
+        playerDmg: monsterReward.hp,
         monsterDmg: 0,
         playerAction: "Trảm sát trong không gian 2.5D Real-Time",
         isCritical: false,
@@ -167,36 +156,11 @@ router.post("/characters/:characterId/battle", requireAuth, async (req, res) => 
     ];
   }
 
-  // Tính toán cấp độ và kinh nghiệm authoritative từ Shared Combat Rules
-  const { newExp, newLevel, leveledUp, expToNextLevel } = calculateLevelProgression(
-    character.experience,
-    character.level,
-    expGained
-  );
-
-  const newStats = getStatsForLevel(character.classId, newLevel);
-
-  const [updated] = await db
-    .update(charactersTable)
-    .set({
-      level: newLevel,
-      experience: newExp,
-      maxHp: newStats.hp,
-      hp: Math.max(1, newStats.hp),
-      atk: newStats.atk,
-      def: newStats.def,
-      spd: newStats.spd,
-      gold: character.gold + goldGained,
-      kills: character.kills + (victory ? 1 : 0),
-      deaths: character.deaths + (victory ? 0 : 1),
-    })
-    .where(eq(charactersTable.id, characterId))
-    .returning();
-
-  await db.insert(battleLogsTable).values({
+  const savedResult = await CombatService.persistBattleResult({
+    userId: req.session.userId!,
     characterId,
     monsterId,
-    monsterName: monsterReward.monsterName,
+    monsterName: monsterReward.name,
     victory,
     expGained,
     goldGained,
@@ -207,11 +171,11 @@ router.post("/characters/:characterId/battle", requireAuth, async (req, res) => 
     rounds,
     expGained,
     goldGained,
-    leveledUp,
-    newLevel: leveledUp ? newLevel : null,
+    leveledUp: savedResult.leveledUp,
+    newLevel: savedResult.leveledUp ? savedResult.newLevel : null,
     character: {
-      ...(await toCharacterResponse(updated)),
-      experienceToNextLevel: expToNextLevel,
+      ...(await toCharacterResponse(savedResult.character)),
+      experienceToNextLevel: savedResult.expToNextLevel,
     },
   });
 });

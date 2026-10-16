@@ -9,35 +9,32 @@ import { Sparkles } from "@react-three/drei";
 export const WorldAtmosphere = memo(function WorldAtmosphere() {
   return (
     <group>
-      {/* ── Atmospheric Fog: Deep mysterious night sky covering horizon ── */}
-      <fogExp2 attach="fog" args={["#080414", 0.015]} />
-
-      {/* ── Key Directional Moonbeam Light with crisp 2048 shadow map ── */}
+      {/* ── Key Directional Sunlight with crisp shadow map ── */}
       <directionalLight
-        position={[25, 45, 20]}
-        intensity={1.6}
-        color="#e0e7ff"
+        position={[30, 50, 25]}
+        intensity={1.8}
+        color="#fffbeb"
         castShadow
         shadow-mapSize={[2048, 2048]}
         shadow-camera-near={1}
-        shadow-camera-far={130}
-        shadow-camera-left={-65}
-        shadow-camera-right={65}
-        shadow-camera-top={65}
-        shadow-camera-bottom={-65}
+        shadow-camera-far={140}
+        shadow-camera-left={-75}
+        shadow-camera-right={75}
+        shadow-camera-top={75}
+        shadow-camera-bottom={-75}
         shadow-bias={-0.0005}
       />
 
-      {/* ── Secondary Cool Blue Fill Light ── */}
+      {/* ── Secondary Warm Fill Light ── */}
       <directionalLight
-        position={[-30, 25, -20]}
-        intensity={0.45}
-        color="#60a5fa"
+        position={[-30, 30, -20]}
+        intensity={0.65}
+        color="#fef3c7"
       />
 
-      {/* ── Ambient & Dark Fantasy Hemisphere Sky/Ground Light ── */}
-      <ambientLight color="#181534" intensity={0.65} />
-      <hemisphereLight args={["#7928ca", "#0a0518", 0.6]} />
+      {/* ── High Intensity Ambient Light for Crisp Pixel Art Readability ── */}
+      <ambientLight color="#ffffff" intensity={1.4} />
+      <hemisphereLight args={["#8ae65c", "#fef3c7", 0.65]} />
 
       {/* ── Ambient Magic Particles Across Biomes ── */}
       {/* Safe Village Zone (Radiant Cyan & Gold stardust) */}

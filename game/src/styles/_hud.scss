@@ -1,0 +1,136 @@
+// ==============================================================================
+// Chiến Long Bá — HUD Styles
+// ==============================================================================
+
+@import './variables';
+@import './mixins';
+
+.hud-header {
+  position: absolute;
+  top: 10px;
+  left: 12px;
+  right: 12px;
+  @include flex-between;
+  align-items: flex-start;
+  pointer-events: none;
+  z-index: 10;
+}
+
+.hud-card {
+  @include glassmorphism;
+  padding: 8px 14px;
+  font-size: 11px;
+  box-shadow: 0 4px 18px rgba(0, 0, 0, 0.65);
+  pointer-events: auto;
+
+  .card-title {
+    font-weight: 700;
+    letter-spacing: 0.5px;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+
+    &.player-title {
+      color: $cyan-primary;
+      @include text-glow($cyan-primary);
+    }
+
+    &.boss-title {
+      color: $crimson-danger;
+      @include text-glow($crimson-danger);
+    }
+  }
+
+  .stat-subtext {
+    color: $text-muted;
+    font-size: 10px;
+    margin-top: 4px;
+    display: flex;
+    justify-content: space-between;
+    gap: 8px;
+    font-family: $font-mono;
+  }
+}
+
+.hp-bar-container {
+  width: 130px;
+  height: 9px;
+  background: #181226;
+  border-radius: 5px;
+  border: 1px solid #4a3e66;
+  overflow: hidden;
+  margin-top: 4px;
+  position: relative;
+
+  .hp-bar-lag {
+    position: absolute;
+    top: 0;
+    left: 0;
+    height: 100%;
+    background: $gold-accent;
+    transition: width 0.35s cubic-bezier(0.4, 0, 0.2, 1);
+  }
+
+  .hp-bar-fill {
+    position: absolute;
+    top: 0;
+    left: 0;
+    height: 100%;
+    background: linear-gradient(90deg, $pink-neon, $purple-magic);
+    transition: width 0.08s ease-out;
+
+    &.boss-fill {
+      background: linear-gradient(90deg, #dc2626, #ef4444);
+    }
+  }
+}
+
+.energy-bar-container {
+  width: 130px;
+  height: 4px;
+  background: #151120;
+  border-radius: 2px;
+  overflow: hidden;
+  margin-top: 3px;
+
+  .energy-fill {
+    height: 100%;
+    background: linear-gradient(90deg, #0284c7, $cyan-primary);
+    transition: width 0.1s linear;
+  }
+}
+
+.poise-bar-container {
+  width: 130px;
+  height: 4px;
+  background: #151120;
+  border-radius: 2px;
+  overflow: hidden;
+  margin-top: 3px;
+
+  .poise-fill {
+    height: 100%;
+    background: linear-gradient(90deg, #f59e0b, $gold-accent);
+    transition: width 0.1s linear;
+  }
+}
+
+.ai-badge {
+  font-weight: bold;
+  padding: 1px 6px;
+  border-radius: 4px;
+  font-size: 9px;
+  text-transform: uppercase;
+
+  &.state-patrol { background: rgba($emerald-success, 0.2); color: $emerald-success; border: 1px solid rgba($emerald-success, 0.4); }
+  &.state-alert { background: rgba($gold-accent, 0.2); color: $gold-accent; border: 1px solid rgba($gold-accent, 0.4); }
+  &.state-chase { background: rgba($crimson-danger, 0.25); color: #fca5a5; border: 1px solid rgba($crimson-danger, 0.5); }
+  &.state-attack { background: $crimson-danger; color: #fff; font-weight: 800; }
+  &.state-stagger { background: #8b5cf6; color: #fff; animation: pulseStagger 0.4s infinite alternate; }
+}
+
+@keyframes pulseStagger {
+  0% { transform: scale(1); filter: brightness(1); }
+  100% { transform: scale(1.08); filter: brightness(1.5); }
+}
+

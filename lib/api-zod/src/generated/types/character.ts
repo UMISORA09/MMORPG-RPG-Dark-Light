@@ -23,5 +23,12 @@ export interface Character {
   gold: number;
   kills: number;
   deaths: number;
+  serverId?: string;
+  title?: string;
+  mp?: number;
+  maxMp?: number;
+  matk?: number;
+  mdef?: number;
+  combatPower?: number;
   createdAt: Date;
 }

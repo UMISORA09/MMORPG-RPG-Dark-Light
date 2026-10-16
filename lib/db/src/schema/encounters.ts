@@ -1,17 +1,11 @@
-import { pgTable, uuid, integer, text, timestamp, jsonb } from "drizzle-orm/pg-core";
+import { index, pgTable, uuid, integer, text, timestamp, jsonb } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod/v4";
-import { charactersTable } from "./characters";
-import { usersTable } from "./users";
 
 export const encountersTable = pgTable("encounters", {
   id: uuid("id").primaryKey().defaultRandom(),
-  characterId: integer("character_id")
-    .notNull()
-    .references(() => charactersTable.id, { onDelete: "cascade" }),
-  userId: integer("user_id")
-    .notNull()
-    .references(() => usersTable.id, { onDelete: "cascade" }),
+  characterId: integer("character_id").notNull(),
+  userId: integer("user_id").notNull(),
   monsterId: text("monster_id").notNull(),
   spawnId: text("spawn_id").notNull(),
   zoneId: text("zone_id").notNull().default("WILDERNESS"),
@@ -28,7 +22,11 @@ export const encountersTable = pgTable("encounters", {
   finalStateJson: jsonb("final_state_json"),
   resultJson: jsonb("result_json"),
   logId: integer("log_id"),
-});
+}, (table) => ({
+  characterIdIndex: index("encounters_character_id_idx").on(table.characterId),
+  userIdIndex: index("encounters_user_id_idx").on(table.userId),
+  monsterIdIndex: index("encounters_monster_id_idx").on(table.monsterId),
+}));
 
 export const insertEncounterSchema = createInsertSchema(encountersTable).omit({
   id: true,

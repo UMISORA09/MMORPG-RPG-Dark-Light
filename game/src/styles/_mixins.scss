@@ -1,0 +1,39 @@
+// ==============================================================================
+// Chiến Long Bá — Sass Mixins
+// ==============================================================================
+
+@import './variables';
+
+@mixin glassmorphism($bg: $bg-card, $blur: 8px, $border: $border-card) {
+  background: $bg;
+  backdrop-filter: blur($blur);
+  -webkit-backdrop-filter: blur($blur);
+  border: 1px solid $border;
+  border-radius: $border-radius-base;
+}
+
+@mixin neon-glow($color, $spread: 15px) {
+  box-shadow: 0 0 $spread rgba($color, 0.45), 0 4px 10px rgba(0, 0, 0, 0.6);
+}
+
+@mixin text-glow($color) {
+  text-shadow: 0 0 8px rgba($color, 0.7);
+}
+
+@mixin flex-center {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+@mixin flex-between {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+@mixin unselectable {
+  user-select: none;
+  -webkit-user-select: none;
+}
+

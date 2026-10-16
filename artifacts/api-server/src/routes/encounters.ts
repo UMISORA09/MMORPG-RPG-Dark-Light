@@ -4,15 +4,9 @@
 
 import { Router } from "express";
 import { EncounterService } from "../encounters/encounterService";
+import { requireAuth } from "../middlewares/requireAuth";
 
 const router = Router();
-
-function requireAuth(req: any, res: any, next: any) {
-  if (!req.session.userId) {
-    return res.status(401).json({ error: "Chưa đăng nhập" });
-  }
-  next();
-}
 
 /**
  * Khởi tạo một trận đấu Authoritative Encounter mới

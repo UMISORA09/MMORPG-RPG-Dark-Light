@@ -19,6 +19,8 @@ import {
   type AIState,
 } from "@/skills";
 import type { DroppedItem } from "../loot/loot.types";
+import { rollMonsterLootDrops } from "../loot/lootRollService";
+import { resolveWorldCollisions } from "../world/worldColliders";
 
 interface MonsterInstance {
   id: number;
@@ -31,6 +33,11 @@ interface MonsterInstance {
   color: string;
   weaponType: "claws" | "sword" | "dragon";
   isBoss: boolean;
+  archetype: "SWARM_PACK" | "LONE_PREDATOR" | "WORLD_BOSS";
+  packId?: string;
+  packIndex?: number;
+  packSize?: number;
+  scale: number;
   spawnPos: THREE.Vector3;
   currentPos: THREE.Vector3;
   state: "idle" | "run" | "attack" | "hurt";
@@ -51,41 +58,96 @@ interface MonsterInstance {
   phase: 1 | 2;
   currentPattern: MonsterAttackPattern | null;
   currentTelegraphId: number | null;
+
+  // Reaction & Lone Predator Special States
+  hitFlashTimer?: number;
+  hasBarrier?: boolean;
+  barrierHp?: number;
+  isEnraged?: boolean;
+  blinkCooldown?: number;
+  territoryHealAcc?: number;
 }
 
 const INITIAL_MONSTERS_DATA = [
-  // Wilderness: Slimes
+  // ── 1. KHU VỰC 2: RỪNG NGUYÊN SINH (TÂY BẮC) — SWARM PACK: Slimes (Lv.1 - Lv.2) ──
   {
     id: 1,
     monsterId: "slime",
-    name: "Slime Rừng Sâu",
-    level: 1,
-    hp: 80,
-    maxHp: 80,
-    atk: 10,
-    color: "#22c55e",
-    weaponType: "claws" as const,
-    isBoss: false,
-    spawnPos: new THREE.Vector3(-18, 0, -18),
-  },
-  {
-    id: 2,
-    monsterId: "slime",
-    name: "Slime Đầm Lầy",
+    name: "Slime Đỏ Đầu Đàn",
     level: 2,
     hp: 95,
     maxHp: 95,
     atk: 12,
-    color: "#16a34a",
+    color: "#e6192e",
     weaponType: "claws" as const,
     isBoss: false,
-    spawnPos: new THREE.Vector3(18, 0, -18),
+    archetype: "SWARM_PACK" as const,
+    packId: "pack_slime",
+    packIndex: 0,
+    packSize: 3,
+    scale: 1.05,
+    spawnPos: new THREE.Vector3(-26, 0, -22),
   },
-  // Wilderness: Wolves
+  {
+    id: 2,
+    monsterId: "slime",
+    name: "Slime Đỏ Rừng Sâu",
+    level: 1,
+    hp: 80,
+    maxHp: 80,
+    atk: 10,
+    color: "#e6192e",
+    weaponType: "claws" as const,
+    isBoss: false,
+    archetype: "SWARM_PACK" as const,
+    packId: "pack_slime",
+    packIndex: 1,
+    packSize: 3,
+    scale: 0.95,
+    spawnPos: new THREE.Vector3(-28.5, 0, -20.5),
+  },
   {
     id: 3,
+    monsterId: "slime",
+    name: "Slime Đỏ Bãi Cỏ",
+    level: 1,
+    hp: 80,
+    maxHp: 80,
+    atk: 10,
+    color: "#e6192e",
+    weaponType: "claws" as const,
+    isBoss: false,
+    archetype: "SWARM_PACK" as const,
+    packId: "pack_slime",
+    packIndex: 2,
+    packSize: 3,
+    scale: 0.95,
+    spawnPos: new THREE.Vector3(-24.5, 0, -24.0),
+  },
+
+  // ── 2. KHU VỰC 2: RỪNG NGUYÊN SINH (TÂY NAM) — SWARM PACK: Wolves (Lv.3 - Lv.4) ──
+  {
+    id: 4,
     monsterId: "wolf",
-    name: "Sói Hoang Hoang Dã",
+    name: "Sói Đầu Đàn Hoang Dã",
+    level: 4,
+    hp: 175,
+    maxHp: 175,
+    atk: 22,
+    color: "#94a3b8",
+    weaponType: "claws" as const,
+    isBoss: false,
+    archetype: "SWARM_PACK" as const,
+    packId: "pack_wolf",
+    packIndex: 0,
+    packSize: 3,
+    scale: 1.15,
+    spawnPos: new THREE.Vector3(-27, 0, 16),
+  },
+  {
+    id: 5,
+    monsterId: "wolf",
+    name: "Sói Hoang Hung Hãn",
     level: 3,
     hp: 140,
     maxHp: 140,
@@ -93,62 +155,136 @@ const INITIAL_MONSTERS_DATA = [
     color: "#94a3b8",
     weaponType: "claws" as const,
     isBoss: false,
-    spawnPos: new THREE.Vector3(-24, 0, 14),
+    archetype: "SWARM_PACK" as const,
+    packId: "pack_wolf",
+    packIndex: 1,
+    packSize: 3,
+    scale: 1.0,
+    spawnPos: new THREE.Vector3(-29.5, 0, 18.5),
   },
-  // Wilderness: Goblins
   {
-    id: 4,
+    id: 6,
+    monsterId: "wolf",
+    name: "Sói Hoang Nanh Băng",
+    level: 3,
+    hp: 140,
+    maxHp: 140,
+    atk: 18,
+    color: "#94a3b8",
+    weaponType: "claws" as const,
+    isBoss: false,
+    archetype: "SWARM_PACK" as const,
+    packId: "pack_wolf",
+    packIndex: 2,
+    packSize: 3,
+    scale: 1.0,
+    spawnPos: new THREE.Vector3(-25.2, 0, 14.2),
+  },
+
+  // ── 3. KHU VỰC 3: VÙNG ĐẤT CHẾT & ĐẦM LẦY (ĐÔNG NAM) — SWARM PACK: Goblins (Lv.5 - Lv.6) ──
+  {
+    id: 7,
     monsterId: "goblin",
-    name: "Yêu Tinh Đao Phủ",
+    name: "Yêu Tinh Đao Phủ Trưởng",
+    level: 6,
+    hp: 260,
+    maxHp: 260,
+    atk: 30,
+    color: "#84cc16",
+    weaponType: "sword" as const,
+    isBoss: false,
+    archetype: "SWARM_PACK" as const,
+    packId: "pack_goblin",
+    packIndex: 0,
+    packSize: 3,
+    scale: 1.12,
+    spawnPos: new THREE.Vector3(28, 0, 16),
+  },
+  {
+    id: 8,
+    monsterId: "goblin",
+    name: "Yêu Tinh Dao Găm",
     level: 5,
-    hp: 220,
-    maxHp: 220,
+    hp: 210,
+    maxHp: 210,
     atk: 25,
     color: "#84cc16",
     weaponType: "sword" as const,
     isBoss: false,
-    spawnPos: new THREE.Vector3(25, 0, 16),
+    archetype: "SWARM_PACK" as const,
+    packId: "pack_goblin",
+    packIndex: 1,
+    packSize: 3,
+    scale: 1.0,
+    spawnPos: new THREE.Vector3(30.5, 0, 18.0),
   },
-  // Wilderness: Orcs
   {
-    id: 5,
+    id: 9,
+    monsterId: "goblin",
+    name: "Yêu Tinh Tiễu Phỉ",
+    level: 5,
+    hp: 210,
+    maxHp: 210,
+    atk: 25,
+    color: "#84cc16",
+    weaponType: "sword" as const,
+    isBoss: false,
+    archetype: "SWARM_PACK" as const,
+    packId: "pack_goblin",
+    packIndex: 2,
+    packSize: 3,
+    scale: 1.0,
+    spawnPos: new THREE.Vector3(26.2, 0, 14.5),
+  },
+
+  // ── 4. KHU VỰC 3: VÙNG ĐẤT CHẾT & ĐẦM LẦY (ĐÔNG TÂM) — LONE PREDATOR: Orc Warrior (Lv.8) ──
+  {
+    id: 10,
     monsterId: "orc",
-    name: "Chiến Binh Orc Cổ",
+    name: "Chiến Binh Orc Cổ (Tinh Anh)",
     level: 8,
-    hp: 360,
-    maxHp: 360,
-    atk: 38,
+    hp: 480,
+    maxHp: 480,
+    atk: 42,
     color: "#dc2626",
     weaponType: "sword" as const,
     isBoss: false,
-    spawnPos: new THREE.Vector3(0, 0, 32),
+    archetype: "LONE_PREDATOR" as const,
+    scale: 1.35,
+    spawnPos: new THREE.Vector3(32, 0, -8),
   },
-  // Wilderness: Skeleton Knight
+
+  // ── 5. KHU VỰC 3: VÙNG ĐẤT CHẾT & ĐẦM LẦY (ĐÔNG BẮC) — LONE PREDATOR: Skeleton Knight (Lv.12) ──
   {
-    id: 6,
+    id: 11,
     monsterId: "skeleton",
-    name: "Kỵ Sĩ Xương Cổ Đại",
+    name: "Kỵ Sĩ Xương Cổ Đại (Tinh Anh)",
     level: 12,
-    hp: 520,
-    maxHp: 520,
-    atk: 50,
+    hp: 620,
+    maxHp: 620,
+    atk: 55,
     color: "#cbd5e1",
     weaponType: "sword" as const,
     isBoss: false,
-    spawnPos: new THREE.Vector3(0, 0, -32),
+    archetype: "LONE_PREDATOR" as const,
+    scale: 1.35,
+    spawnPos: new THREE.Vector3(35, 0, 6),
   },
-  // Boss Altar: Ancient Fire Dragon
+
+  // ── 6. KHU VỰC 4: CẤM ĐỊA SÀO HUYỆT (BẮC SÂU) — WORLD BOSS: Ancient Fire Dragon (Lv.20) ──
   {
-    id: 10,
+    id: 20,
     monsterId: "dragon",
     name: "Rồng Lửa Cổ Đại (Boss Cấp 20)",
     level: 20,
-    hp: 1600,
-    maxHp: 1600,
-    atk: 75,
+    hp: 2400,
+    maxHp: 2400,
+    atk: 85,
     color: "#ef4444",
     weaponType: "dragon" as const,
     isBoss: true,
+    archetype: "WORLD_BOSS" as const,
+    scale: 2.2,
     spawnPos: new THREE.Vector3(0, 0, -70),
   },
 ];
@@ -165,10 +301,17 @@ export const MonsterManager25D = memo(function MonsterManager25D() {
   const onDefeatMonsterCallback = useGameWorldStore((s) => s.onDefeatMonsterCallback);
   const spawnVFX = useGameWorldStore((s) => s.spawnVFX);
   const spawnLoot = useGameWorldStore((s) => s.spawnLoot);
+  const applyPlayerDebuff = useGameWorldStore((s) => s.applyPlayerDebuff);
+  const playerLevel = useGameWorldStore((s) => s.playerLevel);
+  const weather = useGameWorldStore((s) => s.weather);
 
   const bullets = useGameWorldStore((s) => s.bullets);
   const slashEffects = useGameWorldStore((s) => s.slashEffects);
   const floatingTexts = useGameWorldStore((s) => s.floatingTexts);
+
+  // Velocity tracking for Predictive Targeting
+  const prevPlayerPos = useRef(playerPosition.clone());
+  const playerVelRef = useRef(new THREE.Vector3());
 
   // Initialize monster instances with blueprints and stagger gauge
   const monstersRef = useRef<MonsterInstance[]>(
@@ -193,6 +336,11 @@ export const MonsterManager25D = memo(function MonsterManager25D() {
         phase: 1,
         currentPattern: null,
         currentTelegraphId: null,
+        hitFlashTimer: 0,
+        hasBarrier: false,
+        barrierHp: 0,
+        isEnraged: false,
+        blinkCooldown: 0,
       };
     })
   );
@@ -253,14 +401,34 @@ export const MonsterManager25D = memo(function MonsterManager25D() {
           const monster = monstersRef.current.find((m) => m.id === zone.monsterInstanceId);
           const baseAtk = monster ? monster.atk : 40;
           const enrageBonus = monster?.isBoss && monster.phase === 2 ? 1.25 : 1.0;
-          const finalDamage = Math.round(baseAtk * pattern.damageMultiplier * enrageBonus);
+          const isSuppressed = (monster?.level || 1) > playerLevel + 3;
+          const suppressionMult = isSuppressed ? 1.85 : 1.0;
+          const weatherMult = weather === "BLOOD_MOON" ? 1.2 : 1.0;
+          const finalDamage = Math.round(baseAtk * pattern.damageMultiplier * enrageBonus * suppressionMult * weatherMult);
 
-          // Calculate knockback direction
+          // Calculate knockback direction (enhanced if boss in territory)
           const [zx, , zz] = zone.position;
           const knockbackDir = new THREE.Vector3(playerPos.x - zx, 0, playerPos.z - zz).normalize();
           if (knockbackDir.length() < 0.1) knockbackDir.set(1, 0, 0);
 
+          if (isSuppressed) {
+            addFloatingText("💥 ÁP CHẾ BẠO KÍCH (1.85X)!", playerPos.clone().add(new THREE.Vector3(0, 3.0, 0)), "#ef4444");
+          }
+
           damagePlayer(finalDamage, knockbackDir);
+
+          // Apply Debuff (Slow, Bleed, Stun, Poison)
+          if (pattern.debuff) {
+            applyPlayerDebuff({
+              type: pattern.debuff.type,
+              name: pattern.debuff.name || "Bất Lợi",
+              icon: pattern.debuff.icon || "⚠️",
+              duration: pattern.debuff.durationSeconds,
+              magnitude: pattern.debuff.magnitude,
+              tickInterval: pattern.debuff.tickInterval,
+              tickDamage: pattern.debuff.tickDamage,
+            });
+          }
 
           addFloatingText(
             `-${finalDamage} TRÚNG CHIÊU!`,
@@ -308,30 +476,111 @@ export const MonsterManager25D = memo(function MonsterManager25D() {
     const playerPos = playerPosition;
     const isPlayerInSafeZone = currentZone === "SAFE_VILLAGE";
 
+    // Track instant player velocity for Predictive Targeting
+    const playerVel = playerPos.clone().sub(prevPlayerPos.current).divideScalar(dt > 0.001 ? dt : 0.016);
+    playerVelRef.current.copy(playerVel);
+    prevPlayerPos.current.copy(playerPos);
+
     let stateChanged = false;
 
+    // Helper: Social Aggro (Pack Call within 10m or same packId)
+    const callSocialAggro = (triggerMob: MonsterInstance) => {
+      for (const other of monsters) {
+        if (!other.isAlive) continue;
+        if (other.id === triggerMob.id) {
+          if (other.aiState === "PATROL") other.aiState = "AGGRO_CHASE";
+          continue;
+        }
+        if (other.packId && other.packId === triggerMob.packId) {
+          if (other.aiState === "PATROL") {
+            other.aiState = "AGGRO_CHASE";
+            addFloatingText("🐺 Hú Gọi Bầy!", other.currentPos.clone().add(new THREE.Vector3(0, 2.2, 0)), "#f59e0b");
+          }
+        } else if (other.currentPos.distanceTo(triggerMob.currentPos) <= 10.0) {
+          if (other.aiState === "PATROL") {
+            other.aiState = "AGGRO_CHASE";
+          }
+        }
+      }
+    };
+
     // ── 1. Bullets update and hit detection ──────────────────────────────────
+    let bulletsCleaned = false;
     for (let i = bullets.length - 1; i >= 0; i--) {
       const b = bullets[i];
+      if (b.lifetime <= 0) {
+        bulletsCleaned = true;
+        continue;
+      }
       b.position.addScaledVector(b.velocity, dt);
       b.lifetime -= dt;
 
       for (const m of monsters) {
         if (!m.isAlive) continue;
         const dist = b.position.distanceTo(m.currentPos);
-        const hitRadius = m.isBoss ? 2.5 : 1.4;
+        const hitRadius = m.isBoss ? 2.5 : (m.scale || 1.0) * 1.4;
 
         if (dist <= hitRadius) {
+          // Check Level Suppression: High Level Monsters have +25% evasion against lower level players
+          const isSuppressedMob = m.level > playerLevel + 3;
+          if (isSuppressedMob && Math.random() < 0.25) {
+            addFloatingText("💨 NÉ TRÁNH CẤP CAO!", m.currentPos.clone().add(new THREE.Vector3(0, 2.5, 0)), "#00f2ff");
+            b.lifetime = -1;
+            bulletsCleaned = true;
+            break;
+          }
+
           // Stagger vulnerability: 1.5x damage if monster is staggered!
           const dmgMultiplier = m.aiState === "STAGGERED" ? 1.5 : 1.0;
-          const actualDamage = Math.round(b.damage * dmgMultiplier);
+          let actualDamage = Math.round(b.damage * dmgMultiplier);
+
+          // Level Suppression: -40% damage penalty to higher level mobs
+          if (isSuppressedMob) {
+            actualDamage = Math.round(actualDamage * 0.6);
+          }
+
+          // Boss Territory Buff: -25% damage taken when in Boss Altar / Dungeon unless staggered
+          if (m.isBoss && (currentZone === "BOSS_ALTAR" || currentZone === "DUNGEON") && m.aiState !== "STAGGERED") {
+            actualDamage = Math.round(actualDamage * 0.75);
+          }
+
+          // Weather Effect: +25% player damage in Rain
+          if (weather === "RAIN") {
+            actualDamage = Math.round(actualDamage * 1.25);
+          }
+
+          // Lone Predator Barrier Absorption
+          if (m.hasBarrier && m.barrierHp && m.barrierHp > 0) {
+            const absorbed = Math.min(m.barrierHp, actualDamage);
+            m.barrierHp -= absorbed;
+            actualDamage -= absorbed;
+            addFloatingText(`🛡️ HẤP THỤ ${absorbed}`, m.currentPos.clone().add(new THREE.Vector3(0, 2.5, 0)), "#a855f7");
+            if (m.barrierHp <= 0) {
+              m.hasBarrier = false;
+              addFloatingText(`💥 VỠ GIÁP!`, m.currentPos.clone().add(new THREE.Vector3(0, 2.8, 0)), "#ef4444");
+            }
+          }
 
           m.hp = Math.max(0, m.hp - actualDamage);
           m.state = "hurt";
-          b.lifetime = -1; // Destroy bullet
+          m.hitFlashTimer = 0.12;
+          b.lifetime = -1; // Destroy bullet immediately
+          bulletsCleaned = true;
+
+          // Micro-stagger knockback away from bullet
+          const hitDir = m.currentPos.clone().sub(b.position);
+          hitDir.y = 0;
+          if (hitDir.length() > 0.05) {
+            hitDir.normalize();
+            m.currentPos.addScaledVector(hitDir, m.isBoss ? 0.05 : 0.22);
+          }
+
+          // Social Aggro: Alert pack
+          callSocialAggro(m);
 
           // Accumulate Stagger Gauge
           m.staggerGauge = Math.min(m.staggerMax, m.staggerGauge + actualDamage * 0.7);
+          useGameWorldStore.getState().recordCombatHit(actualDamage, false);
 
           addFloatingText(
             `-${actualDamage}${m.aiState === "STAGGERED" ? " (1.5x)" : ""}`,
@@ -350,20 +599,74 @@ export const MonsterManager25D = memo(function MonsterManager25D() {
       }
     }
 
+    if (bulletsCleaned) {
+      const activeBullets = bullets.filter((b) => b.lifetime > 0);
+      if (activeBullets.length !== bullets.length) {
+        useGameWorldStore.setState({ bullets: activeBullets });
+      }
+    }
+
     // ── 2. Slash Effects hit detection ──────────────────────────────────────
     for (const sl of slashEffects) {
       for (const m of monsters) {
         if (!m.isAlive) continue;
         const dist = sl.position.distanceTo(m.currentPos);
         if (dist <= sl.radius) {
+          // Check Level Suppression: High Level Monsters have +25% evasion against lower level players
+          const isSuppressedMob = m.level > playerLevel + 3;
+          if (isSuppressedMob && Math.random() < 0.25) {
+            addFloatingText("💨 NÉ TRÁNH CẤP CAO!", m.currentPos.clone().add(new THREE.Vector3(0, 2.5, 0)), "#00f2ff");
+            continue;
+          }
+
           const dmgMultiplier = m.aiState === "STAGGERED" ? 1.5 : 1.0;
           const baseSlashDmg = 75;
-          const actualDamage = Math.round(baseSlashDmg * dmgMultiplier);
+          let actualDamage = Math.round(baseSlashDmg * dmgMultiplier);
+
+          // Level Suppression: -40% damage penalty to higher level mobs
+          if (isSuppressedMob) {
+            actualDamage = Math.round(actualDamage * 0.6);
+          }
+
+          // Boss Territory Buff: -25% damage taken when in Boss Altar / Dungeon unless staggered
+          if (m.isBoss && (currentZone === "BOSS_ALTAR" || currentZone === "DUNGEON") && m.aiState !== "STAGGERED") {
+            actualDamage = Math.round(actualDamage * 0.75);
+          }
+
+          // Weather Effect: +25% player damage in Rain
+          if (weather === "RAIN") {
+            actualDamage = Math.round(actualDamage * 1.25);
+          }
+
+          // Lone Predator Barrier Absorption
+          if (m.hasBarrier && m.barrierHp && m.barrierHp > 0) {
+            const absorbed = Math.min(m.barrierHp, actualDamage);
+            m.barrierHp -= absorbed;
+            actualDamage -= absorbed;
+            addFloatingText(`🛡️ HẤP THỤ ${absorbed}`, m.currentPos.clone().add(new THREE.Vector3(0, 2.5, 0)), "#a855f7");
+            if (m.barrierHp <= 0) {
+              m.hasBarrier = false;
+              addFloatingText(`💥 VỠ GIÁP!`, m.currentPos.clone().add(new THREE.Vector3(0, 2.8, 0)), "#ef4444");
+            }
+          }
 
           m.hp = Math.max(0, m.hp - actualDamage);
           m.state = "hurt";
+          m.hitFlashTimer = 0.12;
+
+          // Micro-stagger knockback away from slash center
+          const hitDir = m.currentPos.clone().sub(sl.position);
+          hitDir.y = 0;
+          if (hitDir.length() > 0.05) {
+            hitDir.normalize();
+            m.currentPos.addScaledVector(hitDir, m.isBoss ? 0.05 : 0.22);
+          }
+
+          // Social Aggro: Alert pack
+          callSocialAggro(m);
 
           m.staggerGauge = Math.min(m.staggerMax, m.staggerGauge + actualDamage * 0.8);
+          useGameWorldStore.getState().recordCombatHit(actualDamage, Math.random() < 0.2);
 
           addFloatingText(
             `-${actualDamage}${m.aiState === "STAGGERED" ? " (1.5x)" : ""}`,
@@ -384,6 +687,8 @@ export const MonsterManager25D = memo(function MonsterManager25D() {
     // ── 3. Monster State Machine AI Behaviors ────────────────────────────────
     for (const m of monsters) {
       if (m.attackCooldown > 0) m.attackCooldown -= dt;
+      if (m.hitFlashTimer && m.hitFlashTimer > 0) m.hitFlashTimer -= dt;
+      if (m.blinkCooldown && m.blinkCooldown > 0) m.blinkCooldown -= dt;
 
       // Respawn timer
       if (!m.isAlive) {
@@ -396,6 +701,9 @@ export const MonsterManager25D = memo(function MonsterManager25D() {
           m.aiState = "PATROL";
           m.phase = 1;
           m.staggerGauge = 0;
+          m.hasBarrier = false;
+          m.barrierHp = 0;
+          m.isEnraged = false;
           if (m.isBoss) {
             setBossRaidState({
               health: m.maxHp,
@@ -434,10 +742,42 @@ export const MonsterManager25D = memo(function MonsterManager25D() {
         m.aiState = "RETURNING_HOME";
       }
 
+      // Lone Predator Special: Heavy Melee 30% Barrier & Enrage at <30% HP
+      if (m.archetype === "LONE_PREDATOR" && m.hp <= m.maxHp * 0.30 && !m.hasBarrier) {
+        m.hasBarrier = true;
+        m.barrierHp = Math.round(m.maxHp * 0.30);
+        m.atk = Math.round(m.atk * 1.25);
+        m.isEnraged = true;
+        addFloatingText("🛡️ THIẾT GIÁP CUỒNG NỘ (+30% Giáp, +25% Công)!", m.currentPos.clone().add(new THREE.Vector3(0, 3.2, 0)), "#a855f7");
+        playCombatSFX("heavy_slam", 0.6);
+      }
+
+      // Lone Predator Special: Ranged / Mage Kiting / Blinking 4.5m backwards when player is too close
+      if (m.archetype === "LONE_PREDATOR" && m.monsterId === "skeleton" && distToPlayer < 3.5 && (m.blinkCooldown || 0) <= 0) {
+        const awayDir = m.currentPos.clone().sub(playerPos).normalize();
+        awayDir.y = 0;
+        m.currentPos.addScaledVector(awayDir, 4.5);
+        m.blinkCooldown = 6.0;
+        addFloatingText("💨 TỐC BIẾN NÉ TRÁNH!", m.currentPos.clone().add(new THREE.Vector3(0, 2.5, 0)), "#c084fc");
+        playCombatSFX("laser_pew", 0.4);
+      }
+
+      // Boss Territory Advantage: 1% Max HP auto-heal per second in Boss Altar or Dungeon
+      if (m.isBoss && (currentZone === "BOSS_ALTAR" || currentZone === "DUNGEON") && m.hp < m.maxHp) {
+        m.territoryHealAcc = (m.territoryHealAcc || 0) + m.maxHp * 0.01 * dt;
+        if (m.territoryHealAcc >= 1) {
+          const heal = Math.floor(m.territoryHealAcc);
+          m.hp = Math.min(m.maxHp, m.hp + heal);
+          m.territoryHealAcc -= heal;
+        }
+      }
+
       switch (m.aiState) {
         case "PATROL": {
-          if (distToPlayer <= m.blueprint.aggroRadius && !isPlayerInSafeZone) {
+          const weatherAggroMult = weather === "RAIN" ? 0.8 : weather === "DARK_FOG" ? 0.65 : 1.0;
+          if (distToPlayer <= m.blueprint.aggroRadius * weatherAggroMult && !isPlayerInSafeZone) {
             m.aiState = "AGGRO_CHASE";
+            callSocialAggro(m);
             stateChanged = true;
             break;
           }
@@ -468,13 +808,35 @@ export const MonsterManager25D = memo(function MonsterManager25D() {
             break;
           }
 
-          const dir = playerPos.clone().sub(m.currentPos);
+          // ── Flanking & Encircling Algorithm for Swarm Pack ──
+          let targetMovePos = playerPos;
+          if (m.archetype === "SWARM_PACK") {
+            const packIndex = m.packIndex ?? 0;
+            const packSize = m.packSize ?? 3;
+            const flankAngle = (packIndex / packSize) * Math.PI * 2;
+            const flankRadius = 2.6;
+            targetMovePos = playerPos.clone().add(new THREE.Vector3(
+              Math.cos(flankAngle) * flankRadius,
+              0,
+              Math.sin(flankAngle) * flankRadius
+            ));
+          }
+
+          // ── Coordination Buff: +20% Atk Speed if >= 3 Swarm Monsters surround player ──
+          const surroundingSwarmCount = monsters.filter(
+            (other) => other.isAlive && other.archetype === "SWARM_PACK" && other.currentPos.distanceTo(playerPos) <= 4.0
+          ).length;
+          const hasCoordinationBuff = m.archetype === "SWARM_PACK" && surroundingSwarmCount >= 3;
+
+          const dir = targetMovePos.clone().sub(m.currentPos);
           dir.y = 0;
-          const chaseDir = dir.clone().normalize();
+          const distToTarget = dir.length();
+          const chaseDir = distToTarget > 0.05 ? dir.clone().normalize() : new THREE.Vector3(1, 0, 0);
           m.direction = Math.atan2(chaseDir.x, chaseDir.z);
           m.facingLeft = chaseDir.x < -0.05;
 
           // Select candidate attack pattern
+          // Candidate attack patterns
           const patterns =
             m.isBoss && m.phase === 2 && m.blueprint.phase2Patterns
               ? [...m.blueprint.phase2Patterns, ...m.blueprint.attackPatterns]
@@ -483,26 +845,46 @@ export const MonsterManager25D = memo(function MonsterManager25D() {
           const chosenPattern = patterns[Math.floor(Math.random() * patterns.length)];
 
           // Trigger Ground Telegraph Windup if in range and off cooldown
+          // ── Trigger Ground Telegraph with Velocity Lead Prediction ──
           if (distToPlayer <= chosenPattern.range && m.attackCooldown <= 0) {
             m.aiState = "TELEGRAPH_WINDUP";
             m.currentPattern = chosenPattern;
             m.state = "attack";
 
             // Boss Enrage speed boost: 30% faster telegraph duration!
+            const speedMultiplier = hasCoordinationBuff ? 0.8 : 1.0;
             const duration =
               m.isBoss && m.phase === 2
                 ? Math.round(chosenPattern.telegraphDurationMs * 0.7)
-                : chosenPattern.telegraphDurationMs;
+                : Math.round(chosenPattern.telegraphDurationMs * speedMultiplier);
 
             const zoneId = nextTelegraphId++;
             m.currentTelegraphId = zoneId;
+
+            // Predictive Targeting: Lead player running trajectory
+            const leadTime = (duration / 1000) * 0.65;
+            const predictedPos = playerPos.clone().addScaledVector(playerVelRef.current, leadTime);
+
+            let zonePos: [number, number, number];
+            let zoneDir: number;
+
+            if (chosenPattern.shape === "LINE_BOX" || chosenPattern.shape === "CONE") {
+              const toPredicted = predictedPos.clone().sub(m.currentPos);
+              toPredicted.y = 0;
+              if (toPredicted.length() > 0.1) toPredicted.normalize();
+              zoneDir = Math.atan2(toPredicted.x, toPredicted.z);
+              zonePos = [m.currentPos.x, 0.03, m.currentPos.z];
+            } else {
+              zonePos = [predictedPos.x, 0.03, predictedPos.z];
+              zoneDir = m.direction;
+            }
 
             const newZone: ActiveTelegraphZone = {
               id: zoneId,
               monsterInstanceId: m.id,
               pattern: chosenPattern,
-              position: [m.currentPos.x, 0.03, m.currentPos.z],
-              direction: m.direction,
+              position: zonePos,
+              direction: zoneDir,
               elapsedMs: 0,
               durationMs: duration,
               triggered: false,
@@ -518,9 +900,42 @@ export const MonsterManager25D = memo(function MonsterManager25D() {
             }
 
             stateChanged = true;
+          } else if (distToPlayer <= 2.2 && m.attackCooldown <= 0 && !isPlayerInSafeZone) {
+            // ── 92-96% Hit Accuracy Basic Melee Strike ──
+            m.attackCooldown = (hasCoordinationBuff ? 0.8 : 1.0) * m.blueprint.attackCooldown;
+            m.state = "attack";
+
+            const isEvaded = Math.random() > 0.94; // 94% accuracy
+            if (isInvincible) {
+              addFloatingText("I-FRAME! (LƯỚT NÉ)", playerPos.clone().add(new THREE.Vector3(0, 2.3, 0)), "#38bdf8");
+            } else if (isEvaded) {
+              addFloatingText("NÉ TRÁNH! (DODGED)", playerPos.clone().add(new THREE.Vector3(0, 2.3, 0)), "#00f2ff");
+            } else {
+              const isSuppressed = m.level > playerLevel + 3;
+              const suppressionCrit = isSuppressed ? 1.85 : 1.0;
+              const weatherBuff = weather === "BLOOD_MOON" ? 1.2 : 1.0;
+              const basicDmg = Math.round(m.atk * (m.isEnraged ? 1.25 : 1.0) * suppressionCrit * weatherBuff);
+              if (m.isBoss && (currentZone === "BOSS_ALTAR" || currentZone === "DUNGEON")) {
+                damagePlayer(basicDmg, chaseDir.clone().multiplyScalar(2.2));
+                applyPlayerDebuff({
+                  type: "STUN",
+                  name: "Choáng Lãnh Địa",
+                  icon: "⚡",
+                  duration: 1.2,
+                });
+                addFloatingText("⚡ CHOÁNG LÃNH ĐỊA (1.2S)!", playerPos.clone().add(new THREE.Vector3(0, 3.0, 0)), "#fbbf24");
+              } else {
+                damagePlayer(basicDmg, chaseDir);
+              }
+              if (isSuppressed) {
+                addFloatingText("💥 ÁP CHẾ BẠO KÍCH (1.85X)!", playerPos.clone().add(new THREE.Vector3(0, 2.7, 0)), "#ef4444");
+              }
+              addFloatingText(`-${basicDmg}`, playerPos.clone().add(new THREE.Vector3(0, 2.3, 0)), "#ef4444");
+            }
           } else {
-            // Chase towards player
-            m.currentPos.addScaledVector(chaseDir, m.blueprint.moveSpeed * dt);
+            // Chase towards target position
+            const moveSpd = m.blueprint.moveSpeed * (hasCoordinationBuff ? 1.15 : 1.0);
+            m.currentPos.addScaledVector(chaseDir, moveSpd * dt);
             m.state = "run";
           }
           break;
@@ -547,6 +962,9 @@ export const MonsterManager25D = memo(function MonsterManager25D() {
           if (len < 1.0) {
             m.hp = m.maxHp; // Reset health upon escaping leashed area
             m.staggerGauge = 0;
+            m.hasBarrier = false;
+            m.barrierHp = 0;
+            m.isEnraged = false;
             m.aiState = "PATROL";
             m.state = "idle";
             if (m.isBoss) {
@@ -559,6 +977,19 @@ export const MonsterManager25D = memo(function MonsterManager25D() {
             m.state = "run";
           }
           break;
+        }
+      }
+
+      // Physical obstacle collisions for monsters (trees, houses, rocks, barriers)
+      resolveWorldCollisions(m.currentPos, (m.scale || 1.0) * 0.45);
+
+      // Prevent non-boss monsters from entering Safe Village (r < 21.2m)
+      if (!m.isBoss) {
+        const dFromCenter = Math.hypot(m.currentPos.x, m.currentPos.z);
+        if (dFromCenter < 21.2) {
+          const pushScale = 21.2 / (dFromCenter || 1);
+          m.currentPos.x *= pushScale;
+          m.currentPos.z *= pushScale;
         }
       }
     }
@@ -589,6 +1020,22 @@ export const MonsterManager25D = memo(function MonsterManager25D() {
           name: m.name,
         }));
       useGameWorldStore.getState().updateMonsterMarkers(markers);
+
+      // Sync closest enemies for Bottom-Right HUD Bars
+      const nearbyEnemies = monsters
+        .filter((m) => m.isAlive)
+        .map((m) => ({
+          id: m.id,
+          name: m.name,
+          hp: m.hp,
+          maxHp: m.maxHp,
+          dist: m.currentPos.distanceTo(playerPos),
+          color: m.color,
+        }))
+        .filter((m) => m.dist < 25)
+        .sort((a, b) => a.dist - b.dist)
+        .slice(0, 3);
+      useGameWorldStore.getState().updateNearbyTargetEnemies(nearbyEnemies);
     }
 
     if (stateChanged) {
@@ -660,206 +1107,70 @@ export const MonsterManager25D = memo(function MonsterManager25D() {
       "#fbbf24"
     );
 
-    // ── Generate 3D Loot Drops ──────────────────────────────────────────────
-    const drops: DroppedItem[] = [];
-    const basePos = m.currentPos;
+    // ── Generate Authoritative MMORPG Loot Drops ─────────────────────────────
+    const lootResult = rollMonsterLootDrops({
+      id: m.id,
+      monsterId: m.monsterId,
+      name: m.name,
+      level: m.level,
+      isBoss: m.isBoss,
+      aiArchetype: m.archetype,
+      position: { x: m.currentPos.x, y: 0.5, z: m.currentPos.z },
+    });
 
-    const createDropVelocity = (): [number, number, number] => {
-      const angle = Math.random() * Math.PI * 2;
-      const speed = 2.2 + Math.random() * 3.5;
-      return [
-        Math.cos(angle) * speed,
-        5.5 + Math.random() * 3.5,
-        Math.sin(angle) * speed,
-      ];
-    };
-
-    if (m.isBoss) {
-      // 1. World Boss Drops: Multiple Gold Bundles + Guaranteed Legendary + Epic Gear
-      for (let i = 0; i < 4; i++) {
-        drops.push({
-          id: `drop-${Date.now()}-gold-${i}`,
-          itemId: "gold_pile",
-          name: "Rương Vàng Khổng Lồ",
-          type: "gold",
-          rarity: "rare",
-          position: [basePos.x + (Math.random() - 0.5) * 2, 0.5, basePos.z + (Math.random() - 0.5) * 2],
-          velocity: createDropVelocity(),
-          value: 120 + Math.floor(Math.random() * 60),
-          icon: "🪙",
-          color: "#fbbf24",
-          bounceCount: 0,
-          isGrounded: false,
-          lifetime: 60,
-        });
-      }
-
-      // Guaranteed Legendary Dragon Blade
-      drops.push({
-        id: `drop-${Date.now()}-legendary`,
-        itemId: "dragon_blade",
-        name: "Long Thần Kiếm",
-        type: "weapon",
-        rarity: "legendary",
-        position: [basePos.x, 0.6, basePos.z],
-        velocity: createDropVelocity(),
-        value: 85,
-        icon: "🔥",
-        color: "#fbbf24",
-        statText: "ATK +85, MAG +35",
-        bounceCount: 0,
-        isGrounded: false,
-        lifetime: 120,
-      });
-
-      // Guaranteed Epic Dragon Armor
-      drops.push({
-        id: `drop-${Date.now()}-epic`,
-        itemId: "dragon_armor",
-        name: "Long Thần Hoàng Giáp",
-        type: "armor",
-        rarity: "epic",
-        position: [basePos.x, 0.6, basePos.z],
-        velocity: createDropVelocity(),
-        value: 65,
-        icon: "🛡️",
-        color: "#c084fc",
-        statText: "HP +180, DEF +26",
-        bounceCount: 0,
-        isGrounded: false,
-        lifetime: 120,
-      });
-
-      // Divine Healing Potions
-      drops.push({
-        id: `drop-${Date.now()}-potion`,
-        itemId: "potion_divine",
-        name: "Thánh Thủy Hồi Phục",
-        type: "potion",
-        rarity: "rare",
-        position: [basePos.x, 0.6, basePos.z],
-        velocity: createDropVelocity(),
-        value: 350,
-        icon: "🧪",
-        color: "#22c55e",
-        statText: "Hồi 350 HP",
-        bounceCount: 0,
-        isGrounded: false,
-        lifetime: 60,
-      });
-    } else if (m.level >= 5) {
-      // 2. Elite Monsters: 2 Gold Drops + Rare/Epic Equipment + Health Potion
-      for (let i = 0; i < 2; i++) {
-        drops.push({
-          id: `drop-${Date.now()}-gold-${i}`,
-          itemId: "gold_coin",
-          name: "Túi Vàng Tinh Anh",
-          type: "gold",
-          rarity: "common",
-          position: [basePos.x, 0.5, basePos.z],
-          velocity: createDropVelocity(),
-          value: 45 + Math.floor(Math.random() * 35),
-          icon: "🪙",
-          color: "#fbbf24",
-          bounceCount: 0,
-          isGrounded: false,
-          lifetime: 45,
-        });
-      }
-
-      // Rare/Epic Gear
-      drops.push({
-        id: `drop-${Date.now()}-elite-gear`,
-        itemId: "steel_sword",
-        name: "Kiếm Thép Tinh Luyện",
-        type: "weapon",
-        rarity: "rare",
-        position: [basePos.x, 0.6, basePos.z],
-        velocity: createDropVelocity(),
-        value: 28,
-        icon: "🗡️",
-        color: "#00f2ff",
-        statText: "ATK +28, SPD +0.3",
-        bounceCount: 0,
-        isGrounded: false,
-        lifetime: 90,
-      });
-
-      drops.push({
-        id: `drop-${Date.now()}-potion`,
-        itemId: "potion_hp",
-        name: "Bình Huyết Dược",
-        type: "potion",
-        rarity: "common",
-        position: [basePos.x, 0.5, basePos.z],
-        velocity: createDropVelocity(),
-        value: 160,
-        icon: "🧪",
-        color: "#22c55e",
-        statText: "Hồi 160 HP",
-        bounceCount: 0,
-        isGrounded: false,
-        lifetime: 45,
-      });
-    } else {
-      // 3. Minion Slime / Wolves: Gold Coin + Chance for Potion or Basic Weapon
-      drops.push({
-        id: `drop-${Date.now()}-gold`,
-        itemId: "gold_coin",
-        name: "Tiền Vàng",
-        type: "gold",
-        rarity: "common",
-        position: [basePos.x, 0.4, basePos.z],
-        velocity: createDropVelocity(),
-        value: 18 + Math.floor(Math.random() * 20),
-        icon: "🪙",
-        color: "#fbbf24",
-        bounceCount: 0,
-        isGrounded: false,
-        lifetime: 35,
-      });
-
-      if (Math.random() > 0.4) {
-        drops.push({
-          id: `drop-${Date.now()}-potion`,
-          itemId: "potion_hp",
-          name: "Bình Huyết Dược Nhỏ",
-          type: "potion",
-          rarity: "common",
-          position: [basePos.x, 0.4, basePos.z],
-          velocity: createDropVelocity(),
-          value: 100,
-          icon: "🧪",
-          color: "#22c55e",
-          statText: "Hồi 100 HP",
-          bounceCount: 0,
-          isGrounded: false,
-          lifetime: 35,
-        });
-      }
-
-      if (Math.random() > 0.7) {
-        drops.push({
-          id: `drop-${Date.now()}-common-gear`,
-          itemId: "iron_sword",
-          name: "Kiếm Sắt Rừng Sâu",
-          type: "weapon",
-          rarity: "common",
-          position: [basePos.x, 0.4, basePos.z],
-          velocity: createDropVelocity(),
-          value: 12,
-          icon: "⚔️",
-          color: "#94a3b8",
-          statText: "ATK +12",
-          bounceCount: 0,
-          isGrounded: false,
-          lifetime: 45,
-        });
-      }
+    // Spawn authoritative drops
+    spawnLoot(lootResult.drops);
+    if (lootResult.drops.length > 0) {
+      playCombatSFX("loot_drop", 0.45);
     }
 
-    // Spawn generated drops to 3D world scene
-    spawnLoot(drops);
+    if (lootResult.hasRareDrop) {
+      playCombatSFX("rarity_chime", 0.85);
+      playCombatSFX("holy_bell", 0.85);
+      playCombatSFX("level_up_fanfare", 0.75);
+      useGameWorldStore.setState({
+        zoneNotification: `📢 [TOÀN SERVER] Người chơi vừa hạ gục ${m.name} và nhặt được bảo vật ${
+          lootResult.highestRarity === "legendary" ? "🔥 HUYỀN THOẠI (LEGENDARY)" : "💜 SỬ THI (EPIC)"
+        }: ${lootResult.rareItemName}!`,
+        zoneNotificationTimer: 6.5,
+      });
+      addFloatingText(
+        `✨ ${lootResult.rareItemName} (${lootResult.highestRarity?.toUpperCase()})!`,
+        m.currentPos.clone().add(new THREE.Vector3(0, 3.2, 0)),
+        lootResult.highestRarity === "legendary" ? "#fbbf24" : "#c084fc"
+      );
+    }
+
+    // Quest Progress: Monster Kill & Dungeon Clear
+    useGameWorldStore.getState().progressQuest("KILL_MONSTER", m.monsterId, 1);
+    if (m.isBoss) {
+      useGameWorldStore.getState().progressQuest("CLEAR_DUNGEON", "dragon", 1);
+    }
+
+    // Battle Report: Trigger Victory Card for Bosses, Elites or Rare Loot encounters
+    const worldStore = useGameWorldStore.getState();
+    const dmgDealt = Math.max(m.maxHp, worldStore.currentFightDamageDealt);
+    const crits = Math.max(1, worldStore.currentFightCritHits);
+    const duration = Math.max(2, Math.round((Date.now() - worldStore.currentFightStartTime) / 1000));
+    const expGain = m.isBoss ? 450 : m.level * 35;
+    const goldGain = m.isBoss ? 280 : m.level * 18;
+
+    if (m.isBoss || m.level >= 5 || lootResult.hasRareDrop) {
+      worldStore.openBattleReport({
+        victory: true,
+        monsterName: m.name,
+        monsterLevel: m.level,
+        isBoss: m.isBoss,
+        totalDamageDealt: dmgDealt,
+        critHits: crits,
+        durationSeconds: duration,
+        expGained: expGain,
+        goldGained: goldGain,
+        drops: lootResult.drops,
+        highestRarity: lootResult.highestRarity,
+      });
+      worldStore.resetCombatMetrics();
+    }
 
     // Call backend mutation to sync database
     if (onDefeatMonsterCallback) {
@@ -881,13 +1192,31 @@ export const MonsterManager25D = memo(function MonsterManager25D() {
       {/* ── Render 2.5D Billboard Sprites for All Living Monsters ── */}
       {monstersRef.current.map((monster) => {
         if (!monster.isAlive) return null;
+        const overheadY = monster.currentPos.y + (monster.isBoss ? 4.9 : (monster.scale || 1.0) * 2.3);
+
         return (
           <group key={`mob-grp-${monster.id}`}>
-            {/* Monster State Overhead Icon: ! for Aggro / Warning for Cast */}
+            {/* Lone Predator Ground Purple Aura Decal */}
+            {monster.archetype === "LONE_PREDATOR" && (
+              <mesh position={[monster.currentPos.x, 0.025, monster.currentPos.z]} rotation={[-Math.PI / 2, 0, 0]}>
+                <ringGeometry args={[1.0, 1.8, 32]} />
+                <meshBasicMaterial color="#a855f7" transparent opacity={0.55} side={THREE.DoubleSide} depthWrite={false} />
+              </mesh>
+            )}
+
+            {/* Lone Predator Barrier Shield Bubble when enrage shield is active */}
+            {monster.hasBarrier && (monster.barrierHp ?? 0) > 0 && (
+              <mesh position={[monster.currentPos.x, monster.currentPos.y + 1.1, monster.currentPos.z]}>
+                <sphereGeometry args={[1.35, 16, 16]} />
+                <meshBasicMaterial color="#a855f7" transparent opacity={0.28} wireframe={true} />
+              </mesh>
+            )}
+
+            {/* Monster State Overhead Icon: ! for Aggro / Warning for Cast (Positioned safely above name HUD) */}
             {monster.aiState === "AGGRO_CHASE" && (
               <Text
-                position={[monster.currentPos.x, monster.currentPos.y + (monster.isBoss ? 3.6 : 2.2), monster.currentPos.z]}
-                fontSize={0.4}
+                position={[monster.currentPos.x, overheadY, monster.currentPos.z]}
+                fontSize={0.36}
                 color="#ef4444"
                 outlineWidth={0.04}
                 outlineColor="#000000"
@@ -897,8 +1226,8 @@ export const MonsterManager25D = memo(function MonsterManager25D() {
             )}
             {monster.aiState === "TELEGRAPH_WINDUP" && (
               <Text
-                position={[monster.currentPos.x, monster.currentPos.y + (monster.isBoss ? 3.6 : 2.2), monster.currentPos.z]}
-                fontSize={0.35}
+                position={[monster.currentPos.x, overheadY, monster.currentPos.z]}
+                fontSize={0.28}
                 color="#f59e0b"
                 outlineWidth={0.04}
                 outlineColor="#000000"
@@ -908,8 +1237,8 @@ export const MonsterManager25D = memo(function MonsterManager25D() {
             )}
             {monster.aiState === "STAGGERED" && (
               <Text
-                position={[monster.currentPos.x, monster.currentPos.y + (monster.isBoss ? 3.6 : 2.2), monster.currentPos.z]}
-                fontSize={0.35}
+                position={[monster.currentPos.x, overheadY, monster.currentPos.z]}
+                fontSize={0.28}
                 color="#facc15"
                 outlineWidth={0.04}
                 outlineColor="#000000"
@@ -922,6 +1251,8 @@ export const MonsterManager25D = memo(function MonsterManager25D() {
               position={monster.currentPos}
               state={monster.state}
               facingLeft={monster.facingLeft}
+              width={monster.isBoss ? 3.4 : (monster.scale || 1.0) * 1.5}
+              height={monster.isBoss ? 3.8 : (monster.scale || 1.0) * 1.8}
               textureKey={`mob_${monster.monsterId}`}
               color={monster.color}
               weaponType={monster.weaponType}
@@ -930,18 +1261,18 @@ export const MonsterManager25D = memo(function MonsterManager25D() {
               hp={monster.hp}
               maxHp={monster.maxHp}
               isBoss={monster.isBoss}
+              hitFlash={Boolean(monster.hitFlashTimer && monster.hitFlashTimer > 0)}
+              debuffBadges={
+                monster.aiState === "STAGGERED"
+                  ? ["⚡"]
+                  : monster.hasBarrier
+                  ? ["🛡️", "🔥"]
+                  : []
+              }
             />
           </group>
         );
       })}
-
-      {/* ── 3D Energy Bullets Render ── */}
-      {bullets.map((b) => (
-        <mesh key={`bullet-${b.id}`} position={b.position}>
-          <sphereGeometry args={[0.22, 8, 8]} />
-          <meshBasicMaterial color={b.color} />
-        </mesh>
-      ))}
 
       {/* ── 3D Melee Slash Effects Render ── */}
       {slashEffects.map((sl) => (

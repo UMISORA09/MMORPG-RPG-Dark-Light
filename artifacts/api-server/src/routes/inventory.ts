@@ -12,6 +12,9 @@ import {
   GetInventoryResponse,
   UnequipItemParams,
   UnequipItemResponse,
+  EnhanceItemResponse,
+  InventoryActionParams,
+  UseItemResponse,
 } from "@workspace/api-zod";
 import {
   canUseItem,
@@ -23,16 +26,10 @@ import {
   toCharacterResponse,
 } from "../lib/inventory";
 import { getExpForLevel } from "../data/classes";
+import { requireAuth } from "../middlewares/requireAuth";
+import { CharacterInventoryService, InventoryRuleError } from "../services/CharacterInventoryService";
 
 const router = Router();
-
-function requireAuth(req: any, res: any, next: any) {
-  if (!req.session?.userId) {
-    res.status(401).json({ error: "Chưa đăng nhập" });
-    return;
-  }
-  next();
-}
 
 function withExperienceToNextLevel(character: Awaited<ReturnType<typeof toCharacterResponse>>) {
   return {
@@ -92,7 +89,7 @@ router.post("/characters/:characterId/inventory/:itemId/equip", requireAuth, asy
         and(
           eq(characterItemsTable.characterId, character.id),
           eq(characterItemsTable.equipped, true),
-          eq(itemsTable.type, owned.item.type),
+          eq(itemsTable.equipSlot, owned.item.equipSlot),
         ),
       );
     for (const equippedItem of equippedInSlot) {
@@ -103,7 +100,7 @@ router.post("/characters/:characterId/inventory/:itemId/equip", requireAuth, asy
     }
     await tx
       .update(characterItemsTable)
-      .set({ equipped: true })
+      .set({ equipped: true, equippedSlot: owned.item.equipSlot })
       .where(eq(characterItemsTable.id, owned.ownershipId));
   });
 
@@ -132,7 +129,7 @@ router.post("/characters/:characterId/inventory/:itemId/unequip", requireAuth, a
 
   await db
     .update(characterItemsTable)
-    .set({ equipped: false })
+    .set({ equipped: false, equippedSlot: null })
     .where(eq(characterItemsTable.id, owned.ownershipId));
 
   res.status(200).json(
@@ -140,6 +137,66 @@ router.post("/characters/:characterId/inventory/:itemId/unequip", requireAuth, a
       withExperienceToNextLevel(await toCharacterResponse(character)),
     ),
   );
+});
+
+router.post("/characters/:characterId/inventory/:ownershipId/enhance", requireAuth, async (req, res): Promise<void> => {
+  const params = InventoryActionParams.safeParse(req.params);
+  if (!params.success) {
+    res.status(400).json({ error: "Tham số cường hóa không hợp lệ" });
+    return;
+  }
+
+  try {
+    const result = await CharacterInventoryService.enhance(
+      req.session.userId!, params.data.characterId, params.data.ownershipId,
+    );
+    const character = await toCharacterResponse(result.character);
+    res.status(200).json(EnhanceItemResponse.parse({
+      character: { id: character.id, gold: character.gold, combatPower: character.combatPower },
+      item: {
+        ownershipId: result.item.id,
+        itemId: result.item.itemId,
+        enhanceLevel: result.item.enhanceLevel,
+        bonusCombatPower: result.item.bonusCombatPower,
+      },
+    }));
+  } catch (error) {
+    if (error instanceof InventoryRuleError) {
+      res.status(error.statusCode).json({ error: error.message });
+      return;
+    }
+    throw error;
+  }
+});
+
+router.post("/characters/:characterId/inventory/:ownershipId/use", requireAuth, async (req, res): Promise<void> => {
+  const params = InventoryActionParams.safeParse(req.params);
+  if (!params.success) {
+    res.status(400).json({ error: "Tham số sử dụng vật phẩm không hợp lệ" });
+    return;
+  }
+
+  try {
+    const result = await CharacterInventoryService.use(
+      req.session.userId!, params.data.characterId, params.data.ownershipId,
+    );
+    res.status(200).json(UseItemResponse.parse({
+      character: {
+        id: result.character.id,
+        hp: result.character.hp,
+        maxHp: result.character.maxHp,
+        mp: result.character.mp,
+        maxMp: result.character.maxMp,
+      },
+      consumed: result.consumed,
+    }));
+  } catch (error) {
+    if (error instanceof InventoryRuleError) {
+      res.status(error.statusCode).json({ error: error.message });
+      return;
+    }
+    throw error;
+  }
 });
 
 export default router;

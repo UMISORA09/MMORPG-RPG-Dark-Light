@@ -8,12 +8,17 @@
 import { memo, useRef } from "react";
 import * as THREE from "three";
 import { useFrame } from "@react-three/fiber";
-import { Text } from "@react-three/drei";
 import { SpriteBillboard25D } from "../sprites/SpriteBillboard25D";
 import { ZoneDetector } from "./ZoneDetector";
 import { ProceduralTerrain } from "./ProceduralTerrain";
 import { WorldAtmosphere } from "./WorldAtmosphere";
 import { WorldEnvironmentProps } from "./WorldEnvironmentProps";
+import { PixelWorldEnvironmentProps } from "./PixelWorldEnvironmentProps";
+import { DynamicWeatherSystem } from "./DynamicWeatherSystem";
+import { NPCEntities } from "./NPCEntities";
+import { QuestWaypointArrow } from "./QuestWaypointArrow";
+import { MultiplayerSyncManager } from "./MultiplayerSyncManager";
+import { PvPCombatArena } from "./PvPCombatArena";
 import { useGameStore } from "@/game/useGameStore";
 import { useGameWorldStore } from "@/stores/useGameWorldStore";
 
@@ -44,94 +49,43 @@ export const SeamlessWorldMap = memo(function SeamlessWorldMap() {
       {/* ── 2. CINEMATIC ATMOSPHERE, LIGHTING & SPARKLES ── */}
       <WorldAtmosphere />
 
-      {/* ── 3. INSTANCED ENVIRONMENT PROPS (GATES, LANTERNS, BRIDGE, OBELISKS) ── */}
+      {/* ── 2.5 DYNAMIC WEATHER SYSTEM (SUNNY STARDUST, HEAVY RAIN & BLOOD MOON) ── */}
+      <DynamicWeatherSystem />
+
+      {/* ── 3. PIXEL ART ENVIRONMENTAL PROPS (ANCIENT TREES, FALLING LEAVES, GROUNDED ROCKS, GRASS TUFTS) ── */}
+      <PixelWorldEnvironmentProps />
+
+      {/* ── 4. INSTANCED ENVIRONMENT PROPS (GATES, LANTERNS, BRIDGE, OBELISKS) ── */}
       <WorldEnvironmentProps />
 
-      {/* ── 4. REAL-TIME ZONE DETECTOR (AUDIO & HUD ANNOUNCEMENTS) ── */}
+      {/* ── 5. REAL-TIME ZONE DETECTOR (AUDIO & HUD ANNOUNCEMENTS) ── */}
       <ZoneDetector />
 
-      {/* ── 5. VILLAGE INTERACTIVE NPCS ── */}
-      {/* Safe Zone Boundary Ring Decal (Z-Fighting Free) */}
+      {/* ── 6. VILLAGE INTERACTIVE NPCS & SANCTUARY BOUNDARY ── */}
+      {/* Safe Zone Boundary Ring Decal (r = 21.5m, Z-Fighting Free) */}
       <mesh position={[0, 0.02, 0]} rotation={[-Math.PI / 2, 0, 0]}>
-        <ringGeometry args={[17.6, 18.2, 48]} />
+        <ringGeometry args={[21.2, 21.8, 64]} />
         <meshBasicMaterial
           color="#00f2ff"
           transparent
-          opacity={0.5}
+          opacity={0.45}
           depthWrite={false}
           polygonOffset={true}
           polygonOffsetFactor={-1}
         />
       </mesh>
 
-      {/* NPC 1: Thương Gia Long Tộc (Opens Shop Modal) */}
-      <group position={[-7, 0, -4]}>
-        <SpriteBillboard25D
-          position={[0, 0, 0]}
-          textureKey="npc_shop"
-          color="#f59e0b"
-          secondaryColor="#fbbf24"
-          weaponType="shield"
-          name="🪙 Thương Nhân Bảo Khố"
-          level={99}
-          hp={9999}
-          maxHp={9999}
-          onClick={() => openModal("shop")}
-        />
-        <Text
-          position={[0, 2.9, 0]}
-          fontSize={0.24}
-          color="#fbbf24"
-          anchorX="center"
-          anchorY="middle"
-          outlineWidth={0.03}
-          outlineColor="#000"
-        >
-          [Bấm chuột hoặc phím P: Cửa Hàng]
-        </Text>
-      </group>
+      {/* ── 6. VILLAGE INTERACTIVE NPCS & QUEST GIVERS ── */}
+      <NPCEntities />
 
-      {/* NPC 2: Bia Vinh Danh Long Tộc (Opens Leaderboard Modal) */}
-      <group position={[7, 0, -4]}>
-        <SpriteBillboard25D
-          position={[0, 0, 0]}
-          textureKey="npc_leaderboard"
-          color="#a855f7"
-          secondaryColor="#c084fc"
-          weaponType="sword"
-          name="🏆 Đại Sứ Vinh Danh"
-          level={99}
-          hp={9999}
-          maxHp={9999}
-          onClick={() => openModal("leaderboard")}
-        />
-        <Text
-          position={[0, 2.9, 0]}
-          fontSize={0.24}
-          color="#c084fc"
-          anchorX="center"
-          anchorY="middle"
-          outlineWidth={0.03}
-          outlineColor="#000"
-        >
-          [Bấm chuột hoặc phím L/O: Vinh Danh]
-        </Text>
-      </group>
+      {/* ── 7. 3D COMPASS QUEST WAYPOINT ARROW ── */}
+      <QuestWaypointArrow />
 
-      {/* NPC 3: Trưởng Lão Làng Long Tộc */}
-      <group position={[0, 0, -7.5]}>
-        <SpriteBillboard25D
-          position={[0, 0, 0]}
-          textureKey="npc_elder"
-          color="#10b981"
-          secondaryColor="#34d399"
-          weaponType="gun"
-          name="📜 Trưởng Lão Làng"
-          level={100}
-          hp={9999}
-          maxHp={9999}
-        />
-      </group>
+      {/* ── 8. REAL-TIME MULTIPLAYER SYNC & REMOTE PLAYERS ── */}
+      <MultiplayerSyncManager />
+
+      {/* ── 9. RANKED 1v1 PVP DUEL COMBAT ARENA ── */}
+      <PvPCombatArena />
 
       {/* ── 6. BOSS ALTAR RUNIC SEALS (Z-FIGHTING FREE AT Y = 0.05) ── */}
       <group position={[0, 0, -70]}>

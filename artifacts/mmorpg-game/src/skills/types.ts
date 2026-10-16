@@ -73,6 +73,8 @@ export type SFXSynthPreset =
   | "dragon_roar"
   | "holy_bell"
   | "coin_chime"
+  | "loot_drop"
+  | "rarity_chime"
   | "level_up_fanfare";
 
 export interface GameFeelSpec {

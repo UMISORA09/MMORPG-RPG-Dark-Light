@@ -158,31 +158,67 @@ export const WeaponSocket3D = memo(function WeaponSocket3D({
               <meshStandardMaterial color="#0f172a" roughness={0.8} />
             </mesh>
           </group>
+          {/* Off-Hand Reverse Dagger (Reverse Grip) */}
+          <group position={[-0.35, 0.1, -0.1]} rotation={[-Math.PI / 3, 0, Math.PI / 6]}>
+            <mesh castShadow position={[0, -0.22, 0]}>
+              <boxGeometry args={[0.05, 0.42, 0.02]} />
+              <meshStandardMaterial
+                color={rarityColors.blade}
+                emissive={rarityColors.glow}
+                emissiveIntensity={rarityColors.emissiveIntensity}
+                metalness={0.85}
+                roughness={0.15}
+              />
+            </mesh>
+            <mesh position={[0, 0.05, 0]}>
+              <cylinderGeometry args={[0.02, 0.02, 0.14, 6]} />
+              <meshStandardMaterial color="#0f172a" roughness={0.8} />
+            </mesh>
+          </group>
         </group>
       )}
 
       {/* ── 3. QUANTUM BLASTER / GUN (Gunner) ── */}
       {weaponType === "gun" && (
-        <group position={[0, 0, 0]} rotation={[0, -Math.PI / 2, 0]}>
-          {/* Barrel */}
-          <mesh castShadow position={[0.2, 0.05, 0]} rotation={[0, 0, Math.PI / 2]}>
-            <cylinderGeometry args={[0.035, 0.045, 0.45, 8]} />
-            <meshStandardMaterial color="#334155" metalness={0.8} roughness={0.3} />
-          </mesh>
-          {/* Energy Core Chamber */}
-          <mesh position={[0.05, 0.05, 0]}>
-            <boxGeometry args={[0.16, 0.12, 0.08]} />
-            <meshStandardMaterial
-              color={rarityColors.glow}
-              emissive={rarityColors.glow}
-              emissiveIntensity={rarityColors.emissiveIntensity * 1.5}
-            />
-          </mesh>
-          {/* Grip */}
-          <mesh position={[-0.05, -0.08, 0]} rotation={[0, 0, -Math.PI / 6]}>
-            <boxGeometry args={[0.04, 0.16, 0.04]} />
-            <meshStandardMaterial color="#0f172a" roughness={0.9} />
-          </mesh>
+        <group position={[0, 0, 0]}>
+          {/* Main Hand Blaster */}
+          <group position={[0, 0, 0]} rotation={[0, -Math.PI / 2, 0]}>
+            <mesh castShadow position={[0.2, 0.05, 0]} rotation={[0, 0, Math.PI / 2]}>
+              <cylinderGeometry args={[0.035, 0.045, 0.45, 8]} />
+              <meshStandardMaterial color="#334155" metalness={0.8} roughness={0.3} />
+            </mesh>
+            <mesh position={[0.05, 0.05, 0]}>
+              <boxGeometry args={[0.16, 0.12, 0.08]} />
+              <meshStandardMaterial
+                color={rarityColors.glow}
+                emissive={rarityColors.glow}
+                emissiveIntensity={rarityColors.emissiveIntensity * 1.5}
+              />
+            </mesh>
+            <mesh position={[-0.05, -0.08, 0]} rotation={[0, 0, -Math.PI / 6]}>
+              <boxGeometry args={[0.04, 0.16, 0.04]} />
+              <meshStandardMaterial color="#0f172a" roughness={0.9} />
+            </mesh>
+          </group>
+          {/* Off-Hand Plasma Blaster */}
+          <group position={[-0.35, -0.05, -0.15]} rotation={[0, -Math.PI / 2, 0.2]}>
+            <mesh castShadow position={[0.18, 0.05, 0]} rotation={[0, 0, Math.PI / 2]}>
+              <cylinderGeometry args={[0.035, 0.045, 0.42, 8]} />
+              <meshStandardMaterial color="#334155" metalness={0.8} roughness={0.3} />
+            </mesh>
+            <mesh position={[0.05, 0.05, 0]}>
+              <boxGeometry args={[0.15, 0.11, 0.08]} />
+              <meshStandardMaterial
+                color={rarityColors.glow}
+                emissive={rarityColors.glow}
+                emissiveIntensity={rarityColors.emissiveIntensity * 1.5}
+              />
+            </mesh>
+            <mesh position={[-0.05, -0.08, 0]} rotation={[0, 0, -Math.PI / 6]}>
+              <boxGeometry args={[0.04, 0.15, 0.04]} />
+              <meshStandardMaterial color="#0f172a" roughness={0.9} />
+            </mesh>
+          </group>
         </group>
       )}
 
@@ -210,6 +246,21 @@ export const WeaponSocket3D = memo(function WeaponSocket3D({
               metalness={0.9}
             />
           </mesh>
+          {/* Spiked War Hammer in hand */}
+          <group position={[-0.32, 0.25, -0.08]} rotation={[0, 0, -Math.PI / 6]}>
+            <mesh position={[0, -0.15, 0]}>
+              <cylinderGeometry args={[0.03, 0.03, 0.6, 8]} />
+              <meshStandardMaterial color="#78350f" roughness={0.8} />
+            </mesh>
+            <mesh castShadow position={[0, 0.18, 0]}>
+              <boxGeometry args={[0.22, 0.18, 0.18]} />
+              <meshStandardMaterial color="#475569" metalness={0.8} roughness={0.3} />
+            </mesh>
+            <mesh position={[0.13, 0.18, 0]} rotation={[0, 0, -Math.PI / 2]}>
+              <coneGeometry args={[0.06, 0.12, 6]} />
+              <meshStandardMaterial color="#fbbf24" metalness={0.9} />
+            </mesh>
+          </group>
         </group>
       )}
 

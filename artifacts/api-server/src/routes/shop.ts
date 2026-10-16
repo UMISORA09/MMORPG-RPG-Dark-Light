@@ -20,16 +20,9 @@ import {
   toCharacterResponse,
 } from "../lib/inventory";
 import { getExpForLevel } from "../data/classes";
+import { requireAuth } from "../middlewares/requireAuth";
 
 const router = Router();
-
-function requireAuth(req: any, res: any, next: any) {
-  if (!req.session?.userId) {
-    res.status(401).json({ error: "Chưa đăng nhập" });
-    return;
-  }
-  next();
-}
 
 function withExperienceToNextLevel(character: Awaited<ReturnType<typeof toCharacterResponse>>) {
   return {
@@ -92,25 +85,32 @@ router.post("/characters/:characterId/inventory/:itemId/buy", requireAuth, async
       return { error: "Không đủ vàng để mua vật phẩm" as const };
     }
 
-    const [alreadyOwned] = await tx
-      .select({ id: characterItemsTable.id })
+    const ownedRows = await tx
+      .select()
       .from(characterItemsTable)
-      .where(
-        and(
-          eq(characterItemsTable.characterId, character.id),
-          eq(characterItemsTable.itemId, item.id),
-        ),
-      )
-      .limit(1);
+      .where(eq(characterItemsTable.characterId, character.id));
+    const maxStack = Math.max(1, Number(item.maxStack ?? 1));
+    const stack = item.category !== "equipment"
+      ? ownedRows.find((owned: any) => owned.itemId === item.id && owned.quantity < maxStack)
+      : undefined;
+    let ownership;
 
-    if (alreadyOwned) {
-      return { error: "Nhân vật đã sở hữu vật phẩm này" as const };
+    if (stack) {
+      [ownership] = await tx.update(characterItemsTable)
+        .set({ quantity: Number(stack.quantity) + 1 })
+        .where(eq(characterItemsTable.id, stack.id))
+        .returning();
+    } else {
+      if (ownedRows.length >= 30) return { error: "Hành trang đã đầy (30 ô)" as const };
+      const occupiedSlots = new Set(ownedRows.map((owned: any) => Number(owned.slotIndex ?? 0)));
+      let slotIndex = 0;
+      while (occupiedSlots.has(slotIndex) && slotIndex < 30) slotIndex++;
+      if (slotIndex >= 30) return { error: "Hành trang đã đầy (30 ô)" as const };
+      [ownership] = await tx.insert(characterItemsTable)
+        .values({ characterId: character.id, itemId: item.id, slotIndex, quantity: 1, equipped: false })
+        .returning();
     }
 
-    const [ownership] = await tx
-      .insert(characterItemsTable)
-      .values({ characterId: character.id, itemId: item.id })
-      .returning();
     const [updatedCharacter] = await tx
       .update(charactersTable)
       .set({ gold: lockedCharacter.gold - item.price })

@@ -29,9 +29,11 @@ export const MinimapRadar = memo(function MinimapRadar() {
   });
 
   const pRadar = toRadar(playerPos.x, playerPos.z);
-  const villageRadiusPx = 18.0 * scale;
+  const villageRadiusPx = 21.5 * scale;
   const bossCenterRadar = toRadar(0, -70);
   const bossRadiusPx = 17.5 * scale;
+  const dungeonPortalRadar = toRadar(0, -48);
+  const deadMarshRadar = toRadar(35, 0);
 
   return (
     <div
@@ -65,7 +67,7 @@ export const MinimapRadar = memo(function MinimapRadar() {
         </div>
 
         {/* ── World Zones Outlines ── */}
-        {/* 1. Safe Village Sanctuary (Emerald Green Ring) */}
+        {/* 1. Safe Village Sanctuary (Emerald Green Ring r = 21.5m) */}
         <div
           className="absolute rounded-full border border-emerald-400/70 bg-emerald-500/10 -translate-x-1/2 -translate-y-1/2 pointer-events-none shadow-[0_0_8px_rgba(16,185,129,0.3)]"
           style={{
@@ -77,7 +79,30 @@ export const MinimapRadar = memo(function MinimapRadar() {
           title="Làng Long Tộc (An Toàn)"
         />
 
-        {/* 2. Boss Altar (Crimson/Fiery Ring at North z = -70) */}
+        {/* 2. Dead Marsh & Wasteland Sector (Purple East Area) */}
+        <div
+          className="absolute rounded-full border border-purple-500/50 bg-purple-900/15 -translate-x-1/2 -translate-y-1/2 pointer-events-none"
+          style={{
+            left: deadMarshRadar.x,
+            top: deadMarshRadar.y,
+            width: 28 * scale * 2,
+            height: 28 * scale * 2,
+          }}
+          title="Vùng Đất Chết & Đầm Lầy (Lv.6 - Lv.10)"
+        />
+
+        {/* 3. Dungeon Portal Gate Marker at [0, -48] */}
+        <div
+          className="absolute -translate-x-1/2 -translate-y-1/2 z-20 flex items-center justify-center text-cyan-300 drop-shadow-[0_0_8px_#00f2ff] animate-pulse"
+          style={{ left: dungeonPortalRadar.x, top: dungeonPortalRadar.y }}
+          title="Cổng Hang Động Phó Bản"
+        >
+          <div className="w-3.5 h-3.5 rounded-full bg-cyan-500/30 border border-cyan-400 flex items-center justify-center text-[8px] font-black">
+            🌀
+          </div>
+        </div>
+
+        {/* 4. Boss Altar (Crimson/Fiery Ring at North z = -70) */}
         <div
           className="absolute rounded-full border border-rose-500/70 bg-rose-500/15 -translate-x-1/2 -translate-y-1/2 pointer-events-none shadow-[0_0_10px_rgba(244,63,94,0.35)]"
           style={{
@@ -146,10 +171,14 @@ export const MinimapRadar = memo(function MinimapRadar() {
       <div className="mt-1 px-3 py-0.5 rounded-full bg-[#0a0514]/90 border border-slate-800 text-center shadow-md">
         <p className="text-[10px] font-black tracking-wide text-slate-200">
           {currentZone === "SAFE_VILLAGE"
-            ? "🛡️ LÀNG LONG TỘC"
+            ? "🛡️ LÀNG TÂN THỦ (AN TOÀN)"
             : currentZone === "WILDERNESS"
-            ? "⚔️ ĐẤU TRƯỜNG HOANG DÃ"
-            : "🔥 CẤM ĐỊA BOSS"}
+            ? "⚔️ RỪNG NGUYÊN SINH (LV.1-5)"
+            : currentZone === "DEAD_MARSH"
+            ? "☠️ ĐẦM LẦY CHẾT (LV.6-10)"
+            : currentZone === "DUNGEON"
+            ? "🏰 HANG ĐỘNG PHÓ BẢN"
+            : "🔥 CẤM ĐỊA BOSS (LV.20)"}
         </p>
         <p className="text-[8px] font-mono text-slate-400">
           X: {Math.round(playerPos.x)} · Z: {Math.round(playerPos.z)}

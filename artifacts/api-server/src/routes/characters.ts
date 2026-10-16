@@ -1,22 +1,18 @@
 import { Router } from "express";
-import { db, charactersTable, battleLogsTable } from "@workspace/db";
+import { db, charactersTable, battleLogsTable, usersTable, serversTable } from "@workspace/db";
 import { eq, desc } from "drizzle-orm";
 import { CreateCharacterBody } from "@workspace/api-zod";
 import { CHARACTER_CLASSES, getStatsForLevel } from "../data/classes";
+import { requireAuth } from "../middlewares/requireAuth";
 import {
   ensureItemCatalog,
+  ensureServerCatalog,
   ensureStarterInventory,
+  getCharacterForUser,
   toCharacterResponse,
 } from "../lib/inventory";
 
 const router = Router();
-
-function requireAuth(req: any, res: any, next: any) {
-  if (!req.session.userId) {
-    return res.status(401).json({ error: "Chưa đăng nhập" });
-  }
-  next();
-}
 
 router.get("/characters", requireAuth, async (req, res) => {
   const characters = await db
@@ -52,6 +48,18 @@ router.post("/characters", requireAuth, async (req, res) => {
     return res.status(400).json({ error: "Chức nghiệp không hợp lệ" });
   }
 
+  const existingCharacters = await db.select({ id: charactersTable.id }).from(charactersTable)
+    .where(eq(charactersTable.userId, req.session.userId!));
+  if (existingCharacters.length >= 4) {
+    return res.status(409).json({ error: "Tài khoản đã đạt giới hạn 4 nhân vật" });
+  }
+
+  const [user] = await db.select().from(usersTable).where(eq(usersTable.id, req.session.userId!)).limit(1);
+  await ensureServerCatalog();
+  const selectedServerId = user?.selectedServerId ?? "s1_long_vuong";
+  const [server] = await db.select().from(serversTable).where(eq(serversTable.id, selectedServerId)).limit(1);
+  if (!server) return res.status(409).json({ error: "Máy chủ đã chọn không còn khả dụng" });
+
   const stats = getStatsForLevel(classId, 1);
   await ensureItemCatalog();
 
@@ -59,6 +67,7 @@ router.post("/characters", requireAuth, async (req, res) => {
     .insert(charactersTable)
     .values({
       userId: req.session.userId!,
+      serverId: server.id,
       name,
       classId,
       className: cls.name,
@@ -112,6 +121,9 @@ router.get("/characters/:characterId/battle-log", requireAuth, async (req, res) 
   if (isNaN(characterId)) {
     return res.status(400).json({ error: "ID không hợp lệ" });
   }
+
+  const character = await getCharacterForUser(characterId, req.session.userId!);
+  if (!character) return res.status(404).json({ error: "Không tìm thấy nhân vật" });
 
   const logs = await db
     .select()

@@ -157,7 +157,7 @@ export function GameMenuSheet({
       {
         onSuccess: async () => {
           await refreshInventory();
-          toast({ title: 'Đã mua vật phẩm', description: 'Vật phẩm đã được lưu vào túi đồ.' });
+          toast({ title: 'Đã mua vật phẩm', description: 'Vật phẩm đã được lưu vào hành trang.' });
         },
         onError: (error) => toast({ variant: 'destructive', title: 'Mua vật phẩm thất bại', description: getErrorMessage(error) }),
       },
@@ -242,7 +242,7 @@ export function GameMenuSheet({
             }`}
           >
             <Backpack className="h-4 w-4" />
-            Túi đồ
+            Hành trang
           </button>
           <button
             type="button"
@@ -272,7 +272,7 @@ export function GameMenuSheet({
           <div className="space-y-4">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm font-bold text-foreground">Túi đồ & trang bị</p>
+                <p className="text-sm font-bold text-foreground">Hành trang & trang bị</p>
                 <p className="text-xs text-muted-foreground">{classInfo?.name ?? character.className} • chỉ số cập nhật ngay</p>
               </div>
               <span className="rounded-full border border-secondary/30 bg-secondary/10 px-2 py-1 text-[10px] font-mono text-secondary">
@@ -282,11 +282,11 @@ export function GameMenuSheet({
 
             {inventoryLoading ? (
               <div className="flex items-center justify-center gap-2 rounded-xl border border-border p-6 text-xs text-muted-foreground">
-                <Loader2 className="h-4 w-4 animate-spin" /> Đang tải túi đồ...
+                <Loader2 className="h-4 w-4 animate-spin" /> Đang tải hành trang...
               </div>
             ) : ownedItems.length === 0 ? (
               <div className="rounded-xl border border-dashed border-border p-5 text-center text-xs text-muted-foreground">
-                Túi đồ đang trống.
+                Hành trang đang trống.
               </div>
             ) : (
               <div className="max-h-[36vh] space-y-2 overflow-y-auto custom-scrollbar pr-1">

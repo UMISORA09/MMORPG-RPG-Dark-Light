@@ -1,16 +1,22 @@
-# VCS & IDE
+# ==============================================================================
+# .dockerignore for Chiến Long Bá Monorepo
+# Optimizes Docker build context transfer & excludes local dependencies/caches
+# ==============================================================================
+
+# VCS & IDE Metadata
 .git
 .gitignore
 .agents
 .vscode
 .idea
+.work
 
-# Dependencies & Package Managers
+# Dependencies & Package Manager caches
 node_modules
 .pnpm-store
 .pnpm-workspace-state-v1.json
 
-# Build outputs & caches
+# Local build artifacts & compilation caches
 dist
 build
 out-tsc
@@ -19,7 +25,7 @@ tmp
 .cache
 .vercel
 
-# Environment & Secrets
+# Environment variables & secrets
 .env
 .env.*
 !.env.example
@@ -30,7 +36,17 @@ npm-debug.log*
 yarn-debug.log*
 pnpm-debug.log*
 
-# Backups & Heavy Assets not needed for build
+# Heavy local assets & secondary repositories (Not required inside Docker images)
 raw_ai_sprites
+bonfire-develop
+outputs
+tools
+docs
+taonhanvat.md
+header-banner.png
 Dragon-Game-Studio
 Heroic-Battleground
+
+# Local Windows batch & shell helper scripts
+*.bat
+*.ps1

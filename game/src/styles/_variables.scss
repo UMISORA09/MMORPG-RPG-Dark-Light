@@ -1,0 +1,30 @@
+// ==============================================================================
+// Chiến Long Bá — Sass Variables
+// ==============================================================================
+
+// Theme Palette (Dark Fantasy Slate Teal & Neon Cyan/Crimson)
+$bg-dark: #07040d;
+$bg-surface: #0f0a1c;
+$bg-card: rgba(13, 10, 24, 0.88);
+$border-card: rgba(139, 92, 246, 0.45);
+
+$cyan-primary: #38bdf8;
+$purple-magic: #8b5cf6;
+$pink-neon: #ec4899;
+$crimson-danger: #ef4444;
+$gold-accent: #facc15;
+$emerald-success: #22c55e;
+$text-light: #f1f5f9;
+$text-muted: #94a3b8;
+
+// Dimensions & Scales
+$game-width: 640px;
+$game-height: 360px;
+$pixel-scale: 3;
+$border-radius-base: 8px;
+$border-radius-pill: 9999px;
+
+// Typography
+$font-sans: 'Segoe UI', -apple-system, BlinkMacSystemFont, Roboto, sans-serif;
+$font-mono: 'Consolas', 'Courier New', monospace;
+

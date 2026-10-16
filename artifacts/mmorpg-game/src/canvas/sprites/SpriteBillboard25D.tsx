@@ -3,6 +3,7 @@ import * as THREE from "three";
 import { useFrame } from "@react-three/fiber";
 import { Billboard, Text } from "@react-three/drei";
 import { loadOrFallbackSpritesheet } from "./ProceduralSpriteFallback";
+import { useGameWorldStore } from "@/stores/useGameWorldStore";
 
 export type EntityAnimationState =
   | "idle"
@@ -37,6 +38,8 @@ export interface SpriteBillboard25DProps {
   isBoss?: boolean;
   isPlayer?: boolean;
   isInvincible?: boolean;
+  hitFlash?: boolean;
+  debuffBadges?: string[];
   onClick?: () => void;
 }
 
@@ -61,10 +64,13 @@ export const SpriteBillboard25D = memo(function SpriteBillboard25D({
   isBoss = false,
   isPlayer = false,
   isInvincible = false,
+  hitFlash = false,
+  debuffBadges = [],
   onClick,
 }: SpriteBillboard25DProps) {
   const meshRef = useRef<THREE.Mesh>(null);
   const materialRef = useRef<THREE.MeshStandardMaterial>(null);
+  const overheadRef = useRef<THREE.Group>(null);
 
   // Computed dimensions
   const entityWidth = width ?? (isBoss ? 4.2 : 2.2);
@@ -193,19 +199,35 @@ export const SpriteBillboard25D = memo(function SpriteBillboard25D({
 
     // Hurt flashing emissive effect
     if (materialRef.current) {
-      if (state === "hurt" || isInvincible) {
-        materialRef.current.emissive.set("#ff0044");
-        materialRef.current.emissiveIntensity = 0.85 + Math.sin(Date.now() * 0.02) * 0.4;
+      if (state === "hurt" || isInvincible || hitFlash) {
+        materialRef.current.emissive.set("#ff2222");
+        materialRef.current.emissiveIntensity = 0.95 + Math.sin(Date.now() * 0.03) * 0.35;
       } else {
         materialRef.current.emissive.set("#000000");
         materialRef.current.emissiveIntensity = 0;
+      }
+    }
+
+    // Distance check & Player Overhead Visibility
+    if (overheadRef.current) {
+      if (isPlayer) {
+        // Player already has top-left player frame; hide overhead badge to keep view clean
+        overheadRef.current.visible = false;
+      } else {
+        const playerPos = useGameWorldStore.getState().playerPosition;
+        const dx = posArray[0] - playerPos.x;
+        const dy = posArray[1] - playerPos.y;
+        const dz = posArray[2] - playerPos.z;
+        const distSq = dx * dx + dy * dy + dz * dz;
+        // Auto hide if distance > 22m (22 * 22 = 484)
+        overheadRef.current.visible = distSq <= 484;
       }
     }
   });
 
   // Floating HP bar percentage
   const hpPct = Math.max(0, Math.min(1, hp / Math.max(1, maxHp)));
-  const barWidth = isBoss ? 3.0 : 1.5;
+  const barWidth = isBoss ? 2.4 : 1.3;
   const hpColor =
     hpPct > 0.5 ? "#10b981" : hpPct > 0.25 ? "#f59e0b" : "#ef4444";
 
@@ -262,17 +284,35 @@ export const SpriteBillboard25D = memo(function SpriteBillboard25D({
           />
         </mesh>
 
-        {/* --- Overhead Floating HUD: Name, Level, and HP Bar --- */}
-        <group position={[0, entityHeight + 0.35, 0]}>
-          {/* Entity Name & Level */}
-          {name && (
+        {/* --- Overhead Floating HUD: Single-line Name & Compact HP Bar (Pill Background) --- */}
+        <group ref={overheadRef} position={[0, entityHeight + 0.32, 0]}>
+          {/* Black Translucent Background Pill */}
+          <mesh position={[0, 0.1, -0.02]}>
+            <planeGeometry args={[barWidth + 0.3, 0.34]} />
+            <meshBasicMaterial color="#000000" transparent opacity={0.72} depthWrite={false} />
+          </mesh>
+
+          {/* Active Debuff Badges */}
+          {debuffBadges && debuffBadges.length > 0 && (
             <Text
-              position={[0, 0.28, 0]}
-              fontSize={isBoss ? 0.32 : 0.2}
-              color={isPlayer ? "#38bdf8" : isBoss ? "#ef4444" : "#f1f5f9"}
+              position={[0, 0.35, 0]}
+              fontSize={0.16}
               anchorX="center"
               anchorY="middle"
-              outlineWidth={0.03}
+            >
+              {debuffBadges.join(" ")}
+            </Text>
+          )}
+
+          {/* Single-line Entity Name & Level */}
+          {name && (
+            <Text
+              position={[0, 0.17, 0]}
+              fontSize={isBoss ? 0.26 : 0.18}
+              color={isBoss ? "#ef4444" : "#ffffff"}
+              anchorX="center"
+              anchorY="middle"
+              outlineWidth={0.025}
               outlineColor="#020617"
             >
               {level ? `Lv.${level} ` : ""}
@@ -280,15 +320,15 @@ export const SpriteBillboard25D = memo(function SpriteBillboard25D({
             </Text>
           )}
 
-          {/* HP Bar Background */}
-          <mesh position={[0, 0, -0.01]}>
-            <planeGeometry args={[barWidth + 0.08, 0.16]} />
-            <meshBasicMaterial color="#090d16" />
+          {/* Compact HP Bar Track */}
+          <mesh position={[0, 0.03, -0.01]}>
+            <planeGeometry args={[barWidth, 0.06]} />
+            <meshBasicMaterial color="#1a202c" />
           </mesh>
 
-          {/* HP Bar Foreground Fill */}
-          <mesh position={[(-barWidth * (1 - hpPct)) / 2, 0, 0]}>
-            <planeGeometry args={[Math.max(0.01, barWidth * hpPct), 0.12]} />
+          {/* Compact HP Bar Fill */}
+          <mesh position={[(-barWidth * (1 - hpPct)) / 2, 0.03, 0]}>
+            <planeGeometry args={[Math.max(0.01, barWidth * hpPct), 0.06]} />
             <meshBasicMaterial color={hpColor} />
           </mesh>
         </group>

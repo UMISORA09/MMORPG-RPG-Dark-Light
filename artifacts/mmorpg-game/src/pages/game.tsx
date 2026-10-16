@@ -21,6 +21,7 @@ import Game from "@/game/Game";
 import { useGameStore } from "@/game/useGameStore";
 import { useGameWorldStore } from "@/stores/useGameWorldStore";
 import { UnifiedOverlayModals } from "@/components/UnifiedOverlayModals";
+import { playCombatSFX } from "@/audio/CombatSoundSynth";
 
 export default function GamePage() {
   const [, setLocation] = useLocation();
@@ -120,6 +121,7 @@ export default function GamePage() {
 
             // Show celebratory notification for Level Up
             if (result.leveledUp) {
+              playCombatSFX("level_up_fanfare", 0.85);
               toast({
                 title: "🎉 THĂNG CẤP THÀNH CÔNG!",
                 description: `Chúc mừng bạn đã đạt Cấp ${result.character.level}! Sức mạnh tấn công và phòng ngự tăng vọt.`,

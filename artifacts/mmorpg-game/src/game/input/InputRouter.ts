@@ -83,43 +83,185 @@ export function initInputRouter() {
       return;
     }
 
-    // If modal is open, ignore gameplay hotkeys
-    if (hasModal) return;
-
-    // 2. Action Hotkeys (Single Unified Dispatch)
-    // Combat Skills: 1 / Q (Skill 1), 2 / E (Skill 2), 3 / R (Skill 3)
-    if (code === "Digit1" || code === "KeyQ") {
-      worldStore.triggerSkill(1);
-      gameStore.triggerSkill(1);
-    } else if (code === "Digit2" || code === "KeyE") {
-      // E is strictly Skill 2
-      worldStore.triggerSkill(2);
-      gameStore.triggerSkill(2);
-    } else if (code === "Digit3" || code === "KeyR") {
-      worldStore.triggerSkill(3);
-      gameStore.triggerSkill(3);
-    }
-
-    // Attack Trigger via Keyboard (J)
-    if (code === "KeyJ") {
-      wantsAttackEdge = true;
-    }
-
-    // Interface Modals: B/I (Inventory), P (Shop), L/O (Leaderboard), H (Battle Log), V (2.5D/3D Mode)
+    // Interface Modals Toggle: B or I (Inventory & Character), P (Shop), O (Leaderboard - NOT L), H (Battle Log), V (2.5D/3D Mode)
     if (code === "KeyB" || code === "KeyI") {
-      worldStore.setActiveModal("inventory");
-      gameStore.setActiveModal("inventory");
+      if (worldStore.activeModal === "inventory") {
+        worldStore.closeActiveModal();
+        gameStore.closeActiveModal();
+      } else {
+        worldStore.setActiveModal("inventory");
+        gameStore.setActiveModal("inventory");
+      }
+      return;
     } else if (code === "KeyP") {
-      worldStore.setActiveModal("shop");
-      gameStore.setActiveModal("shop");
-    } else if (code === "KeyL" || code === "KeyO") {
-      worldStore.setActiveModal("leaderboard");
-      gameStore.setActiveModal("leaderboard");
+      if (worldStore.activeModal === "shop") {
+        worldStore.closeActiveModal();
+      } else {
+        worldStore.setActiveModal("shop");
+        gameStore.setActiveModal("shop");
+      }
+      return;
+    } else if (code === "KeyO") {
+      if (worldStore.activeModal === "leaderboard") {
+        worldStore.closeActiveModal();
+      } else {
+        worldStore.setActiveModal("leaderboard");
+        gameStore.setActiveModal("leaderboard");
+      }
+      return;
     } else if (code === "KeyH") {
-      worldStore.setActiveModal("battleLog");
-      gameStore.setActiveModal("battle_logs");
+      if (worldStore.activeModal === "battleLog") {
+        worldStore.closeActiveModal();
+      } else {
+        worldStore.setActiveModal("battleLog");
+        gameStore.setActiveModal("battle_logs");
+      }
+      return;
+    } else if (code === "KeyY") {
+      if (worldStore.activeModal === "achievements") {
+        worldStore.closeActiveModal();
+      } else {
+        worldStore.setActiveModal("achievements");
+      }
+      return;
+    } else if (code === "KeyU") {
+      if (worldStore.activeModal === "dailyRewards") {
+        worldStore.closeActiveModal();
+      } else {
+        worldStore.setActiveModal("dailyRewards");
+      }
+      return;
     } else if (code === "KeyV") {
       worldStore.toggleCharacterRenderMode();
+      return;
+    }
+
+    // If modal is open, ignore gameplay combat hotkeys
+    if (hasModal) return;
+
+    // Basic Attack / Combo: J or Left Mouse (W, A, S, D are strictly reserved for movement!)
+    if (code === "KeyJ") {
+      wantsAttackEdge = true;
+      return;
+    }
+
+    // Phím tương tác [F]: Vào Hang Động Phó Bản, Bia Tưởng Niệm, NPC hoặc nhặt đồ
+    if (code === "KeyF") {
+      const pPos = worldStore.playerPosition;
+      // 1. Cổng Hang Động Phó Bản (z = -48)
+      const dPortal = Math.hypot(pPos.x - 0, pPos.z - (-48));
+      const dPortalLeft = Math.hypot(pPos.x - (-22), pPos.z - (-48));
+      const dPortalRight = Math.hypot(pPos.x - 22, pPos.z - (-48));
+      if (dPortal < 7.5 || dPortalLeft < 6.0 || dPortalRight < 6.0) {
+        worldStore.openDungeonModal();
+        return;
+      }
+
+      // 2. Bia Tưởng Niệm & Bảng Xếp Hạng Làng Tân Thủ ([6.5, 4.5])
+      const dMemorial = Math.hypot(pPos.x - 6.5, pPos.z - 4.5);
+      if (dMemorial < 5.0) {
+        worldStore.setActiveModal("leaderboard");
+        gameStore.setActiveModal("leaderboard");
+        return;
+      }
+
+      // 3. NPC Làng Tân Thủ
+      if (Math.hypot(pPos.x - 0, pPos.z - 8) < 4.0) {
+        worldStore.setActiveModal("quests");
+        return;
+      }
+      if (Math.hypot(pPos.x - (-8), pPos.z - (-6)) < 4.0) {
+        worldStore.setActiveModal("blacksmith");
+        return;
+      }
+      if (Math.hypot(pPos.x - 8, pPos.z - (-6)) < 4.0) {
+        worldStore.setActiveModal("shop");
+        return;
+      }
+      if (Math.hypot(pPos.x - 0, pPos.z - (-12)) < 4.0) {
+        worldStore.openDungeonModal();
+        return;
+      }
+
+      // 4. Nhặt đồ rơi vương vãi gần chân
+      worldStore.pickUpNearbyLoot(4.5);
+      return;
+    }
+
+    // Skill 1: Phím 1 hoặc Q (hoặc K)
+    if (code === "Digit1" || code === "KeyQ" || code === "KeyK") {
+      worldStore.triggerSkill(1);
+      gameStore.triggerSkill(1);
+      return;
+    }
+
+    // Skill 2: Phím 2 hoặc E
+    if (code === "Digit2" || code === "KeyE") {
+      worldStore.triggerSkill(2);
+      gameStore.triggerSkill(2);
+      return;
+    }
+
+    // Skill 3 (Tuyệt Kỹ / Ult): Phím 3 hoặc R (hoặc U)
+    if (code === "Digit3" || code === "KeyR" || code === "KeyU") {
+      worldStore.triggerSkill(3);
+      gameStore.triggerSkill(3);
+      return;
+    }
+
+    // Cuồng Nộ Thức Tỉnh (Fever Awakening): Phím T
+    if (code === "KeyT") {
+      if (worldStore.feverGauge >= 100) {
+        worldStore.activateFever();
+      } else {
+        worldStore.triggerSkill(3);
+      }
+      return;
+    }
+
+    // GM Admin Secret Panel: F12
+    if (e.key === "F12" || code === "F12") {
+      e.preventDefault();
+      worldStore.toggleGMAdmin();
+      return;
+    }
+
+    // Thú Cưỡi (Mount System): Phím Z hoặc M
+    if (code === "KeyZ" || code === "KeyM") {
+      worldStore.toggleMount();
+      return;
+    }
+
+    // 3. Quick Consumables / Potions
+    // Bình Máu (HP Potion): Phím 4 hoặc X
+    if (code === "Digit4" || code === "KeyX") {
+      worldStore.useQuickPotionHp();
+      return;
+    }
+    // Bình Năng Lượng (MP Potion): Phím 5 hoặc C
+    if (code === "Digit5" || code === "KeyC") {
+      worldStore.useQuickPotionMp();
+      return;
+    }
+    // La Bàn Dịch Chuyển Về Làng (Town Teleport): Phím 7
+    if (code === "Digit7") {
+      worldStore.useQuickTeleport();
+      return;
+    }
+    // Cuộn Khiên Thánh (Shield Scroll): Phím 8
+    if (code === "Digit8") {
+      worldStore.useQuickShield();
+      return;
+    }
+    // Thịt Nướng Hồi Máu (Food Meat): Phím 9
+    if (code === "Digit9") {
+      worldStore.useQuickFood("meat");
+      return;
+    }
+    // Súp Hầm Hồi MP (Food Soup): Phím 0
+    if (code === "Digit0") {
+      worldStore.useQuickFood("soup");
+      return;
     }
   });
 

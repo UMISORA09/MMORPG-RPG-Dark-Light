@@ -15,6 +15,10 @@ import { mobileState } from "@/game/mobileControls";
 import { PlayerStatusFrame } from "./PlayerStatusFrame";
 import { MinimapRadar } from "./MinimapRadar";
 import { ActionCombatBar } from "./ActionCombatBar";
+import { SymmetricalActionHUD } from "./SymmetricalActionHUD";
+import { PixelEnemyHealthBars } from "./PixelEnemyHealthBars";
+import { DungeonSelectModal } from "../modals/DungeonSelectModal";
+import { QuestTrackerHUD } from "./QuestTrackerHUD";
 import { 
   Backpack, 
   ShoppingBag, 
@@ -22,7 +26,13 @@ import {
   ScrollText, 
   LogOut, 
   Box, 
-  Settings 
+  Settings,
+  Crown,
+  Volume2,
+  VolumeX,
+  BarChart3,
+  Award,
+  Gift
 } from "lucide-react";
 
 export interface UnifiedGameHUDProps {
@@ -34,6 +44,9 @@ export const UnifiedGameHUD = memo(function UnifiedGameHUD({
 }: UnifiedGameHUDProps) {
   const currentZone = useGameWorldStore((s) => s.currentZone);
   const zoneNotification = useGameWorldStore((s) => s.zoneNotification);
+  const isLevelSuppressed = useGameWorldStore((s) => s.isLevelSuppressed);
+  const zoneWarningBanner = useGameWorldStore((s) => s.zoneWarningBanner);
+  const weather = useGameWorldStore((s) => s.weather);
   const bossName = useGameWorldStore((s) => s.bossName);
   const bossHealth = useGameWorldStore((s) => s.bossHealth);
   const bossMaxHealth = useGameWorldStore((s) => s.bossMaxHealth);
@@ -47,11 +60,19 @@ export const UnifiedGameHUD = memo(function UnifiedGameHUD({
   const characterRenderMode = useGameWorldStore((s) => s.characterRenderMode);
   const toggleCharacterRenderMode = useGameWorldStore((s) => s.toggleCharacterRenderMode);
 
-  const openModal = (modal: "inventory" | "shop" | "leaderboard" | "battleLog" | "settings") => {
+  // Mount & GM Admin tooling
+  const isMounted = useGameWorldStore((s) => s.isMounted);
+  const toggleMount = useGameWorldStore((s) => s.toggleMount);
+  const toggleGMAdmin = useGameWorldStore((s) => s.toggleGMAdmin);
+  const godMode = useGameWorldStore((s) => s.godMode);
+  const soundMuted = useGameWorldStore((s) => s.soundMuted);
+  const toggleSoundMute = useGameWorldStore((s) => s.toggleSoundMute);
+
+  const openModal = (modal: "inventory" | "shop" | "leaderboard" | "battleLog" | "settings" | "achievements" | "dailyRewards") => {
     useGameWorldStore.getState().setActiveModal(modal);
     if (modal === "battleLog") {
       useGameStore.getState().setActiveModal("battle_logs");
-    } else if (modal !== "settings") {
+    } else if (modal !== "settings" && modal !== "achievements" && modal !== "dailyRewards") {
       useGameStore.getState().setActiveModal(modal);
     }
   };
@@ -114,11 +135,23 @@ export const UnifiedGameHUD = memo(function UnifiedGameHUD({
       {/* ── TOP SECTION: Player Status (Left), Boss Bar / Zone Banner (Center), Minimap & Menu (Right) ── */}
       <div className="flex items-start justify-between w-full">
         
-        {/* Top-Left: Player Status Frame */}
-        <PlayerStatusFrame />
+        {/* Top-Left: Player Status Frame & Quest Tracker */}
+        <div className="flex flex-col gap-2">
+          <PlayerStatusFrame />
+          <QuestTrackerHUD />
+        </div>
 
-        {/* Top-Center: Zone Notification Banner & Boss Raid Health Bar */}
+        {/* Top-Center: Zone Warning Banner, Boss Raid Health Bar & Smooth Notices */}
         <div className="flex flex-col items-center flex-1 max-w-md mx-3">
+          {/* Big Dangerous Zone Warning Banner */}
+          {zoneWarningBanner && (
+            <div className="mb-2 w-full bg-rose-950/95 backdrop-blur-md border-2 border-rose-500 rounded-xl px-4 py-2 shadow-[0_0_30px_rgba(239,68,68,0.6)] text-center animate-bounce pointer-events-auto">
+              <span className="text-xs md:text-sm font-black tracking-wide text-rose-200">
+                {zoneWarningBanner}
+              </span>
+            </div>
+          )}
+
           {/* Boss Raid Health Bar */}
           {bossActive && (
             <div
@@ -156,6 +189,17 @@ export const UnifiedGameHUD = memo(function UnifiedGameHUD({
                 />
               </div>
 
+              {/* Boss Territory Advantage Buff */}
+              {(currentZone === "BOSS_ALTAR" || currentZone === "DUNGEON") && (
+                <div className="mt-1 flex items-center justify-between text-[9px] font-bold text-amber-300 bg-amber-950/60 border border-amber-600/40 rounded px-2 py-0.5">
+                  <span className="flex items-center gap-1">
+                    <span>🔥</span>
+                    <span>HƯỞNG LỢI LÃNH ĐỊA</span>
+                  </span>
+                  <span className="font-mono text-amber-200">+25% DEF, HỒI 1% HP/S</span>
+                </div>
+              )}
+
               {/* Stagger Armor Bar */}
               <div className="flex items-center gap-2 mt-1">
                 <span className="text-[9px] font-mono text-amber-400 font-bold shrink-0">GIÁP</span>
@@ -191,12 +235,26 @@ export const UnifiedGameHUD = memo(function UnifiedGameHUD({
             </div>
           )}
 
+          {/* Level Suppression Badge */}
+          {isLevelSuppressed && (
+            <div className="mt-1.5 flex items-center gap-1.5 px-3 py-1 rounded-full bg-red-950/90 border border-red-500/80 text-rose-300 font-mono text-[10px] font-black tracking-wider animate-pulse shadow-[0_0_15px_rgba(239,68,68,0.4)]">
+              <span>⚠️ ÁP CHẾ CẤP ĐỘ (-40% CÔNG THỦ, QUÁI NÉ TRÁNH TĂNG)</span>
+            </div>
+          )}
+
           {/* Smooth Zone Transition Notice */}
           {zoneNotification && (
             <div className="mt-2 bg-[#0a0514]/90 backdrop-blur-lg border border-cyan-500/50 rounded-full px-5 py-1.5 shadow-[0_0_15px_rgba(6,182,212,0.4)] text-xs font-black tracking-widest uppercase text-cyan-300 animate-bounce">
               {zoneNotification}
             </div>
           )}
+
+          {/* Dynamic Weather & Zone Status */}
+          <div className="mt-1 text-[10px] font-mono text-slate-400 flex items-center gap-2">
+            <span>
+              {weather === "SUNNY" ? "☀️ Trời Nắng Ráo" : weather === "RAIN" ? "🌧️ Mưa Giông (Tầm quái -20%, Kỹ năng +25%)" : "🩸 Huyết Nguyệt (Quái Cuồng Bạo)"}
+            </span>
+          </div>
         </div>
 
         {/* Top-Right: Minimap Radar + Quick Action Navigation Icons */}
@@ -241,22 +299,79 @@ export const UnifiedGameHUD = memo(function UnifiedGameHUD({
               <ShoppingBag className="w-4 h-4" />
             </button>
 
-            {/* Bảng Xếp Hạng (L / O) */}
+            {/* Bảng Xếp Hạng (O) */}
             <button
               onClick={() => openModal("leaderboard")}
               className="p-2 bg-slate-900 hover:bg-slate-800 border border-slate-700 hover:border-purple-400 rounded-xl text-purple-300 transition cursor-pointer"
-              title="Bảng Vinh Danh Long Tộc (Phím L hoặc O)"
+              title="Bảng Vinh Danh Long Tộc (Phím O)"
             >
               <Trophy className="w-4 h-4" />
             </button>
 
-            {/* Chiến Báo (H) */}
+            {/* 📊 Lịch Sử Chiến Đấu (Battle Logs) - Phím H */}
             <button
               onClick={() => openModal("battleLog")}
-              className="p-2 bg-slate-900 hover:bg-slate-800 border border-slate-700 hover:border-red-400 rounded-xl text-red-300 transition cursor-pointer"
-              title="Chiến Báo & Lịch Sử (Phím H)"
+              className="p-2 bg-slate-900 hover:bg-slate-800 border border-slate-700 hover:border-red-400 rounded-xl text-red-300 transition cursor-pointer flex items-center justify-center"
+              title="📊 Lịch Sử Chiến Đấu (Battle Logs) - Phím H"
             >
               <ScrollText className="w-4 h-4" />
+            </button>
+
+            {/* 🏆 Bảng Thành Tựu (Phím Y) */}
+            <button
+              onClick={() => openModal("achievements")}
+              className="p-2 bg-slate-900 hover:bg-slate-800 border border-slate-700 hover:border-amber-400 rounded-xl text-amber-400 transition cursor-pointer flex items-center justify-center shadow-[0_0_10px_rgba(245,158,11,0.2)]"
+              title="🏆 Bảng Thành Tựu & Cột Mốc Danh Vọng (Phím Y)"
+            >
+              <Award className="w-4 h-4" />
+            </button>
+
+            {/* 🎁 Quà Đăng Nhập 7 Ngày (Phím U) */}
+            <button
+              onClick={() => openModal("dailyRewards")}
+              className="p-2 bg-slate-900 hover:bg-slate-800 border border-slate-700 hover:border-emerald-400 rounded-xl text-emerald-400 transition cursor-pointer flex items-center justify-center shadow-[0_0_10px_rgba(16,185,129,0.2)]"
+              title="🎁 Quà Đăng Nhập 7 Ngày Liên Tục (Phím U)"
+            >
+              <Gift className="w-4 h-4" />
+            </button>
+
+            {/* Cưỡi Thú (Z / M) */}
+            <button
+              onClick={toggleMount}
+              className={`p-2 border rounded-xl transition cursor-pointer flex items-center justify-center text-xs ${
+                isMounted
+                  ? "bg-cyan-500/30 border-cyan-400 text-cyan-300 shadow-[0_0_12px_rgba(40,195,225,0.45)]"
+                  : "bg-slate-900 border-slate-700 text-slate-300 hover:text-white"
+              }`}
+              title="Cưỡi Thú (+70% Tốc Độ) - Phím Z hoặc M"
+            >
+              🐎
+            </button>
+
+            {/* GM Admin Demo Panel (F12) */}
+            <button
+              onClick={toggleGMAdmin}
+              className={`p-2 border rounded-xl transition cursor-pointer flex items-center justify-center ${
+                godMode
+                  ? "bg-rose-500/30 border-rose-400 text-rose-300 shadow-[0_0_15px_rgba(244,63,94,0.5)]"
+                  : "bg-slate-900 border-slate-700 text-rose-400 hover:text-rose-300 hover:border-rose-500"
+              }`}
+              title="Bảng Quản Trị Viên (GM Admin Demo) - Phím F12"
+            >
+              <Crown className="w-4 h-4 text-rose-400" />
+            </button>
+
+            {/* Bật/Tắt Âm Thanh Game (Sound Mute Toggle) */}
+            <button
+              onClick={toggleSoundMute}
+              className={`p-2 border rounded-xl transition cursor-pointer flex items-center justify-center ${
+                soundMuted
+                  ? "bg-red-950/70 border-red-700/80 text-red-400 hover:text-red-300 hover:border-red-500 shadow-[0_0_10px_rgba(239,68,68,0.3)]"
+                  : "bg-cyan-950/60 border-cyan-700/80 text-cyan-400 hover:text-cyan-300 hover:border-cyan-400 shadow-[0_0_10px_rgba(6,182,212,0.25)]"
+              }`}
+              title={soundMuted ? "🔇 Bật Âm Thanh Game (Web Audio API Đang Tắt)" : "🔊 Tắt Âm Thanh Game (Web Audio API Đang Bật)"}
+            >
+              {soundMuted ? <VolumeX className="w-4 h-4" /> : <Volume2 className="w-4 h-4" />}
             </button>
 
             {/* Cài Đặt */}
@@ -282,7 +397,7 @@ export const UnifiedGameHUD = memo(function UnifiedGameHUD({
         </div>
       </div>
 
-      {/* ── BOTTOM SECTION: Action Combat Bar & Mobile Virtual Controls ── */}
+      {/* ── BOTTOM SECTION: Action Combat Bar, Mobile Controls & Bottom-Right Enemy HP Bars ── */}
       <div className="flex items-end justify-between w-full">
         
         {/* Mobile Virtual Joystick (Left) */}
@@ -307,13 +422,14 @@ export const UnifiedGameHUD = memo(function UnifiedGameHUD({
           <div className="w-28" />
         )}
 
-        {/* Center: Action Combat Bar (Combo 1-2-3 & Skills 1, 2, 3 with conic-gradient cooldowns) */}
-        <ActionCombatBar />
+        {/* Center: Symmetrical Action HUD (Totem Emblem, Dual Wing Gauges, Left 10 Skills, Right 10 Consumables, Master EXP Bar) */}
+        <SymmetricalActionHUD />
 
-        {/* Right Balance Spacer */}
-        <div className="w-28" />
+        {/* Bottom-Right: Active Target Enemy HP Bars (e.g. SLIME) */}
+        <div className="min-w-[200px] flex flex-col items-end gap-1.5">
+          <PixelEnemyHealthBars />
+        </div>
       </div>
-
     </div>
   );
 });

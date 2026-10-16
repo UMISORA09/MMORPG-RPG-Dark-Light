@@ -2,7 +2,10 @@ import { Router } from "express";
 import bcrypt from "bcryptjs";
 import { db, usersTable } from "@workspace/db";
 import { eq } from "drizzle-orm";
-import { RegisterBody, LoginBody } from "@workspace/api-zod";
+import { RegisterBody, LoginBody, SetServerBody } from "@workspace/api-zod";
+import { serversTable } from "@workspace/db";
+import { requireAuth } from "../middlewares/requireAuth";
+import { ensureServerCatalog } from "../lib/inventory";
 
 declare module "express-session" {
   interface SessionData {
@@ -11,6 +14,25 @@ declare module "express-session" {
 }
 
 const router = Router();
+
+router.post("/auth/server", requireAuth, async (req, res) => {
+  const parsed = SetServerBody.safeParse(req.body);
+  if (!parsed.success) return res.status(400).json({ error: "Vùng hoặc máy chủ không hợp lệ" });
+
+  await ensureServerCatalog();
+  const [server] = await db.select().from(serversTable).where(eq(serversTable.id, parsed.data.serverId)).limit(1);
+  if (!server || server.region !== parsed.data.region) {
+    return res.status(400).json({ error: "Máy chủ không thuộc cụm vùng đã chọn" });
+  }
+
+  const [user] = await db.update(usersTable).set({
+    selectedRegion: server.region,
+    selectedServerId: server.id,
+  }).where(eq(usersTable.id, req.session.userId!)).returning();
+  if (!user) return res.status(401).json({ error: "Tài khoản không còn tồn tại" });
+
+  return res.status(200).json({ selectedRegion: user.selectedRegion, selectedServerId: user.selectedServerId });
+});
 
 router.post("/auth/register", async (req, res) => {
   const parsed = RegisterBody.safeParse(req.body);

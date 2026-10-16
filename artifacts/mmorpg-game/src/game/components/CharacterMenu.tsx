@@ -55,7 +55,7 @@ const STAT_INFO = [
 const TABS: { id: Tab; label: string; icon: string }[] = [
   { id: "character", label: "Nhân Vật", icon: "🧙" },
   { id: "stats", label: "Chỉ Số", icon: "📊" },
-  { id: "bag", label: "Túi Đồ", icon: "🎒" },
+  { id: "bag", label: "Hành Trang", icon: "🎒" },
   { id: "equipment", label: "Trang Bị", icon: "⚔️" },
   { id: "skills", label: "Kỹ Năng", icon: "✨" },
 ];
@@ -716,7 +716,7 @@ function BagTab() {
               border: "1px dashed rgba(255,255,255,0.08)",
             }}
           >
-            Túi đồ trống. Hãy mua vật phẩm ở cửa hàng bên dưới!
+            Hành trang trống. Hãy mua vật phẩm ở cửa hàng bên dưới!
           </div>
         ) : (
           <div
@@ -1148,7 +1148,7 @@ function EquipmentTab() {
       {/* Quick equip from inventory */}
       {player.inventory.length > 0 && (
         <>
-          <SectionTitle>🔄 Trang Bị Nhanh Từ Túi Đồ</SectionTitle>
+          <SectionTitle>🔄 Trang Bị Nhanh Từ Hành Trang</SectionTitle>
           <div
             style={{
               display: "grid",

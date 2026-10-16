@@ -8,3 +8,4 @@ export { default as VillageHUD } from "./VillageHUD";
 export { PlayerStatusFrame } from "./PlayerStatusFrame";
 export { MinimapRadar } from "./MinimapRadar";
 export { ActionCombatBar } from "./ActionCombatBar";
+export { SymmetricalActionHUD } from "./SymmetricalActionHUD";

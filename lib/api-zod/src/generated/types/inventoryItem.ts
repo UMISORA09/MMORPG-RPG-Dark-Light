@@ -7,8 +7,14 @@
  */
 import type { Item } from './item';
 
-export type InventoryItem = Item & {
+export type InventoryItem = Item & ({
   ownershipId: number;
   equipped: boolean;
+  /** @nullable */
+  equippedSlot: string | null;
+  slotIndex: number;
+  quantity: number;
+  enhanceLevel: number;
+  bonusCombatPower: number;
   acquiredAt: Date;
-};
+});

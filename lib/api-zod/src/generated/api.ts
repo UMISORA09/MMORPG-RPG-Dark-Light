@@ -35,7 +35,10 @@ export const RegisterResponse = zod.object({
   "user": zod.object({
   "id": zod.number(),
   "username": zod.string(),
-  "createdAt": zod.coerce.date()
+  "createdAt": zod.coerce.date(),
+  "forumTitle": zod.string().optional(),
+  "selectedRegion": zod.string().optional(),
+  "selectedServerId": zod.string().optional()
 })
 })
 
@@ -52,7 +55,10 @@ export const LoginResponse = zod.object({
   "user": zod.object({
   "id": zod.number(),
   "username": zod.string(),
-  "createdAt": zod.coerce.date()
+  "createdAt": zod.coerce.date(),
+  "forumTitle": zod.string().optional(),
+  "selectedRegion": zod.string().optional(),
+  "selectedServerId": zod.string().optional()
 })
 })
 
@@ -71,7 +77,24 @@ export const LogoutResponse = zod.object({
 export const GetMeResponse = zod.object({
   "id": zod.number(),
   "username": zod.string(),
-  "createdAt": zod.coerce.date()
+  "createdAt": zod.coerce.date(),
+  "forumTitle": zod.string().optional(),
+  "selectedRegion": zod.string().optional(),
+  "selectedServerId": zod.string().optional()
+})
+
+
+/**
+ * @summary Save the current account's region and server
+ */
+export const SelectServerBody = zod.object({
+  "serverId": zod.string(),
+  "region": zod.enum(['VN', 'SEA', 'TEST'])
+})
+
+export const SelectServerResponse = zod.object({
+  "selectedRegion": zod.string(),
+  "selectedServerId": zod.string()
 })
 
 
@@ -119,6 +142,13 @@ export const GetCharactersResponseItem = zod.object({
   "gold": zod.number(),
   "kills": zod.number(),
   "deaths": zod.number(),
+  "serverId": zod.string().optional(),
+  "title": zod.string().optional(),
+  "mp": zod.number().optional(),
+  "maxMp": zod.number().optional(),
+  "matk": zod.number().optional(),
+  "mdef": zod.number().optional(),
+  "combatPower": zod.number().optional(),
   "createdAt": zod.coerce.date()
 })
 export const GetCharactersResponse = zod.array(GetCharactersResponseItem)
@@ -154,6 +184,13 @@ export const CreateCharacterResponse = zod.object({
   "gold": zod.number(),
   "kills": zod.number(),
   "deaths": zod.number(),
+  "serverId": zod.string().optional(),
+  "title": zod.string().optional(),
+  "mp": zod.number().optional(),
+  "maxMp": zod.number().optional(),
+  "matk": zod.number().optional(),
+  "mdef": zod.number().optional(),
+  "combatPower": zod.number().optional(),
   "createdAt": zod.coerce.date()
 })
 
@@ -182,6 +219,13 @@ export const GetCharacterResponse = zod.object({
   "gold": zod.number(),
   "kills": zod.number(),
   "deaths": zod.number(),
+  "serverId": zod.string().optional(),
+  "title": zod.string().optional(),
+  "mp": zod.number().optional(),
+  "maxMp": zod.number().optional(),
+  "matk": zod.number().optional(),
+  "mdef": zod.number().optional(),
+  "combatPower": zod.number().optional(),
   "createdAt": zod.coerce.date()
 })
 
@@ -229,6 +273,13 @@ export const StartBattleResponse = zod.object({
   "gold": zod.number(),
   "kills": zod.number(),
   "deaths": zod.number(),
+  "serverId": zod.string().optional(),
+  "title": zod.string().optional(),
+  "mp": zod.number().optional(),
+  "maxMp": zod.number().optional(),
+  "matk": zod.number().optional(),
+  "mdef": zod.number().optional(),
+  "combatPower": zod.number().optional(),
   "createdAt": zod.coerce.date()
 })
 })
@@ -260,17 +311,33 @@ export const GetBattleLogResponse = zod.array(GetBattleLogResponseItem)
 export const GetItemsResponseItem = zod.object({
   "id": zod.string(),
   "name": zod.string(),
-  "type": zod.string().describe('weapon | armor | accessory'),
+  "category": zod.enum(['equipment', 'consumable', 'material', 'quest']),
+  "type": zod.enum(['weapon', 'armor', 'accessory', 'potion', 'scroll', 'food', 'stone', 'chest']),
+  "equipSlot": zod.enum(['helm', 'armor', 'greaves', 'boots', 'pauldrons', 'gauntlets', 'main_weapon', 'off_weapon', 'earring', 'amulet', 'ring', 'relic', 'none']),
   "description": zod.string(),
+  "lore": zod.string(),
   "rarity": zod.string(),
   "hpBoost": zod.number(),
+  "mpBoost": zod.number(),
   "atkBoost": zod.number(),
+  "matkBoost": zod.number(),
   "defBoost": zod.number(),
+  "mdefBoost": zod.number(),
   "spdBoost": zod.number(),
+  "strBoost": zod.number(),
+  "dexBoost": zod.number(),
+  "intBoost": zod.number(),
+  "lukBoost": zod.number(),
+  "vitBoost": zod.number(),
+  "critRateBoost": zod.number(),
+  "healHpPercent": zod.number(),
+  "healMpPercent": zod.number(),
+  "buffType": zod.string().nullish(),
   "price": zod.number(),
+  "maxStack": zod.number(),
   "classId": zod.string().nullable(),
   "requiredLevel": zod.number(),
-  "icon": zod.string().optional()
+  "icon": zod.string()
 })
 export const GetItemsResponse = zod.array(GetItemsResponseItem)
 
@@ -285,20 +352,41 @@ export const GetInventoryParams = zod.object({
 export const GetInventoryResponseItem = zod.object({
   "id": zod.string(),
   "name": zod.string(),
-  "type": zod.string().describe('weapon | armor | accessory'),
+  "category": zod.enum(['equipment', 'consumable', 'material', 'quest']),
+  "type": zod.enum(['weapon', 'armor', 'accessory', 'potion', 'scroll', 'food', 'stone', 'chest']),
+  "equipSlot": zod.enum(['helm', 'armor', 'greaves', 'boots', 'pauldrons', 'gauntlets', 'main_weapon', 'off_weapon', 'earring', 'amulet', 'ring', 'relic', 'none']),
   "description": zod.string(),
+  "lore": zod.string(),
   "rarity": zod.string(),
   "hpBoost": zod.number(),
+  "mpBoost": zod.number(),
   "atkBoost": zod.number(),
+  "matkBoost": zod.number(),
   "defBoost": zod.number(),
+  "mdefBoost": zod.number(),
   "spdBoost": zod.number(),
+  "strBoost": zod.number(),
+  "dexBoost": zod.number(),
+  "intBoost": zod.number(),
+  "lukBoost": zod.number(),
+  "vitBoost": zod.number(),
+  "critRateBoost": zod.number(),
+  "healHpPercent": zod.number(),
+  "healMpPercent": zod.number(),
+  "buffType": zod.string().nullish(),
   "price": zod.number(),
+  "maxStack": zod.number(),
   "classId": zod.string().nullable(),
   "requiredLevel": zod.number(),
-  "icon": zod.string().optional()
+  "icon": zod.string()
 }).and(zod.object({
   "ownershipId": zod.number(),
   "equipped": zod.boolean(),
+  "equippedSlot": zod.string().nullable(),
+  "slotIndex": zod.number(),
+  "quantity": zod.number(),
+  "enhanceLevel": zod.number(),
+  "bonusCombatPower": zod.number(),
   "acquiredAt": zod.coerce.date()
 }))
 export const GetInventoryResponse = zod.array(GetInventoryResponseItem)
@@ -330,25 +418,53 @@ export const BuyItemResponse = zod.object({
   "gold": zod.number(),
   "kills": zod.number(),
   "deaths": zod.number(),
+  "serverId": zod.string().optional(),
+  "title": zod.string().optional(),
+  "mp": zod.number().optional(),
+  "maxMp": zod.number().optional(),
+  "matk": zod.number().optional(),
+  "mdef": zod.number().optional(),
+  "combatPower": zod.number().optional(),
   "createdAt": zod.coerce.date()
 }),
   "inventoryItem": zod.object({
   "id": zod.string(),
   "name": zod.string(),
-  "type": zod.string().describe('weapon | armor | accessory'),
+  "category": zod.enum(['equipment', 'consumable', 'material', 'quest']),
+  "type": zod.enum(['weapon', 'armor', 'accessory', 'potion', 'scroll', 'food', 'stone', 'chest']),
+  "equipSlot": zod.enum(['helm', 'armor', 'greaves', 'boots', 'pauldrons', 'gauntlets', 'main_weapon', 'off_weapon', 'earring', 'amulet', 'ring', 'relic', 'none']),
   "description": zod.string(),
+  "lore": zod.string(),
   "rarity": zod.string(),
   "hpBoost": zod.number(),
+  "mpBoost": zod.number(),
   "atkBoost": zod.number(),
+  "matkBoost": zod.number(),
   "defBoost": zod.number(),
+  "mdefBoost": zod.number(),
   "spdBoost": zod.number(),
+  "strBoost": zod.number(),
+  "dexBoost": zod.number(),
+  "intBoost": zod.number(),
+  "lukBoost": zod.number(),
+  "vitBoost": zod.number(),
+  "critRateBoost": zod.number(),
+  "healHpPercent": zod.number(),
+  "healMpPercent": zod.number(),
+  "buffType": zod.string().nullish(),
   "price": zod.number(),
+  "maxStack": zod.number(),
   "classId": zod.string().nullable(),
   "requiredLevel": zod.number(),
-  "icon": zod.string().optional()
+  "icon": zod.string()
 }).and(zod.object({
   "ownershipId": zod.number(),
   "equipped": zod.boolean(),
+  "equippedSlot": zod.string().nullable(),
+  "slotIndex": zod.number(),
+  "quantity": zod.number(),
+  "enhanceLevel": zod.number(),
+  "bonusCombatPower": zod.number(),
   "acquiredAt": zod.coerce.date()
 }))
 })
@@ -379,6 +495,13 @@ export const EquipItemResponse = zod.object({
   "gold": zod.number(),
   "kills": zod.number(),
   "deaths": zod.number(),
+  "serverId": zod.string().optional(),
+  "title": zod.string().optional(),
+  "mp": zod.number().optional(),
+  "maxMp": zod.number().optional(),
+  "matk": zod.number().optional(),
+  "mdef": zod.number().optional(),
+  "combatPower": zod.number().optional(),
   "createdAt": zod.coerce.date()
 })
 
@@ -408,6 +531,231 @@ export const UnequipItemResponse = zod.object({
   "gold": zod.number(),
   "kills": zod.number(),
   "deaths": zod.number(),
+  "serverId": zod.string().optional(),
+  "title": zod.string().optional(),
+  "mp": zod.number().optional(),
+  "maxMp": zod.number().optional(),
+  "matk": zod.number().optional(),
+  "mdef": zod.number().optional(),
+  "combatPower": zod.number().optional(),
+  "createdAt": zod.coerce.date()
+})
+
+
+/**
+ * @summary Enhance an owned equipment item
+ */
+export const EnhanceItemParams = zod.object({
+  "characterId": zod.coerce.number(),
+  "ownershipId": zod.coerce.number()
+})
+
+export const EnhanceItemResponse = zod.object({
+  "character": zod.object({
+  "id": zod.number(),
+  "gold": zod.number(),
+  "combatPower": zod.number()
+}),
+  "item": zod.object({
+  "ownershipId": zod.number(),
+  "itemId": zod.string(),
+  "enhanceLevel": zod.number(),
+  "bonusCombatPower": zod.number()
+})
+})
+
+
+/**
+ * @summary Use an owned consumable item
+ */
+export const UseItemParams = zod.object({
+  "characterId": zod.coerce.number(),
+  "ownershipId": zod.coerce.number()
+})
+
+export const UseItemResponse = zod.object({
+  "character": zod.object({
+  "id": zod.number(),
+  "hp": zod.number(),
+  "maxHp": zod.number(),
+  "mp": zod.number(),
+  "maxMp": zod.number()
+}),
+  "consumed": zod.object({
+  "ownershipId": zod.number(),
+  "itemId": zod.string(),
+  "quantityRemaining": zod.number()
+})
+})
+
+
+/**
+ * @summary List forum posts
+ */
+export const getCommunityPostsQueryLimitMax = 100;
+
+
+
+export const GetCommunityPostsQueryParams = zod.object({
+  "serverId": zod.coerce.string().optional(),
+  "category": zod.enum(['general', 'build', 'boss', 'notice']).optional(),
+  "limit": zod.coerce.number().int().min(1).max(getCommunityPostsQueryLimitMax).optional()
+})
+
+export const GetCommunityPostsResponseItem = zod.object({
+  "id": zod.number(),
+  "userId": zod.number(),
+  "characterId": zod.number().nullish(),
+  "serverId": zod.string(),
+  "title": zod.string(),
+  "category": zod.string(),
+  "body": zod.string(),
+  "likes": zod.array(zod.number()),
+  "createdAt": zod.coerce.date(),
+  "updatedAt": zod.coerce.date()
+})
+export const GetCommunityPostsResponse = zod.array(GetCommunityPostsResponseItem)
+
+
+/**
+ * @summary Create a forum post
+ */
+export const createCommunityPostBodyTitleMin = 4;
+export const createCommunityPostBodyTitleMax = 120;
+
+export const createCommunityPostBodyBodyMax = 5000;
+
+
+
+export const CreateCommunityPostBody = zod.object({
+  "title": zod.string().min(createCommunityPostBodyTitleMin).max(createCommunityPostBodyTitleMax),
+  "category": zod.enum(['general', 'build', 'boss', 'notice']).optional(),
+  "body": zod.string().min(1).max(createCommunityPostBodyBodyMax),
+  "characterId": zod.number().optional(),
+  "serverId": zod.string().optional()
+})
+
+export const CreateCommunityPostResponse = zod.object({
+  "id": zod.number(),
+  "userId": zod.number(),
+  "characterId": zod.number().nullish(),
+  "serverId": zod.string(),
+  "title": zod.string(),
+  "category": zod.string(),
+  "body": zod.string(),
+  "likes": zod.array(zod.number()),
+  "createdAt": zod.coerce.date(),
+  "updatedAt": zod.coerce.date()
+})
+
+
+/**
+ * @summary Set the current user's like state on a post
+ */
+export const SetCommunityPostLikeParams = zod.object({
+  "postId": zod.coerce.number()
+})
+
+export const SetCommunityPostLikeBody = zod.object({
+  "liked": zod.boolean()
+})
+
+export const SetCommunityPostLikeResponse = zod.object({
+  "postId": zod.number(),
+  "liked": zod.boolean(),
+  "likesCount": zod.number()
+})
+
+
+/**
+ * @summary List comments on a post
+ */
+export const GetCommunityPostCommentsParams = zod.object({
+  "postId": zod.coerce.number()
+})
+
+export const GetCommunityPostCommentsResponseItem = zod.object({
+  "id": zod.number(),
+  "postId": zod.number(),
+  "userId": zod.number(),
+  "characterId": zod.number().nullish(),
+  "comment": zod.string(),
+  "createdAt": zod.coerce.date()
+})
+export const GetCommunityPostCommentsResponse = zod.array(GetCommunityPostCommentsResponseItem)
+
+
+/**
+ * @summary Comment on a post
+ */
+export const CreateCommunityPostCommentParams = zod.object({
+  "postId": zod.coerce.number()
+})
+
+export const createCommunityPostCommentBodyCommentMax = 1000;
+
+
+
+export const CreateCommunityPostCommentBody = zod.object({
+  "comment": zod.string().min(1).max(createCommunityPostCommentBodyCommentMax)
+})
+
+export const CreateCommunityPostCommentResponse = zod.object({
+  "id": zod.number(),
+  "postId": zod.number(),
+  "userId": zod.number(),
+  "characterId": zod.number().nullish(),
+  "comment": zod.string(),
+  "createdAt": zod.coerce.date()
+})
+
+
+/**
+ * @summary List world, server, or party chat messages
+ */
+export const getWorldChatsQueryLimitMax = 100;
+
+
+
+export const GetWorldChatsQueryParams = zod.object({
+  "serverId": zod.coerce.string().optional(),
+  "channel": zod.enum(['world', 'server', 'party']).optional(),
+  "limit": zod.coerce.number().int().min(1).max(getWorldChatsQueryLimitMax).optional()
+})
+
+export const GetWorldChatsResponseItem = zod.object({
+  "id": zod.number(),
+  "userId": zod.number(),
+  "characterId": zod.number().nullish(),
+  "serverId": zod.string(),
+  "channel": zod.enum(['world', 'server', 'party']),
+  "message": zod.string(),
+  "createdAt": zod.coerce.date()
+})
+export const GetWorldChatsResponse = zod.array(GetWorldChatsResponseItem)
+
+
+/**
+ * @summary Send a world, server, or party chat message
+ */
+export const createWorldChatBodyMessageMax = 240;
+
+
+
+export const CreateWorldChatBody = zod.object({
+  "message": zod.string().min(1).max(createWorldChatBodyMessageMax),
+  "channel": zod.enum(['world', 'server', 'party']).optional(),
+  "characterId": zod.number().optional(),
+  "serverId": zod.string().optional()
+})
+
+export const CreateWorldChatResponse = zod.object({
+  "id": zod.number(),
+  "userId": zod.number(),
+  "characterId": zod.number().nullish(),
+  "serverId": zod.string(),
+  "channel": zod.enum(['world', 'server', 'party']),
+  "message": zod.string(),
   "createdAt": zod.coerce.date()
 })
 

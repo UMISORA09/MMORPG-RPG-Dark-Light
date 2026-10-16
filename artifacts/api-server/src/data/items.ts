@@ -1,7 +1,9 @@
+import { SEED_ALL_ITEMS } from "@workspace/db";
+
 export type ItemDefinition = {
   id: string;
   name: string;
-  type: "weapon" | "armor" | "accessory";
+  type: string;
   description: string;
   rarity: string;
   hpBoost: number;
@@ -12,9 +14,25 @@ export type ItemDefinition = {
   classId: string | null;
   requiredLevel: number;
   icon: string;
+  category?: string;
+  equipSlot?: string;
+  lore?: string;
+  mpBoost?: number;
+  matkBoost?: number;
+  mdefBoost?: number;
+  strBoost?: number;
+  dexBoost?: number;
+  intBoost?: number;
+  lukBoost?: number;
+  vitBoost?: number;
+  critRateBoost?: number;
+  healHpPercent?: number;
+  healMpPercent?: number;
+  buffType?: string | null;
+  maxStack?: number;
 };
 
-export const ITEM_CATALOG: ItemDefinition[] = [
+const LEGACY_ITEM_CATALOG: ItemDefinition[] = [
   {
     id: "starter-gunner-weapon",
     name: "Súng Plasma Mk-I",
@@ -195,4 +213,27 @@ export const ITEM_CATALOG: ItemDefinition[] = [
     requiredLevel: 3,
     icon: "⬡",
   },
+];
+
+export const ITEM_CATALOG: ItemDefinition[] = [
+  ...(SEED_ALL_ITEMS as ItemDefinition[]),
+  ...LEGACY_ITEM_CATALOG.filter((legacy) => !SEED_ALL_ITEMS.some((item) => item.id === legacy.id)).map((item) => ({
+    ...item,
+    category: item.category ?? (item.type === "weapon" || item.type === "armor" || item.type === "accessory" ? "equipment" : "consumable"),
+    equipSlot: item.equipSlot ?? (item.type === "weapon" ? "main_weapon" : item.type === "armor" ? "armor" : "none"),
+    lore: item.lore ?? item.description ?? "",
+    mpBoost: item.mpBoost ?? 0,
+    matkBoost: item.matkBoost ?? 0,
+    mdefBoost: item.mdefBoost ?? 0,
+    strBoost: item.strBoost ?? 0,
+    dexBoost: item.dexBoost ?? 0,
+    intBoost: item.intBoost ?? 0,
+    lukBoost: item.lukBoost ?? 0,
+    vitBoost: item.vitBoost ?? 0,
+    critRateBoost: item.critRateBoost ?? 0,
+    healHpPercent: item.healHpPercent ?? 0,
+    healMpPercent: item.healMpPercent ?? 0,
+    buffType: item.buffType ?? null,
+    maxStack: item.maxStack ?? 99,
+  })),
 ];

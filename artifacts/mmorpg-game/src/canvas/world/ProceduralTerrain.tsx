@@ -1,14 +1,16 @@
 // ==============================================================================
-// Procedural Biome Blending Ground Terrain Shader
-// Smoothstep blending between:
-// 1. Safe Village (r < 18): Ancient carved dragon stone with cyan glowing seams
-// 2. Wilderness (18 <= r < 50): Night velvet grass with natural dirt cross-paths
-// 3. Boss Altar (z < -48): Obsidian volcanic crust with breathing lava veins
+// Procedural Biome Blending Ground Terrain Shader & Pixel Texture System
+// Seamlessly blends 4 distinct biomes across the open world:
+// 1. Safe Village (r < 21.5m): Ancient dragon carved stone plaza with cyan glowing seams & golden runes
+// 2. Wilderness (West & South, 21.5m <= r < 50m): 4-layer pixel grass & warm dirt crossroads
+// 3. Dead Marsh & Wasteland (East, x > 22m): Dark cracked mud, toxic purple mist veins & stagnant bog pools
+// 4. Boss Altar & Dungeon Gates (North, z < -45m): Obsidian volcanic crust with breathing molten lava veins
 // ==============================================================================
 
 import { memo, useRef, useMemo } from "react";
 import * as THREE from "three";
 import { useFrame } from "@react-three/fiber";
+import { createPixelGrassTexture } from "./PixelGrassPathGenerator";
 
 const TERRAIN_VERTEX_SHADER = /* glsl */ `
   varying vec3 vWorldPosition;
@@ -24,15 +26,14 @@ const TERRAIN_VERTEX_SHADER = /* glsl */ `
 
 const TERRAIN_FRAGMENT_SHADER = /* glsl */ `
   uniform float uTime;
+  uniform sampler2D uGrassTex;
   varying vec3 vWorldPosition;
   varying vec2 vUv;
 
-  // Simple pseudo-random hash
   float hash(vec2 p) {
     return fract(sin(dot(p, vec2(127.1, 311.7))) * 43758.5453123);
   }
 
-  // Noise function
   float noise(vec2 p) {
     vec2 i = floor(p);
     vec2 f = fract(p);
@@ -45,9 +46,31 @@ const TERRAIN_FRAGMENT_SHADER = /* glsl */ `
     vec2 p = vWorldPosition.xz;
     float dist = length(p);
 
-    // ── BIOME 1: SAFE VILLAGE (Ancient Dragon Plaza) ──
+    // Sample 4-Step Pixel Art Grass Texture (tiled crisply without mipmap blur)
+    vec2 grassUv = p * 0.18; // 1 tile per ~5.5 meters
+    vec4 grassSample = texture2D(uGrassTex, grassUv);
+
+    // ── BIOME 2: WILDERNESS (Pixel Grass + Warm Dirt Trail) ──
+    vec3 wildernessColor = grassSample.rgb;
+
+    // 4 Cardinal Dirt Paths (Crossroad through wilderness)
+    float curveX = sin(p.y * 0.2) * 0.8;
+    float curveZ = cos(p.x * 0.2) * 0.8;
+    float pathX = smoothstep(2.6, 0.4, abs(p.x - curveX));
+    float pathZ = smoothstep(2.6, 0.4, abs(p.y - curveZ)); // p.y is z
+    float pathMask = max(pathX, pathZ);
+
+    vec3 warmDirt = vec3(0.96, 0.88, 0.64); // #f5e1a4
+    vec3 dirtPebble = vec3(0.85, 0.72, 0.45); // #d9b872
+    float pebbleNoise = step(0.72, hash(floor(p * 3.0)));
+    vec3 dirtColor = mix(warmDirt, dirtPebble, pebbleNoise * 0.4);
+
+    float jag = (hash(floor(p * 4.0)) - 0.5) * 0.15;
+    float dirtMix = smoothstep(0.4 + jag, 0.75 + jag, pathMask);
+    wildernessColor = mix(wildernessColor, dirtColor, dirtMix * 0.92);
+
+    // ── BIOME 1: SAFE VILLAGE (Ancient Dragon Plaza r < 21.5m) ──
     vec3 villageStone = vec3(0.12, 0.10, 0.18); // #2a1f3d base
-    // Cobblestone grid
     vec2 brickUv = mod(p, 1.4);
     float seamX = smoothstep(0.0, 0.08, brickUv.x) * (1.0 - smoothstep(1.32, 1.4, brickUv.x));
     float seamY = smoothstep(0.0, 0.08, brickUv.y) * (1.0 - smoothstep(1.32, 1.4, brickUv.y));
@@ -60,36 +83,35 @@ const TERRAIN_FRAGMENT_SHADER = /* glsl */ `
 
     // Center Golden Dragon Rune Circles
     float centerRune1 = abs(dist - 5.0);
-    float centerRune2 = abs(dist - 11.5);
-    if (centerRune1 < 0.25 || centerRune2 < 0.3) {
+    float centerRune2 = abs(dist - 12.5);
+    float centerRune3 = abs(dist - 18.0);
+    if (centerRune1 < 0.25 || centerRune2 < 0.3 || centerRune3 < 0.28) {
       villageColor += vec3(0.98, 0.75, 0.15) * (0.6 + 0.4 * sin(uTime * 2.2));
     }
 
-    // ── BIOME 2: WILDERNESS (Night Indigo Grass & Dirt Trails) ──
-    vec3 grassColor1 = vec3(0.04, 0.05, 0.12);
-    vec3 grassColor2 = vec3(0.08, 0.09, 0.19);
-    float nGrass = noise(p * 0.35);
-    vec3 wildernessColor = mix(grassColor1, grassColor2, nGrass);
+    // ── BIOME 3: DEAD MARSH & WASTELAND (East Sector: x > 22m) ──
+    vec3 marshMud = vec3(0.11, 0.08, 0.16); // Deep mud
+    float nMud = noise(p * 0.35 + vec2(sin(uTime * 0.15), cos(uTime * 0.15)));
+    float mudCracks = smoothstep(0.45, 0.52, nMud) * (1.0 - smoothstep(0.52, 0.58, nMud));
+    float marshPulse = 0.6 + 0.4 * sin(uTime * 1.6 + p.x * 0.3);
+    vec3 toxicPurpleVeins = vec3(0.72, 0.22, 0.98) * marshPulse * 1.4;
+    vec3 deadMarshColor = mix(marshMud, toxicPurpleVeins, mudCracks * 0.85);
 
-    // 4 Cardinal Dirt Paths (North towards bridge, South, East, West)
-    float pathX = smoothstep(2.6, 0.5, abs(p.x));
-    float pathZ = smoothstep(2.6, 0.5, abs(p.y)); // p.y is z
-    float pathMask = max(pathX, pathZ);
-    vec3 dirtColor = vec3(0.14, 0.11, 0.16);
-    wildernessColor = mix(wildernessColor, dirtColor, pathMask * 0.65);
+    // Stagnant poisoned water pools in Dead Marsh
+    float poolNoise = noise(p * 0.18);
+    if (poolNoise > 0.65) {
+      deadMarshColor = mix(deadMarshColor, vec3(0.25, 0.08, 0.45), 0.75);
+    }
 
-    // ── BIOME 3: BOSS RAID ALTAR (Cracked Obsidian & Molten Lava) ──
+    // ── BIOME 4: BOSS RAID ALTAR & DUNGEON (North Sector: z < -45m) ──
     vec3 obsidianStone = vec3(0.035, 0.02, 0.06);
-    // Molten lava cracks
     float nLava = noise(p * 0.25 + vec2(sin(uTime * 0.2), cos(uTime * 0.2)));
     float cracks = smoothstep(0.48, 0.53, nLava) * (1.0 - smoothstep(0.53, 0.58, nLava));
-    
-    // Breathing lava glow
     float breath = 0.65 + 0.35 * sin(uTime * 2.5 + p.x * 0.2);
     vec3 moltenLava = mix(vec3(1.0, 0.18, 0.35), vec3(1.0, 0.65, 0.0), breath) * breath * 1.8;
     vec3 bossColor = mix(obsidianStone, moltenLava, cracks * 0.9);
 
-    // Lava Moat ring around boss arena
+    // Lava Moat ring around boss arena (z = -70)
     vec2 bossCenter = vec2(0.0, -70.0);
     float bossDist = length(p - bossCenter);
     if (bossDist >= 17.0 && bossDist <= 23.0) {
@@ -97,30 +119,42 @@ const TERRAIN_FRAGMENT_SHADER = /* glsl */ `
       bossColor += vec3(1.0, 0.2, 0.1) * moat * 1.5;
     }
 
-    // ── SEAMLESS PROCEDURAL BLENDING ──
-    // 1. Blend Village into Wilderness at r = 18m
-    float villageWeight = 1.0 - smoothstep(16.5, 18.5, dist);
-    vec3 groundColor = mix(wildernessColor, villageColor, villageWeight);
+    // ── 4-BIOME PROCEDURAL BLEND MATH ──
+    // 1. Start with Wilderness Grass as base
+    vec3 finalColor = wildernessColor;
 
-    // 2. Blend Wilderness into Boss Altar at z < -46m
-    float bossWeight = smoothstep(-44.0, -52.0, p.y); // p.y is z coordinate
-    groundColor = mix(groundColor, bossColor, bossWeight);
+    // 2. Blend Dead Marsh in Eastern Sector (x > 22)
+    float eastWeight = smoothstep(20.0, 27.0, p.x);
+    finalColor = mix(finalColor, deadMarshColor, eastWeight);
 
-    // 3. Smooth fade at world outer boundaries (r = 85m)
-    float edgeFade = 1.0 - smoothstep(76.0, 85.0, dist);
+    // 3. Blend Boss Altar in Deep North Sector (z < -45)
+    float northWeight = smoothstep(-43.0, -50.0, p.y);
+    finalColor = mix(finalColor, bossColor, northWeight);
 
-    gl_FragColor = vec4(groundColor * edgeFade, 1.0);
+    // 4. Blend Safe Village in Center (r < 21.5)
+    float villageWeight = 1.0 - smoothstep(19.5, 21.5, dist);
+    finalColor = mix(finalColor, villageColor, villageWeight);
+
+    // Boost overall vibrancy & contrast for crisp Dark Fantasy pixel RPG aesthetics
+    finalColor = finalColor * 1.32;
+
+    gl_FragColor = vec4(finalColor, 1.0);
   }
 `;
 
 export const ProceduralTerrain = memo(function ProceduralTerrain() {
   const materialRef = useRef<THREE.ShaderMaterial>(null);
 
+  const grassTexture = useMemo(() => {
+    return createPixelGrassTexture(128);
+  }, []);
+
   const uniforms = useMemo(
     () => ({
       uTime: { value: 0.0 },
+      uGrassTex: { value: grassTexture },
     }),
-    []
+    [grassTexture]
   );
 
   useFrame((_, delta) => {

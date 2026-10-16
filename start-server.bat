@@ -12,13 +12,15 @@ if %errorlevel% neq 0 (
     exit /b 1
 )
 
-echo [2/3] Đang mở trình duyệt vào game: http://localhost:8080
-start "" "http://localhost:8080"
+echo [2/3] Đang mở trình duyệt vào game: http://localhost:3000
+start "" "http://localhost:3000"
 
 echo [3/3] Đang khởi chạy máy chủ kết hợp (API + 3D Web Client)...
-echo Cổng máy chủ: http://localhost:8080
+echo Cổng máy chủ: http://localhost:3000 (hoặc http://chienlongba.local:3000)
 echo Nhấn Ctrl+C để dừng máy chủ bất cứ lúc nào.
 echo.
 
+set PORT=3000
 node artifacts/api-server/dist/index.mjs
 pause
+

@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { Camera, RotateCcw, Vibrate } from "lucide-react";
+import { Camera, Globe2, RotateCcw, Vibrate } from "lucide-react";
 import { CloudDownload, Database, Loader2 } from "lucide-react";
 import { getCharacter, getGetCharacterQueryKey, getGetCharactersQueryKey, getGetInventoryQueryKey, getGetItemsQueryKey, getInventory, getItems, type Character } from "@workspace/api-client-react";
 import { useQueryClient } from "@tanstack/react-query";
@@ -7,10 +7,12 @@ import { setCameraPreferences } from "@/game/cameraControls";
 import { useGameStore } from "../stores";
 import { useGameWorldStore } from "@/stores/useGameWorldStore";
 import { useToast } from "@/hooks/use-toast";
+import { useLocation } from "wouter";
 
 const DEFAULTS = { sensitivityX: 1, sensitivityY: 1, invertY: false, reduceShake: false };
 
 export function GameSettingsPanel({ characterId }: { characterId: number }) {
+  const [, setLocation] = useLocation();
   const [sensitivityX, setSensitivityX] = useState(DEFAULTS.sensitivityX);
   const [sensitivityY, setSensitivityY] = useState(DEFAULTS.sensitivityY);
   const [invertY, setInvertY] = useState(DEFAULTS.invertY);
@@ -96,6 +98,9 @@ export function GameSettingsPanel({ characterId }: { characterId: number }) {
           {isLoadingSavedData ? "Đang tải…" : "Tải dữ liệu từ máy chủ"}
         </button>
       </section>
+      <button type="button" onClick={() => setLocation("/portal")} className="flex w-full items-center justify-center gap-2 rounded-full border border-[#ffb400]/50 bg-[#ffb400]/10 px-4 py-3 text-xs font-black text-[#ffcf52] transition hover:bg-[#ffb400]/20">
+        <Globe2 className="h-4 w-4" />🌐 Về Trang Chủ / Đổi Server
+      </button>
     </div>
   );
 }

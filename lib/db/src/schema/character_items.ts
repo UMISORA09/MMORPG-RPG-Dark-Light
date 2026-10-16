@@ -1,26 +1,24 @@
-import { pgTable, serial, integer, text, boolean, timestamp, uniqueIndex } from "drizzle-orm/pg-core";
+import { index, pgTable, serial, integer, text, boolean, timestamp } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod/v4";
-import { charactersTable } from "./characters";
-import { itemsTable } from "./items";
 
-export const characterItemsTable = pgTable(
-  "character_items",
-  {
+export const characterItemsTable = pgTable("character_items", {
     id: serial("id").primaryKey(),
-    characterId: integer("character_id")
-      .notNull()
-      .references(() => charactersTable.id, { onDelete: "cascade" }),
-    itemId: text("item_id")
-      .notNull()
-      .references(() => itemsTable.id, { onDelete: "cascade" }),
+    characterId: integer("character_id").notNull(),
+    itemId: text("item_id").notNull(),
     equipped: boolean("equipped").notNull().default(false),
+    equippedSlot: text("equipped_slot"),
+    slotIndex: integer("slot_index").notNull().default(0),
+    quantity: integer("quantity").notNull().default(1),
+    enhanceLevel: integer("enhance_level").notNull().default(0),
+    bonusCombatPower: integer("bonus_combat_power").notNull().default(0),
     acquiredAt: timestamp("acquired_at").defaultNow().notNull(),
-  },
-  (table) => ({
-    characterItemUnique: uniqueIndex("character_item_unique").on(table.characterId, table.itemId),
-  }),
-);
+  }, (table) => ({
+    characterIdIndex: index("character_items_character_id_idx").on(table.characterId),
+    itemIdIndex: index("character_items_item_id_idx").on(table.itemId),
+    characterSlotIndex: index("character_items_character_slot_idx").on(table.characterId, table.equippedSlot),
+    characterBagIndex: index("character_items_character_bag_idx").on(table.characterId, table.slotIndex),
+  }));
 
 export const insertCharacterItemSchema = createInsertSchema(characterItemsTable).omit({
   id: true,

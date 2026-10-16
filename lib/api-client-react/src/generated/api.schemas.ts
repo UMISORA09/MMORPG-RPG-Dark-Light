@@ -36,6 +36,28 @@ export interface User {
   id: number;
   username: string;
   createdAt: string;
+  forumTitle?: string;
+  selectedRegion?: string;
+  selectedServerId?: string;
+}
+
+export type ServerSelectionInputRegion = typeof ServerSelectionInputRegion[keyof typeof ServerSelectionInputRegion];
+
+
+export const ServerSelectionInputRegion = {
+  VN: 'VN',
+  SEA: 'SEA',
+  TEST: 'TEST',
+} as const;
+
+export interface ServerSelectionInput {
+  serverId: string;
+  region: ServerSelectionInputRegion;
+}
+
+export interface ServerSelection {
+  selectedRegion: string;
+  selectedServerId: string;
 }
 
 export interface AuthResponse {
@@ -90,32 +112,141 @@ export interface Character {
   gold: number;
   kills: number;
   deaths: number;
+  serverId?: string;
+  title?: string;
+  mp?: number;
+  maxMp?: number;
+  matk?: number;
+  mdef?: number;
+  combatPower?: number;
   createdAt: string;
 }
+
+export type ItemCategory = typeof ItemCategory[keyof typeof ItemCategory];
+
+
+export const ItemCategory = {
+  equipment: 'equipment',
+  consumable: 'consumable',
+  material: 'material',
+  quest: 'quest',
+} as const;
+
+export type ItemType = typeof ItemType[keyof typeof ItemType];
+
+
+export const ItemType = {
+  weapon: 'weapon',
+  armor: 'armor',
+  accessory: 'accessory',
+  potion: 'potion',
+  scroll: 'scroll',
+  food: 'food',
+  stone: 'stone',
+  chest: 'chest',
+} as const;
+
+export type ItemEquipSlot = typeof ItemEquipSlot[keyof typeof ItemEquipSlot];
+
+
+export const ItemEquipSlot = {
+  helm: 'helm',
+  armor: 'armor',
+  greaves: 'greaves',
+  boots: 'boots',
+  pauldrons: 'pauldrons',
+  gauntlets: 'gauntlets',
+  main_weapon: 'main_weapon',
+  off_weapon: 'off_weapon',
+  earring: 'earring',
+  amulet: 'amulet',
+  ring: 'ring',
+  relic: 'relic',
+  none: 'none',
+} as const;
 
 export interface Item {
   id: string;
   name: string;
-  /** weapon | armor | accessory */
-  type: string;
+  category: ItemCategory;
+  type: ItemType;
+  equipSlot: ItemEquipSlot;
   description: string;
+  lore: string;
   rarity: string;
   hpBoost: number;
+  mpBoost: number;
   atkBoost: number;
+  matkBoost: number;
   defBoost: number;
+  mdefBoost: number;
   spdBoost: number;
+  strBoost: number;
+  dexBoost: number;
+  intBoost: number;
+  lukBoost: number;
+  vitBoost: number;
+  critRateBoost: number;
+  healHpPercent: number;
+  healMpPercent: number;
+  /** @nullable */
+  buffType?: string | null;
   price: number;
+  maxStack: number;
   /** @nullable */
   classId: string | null;
   requiredLevel: number;
-  icon?: string;
+  icon: string;
 }
 
-export type InventoryItem = Item & {
+export type EnhanceInventoryResponseCharacter = {
+  id: number;
+  gold: number;
+  combatPower: number;
+};
+
+export type EnhanceInventoryResponseItem = {
+  ownershipId: number;
+  itemId: string;
+  enhanceLevel: number;
+  bonusCombatPower: number;
+};
+
+export interface EnhanceInventoryResponse {
+  character: EnhanceInventoryResponseCharacter;
+  item: EnhanceInventoryResponseItem;
+}
+
+export type UseInventoryResponseCharacter = {
+  id: number;
+  hp: number;
+  maxHp: number;
+  mp: number;
+  maxMp: number;
+};
+
+export type UseInventoryResponseConsumed = {
+  ownershipId: number;
+  itemId: string;
+  quantityRemaining: number;
+};
+
+export interface UseInventoryResponse {
+  character: UseInventoryResponseCharacter;
+  consumed: UseInventoryResponseConsumed;
+}
+
+export type InventoryItem = Item & ({
   ownershipId: number;
   equipped: boolean;
+  /** @nullable */
+  equippedSlot: string | null;
+  slotIndex: number;
+  quantity: number;
+  enhanceLevel: number;
+  bonusCombatPower: number;
   acquiredAt: string;
-};
+});
 
 export interface PurchaseResponse {
   character: Character;
@@ -180,4 +311,151 @@ export interface LeaderboardEntry {
   kills: number;
   username: string;
 }
+
+export type CreateForumPostInputCategory = typeof CreateForumPostInputCategory[keyof typeof CreateForumPostInputCategory];
+
+
+export const CreateForumPostInputCategory = {
+  general: 'general',
+  build: 'build',
+  boss: 'boss',
+  notice: 'notice',
+} as const;
+
+export interface CreateForumPostInput {
+  /**
+     * @minLength 4
+     * @maxLength 120
+     */
+  title: string;
+  category?: CreateForumPostInputCategory;
+  /**
+     * @minLength 1
+     * @maxLength 5000
+     */
+  body: string;
+  characterId?: number;
+  serverId?: string;
+}
+
+export interface ForumLikeInput {
+  liked: boolean;
+}
+
+export interface ForumCommentInput {
+  /**
+     * @minLength 1
+     * @maxLength 1000
+     */
+  comment: string;
+}
+
+export type CreateWorldChatInputChannel = typeof CreateWorldChatInputChannel[keyof typeof CreateWorldChatInputChannel];
+
+
+export const CreateWorldChatInputChannel = {
+  world: 'world',
+  server: 'server',
+  party: 'party',
+} as const;
+
+export interface CreateWorldChatInput {
+  /**
+     * @minLength 1
+     * @maxLength 240
+     */
+  message: string;
+  channel?: CreateWorldChatInputChannel;
+  characterId?: number;
+  serverId?: string;
+}
+
+export interface ForumPost {
+  id: number;
+  userId: number;
+  /** @nullable */
+  characterId?: number | null;
+  serverId: string;
+  title: string;
+  category: string;
+  body: string;
+  likes: number[];
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface ForumComment {
+  id: number;
+  postId: number;
+  userId: number;
+  /** @nullable */
+  characterId?: number | null;
+  comment: string;
+  createdAt: string;
+}
+
+export type WorldChatMessageChannel = typeof WorldChatMessageChannel[keyof typeof WorldChatMessageChannel];
+
+
+export const WorldChatMessageChannel = {
+  world: 'world',
+  server: 'server',
+  party: 'party',
+} as const;
+
+export interface WorldChatMessage {
+  id: number;
+  userId: number;
+  /** @nullable */
+  characterId?: number | null;
+  serverId: string;
+  channel: WorldChatMessageChannel;
+  message: string;
+  createdAt: string;
+}
+
+export type GetCommunityPostsParams = {
+serverId?: string;
+category?: GetCommunityPostsCategory;
+/**
+ * @minimum 1
+ * @maximum 100
+ */
+limit?: number;
+};
+
+export type GetCommunityPostsCategory = typeof GetCommunityPostsCategory[keyof typeof GetCommunityPostsCategory];
+
+
+export const GetCommunityPostsCategory = {
+  general: 'general',
+  build: 'build',
+  boss: 'boss',
+  notice: 'notice',
+} as const;
+
+export type SetCommunityPostLike200 = {
+  postId: number;
+  liked: boolean;
+  likesCount: number;
+};
+
+export type GetWorldChatsParams = {
+serverId?: string;
+channel?: GetWorldChatsChannel;
+/**
+ * @minimum 1
+ * @maximum 100
+ */
+limit?: number;
+};
+
+export type GetWorldChatsChannel = typeof GetWorldChatsChannel[keyof typeof GetWorldChatsChannel];
+
+
+export const GetWorldChatsChannel = {
+  world: 'world',
+  server: 'server',
+  party: 'party',
+} as const;
 

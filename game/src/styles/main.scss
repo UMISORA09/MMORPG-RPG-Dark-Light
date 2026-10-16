@@ -1,0 +1,75 @@
+// ==============================================================================
+// Chiến Long Bá — Master Sass Stylesheet
+// ==============================================================================
+
+@import './variables';
+@import './mixins';
+@import './hud';
+@import './controls';
+@import './combo';
+@import './combat-log';
+
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+  @include unselectable;
+}
+
+body {
+  background-color: $bg-dark;
+  color: $text-light;
+  font-family: $font-sans;
+  @include flex-center;
+  flex-direction: column;
+  min-height: 100vh;
+  overflow: hidden;
+  touch-action: none;
+}
+
+#root {
+  @include flex-center;
+  flex-direction: column;
+  width: 100%;
+}
+
+.game-viewport {
+  position: relative;
+  width: $game-width;
+  height: $game-height;
+  max-width: 100vw;
+  max-height: 56.25vw;
+  border: 3px solid #3b2d54;
+  border-radius: 12px;
+  box-shadow: 0 10px 45px rgba(0, 0, 0, 0.95), 0 0 35px rgba(139, 92, 246, 0.35);
+  background: $bg-surface;
+  overflow: hidden;
+
+  canvas {
+    display: block;
+    width: 100%;
+    height: 100%;
+    image-rendering: -moz-crisp-edges;
+    image-rendering: -webkit-crisp-edges;
+    image-rendering: pixelated;
+    image-rendering: crisp-edges;
+  }
+}
+
+.keyboard-hint {
+  color: $text-muted;
+  font-size: 11px;
+  margin-top: 6px;
+  text-align: center;
+
+  kbd {
+    background: #1e293b;
+    border: 1px solid #475569;
+    padding: 1px 5px;
+    border-radius: 4px;
+    color: $cyan-primary;
+    font-weight: bold;
+    font-family: $font-mono;
+  }
+}
+

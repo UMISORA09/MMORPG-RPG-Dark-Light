@@ -16,6 +16,7 @@ export interface DroppedItem {
   position: [number, number, number];
   velocity: [number, number, number];
   value: number; // Gold amount or stat boost
+  quantity?: number;
   icon: string;
   color: string;
   statText?: string; // e.g. "ATK +45" or "HP +120"

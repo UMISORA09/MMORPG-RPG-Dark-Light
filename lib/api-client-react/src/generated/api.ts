@@ -27,7 +27,16 @@ import type {
   Character,
   CharacterClass,
   CharacterInput,
+  CreateForumPostInput,
+  CreateWorldChatInput,
+  EnhanceInventoryResponse,
   ErrorResponse,
+  ForumComment,
+  ForumCommentInput,
+  ForumLikeInput,
+  ForumPost,
+  GetCommunityPostsParams,
+  GetWorldChatsParams,
   HealthStatus,
   InventoryItem,
   Item,
@@ -36,8 +45,13 @@ import type {
   Monster,
   PurchaseResponse,
   RegisterInput,
+  ServerSelection,
+  ServerSelectionInput,
+  SetCommunityPostLike200,
   SuccessResponse,
-  User
+  UseInventoryResponse,
+  User,
+  WorldChatMessage
 } from './api.schemas';
 
 import { customFetch } from '../custom-fetch';
@@ -433,6 +447,77 @@ export function useGetMe<TData = Awaited<ReturnType<typeof getMe>>, TError = Err
 
 
 
+
+export const getSelectServerUrl = () => {
+
+
+
+
+  return `/api/auth/server`
+}
+
+/**
+ * @summary Save the current account's region and server
+ */
+export const selectServer = async (serverSelectionInput: ServerSelectionInput, options?: Parameters<typeof customFetch>[1]): Promise<ServerSelection> => {
+
+  return customFetch<ServerSelection>(getSelectServerUrl(),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(serverSelectionInput)
+  }
+);}
+
+
+
+
+
+export const getSelectServerMutationOptions = <TError = ErrorType<ErrorResponse>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof selectServer>>, TError,{data: BodyType<ServerSelectionInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof selectServer>>, TError,{data: BodyType<ServerSelectionInput>}, TContext> => {
+
+const mutationKey = ['selectServer'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof selectServer>>, {data: BodyType<ServerSelectionInput>}> = (props) => {
+          const {data} = props ?? {};
+
+          return  selectServer(data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type SelectServerMutationResult = NonNullable<Awaited<ReturnType<typeof selectServer>>>
+    export type SelectServerMutationBody = BodyType<ServerSelectionInput>
+    export type SelectServerMutationError = ErrorType<ErrorResponse>
+
+    /**
+ * @summary Save the current account's region and server
+ */
+export const useSelectServer = <TError = ErrorType<ErrorResponse>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof selectServer>>, TError,{data: BodyType<ServerSelectionInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof selectServer>>,
+        TError,
+        {data: BodyType<ServerSelectionInput>},
+        TContext
+      > => {
+      return useMutation(getSelectServerMutationOptions(options));
+    }
 
 export const getGetClassesUrl = () => {
 
@@ -1256,6 +1341,683 @@ export const useUnequipItem = <TError = ErrorType<ErrorResponse>,
         TContext
       > => {
       return useMutation(getUnequipItemMutationOptions(options));
+    }
+
+export const getEnhanceItemUrl = (characterId: number,
+    ownershipId: number,) => {
+
+
+
+
+  return `/api/characters/${characterId}/inventory/${ownershipId}/enhance`
+}
+
+/**
+ * @summary Enhance an owned equipment item
+ */
+export const enhanceItem = async (characterId: number,
+    ownershipId: number, options?: Parameters<typeof customFetch>[1]): Promise<EnhanceInventoryResponse> => {
+
+  return customFetch<EnhanceInventoryResponse>(getEnhanceItemUrl(characterId,ownershipId),
+  {
+    ...options,
+    method: 'POST'
+
+
+  }
+);}
+
+
+
+
+
+export const getEnhanceItemMutationOptions = <TError = ErrorType<ErrorResponse>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof enhanceItem>>, TError,{characterId: number;ownershipId: number}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof enhanceItem>>, TError,{characterId: number;ownershipId: number}, TContext> => {
+
+const mutationKey = ['enhanceItem'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof enhanceItem>>, {characterId: number;ownershipId: number}> = (props) => {
+          const {characterId,ownershipId} = props ?? {};
+
+          return  enhanceItem(characterId,ownershipId,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type EnhanceItemMutationResult = NonNullable<Awaited<ReturnType<typeof enhanceItem>>>
+
+    export type EnhanceItemMutationError = ErrorType<ErrorResponse>
+
+    /**
+ * @summary Enhance an owned equipment item
+ */
+export const useEnhanceItem = <TError = ErrorType<ErrorResponse>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof enhanceItem>>, TError,{characterId: number;ownershipId: number}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof enhanceItem>>,
+        TError,
+        {characterId: number;ownershipId: number},
+        TContext
+      > => {
+      return useMutation(getEnhanceItemMutationOptions(options));
+    }
+
+export const getUseItemUrl = (characterId: number,
+    ownershipId: number,) => {
+
+
+
+
+  return `/api/characters/${characterId}/inventory/${ownershipId}/use`
+}
+
+/**
+ * @summary Use an owned consumable item
+ */
+export const useItem = async (characterId: number,
+    ownershipId: number, options?: Parameters<typeof customFetch>[1]): Promise<UseInventoryResponse> => {
+
+  return customFetch<UseInventoryResponse>(getUseItemUrl(characterId,ownershipId),
+  {
+    ...options,
+    method: 'POST'
+
+
+  }
+);}
+
+
+
+
+
+export const getUseItemMutationOptions = <TError = ErrorType<ErrorResponse>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof useItem>>, TError,{characterId: number;ownershipId: number}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof useItem>>, TError,{characterId: number;ownershipId: number}, TContext> => {
+
+const mutationKey = ['useItem'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof useItem>>, {characterId: number;ownershipId: number}> = (props) => {
+          const {characterId,ownershipId} = props ?? {};
+
+          return  useItem(characterId,ownershipId,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type UseItemMutationResult = NonNullable<Awaited<ReturnType<typeof useItem>>>
+
+    export type UseItemMutationError = ErrorType<ErrorResponse>
+
+    /**
+ * @summary Use an owned consumable item
+ */
+export const useUseItem = <TError = ErrorType<ErrorResponse>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof useItem>>, TError,{characterId: number;ownershipId: number}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof useItem>>,
+        TError,
+        {characterId: number;ownershipId: number},
+        TContext
+      > => {
+      return useMutation(getUseItemMutationOptions(options));
+    }
+
+export const getGetCommunityPostsUrl = (params?: GetCommunityPostsParams,) => {
+  const normalizedParams = new URLSearchParams();
+
+  Object.entries(params || {}).forEach(([key, value]) => {
+
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? 'null' : String(value))
+    }
+  });
+
+  const stringifiedParams = normalizedParams.toString();
+
+  return stringifiedParams.length > 0 ? `/api/community/posts?${stringifiedParams}` : `/api/community/posts`
+}
+
+/**
+ * @summary List forum posts
+ */
+export const getCommunityPosts = async (params?: GetCommunityPostsParams, options?: Parameters<typeof customFetch>[1]): Promise<ForumPost[]> => {
+
+  return customFetch<ForumPost[]>(getGetCommunityPostsUrl(params),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getGetCommunityPostsQueryKey = (params?: GetCommunityPostsParams,) => {
+    return [
+    `/api/community/posts`, ...(params ? [params] : [])
+    ] as const;
+    }
+
+
+export const getGetCommunityPostsQueryOptions = <TData = Awaited<ReturnType<typeof getCommunityPosts>>, TError = ErrorType<unknown>>(params?: GetCommunityPostsParams, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getCommunityPosts>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getGetCommunityPostsQueryKey(params);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getCommunityPosts>>> = ({ signal }) => getCommunityPosts(params, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getCommunityPosts>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type GetCommunityPostsQueryResult = NonNullable<Awaited<ReturnType<typeof getCommunityPosts>>>
+export type GetCommunityPostsQueryError = ErrorType<unknown>
+
+
+/**
+ * @summary List forum posts
+ */
+
+export function useGetCommunityPosts<TData = Awaited<ReturnType<typeof getCommunityPosts>>, TError = ErrorType<unknown>>(
+ params?: GetCommunityPostsParams, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getCommunityPosts>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getGetCommunityPostsQueryOptions(params,options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
+
+export const getCreateCommunityPostUrl = () => {
+
+
+
+
+  return `/api/community/posts`
+}
+
+/**
+ * @summary Create a forum post
+ */
+export const createCommunityPost = async (createForumPostInput: CreateForumPostInput, options?: Parameters<typeof customFetch>[1]): Promise<ForumPost> => {
+
+  return customFetch<ForumPost>(getCreateCommunityPostUrl(),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(createForumPostInput)
+  }
+);}
+
+
+
+
+
+export const getCreateCommunityPostMutationOptions = <TError = ErrorType<ErrorResponse>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createCommunityPost>>, TError,{data: BodyType<CreateForumPostInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof createCommunityPost>>, TError,{data: BodyType<CreateForumPostInput>}, TContext> => {
+
+const mutationKey = ['createCommunityPost'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof createCommunityPost>>, {data: BodyType<CreateForumPostInput>}> = (props) => {
+          const {data} = props ?? {};
+
+          return  createCommunityPost(data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type CreateCommunityPostMutationResult = NonNullable<Awaited<ReturnType<typeof createCommunityPost>>>
+    export type CreateCommunityPostMutationBody = BodyType<CreateForumPostInput>
+    export type CreateCommunityPostMutationError = ErrorType<ErrorResponse>
+
+    /**
+ * @summary Create a forum post
+ */
+export const useCreateCommunityPost = <TError = ErrorType<ErrorResponse>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createCommunityPost>>, TError,{data: BodyType<CreateForumPostInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof createCommunityPost>>,
+        TError,
+        {data: BodyType<CreateForumPostInput>},
+        TContext
+      > => {
+      return useMutation(getCreateCommunityPostMutationOptions(options));
+    }
+
+export const getSetCommunityPostLikeUrl = (postId: number,) => {
+
+
+
+
+  return `/api/community/posts/${postId}/like`
+}
+
+/**
+ * @summary Set the current user's like state on a post
+ */
+export const setCommunityPostLike = async (postId: number,
+    forumLikeInput: ForumLikeInput, options?: Parameters<typeof customFetch>[1]): Promise<SetCommunityPostLike200> => {
+
+  return customFetch<SetCommunityPostLike200>(getSetCommunityPostLikeUrl(postId),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(forumLikeInput)
+  }
+);}
+
+
+
+
+
+export const getSetCommunityPostLikeMutationOptions = <TError = ErrorType<ErrorResponse>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof setCommunityPostLike>>, TError,{postId: number;data: BodyType<ForumLikeInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof setCommunityPostLike>>, TError,{postId: number;data: BodyType<ForumLikeInput>}, TContext> => {
+
+const mutationKey = ['setCommunityPostLike'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof setCommunityPostLike>>, {postId: number;data: BodyType<ForumLikeInput>}> = (props) => {
+          const {postId,data} = props ?? {};
+
+          return  setCommunityPostLike(postId,data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type SetCommunityPostLikeMutationResult = NonNullable<Awaited<ReturnType<typeof setCommunityPostLike>>>
+    export type SetCommunityPostLikeMutationBody = BodyType<ForumLikeInput>
+    export type SetCommunityPostLikeMutationError = ErrorType<ErrorResponse>
+
+    /**
+ * @summary Set the current user's like state on a post
+ */
+export const useSetCommunityPostLike = <TError = ErrorType<ErrorResponse>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof setCommunityPostLike>>, TError,{postId: number;data: BodyType<ForumLikeInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof setCommunityPostLike>>,
+        TError,
+        {postId: number;data: BodyType<ForumLikeInput>},
+        TContext
+      > => {
+      return useMutation(getSetCommunityPostLikeMutationOptions(options));
+    }
+
+export const getGetCommunityPostCommentsUrl = (postId: number,) => {
+
+
+
+
+  return `/api/community/posts/${postId}/comments`
+}
+
+/**
+ * @summary List comments on a post
+ */
+export const getCommunityPostComments = async (postId: number, options?: Parameters<typeof customFetch>[1]): Promise<ForumComment[]> => {
+
+  return customFetch<ForumComment[]>(getGetCommunityPostCommentsUrl(postId),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getGetCommunityPostCommentsQueryKey = (postId: number,) => {
+    return [
+    `/api/community/posts/${postId}/comments`
+    ] as const;
+    }
+
+
+export const getGetCommunityPostCommentsQueryOptions = <TData = Awaited<ReturnType<typeof getCommunityPostComments>>, TError = ErrorType<ErrorResponse>>(postId: number, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getCommunityPostComments>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getGetCommunityPostCommentsQueryKey(postId);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getCommunityPostComments>>> = ({ signal }) => getCommunityPostComments(postId, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, enabled: postId !== null && postId !== undefined, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getCommunityPostComments>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type GetCommunityPostCommentsQueryResult = NonNullable<Awaited<ReturnType<typeof getCommunityPostComments>>>
+export type GetCommunityPostCommentsQueryError = ErrorType<ErrorResponse>
+
+
+/**
+ * @summary List comments on a post
+ */
+
+export function useGetCommunityPostComments<TData = Awaited<ReturnType<typeof getCommunityPostComments>>, TError = ErrorType<ErrorResponse>>(
+ postId: number, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getCommunityPostComments>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getGetCommunityPostCommentsQueryOptions(postId,options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
+
+export const getCreateCommunityPostCommentUrl = (postId: number,) => {
+
+
+
+
+  return `/api/community/posts/${postId}/comments`
+}
+
+/**
+ * @summary Comment on a post
+ */
+export const createCommunityPostComment = async (postId: number,
+    forumCommentInput: ForumCommentInput, options?: Parameters<typeof customFetch>[1]): Promise<ForumComment> => {
+
+  return customFetch<ForumComment>(getCreateCommunityPostCommentUrl(postId),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(forumCommentInput)
+  }
+);}
+
+
+
+
+
+export const getCreateCommunityPostCommentMutationOptions = <TError = ErrorType<ErrorResponse>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createCommunityPostComment>>, TError,{postId: number;data: BodyType<ForumCommentInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof createCommunityPostComment>>, TError,{postId: number;data: BodyType<ForumCommentInput>}, TContext> => {
+
+const mutationKey = ['createCommunityPostComment'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof createCommunityPostComment>>, {postId: number;data: BodyType<ForumCommentInput>}> = (props) => {
+          const {postId,data} = props ?? {};
+
+          return  createCommunityPostComment(postId,data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type CreateCommunityPostCommentMutationResult = NonNullable<Awaited<ReturnType<typeof createCommunityPostComment>>>
+    export type CreateCommunityPostCommentMutationBody = BodyType<ForumCommentInput>
+    export type CreateCommunityPostCommentMutationError = ErrorType<ErrorResponse>
+
+    /**
+ * @summary Comment on a post
+ */
+export const useCreateCommunityPostComment = <TError = ErrorType<ErrorResponse>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createCommunityPostComment>>, TError,{postId: number;data: BodyType<ForumCommentInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof createCommunityPostComment>>,
+        TError,
+        {postId: number;data: BodyType<ForumCommentInput>},
+        TContext
+      > => {
+      return useMutation(getCreateCommunityPostCommentMutationOptions(options));
+    }
+
+export const getGetWorldChatsUrl = (params?: GetWorldChatsParams,) => {
+  const normalizedParams = new URLSearchParams();
+
+  Object.entries(params || {}).forEach(([key, value]) => {
+
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? 'null' : String(value))
+    }
+  });
+
+  const stringifiedParams = normalizedParams.toString();
+
+  return stringifiedParams.length > 0 ? `/api/community/chats?${stringifiedParams}` : `/api/community/chats`
+}
+
+/**
+ * @summary List world, server, or party chat messages
+ */
+export const getWorldChats = async (params?: GetWorldChatsParams, options?: Parameters<typeof customFetch>[1]): Promise<WorldChatMessage[]> => {
+
+  return customFetch<WorldChatMessage[]>(getGetWorldChatsUrl(params),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getGetWorldChatsQueryKey = (params?: GetWorldChatsParams,) => {
+    return [
+    `/api/community/chats`, ...(params ? [params] : [])
+    ] as const;
+    }
+
+
+export const getGetWorldChatsQueryOptions = <TData = Awaited<ReturnType<typeof getWorldChats>>, TError = ErrorType<unknown>>(params?: GetWorldChatsParams, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getWorldChats>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getGetWorldChatsQueryKey(params);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getWorldChats>>> = ({ signal }) => getWorldChats(params, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getWorldChats>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type GetWorldChatsQueryResult = NonNullable<Awaited<ReturnType<typeof getWorldChats>>>
+export type GetWorldChatsQueryError = ErrorType<unknown>
+
+
+/**
+ * @summary List world, server, or party chat messages
+ */
+
+export function useGetWorldChats<TData = Awaited<ReturnType<typeof getWorldChats>>, TError = ErrorType<unknown>>(
+ params?: GetWorldChatsParams, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getWorldChats>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getGetWorldChatsQueryOptions(params,options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
+
+export const getCreateWorldChatUrl = () => {
+
+
+
+
+  return `/api/community/chats`
+}
+
+/**
+ * @summary Send a world, server, or party chat message
+ */
+export const createWorldChat = async (createWorldChatInput: CreateWorldChatInput, options?: Parameters<typeof customFetch>[1]): Promise<WorldChatMessage> => {
+
+  return customFetch<WorldChatMessage>(getCreateWorldChatUrl(),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(createWorldChatInput)
+  }
+);}
+
+
+
+
+
+export const getCreateWorldChatMutationOptions = <TError = ErrorType<ErrorResponse>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createWorldChat>>, TError,{data: BodyType<CreateWorldChatInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof createWorldChat>>, TError,{data: BodyType<CreateWorldChatInput>}, TContext> => {
+
+const mutationKey = ['createWorldChat'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof createWorldChat>>, {data: BodyType<CreateWorldChatInput>}> = (props) => {
+          const {data} = props ?? {};
+
+          return  createWorldChat(data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type CreateWorldChatMutationResult = NonNullable<Awaited<ReturnType<typeof createWorldChat>>>
+    export type CreateWorldChatMutationBody = BodyType<CreateWorldChatInput>
+    export type CreateWorldChatMutationError = ErrorType<ErrorResponse>
+
+    /**
+ * @summary Send a world, server, or party chat message
+ */
+export const useCreateWorldChat = <TError = ErrorType<ErrorResponse>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createWorldChat>>, TError,{data: BodyType<CreateWorldChatInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof createWorldChat>>,
+        TError,
+        {data: BodyType<CreateWorldChatInput>},
+        TContext
+      > => {
+      return useMutation(getCreateWorldChatMutationOptions(options));
     }
 
 export const getGetMonstersUrl = () => {

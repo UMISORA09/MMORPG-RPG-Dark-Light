@@ -1,6 +1,17 @@
 import { memo } from "react";
 import { InventoryEquipmentPanel } from "./InventoryEquipmentPanel";
+import { CharacterInventoryModal } from "@/ui/modals/CharacterInventoryModal";
 import { GameSettingsPanel } from "./GameSettingsPanel";
+import { QuestLogModal } from "@/ui/modals/QuestLogModal";
+import { BlacksmithModal } from "@/ui/modals/BlacksmithModal";
+import { CharacterAttributesPanel } from "@/ui/modals/CharacterAttributesPanel";
+import { PvPArenaModal } from "@/ui/modals/PvPArenaModal";
+import { GMAdminPanel } from "@/ui/modals/GMAdminPanel";
+import { DungeonSelectModal } from "@/ui/modals/DungeonSelectModal";
+import { BattleReportModal } from "@/ui/modals/BattleReportModal";
+import { AchievementsModal } from "@/ui/modals/AchievementsModal";
+import { DailyLoginModal } from "@/ui/modals/DailyLoginModal";
+import { LoadingTransitionScreen } from "@/ui/transition/LoadingTransitionScreen";
 import {
   useGetInventory,
   getGetInventoryQueryKey,
@@ -11,8 +22,6 @@ import {
   useUnequipItem,
   useGetLeaderboard,
   getGetLeaderboardQueryKey,
-  useGetBattleLog,
-  getGetBattleLogQueryKey,
   getGetCharacterQueryKey,
   getGetCharactersQueryKey,
   type Character,
@@ -27,9 +36,6 @@ import {
   Backpack, 
   ShoppingBag, 
   Trophy, 
-  ScrollText, 
-  Sword,
-  Clock,
   Settings,
 } from "lucide-react";
 
@@ -53,7 +59,6 @@ export const UnifiedOverlayModals = memo(function UnifiedOverlayModals({
   const queryClient = useQueryClient();
 
   // ── Queries ──
-  const isLogOpen = activeModal === "battleLog" || activeModal === "battle_logs";
   const { data: inventory = [], isLoading: inventoryLoading } = useGetInventory(
     character.id,
     { query: { queryKey: getGetInventoryQueryKey(character.id), enabled: activeModal === "inventory" || activeModal === "shop" } }
@@ -66,11 +71,6 @@ export const UnifiedOverlayModals = memo(function UnifiedOverlayModals({
   const { data: leaderboard = [], isLoading: leaderboardLoading } = useGetLeaderboard({
     query: { queryKey: getGetLeaderboardQueryKey(), enabled: activeModal === "leaderboard" },
   });
-
-  const { data: battleLogs = [], isLoading: logsLoading } = useGetBattleLog(
-    character.id,
-    { query: { queryKey: getGetBattleLogQueryKey(character.id), enabled: isLogOpen } }
-  );
 
   // ── Mutations ──
   const buyItem = useBuyItem();
@@ -101,7 +101,7 @@ export const UnifiedOverlayModals = memo(function UnifiedOverlayModals({
         onSuccess: async (data) => {
           toast({
             title: "Mua thành công!",
-            description: `Đã mua ${itemName} và cất vào Túi đồ.`,
+            description: `Đã mua ${itemName} và cất vào Hành trang.`,
           });
           // Update gold in game stores
           useGameStore.getState().updatePlayerStatsAfterBattle({
@@ -156,58 +156,94 @@ export const UnifiedOverlayModals = memo(function UnifiedOverlayModals({
     );
   };
 
-  if (!activeModal) return null;
+  return (
+    <>
+      {/* 0. GM Admin Floating Panel (F12 or /gm) */}
+      <GMAdminPanel />
 
-  // 1. HÀNH TRANG & TRANG BỊ (Custom Dark Slate Cinema Card)
-  if (activeModal === "inventory" || activeModal === "shop") {
-    return (
-      <div
-        className="fixed inset-0 z-50 flex items-center justify-center p-2 sm:p-4 bg-black/75 backdrop-blur-md animate-in fade-in duration-200"
-        onClick={(e) => {
-          if (e.target === e.currentTarget) closeActiveModal();
-        }}
-      >
-        <InventoryEquipmentPanel
+      {/* 0.1 Dungeon Selection Modal */}
+      <DungeonSelectModal />
+
+      {/* 0.2 Battle Report & History Modal */}
+      <BattleReportModal characterId={character.id} />
+
+      {/* 0.3 Achievements & Milestones Modal */}
+      {activeModal === "achievements" && <AchievementsModal characterId={character.id} />}
+
+      {/* 0.4 Daily 7-Day Login Rewards Modal */}
+      {activeModal === "dailyRewards" && <DailyLoginModal characterId={character.id} />}
+
+      {/* 0.5 Zone Transition Loading Screen */}
+      <LoadingTransitionScreen />
+
+      {/* 1. Character Attributes Panel (Point Allocation) */}
+      {activeModal === "attributes" && <CharacterAttributesPanel />}
+
+      {/* 2. Storyline Quests & Waypoints Log */}
+      {activeModal === "quests" && <QuestLogModal />}
+
+      {/* 3. Blacksmith +15 Forge & Crafting */}
+      {activeModal === "blacksmith" && <BlacksmithModal />}
+
+      {/* 4. Ranked 1v1 PvP Arena Matchmaking */}
+      {activeModal === "pvpArena" && <PvPArenaModal />}
+
+      {/* 5. Character Inventory Dual Window */}
+      {activeModal === "inventory" && (
+        <CharacterInventoryModal
           character={character}
           inventory={inventory}
-          shopItems={shopItems}
-          inventoryLoading={inventoryLoading}
-          shopLoading={shopLoading}
-          busy={equipItem.isPending || unequipItem.isPending || buyItem.isPending}
-          initialSection={activeModal === "shop" ? "shop" : "storage"}
           onEquip={handleEquip}
-          onBuy={(item) => handleBuy(item.id, item.price, item.name)}
           onClose={closeActiveModal}
         />
-      </div>
-    );
-  }
+      )}
 
-  return (
-    <div
-      className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-6 bg-black/60 backdrop-blur-md animate-in fade-in duration-200"
-      onClick={(e) => {
-        if (e.target === e.currentTarget) closeActiveModal();
-      }}
-    >
+      {/* 6. Shop Panel */}
+      {activeModal === "shop" && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center p-2 sm:p-4 bg-black/75 backdrop-blur-md animate-in fade-in duration-200"
+          onClick={(e) => {
+            if (e.target === e.currentTarget) closeActiveModal();
+          }}
+        >
+          <InventoryEquipmentPanel
+            character={character}
+            inventory={inventory}
+            shopItems={shopItems}
+            inventoryLoading={inventoryLoading}
+            shopLoading={shopLoading}
+            busy={equipItem.isPending || unequipItem.isPending || buyItem.isPending}
+            initialSection="shop"
+            onEquip={handleEquip}
+            onBuy={(item) => handleBuy(item.id, item.price, item.name)}
+            onClose={closeActiveModal}
+          />
+        </div>
+      )}
+
+      {/* 7. Shared Modals (Leaderboard, Settings) */}
+      {(activeModal === "leaderboard" || activeModal === "settings") && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-6 bg-black/60 backdrop-blur-md animate-in fade-in duration-200"
+          onClick={(e) => {
+            if (e.target === e.currentTarget) closeActiveModal();
+          }}
+        >
       <div className="relative w-full max-w-5xl max-h-[90vh] flex flex-col bg-[#342a2b] border border-[#5d4648] rounded-[28px] shadow-[0_30px_90px_rgba(0,0,0,0.7)] overflow-hidden text-slate-100">
         
         {/* ── Modal Header ── */}
         <div className="flex items-center justify-between px-6 py-4 border-b border-slate-800/80 bg-slate-900/40">
           <div className="flex items-center gap-3">
             {activeModal === "leaderboard" && <Trophy className="w-6 h-6 text-purple-400" />}
-            {isLogOpen && <ScrollText className="w-6 h-6 text-red-400" />}
             {activeModal === "settings" && <Settings className="w-6 h-6 text-cyan-400" />}
 
             <div>
               <h2 className="text-lg font-black tracking-wide text-white flex items-center gap-2">
                 {activeModal === "leaderboard" && "BẢNG VINH DANH LONG TỘC"}
-                {isLogOpen && "LỊCH SỬ CHIẾN BÁO"}
                 {activeModal === "settings" && "CÀI ĐẶT ĐIỀU KHIỂN"}
               </h2>
               <p className="text-xs text-slate-400">
                 {activeModal === "leaderboard" && "Top những chiến binh mạnh nhất đại lục Long Tộc"}
-                {isLogOpen && "Ghi nhận các chiến tích tiêu diệt quái vật và Boss rồng"}
                 {activeModal === "settings" && "Tinh chỉnh camera và hiệu ứng theo cách chơi của bạn"}
               </p>
             </div>
@@ -282,53 +318,6 @@ export const UnifiedOverlayModals = memo(function UnifiedOverlayModals({
             </div>
           )}
 
-          {/* 4. BATTLE LOGS MODAL */}
-          {isLogOpen && (
-            <div>
-              {logsLoading ? (
-                <div className="text-center py-12 text-slate-400">Đang tải lịch sử chiến đấu...</div>
-              ) : battleLogs.length === 0 ? (
-                <div className="text-center py-12 space-y-2">
-                  <Sword className="w-10 h-10 text-slate-600 mx-auto" />
-                  <p className="text-slate-400 font-semibold">Chưa có chiến tích nào được ghi nhận!</p>
-                  <p className="text-xs text-slate-500">Hãy bước ra Đấu Trường Hoang Dã để săn quái và nhận thưởng.</p>
-                </div>
-              ) : (
-                <div className="space-y-2.5">
-                  {battleLogs.map((log) => (
-                    <div
-                      key={log.id}
-                      className="p-3.5 rounded-2xl bg-slate-900/60 border border-slate-800/80 flex items-center justify-between"
-                    >
-                      <div className="flex items-center gap-3">
-                        <div className={`w-9 h-9 rounded-xl flex items-center justify-center font-black text-sm ${
-                          log.victory ? "bg-emerald-500/20 text-emerald-400 border border-emerald-500/40" : "bg-red-500/20 text-red-400 border border-red-500/40"
-                        }`}>
-                          {log.victory ? "WIN" : "LOSE"}
-                        </div>
-                        <div>
-                          <p className="font-bold text-sm text-slate-200">
-                            Hạ gục: <span className="text-amber-300">{log.monsterName}</span>
-                          </p>
-                          <div className="flex items-center gap-2 text-xs text-slate-400 mt-0.5">
-                            <span className="text-blue-400 font-mono">+{log.expGained} EXP</span>
-                            <span>•</span>
-                            <span className="text-yellow-400 font-mono">+{log.goldGained} Vàng</span>
-                          </div>
-                        </div>
-                      </div>
-
-                      <div className="text-right text-[11px] text-slate-500 font-mono flex items-center gap-1">
-                        <Clock className="w-3 h-3" />
-                        {new Date(log.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' })}
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              )}
-            </div>
-          )}
-
         </div>
 
         {/* ── Modal Footer ── */}
@@ -344,5 +333,7 @@ export const UnifiedOverlayModals = memo(function UnifiedOverlayModals({
 
       </div>
     </div>
+      )}
+    </>
   );
 });

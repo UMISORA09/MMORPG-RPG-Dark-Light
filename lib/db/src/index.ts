@@ -18,6 +18,13 @@ interface MemoryStoreData {
   battle_logs: any[];
   encounters: any[];
   reward_grants: any[];
+  servers: any[];
+  monsters: any[];
+  forum_posts: any[];
+  forum_comments: any[];
+  world_chats: any[];
+  quests: any[];
+  character_quests: any[];
 }
 
 const memoryStore: MemoryStoreData = {
@@ -28,6 +35,13 @@ const memoryStore: MemoryStoreData = {
   battle_logs: [],
   encounters: [],
   reward_grants: [],
+  servers: [],
+  monsters: [],
+  forum_posts: [],
+  forum_comments: [],
+  world_chats: [],
+  quests: [],
+  character_quests: [],
 };
 
 let autoIncrement = {
@@ -35,6 +49,8 @@ let autoIncrement = {
   characters: 1,
   character_items: 1,
   battle_logs: 1,
+  forum_posts: 1,
+  world_chats: 1,
 };
 
 function createMemoryDb() {
@@ -55,6 +71,11 @@ function createMemoryDb() {
 
     if (name.includes("user_session") || name.includes("session")) return [];
     if (name.includes("reward_grant")) return memoryStore.reward_grants;
+    if (name.includes("forum_post")) return memoryStore.forum_posts;
+    if (name.includes("forum_comment")) return memoryStore.forum_comments;
+    if (name.includes("world_chat")) return memoryStore.world_chats;
+    if (name.includes("monster")) return memoryStore.monsters;
+    if (name.includes("server")) return memoryStore.servers;
     if (name.includes("encounter")) return memoryStore.encounters;
     if (name.includes("character_item")) return memoryStore.character_items;
     if (name.includes("character")) return memoryStore.characters;
@@ -70,6 +91,9 @@ function createMemoryDb() {
     if (data === memoryStore.character_items) return "character_items";
     if (data === memoryStore.characters) return "characters";
     if (data === memoryStore.battle_logs) return "battle_logs";
+    if (data === memoryStore.forum_posts) return "forum_posts";
+    if (data === memoryStore.forum_comments) return "forum_comments";
+    if (data === memoryStore.world_chats) return "world_chats";
     return null;
   };
 
@@ -156,7 +180,7 @@ function createMemoryDb() {
     return str.replace(/[A-Z]/g, (letter) => `_${letter.toLowerCase()}`);
   }
 
-  return {
+  const memoryDb: any = {
     select: () => ({
       from: (table: any) => {
         let rows = [...getTableData(table)];
@@ -221,8 +245,34 @@ function createMemoryDb() {
 
         const builder: any = {
           returning: () => Promise.resolve(inserted),
-          onConflictDoNothing: () => builder,
-          onConflictDoUpdate: () => builder,
+          onConflictDoNothing: (options?: any) => {
+            const targetColumn = Array.isArray(options?.target) ? options.target[0] : options?.target;
+            const columnName = targetColumn?.name ?? "id";
+            for (const row of [...inserted]) {
+              const conflict = target.find((candidate: any) => candidate !== row && (candidate[columnName] ?? candidate[camelCase(columnName)]) === (row[columnName] ?? row[camelCase(columnName)]));
+              if (!conflict) continue;
+              const rowIndex = target.indexOf(row);
+              if (rowIndex >= 0) target.splice(rowIndex, 1);
+              const resultIndex = inserted.indexOf(row);
+              if (resultIndex >= 0) inserted.splice(resultIndex, 1);
+            }
+            return builder;
+          },
+          onConflictDoUpdate: (options: any) => {
+            const targetColumn = Array.isArray(options?.target) ? options.target[0] : options?.target;
+            const columnName = targetColumn?.name ?? "id";
+            for (const row of [...inserted]) {
+              const rowValue = row[columnName] ?? row[camelCase(columnName)];
+              const conflict = target.find((candidate: any) => candidate !== row && (candidate[columnName] ?? candidate[camelCase(columnName)]) === rowValue);
+              if (!conflict) continue;
+              Object.assign(conflict, options.set);
+              const rowIndex = target.indexOf(row);
+              if (rowIndex >= 0) target.splice(rowIndex, 1);
+              const resultIndex = inserted.indexOf(row);
+              if (resultIndex >= 0) inserted.splice(resultIndex, 1, conflict);
+            }
+            return builder;
+          },
           then: (resolve: any, reject: any) => Promise.resolve(inserted).then(resolve, reject),
         };
         return builder;
@@ -269,7 +319,9 @@ function createMemoryDb() {
         findMany: async () => memoryStore.characters,
       },
     },
+    transaction: async (callback: (transaction: any) => unknown) => callback(memoryDb),
   };
+  return memoryDb;
 }
 
 export async function initDatabase() {
@@ -303,53 +355,138 @@ export async function initDatabase() {
 
         CREATE TABLE IF NOT EXISTS characters (
           id SERIAL PRIMARY KEY,
-          user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+          user_id INTEGER NOT NULL,
+          server_id TEXT NOT NULL DEFAULT 's1_long_vuong',
           name TEXT NOT NULL,
+          gender TEXT DEFAULT 'male' NOT NULL,
           class_id TEXT NOT NULL,
           class_name TEXT NOT NULL,
+          title TEXT DEFAULT 'Thượng Cấp Chiến Sĩ' NOT NULL,
+          zone_id TEXT DEFAULT 'SAFE_VILLAGE' NOT NULL,
+          pos_x INTEGER DEFAULT 0 NOT NULL,
+          pos_z INTEGER DEFAULT 0 NOT NULL,
           level INTEGER DEFAULT 1 NOT NULL,
           experience INTEGER DEFAULT 0 NOT NULL,
           hp INTEGER NOT NULL,
           max_hp INTEGER NOT NULL,
+          mp INTEGER DEFAULT 200 NOT NULL,
+          max_mp INTEGER DEFAULT 200 NOT NULL,
+          str INTEGER DEFAULT 15 NOT NULL,
+          dex INTEGER DEFAULT 15 NOT NULL,
+          intel INTEGER DEFAULT 15 NOT NULL,
+          luk INTEGER DEFAULT 10 NOT NULL,
+          vit INTEGER DEFAULT 15 NOT NULL,
           atk INTEGER NOT NULL,
+          matk INTEGER DEFAULT 20 NOT NULL,
           def INTEGER NOT NULL,
+          mdef INTEGER DEFAULT 15 NOT NULL,
           spd INTEGER NOT NULL,
-          gold INTEGER DEFAULT 0 NOT NULL,
+          crit_rate INTEGER DEFAULT 15 NOT NULL,
+          crit_dmg INTEGER DEFAULT 150 NOT NULL,
+          accuracy INTEGER DEFAULT 95 NOT NULL,
+          evasion INTEGER DEFAULT 10 NOT NULL,
+          combat_power INTEGER DEFAULT 500 NOT NULL,
+          gold INTEGER DEFAULT 1000 NOT NULL,
           kills INTEGER DEFAULT 0 NOT NULL,
           deaths INTEGER DEFAULT 0 NOT NULL,
-          gender TEXT DEFAULT 'male' NOT NULL,
           created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP NOT NULL
         );
 
+        ALTER TABLE users ADD COLUMN IF NOT EXISTS forum_title TEXT DEFAULT 'Tân Thủ Long Tộc' NOT NULL;
+        ALTER TABLE users ADD COLUMN IF NOT EXISTS selected_region TEXT DEFAULT 'VN' NOT NULL;
+        ALTER TABLE users ADD COLUMN IF NOT EXISTS selected_server_id TEXT DEFAULT 's1_long_vuong' NOT NULL;
         ALTER TABLE characters ADD COLUMN IF NOT EXISTS gender TEXT DEFAULT 'male' NOT NULL;
+        ALTER TABLE characters ADD COLUMN IF NOT EXISTS server_id TEXT DEFAULT 's1_long_vuong' NOT NULL;
+        ALTER TABLE characters ADD COLUMN IF NOT EXISTS title TEXT DEFAULT 'Thượng Cấp Chiến Sĩ' NOT NULL;
+        ALTER TABLE characters ADD COLUMN IF NOT EXISTS zone_id TEXT DEFAULT 'SAFE_VILLAGE' NOT NULL;
+        ALTER TABLE characters ADD COLUMN IF NOT EXISTS pos_x INTEGER DEFAULT 0 NOT NULL;
+        ALTER TABLE characters ADD COLUMN IF NOT EXISTS pos_z INTEGER DEFAULT 0 NOT NULL;
+        ALTER TABLE characters ADD COLUMN IF NOT EXISTS mp INTEGER DEFAULT 200 NOT NULL;
+        ALTER TABLE characters ADD COLUMN IF NOT EXISTS max_mp INTEGER DEFAULT 200 NOT NULL;
+        ALTER TABLE characters ADD COLUMN IF NOT EXISTS str INTEGER DEFAULT 15 NOT NULL;
+        ALTER TABLE characters ADD COLUMN IF NOT EXISTS dex INTEGER DEFAULT 15 NOT NULL;
+        ALTER TABLE characters ADD COLUMN IF NOT EXISTS intel INTEGER DEFAULT 15 NOT NULL;
+        ALTER TABLE characters ADD COLUMN IF NOT EXISTS luk INTEGER DEFAULT 10 NOT NULL;
+        ALTER TABLE characters ADD COLUMN IF NOT EXISTS vit INTEGER DEFAULT 15 NOT NULL;
+        ALTER TABLE characters ADD COLUMN IF NOT EXISTS matk INTEGER DEFAULT 20 NOT NULL;
+        ALTER TABLE characters ADD COLUMN IF NOT EXISTS mdef INTEGER DEFAULT 15 NOT NULL;
+        ALTER TABLE characters ADD COLUMN IF NOT EXISTS crit_rate INTEGER DEFAULT 15 NOT NULL;
+        ALTER TABLE characters ADD COLUMN IF NOT EXISTS crit_dmg INTEGER DEFAULT 150 NOT NULL;
+        ALTER TABLE characters ADD COLUMN IF NOT EXISTS accuracy INTEGER DEFAULT 95 NOT NULL;
+        ALTER TABLE characters ADD COLUMN IF NOT EXISTS evasion INTEGER DEFAULT 10 NOT NULL;
+        ALTER TABLE characters ADD COLUMN IF NOT EXISTS combat_power INTEGER DEFAULT 500 NOT NULL;
 
         CREATE TABLE IF NOT EXISTS items (
           id TEXT PRIMARY KEY,
           name TEXT NOT NULL,
+          category TEXT DEFAULT 'equipment' NOT NULL,
           type TEXT NOT NULL,
+          equip_slot TEXT DEFAULT 'none' NOT NULL,
           description TEXT NOT NULL,
+          lore TEXT DEFAULT '' NOT NULL,
           rarity TEXT NOT NULL,
           hp_boost INTEGER DEFAULT 0 NOT NULL,
+          mp_boost INTEGER DEFAULT 0 NOT NULL,
           atk_boost INTEGER DEFAULT 0 NOT NULL,
+          matk_boost INTEGER DEFAULT 0 NOT NULL,
           def_boost INTEGER DEFAULT 0 NOT NULL,
+          mdef_boost INTEGER DEFAULT 0 NOT NULL,
           spd_boost INTEGER DEFAULT 0 NOT NULL,
+          str_boost INTEGER DEFAULT 0 NOT NULL,
+          dex_boost INTEGER DEFAULT 0 NOT NULL,
+          int_boost INTEGER DEFAULT 0 NOT NULL,
+          luk_boost INTEGER DEFAULT 0 NOT NULL,
+          vit_boost INTEGER DEFAULT 0 NOT NULL,
+          crit_rate_boost INTEGER DEFAULT 0 NOT NULL,
+          heal_hp_percent INTEGER DEFAULT 0 NOT NULL,
+          heal_mp_percent INTEGER DEFAULT 0 NOT NULL,
+          buff_type TEXT,
           price INTEGER DEFAULT 0 NOT NULL,
+          max_stack INTEGER DEFAULT 1 NOT NULL,
           class_id TEXT,
           required_level INTEGER DEFAULT 1 NOT NULL,
           icon TEXT DEFAULT '◇' NOT NULL
         );
 
+        ALTER TABLE items ADD COLUMN IF NOT EXISTS category TEXT DEFAULT 'equipment' NOT NULL;
+        ALTER TABLE items ADD COLUMN IF NOT EXISTS equip_slot TEXT DEFAULT 'none' NOT NULL;
+        ALTER TABLE items ADD COLUMN IF NOT EXISTS lore TEXT DEFAULT '' NOT NULL;
+        ALTER TABLE items ADD COLUMN IF NOT EXISTS mp_boost INTEGER DEFAULT 0 NOT NULL;
+        ALTER TABLE items ADD COLUMN IF NOT EXISTS matk_boost INTEGER DEFAULT 0 NOT NULL;
+        ALTER TABLE items ADD COLUMN IF NOT EXISTS mdef_boost INTEGER DEFAULT 0 NOT NULL;
+        ALTER TABLE items ADD COLUMN IF NOT EXISTS str_boost INTEGER DEFAULT 0 NOT NULL;
+        ALTER TABLE items ADD COLUMN IF NOT EXISTS dex_boost INTEGER DEFAULT 0 NOT NULL;
+        ALTER TABLE items ADD COLUMN IF NOT EXISTS int_boost INTEGER DEFAULT 0 NOT NULL;
+        ALTER TABLE items ADD COLUMN IF NOT EXISTS luk_boost INTEGER DEFAULT 0 NOT NULL;
+        ALTER TABLE items ADD COLUMN IF NOT EXISTS vit_boost INTEGER DEFAULT 0 NOT NULL;
+        ALTER TABLE items ADD COLUMN IF NOT EXISTS crit_rate_boost INTEGER DEFAULT 0 NOT NULL;
+        ALTER TABLE items ADD COLUMN IF NOT EXISTS heal_hp_percent INTEGER DEFAULT 0 NOT NULL;
+        ALTER TABLE items ADD COLUMN IF NOT EXISTS heal_mp_percent INTEGER DEFAULT 0 NOT NULL;
+        ALTER TABLE items ADD COLUMN IF NOT EXISTS buff_type TEXT;
+        ALTER TABLE items ADD COLUMN IF NOT EXISTS max_stack INTEGER DEFAULT 1 NOT NULL;
+
         CREATE TABLE IF NOT EXISTS character_items (
           id SERIAL PRIMARY KEY,
-          character_id INTEGER NOT NULL REFERENCES characters(id) ON DELETE CASCADE,
-          item_id TEXT NOT NULL REFERENCES items(id) ON DELETE CASCADE,
+          character_id INTEGER NOT NULL,
+          item_id TEXT NOT NULL,
           equipped BOOLEAN DEFAULT FALSE NOT NULL,
+          equipped_slot TEXT,
+          slot_index INTEGER DEFAULT 0 NOT NULL,
+          quantity INTEGER DEFAULT 1 NOT NULL,
+          enhance_level INTEGER DEFAULT 0 NOT NULL,
+          bonus_combat_power INTEGER DEFAULT 0 NOT NULL,
           acquired_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP NOT NULL
         );
+        ALTER TABLE character_items ADD COLUMN IF NOT EXISTS equipped_slot TEXT;
+        ALTER TABLE character_items ADD COLUMN IF NOT EXISTS slot_index INTEGER DEFAULT 0 NOT NULL;
+        ALTER TABLE character_items ADD COLUMN IF NOT EXISTS quantity INTEGER DEFAULT 1 NOT NULL;
+        ALTER TABLE character_items ADD COLUMN IF NOT EXISTS enhance_level INTEGER DEFAULT 0 NOT NULL;
+        ALTER TABLE character_items ADD COLUMN IF NOT EXISTS bonus_combat_power INTEGER DEFAULT 0 NOT NULL;
+        DROP INDEX IF EXISTS character_item_unique;
 
         CREATE TABLE IF NOT EXISTS battle_logs (
           id SERIAL PRIMARY KEY,
-          character_id INTEGER NOT NULL REFERENCES characters(id) ON DELETE CASCADE,
+          character_id INTEGER NOT NULL,
           encounter_id UUID,
           monster_id TEXT NOT NULL,
           monster_name TEXT NOT NULL,
@@ -361,8 +498,8 @@ export async function initDatabase() {
 
         CREATE TABLE IF NOT EXISTS encounters (
           id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-          character_id INTEGER NOT NULL REFERENCES characters(id) ON DELETE CASCADE,
-          user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+          character_id INTEGER NOT NULL,
+          user_id INTEGER NOT NULL,
           monster_id TEXT NOT NULL,
           spawn_id TEXT NOT NULL,
           zone_id TEXT DEFAULT 'WILDERNESS' NOT NULL,
@@ -384,8 +521,8 @@ export async function initDatabase() {
         CREATE UNIQUE INDEX IF NOT EXISTS idx_encounters_client_req ON encounters (character_id, client_request_id);
 
         CREATE TABLE IF NOT EXISTS reward_grants (
-          encounter_id UUID PRIMARY KEY REFERENCES encounters(id) ON DELETE CASCADE,
-          character_id INTEGER NOT NULL REFERENCES characters(id) ON DELETE CASCADE,
+          encounter_id UUID PRIMARY KEY,
+          character_id INTEGER NOT NULL,
           exp_granted INTEGER NOT NULL,
           gold_granted INTEGER NOT NULL,
           items_granted JSONB,
@@ -398,6 +535,103 @@ export async function initDatabase() {
           expire TIMESTAMP(6) NOT NULL
         );
         CREATE INDEX IF NOT EXISTS "IDX_session_expire" ON user_sessions ("expire");
+
+        CREATE TABLE IF NOT EXISTS servers (
+          id TEXT PRIMARY KEY, name TEXT NOT NULL, region TEXT NOT NULL,
+          status TEXT DEFAULT 'GOOD' NOT NULL, exp_multiplier INTEGER DEFAULT 1 NOT NULL,
+          gold_multiplier INTEGER DEFAULT 1 NOT NULL, max_players INTEGER DEFAULT 1000 NOT NULL
+        );
+        CREATE TABLE IF NOT EXISTS monsters (
+          id TEXT PRIMARY KEY, name TEXT NOT NULL, title TEXT DEFAULT '' NOT NULL,
+          archetype TEXT DEFAULT 'MELEE_RUSHER' NOT NULL, zone_id TEXT DEFAULT 'WILDERNESS' NOT NULL,
+          level INTEGER DEFAULT 1 NOT NULL, hp INTEGER NOT NULL, atk INTEGER NOT NULL, def INTEGER NOT NULL,
+          spd INTEGER DEFAULT 10 NOT NULL, crit_rate INTEGER DEFAULT 5 NOT NULL,
+          stagger_threshold INTEGER DEFAULT 100 NOT NULL, aggro_radius INTEGER DEFAULT 8 NOT NULL,
+          leash_radius INTEGER DEFAULT 18 NOT NULL, exp_reward INTEGER DEFAULT 0 NOT NULL,
+          gold_reward INTEGER DEFAULT 0 NOT NULL, emoji TEXT DEFAULT '👹' NOT NULL,
+          sprite_type TEXT DEFAULT 'goblin' NOT NULL, description TEXT DEFAULT '' NOT NULL,
+          drop_table_json TEXT DEFAULT '[]' NOT NULL
+        );
+        CREATE TABLE IF NOT EXISTS forum_posts (
+          id SERIAL PRIMARY KEY, user_id INTEGER NOT NULL, character_id INTEGER,
+          server_id TEXT DEFAULT 's1_long_vuong' NOT NULL, title TEXT NOT NULL,
+          category TEXT DEFAULT 'general' NOT NULL, body TEXT NOT NULL,
+          likes JSONB DEFAULT '[]'::jsonb NOT NULL,
+          created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP NOT NULL,
+          updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP NOT NULL
+        );
+        CREATE TABLE IF NOT EXISTS world_chats (
+          id SERIAL PRIMARY KEY, user_id INTEGER NOT NULL, character_id INTEGER,
+          server_id TEXT DEFAULT 's1_long_vuong' NOT NULL, channel TEXT DEFAULT 'world' NOT NULL,
+          message TEXT NOT NULL, created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP NOT NULL
+        );
+        CREATE TABLE IF NOT EXISTS forum_comments (
+          id SERIAL PRIMARY KEY, post_id INTEGER NOT NULL, user_id INTEGER NOT NULL,
+          character_id INTEGER, comment TEXT NOT NULL,
+          created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP NOT NULL
+        );
+        CREATE TABLE IF NOT EXISTS quests (
+          id TEXT PRIMARY KEY, title TEXT NOT NULL, type TEXT DEFAULT 'MAIN' NOT NULL,
+          npc_id TEXT NOT NULL, npc_name TEXT DEFAULT 'Trưởng Làng' NOT NULL,
+          description TEXT NOT NULL, objective_type TEXT NOT NULL,
+          target_id TEXT NOT NULL, target_name TEXT NOT NULL,
+          required_count INTEGER DEFAULT 1 NOT NULL, reward_exp INTEGER DEFAULT 0 NOT NULL,
+          reward_gold INTEGER DEFAULT 0 NOT NULL, reward_item_id TEXT,
+          reward_item_name TEXT, reward_item_count INTEGER DEFAULT 1,
+          next_quest_id TEXT, target_pos_x REAL DEFAULT 0 NOT NULL,
+          target_pos_z REAL DEFAULT 0 NOT NULL, target_zone TEXT DEFAULT 'SAFE_VILLAGE' NOT NULL,
+          order_index INTEGER DEFAULT 0 NOT NULL
+        );
+        CREATE TABLE IF NOT EXISTS character_quests (
+          id TEXT PRIMARY KEY, character_id INTEGER NOT NULL,
+          quest_id TEXT NOT NULL, progress INTEGER DEFAULT 0 NOT NULL,
+          status TEXT DEFAULT 'AVAILABLE' NOT NULL,
+          created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+          updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        );
+        CREATE INDEX IF NOT EXISTS quests_type_idx ON quests(type);
+        CREATE INDEX IF NOT EXISTS quests_npc_id_idx ON quests(npc_id);
+        CREATE INDEX IF NOT EXISTS quests_order_idx ON quests(order_index);
+        CREATE INDEX IF NOT EXISTS char_quests_char_id_idx ON character_quests(character_id);
+        CREATE INDEX IF NOT EXISTS char_quests_quest_id_idx ON character_quests(quest_id);
+        CREATE INDEX IF NOT EXISTS char_quests_status_idx ON character_quests(status);
+        CREATE INDEX IF NOT EXISTS characters_user_id_idx ON characters(user_id);
+        CREATE INDEX IF NOT EXISTS characters_server_id_idx ON characters(server_id);
+        CREATE INDEX IF NOT EXISTS users_selected_server_id_idx ON users(selected_server_id);
+        CREATE INDEX IF NOT EXISTS items_class_id_idx ON items(class_id);
+        CREATE INDEX IF NOT EXISTS character_items_character_id_idx ON character_items(character_id);
+        CREATE INDEX IF NOT EXISTS character_items_item_id_idx ON character_items(item_id);
+        CREATE INDEX IF NOT EXISTS battle_logs_character_id_idx ON battle_logs(character_id);
+        CREATE INDEX IF NOT EXISTS battle_logs_monster_id_idx ON battle_logs(monster_id);
+        CREATE INDEX IF NOT EXISTS encounters_character_id_idx ON encounters(character_id);
+        CREATE INDEX IF NOT EXISTS encounters_user_id_idx ON encounters(user_id);
+        CREATE INDEX IF NOT EXISTS encounters_monster_id_idx ON encounters(monster_id);
+        CREATE INDEX IF NOT EXISTS forum_posts_user_id_idx ON forum_posts(user_id);
+        CREATE INDEX IF NOT EXISTS forum_posts_character_id_idx ON forum_posts(character_id);
+        CREATE INDEX IF NOT EXISTS forum_posts_server_id_idx ON forum_posts(server_id);
+        CREATE INDEX IF NOT EXISTS world_chats_user_id_idx ON world_chats(user_id);
+        CREATE INDEX IF NOT EXISTS world_chats_character_id_idx ON world_chats(character_id);
+        CREATE INDEX IF NOT EXISTS world_chats_server_id_idx ON world_chats(server_id);
+        CREATE INDEX IF NOT EXISTS forum_comments_post_id_idx ON forum_comments(post_id);
+        CREATE INDEX IF NOT EXISTS forum_comments_user_id_idx ON forum_comments(user_id);
+        CREATE INDEX IF NOT EXISTS forum_comments_character_id_idx ON forum_comments(character_id);
+
+        DO $$
+        DECLARE fk RECORD;
+        BEGIN
+          FOR fk IN
+            SELECT conrelid::regclass AS table_name, conname
+            FROM pg_constraint
+            WHERE contype = 'f'
+              AND conrelid IN (
+                SELECT oid FROM pg_class
+                WHERE relname IN ('characters', 'character_items', 'battle_logs', 'encounters', 'reward_grants')
+                  AND relnamespace = current_schema()::regnamespace
+              )
+          LOOP
+            EXECUTE format('ALTER TABLE %s DROP CONSTRAINT %I', fk.table_name, fk.conname);
+          END LOOP;
+        END $$;
       `);
 
       // Auto-seed default item catalog into PostgreSQL
@@ -441,4 +675,5 @@ if (process.env.DATABASE_URL && process.env.DATABASE_URL !== "memory") {
 
 export * from "./schema";
 export * from "./seed-data";
+export * from "./game-seed";
 export { seedDatabase } from "./seed";
