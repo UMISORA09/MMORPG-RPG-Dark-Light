@@ -27,7 +27,6 @@ import {
   LogOut, 
   Box, 
   Settings,
-  Crown,
   Volume2,
   VolumeX,
   BarChart3,
@@ -67,6 +66,7 @@ export const UnifiedGameHUD = memo(function UnifiedGameHUD({
   const godMode = useGameWorldStore((s) => s.godMode);
   const soundMuted = useGameWorldStore((s) => s.soundMuted);
   const toggleSoundMute = useGameWorldStore((s) => s.toggleSoundMute);
+  const combatKillToast = useGameWorldStore((s) => s.combatKillToast);
 
   const openModal = (modal: "inventory" | "shop" | "leaderboard" | "battleLog" | "settings" | "achievements" | "dailyRewards") => {
     useGameWorldStore.getState().setActiveModal(modal);
@@ -348,19 +348,6 @@ export const UnifiedGameHUD = memo(function UnifiedGameHUD({
               🐎
             </button>
 
-            {/* GM Admin Demo Panel (F12) */}
-            <button
-              onClick={toggleGMAdmin}
-              className={`p-2 border rounded-xl transition cursor-pointer flex items-center justify-center ${
-                godMode
-                  ? "bg-rose-500/30 border-rose-400 text-rose-300 shadow-[0_0_15px_rgba(244,63,94,0.5)]"
-                  : "bg-slate-900 border-slate-700 text-rose-400 hover:text-rose-300 hover:border-rose-500"
-              }`}
-              title="Bảng Quản Trị Viên (GM Admin Demo) - Phím F12"
-            >
-              <Crown className="w-4 h-4 text-rose-400" />
-            </button>
-
             {/* Bật/Tắt Âm Thanh Game (Sound Mute Toggle) */}
             <button
               onClick={toggleSoundMute}
@@ -430,6 +417,48 @@ export const UnifiedGameHUD = memo(function UnifiedGameHUD({
           <PixelEnemyHealthBars />
         </div>
       </div>
+
+      {/* ── Compact Monster Kill Toast Tab (Tự động biến mất sau 2.5s, không che khuất tầm nhìn đánh quái tiếp theo) ── */}
+      {combatKillToast && (
+        <div
+          className="fixed top-24 right-4 z-40 pointer-events-none animate-in fade-in slide-in-from-right-4 duration-200 select-none"
+        >
+          <div className="w-[280px] sm:w-[320px] rounded-2xl bg-[#0e131ef2] border border-cyan-400/60 shadow-[0_10px_30px_rgba(0,0,0,0.85),0_0_20px_rgba(40,195,225,0.3)] p-2.5 backdrop-blur-md flex flex-col gap-1.5 overflow-hidden">
+            {/* Header: Monster Name + Level */}
+            <div className="flex items-center justify-between gap-2">
+              <div className="flex items-center gap-1.5 min-w-0">
+                <span className="text-sm">⚔️</span>
+                <p className="text-xs font-black text-white truncate">
+                  Hạ gục: <span className="text-cyan-300">{combatKillToast.monsterName}</span>
+                </p>
+              </div>
+              <span className="text-[9px] font-mono font-bold text-slate-300 px-1.5 py-0.5 rounded bg-black/60 border border-slate-700 shrink-0">
+                Cấp {combatKillToast.monsterLevel}
+              </span>
+            </div>
+
+            {/* EXP + Gold + Drops */}
+            <div className="flex items-center justify-between text-[11px] font-mono bg-black/50 px-2 py-1 rounded-xl border border-slate-800">
+              <span className="text-emerald-400 font-bold flex items-center gap-1">
+                ✦ +{combatKillToast.expGained} EXP
+              </span>
+              <span className="text-amber-300 font-bold flex items-center gap-1">
+                🪙 +{combatKillToast.goldGained} Vàng
+              </span>
+              {combatKillToast.drops.length > 0 && (
+                <span className="text-purple-300 font-bold flex items-center gap-0.5">
+                  🎁 x{combatKillToast.drops.length}
+                </span>
+              )}
+            </div>
+
+            {/* Auto-dismiss countdown bar */}
+            <div className="w-full h-0.5 bg-slate-800/80 rounded-full overflow-hidden">
+              <div className="h-full bg-gradient-to-r from-cyan-400 to-emerald-400 animate-shrink-timer" />
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 });

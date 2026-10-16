@@ -22,6 +22,8 @@ export interface BattleReportData {
 export type WorldZone = "SAFE_VILLAGE" | "WILDERNESS" | "DEAD_MARSH" | "BOSS_ALTAR" | "DUNGEON";
 export type WorldWeather = "SUNNY" | "RAIN" | "DARK_FOG" | "BLOOD_MOON";
 
+let combatToastTimer: ReturnType<typeof setTimeout> | null = null;
+
 export interface CharacterInventoryItem {
   id: string;
   itemId: string;
@@ -361,8 +363,11 @@ export interface GameWorldState {
   // --- Battle Reports & Audio Control ---
   battleReport: BattleReportData | null;
   battleReportOpen: boolean;
+  combatKillToast: BattleReportData | null;
   openBattleReport: (data: BattleReportData) => void;
   closeBattleReport: () => void;
+  showCombatKillToast: (data: BattleReportData) => void;
+  clearCombatKillToast: () => void;
   currentFightDamageDealt: number;
   currentFightCritHits: number;
   currentFightStartTime: number;
@@ -732,6 +737,7 @@ export const useGameWorldStore = create<GameWorldState>((set, get) => ({
   // Battle Reports & Audio Control
   battleReport: null,
   battleReportOpen: false,
+  combatKillToast: null,
   currentFightDamageDealt: 0,
   currentFightCritHits: 0,
   currentFightStartTime: Date.now(),
@@ -749,6 +755,22 @@ export const useGameWorldStore = create<GameWorldState>((set, get) => ({
       battleReportOpen: false,
       activeModal: null,
     });
+  },
+  showCombatKillToast: (data: BattleReportData) => {
+    // Record into battle report for history, but DO NOT open blocking full modal!
+    set({
+      battleReport: { ...data, timestamp: data.timestamp || Date.now() },
+      combatKillToast: { ...data, timestamp: data.timestamp || Date.now() },
+    });
+    // Auto dismiss quickly after 2.6 seconds so it never blocks gameplay
+    if (combatToastTimer) clearTimeout(combatToastTimer);
+    combatToastTimer = setTimeout(() => {
+      set({ combatKillToast: null });
+    }, 2600);
+  },
+  clearCombatKillToast: () => {
+    if (combatToastTimer) clearTimeout(combatToastTimer);
+    set({ combatKillToast: null });
   },
   recordCombatHit: (damage: number, isCrit = false) => {
     const s = get();

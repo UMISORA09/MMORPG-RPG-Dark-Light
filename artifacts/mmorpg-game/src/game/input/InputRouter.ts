@@ -267,7 +267,7 @@ export function initInputRouter() {
 
   window.addEventListener("keyup", (e: KeyboardEvent) => {
     activeKeyCodes.delete(e.code);
-  });
+  }, { passive: true });
 
   // Handle Alt-Tab, Window Blur, and Tab Switching
   window.addEventListener("blur", clearAllInputs);
@@ -344,10 +344,10 @@ export function bindCanvasMouseControls(canvas: HTMLElement) {
   };
 
   canvas.addEventListener("contextmenu", onContextMenu);
-  canvas.addEventListener("mousedown", onMouseDown);
+  canvas.addEventListener("mousedown", onMouseDown, { passive: true });
   canvas.addEventListener("wheel", onWheel, { passive: false });
-  window.addEventListener("mouseup", onMouseUp);
-  window.addEventListener("mousemove", onMouseMove);
+  window.addEventListener("mouseup", onMouseUp, { passive: true });
+  window.addEventListener("mousemove", onMouseMove, { passive: true });
 
   return () => {
     canvas.removeEventListener("contextmenu", onContextMenu);

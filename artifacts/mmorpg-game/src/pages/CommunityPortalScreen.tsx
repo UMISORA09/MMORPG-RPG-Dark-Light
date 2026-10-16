@@ -31,11 +31,6 @@ const CATEGORY_LABELS: Record<ForumCategory, string> = {
 };
 const CLASS_NAMES: Record<string, string> = { tank: "Hộ Vệ", fighter: "Chiến Binh", assassin: "Sát Thủ", gunner: "Xạ Thủ" };
 const CHAT_LABELS: Record<ChatChannel, string> = { world: "🌍 Thế Giới", server: "🏰 Máy Chủ", party: "🤝 Tổ Đội" };
-const BOT_MESSAGES = [
-  { characterName: "MocNhan", className: "Hộ Vệ", level: 24, body: "Đội săn Boss còn thiếu một người, ai đi cùng không?" },
-  { characterName: "PhongHan", className: "Xạ Thủ", level: 18, body: "Chúc mừng đội S3 vừa hạ Cổ Long!" },
-  { characterName: "DaXoa_70", className: "Sát Thủ", level: 70, body: "Khiên Pháo Đài vừa lên +8, cảm ơn phù hộ của Long Tộc!" },
-];
 
 function formatDate(value?: string) {
   if (!value) return "Chưa rõ";
@@ -100,15 +95,6 @@ export default function CommunityPortalScreen() {
   useEffect(() => {
     if (featuredCharacter && featuredCharacter.id !== featuredCharacterId) setFeaturedCharacter(featuredCharacter.id);
   }, [featuredCharacter, featuredCharacterId, setFeaturedCharacter]);
-
-  useEffect(() => {
-    const interval = window.setInterval(() => {
-      const bot = BOT_MESSAGES[Math.floor(Math.random() * BOT_MESSAGES.length)];
-      const server = SERVERS[Math.floor(Math.random() * SERVERS.length)];
-      addMessage({ id: `bot-${Date.now()}`, channel: Math.random() > 0.7 ? "server" : "world", serverName: `${server.code} - ${server.name}`, ...bot });
-    }, 12000);
-    return () => window.clearInterval(interval);
-  }, [addMessage]);
 
   const filteredPosts = useMemo(
     () => activeForumCategory === "all" ? posts : posts.filter((post) => post.category === activeForumCategory),

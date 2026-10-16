@@ -234,14 +234,14 @@ export const GMAdminPanel = memo(function GMAdminPanel() {
             <div>
               <div className="flex items-center gap-2">
                 <h2 className="text-base sm:text-lg font-black tracking-wide text-white uppercase flex items-center gap-1.5">
-                  👑 BẢNG QUẢN TRỊ VIÊN (GM ADMIN DEMO)
+                  👑 BẢNG ĐIỀU HÀNH GAME MASTER (GM CONSOLE)
                 </h2>
                 <span className="text-[10px] px-2 py-0.5 rounded-full bg-rose-500/20 border border-rose-400/50 text-rose-300 font-mono font-bold tracking-wider uppercase">
-                  GRADING MODE
+                  MASTER MODE
                 </span>
               </div>
               <p className="text-xs text-rose-300/70 font-mono">
-                Công cụ kiểm thử & biểu diễn toàn cục đồ án Chiến Long Bá (Phím nóng: F12)
+                Công cụ điều hành & quản trị kỹ thuật thế giới Chiến Long Bá
               </p>
             </div>
           </div>
@@ -265,7 +265,7 @@ export const GMAdminPanel = memo(function GMAdminPanel() {
         {/* Main Body */}
         <div className="p-5 sm:p-6 space-y-5 overflow-y-auto max-h-[75vh]">
           
-          {/* Section 1: 7 Core Instant Demo Powers */}
+          {/* Section 1: 7 Core Instant Powers */}
           <div>
             <div className="flex items-center justify-between mb-3">
               <h3 className="text-xs font-bold text-rose-400 uppercase tracking-wider flex items-center gap-1.5">
@@ -379,7 +379,7 @@ export const GMAdminPanel = memo(function GMAdminPanel() {
                         {godMode ? "ON" : "OFF"}
                       </span>
                     </div>
-                    <p className="text-[11px] text-slate-400">Vô hạn HP, 0s hồi chiêu, tự do demo</p>
+                    <p className="text-[11px] text-slate-400">Vô hạn HP, 0s hồi chiêu, bất tử chiến đấu</p>
                   </div>
                 </div>
                 <ChevronRight className="w-4 h-4 text-slate-500 group-hover:text-white transition" />
@@ -424,7 +424,7 @@ export const GMAdminPanel = memo(function GMAdminPanel() {
                       ✨ Vũ Khí Cường Hóa +15 (Kích Hoạt Hào Quang Rồng Lửa Tối Thượng)
                     </h4>
                     <p className="text-[11px] text-slate-300">
-                      Bật ngay bộ hiệu ứng hạt Dragon Fire Aura 3D quanh vũ khí nhân vật để chấm điểm đồ họa
+                      Bật ngay bộ hiệu ứng hạt Dragon Fire Aura 3D quanh vũ khí nhân vật
                     </p>
                   </div>
                 </div>
@@ -475,7 +475,7 @@ export const GMAdminPanel = memo(function GMAdminPanel() {
         {/* Footer */}
         <div className="px-6 py-3 border-t border-rose-500/30 bg-black/60 flex items-center justify-between text-[11px] text-slate-400 font-mono">
           <span>Nhấn <kbd className="px-1.5 py-0.5 bg-slate-800 border border-slate-700 rounded text-slate-200 font-bold">F12</kbd> hoặc <kbd className="px-1.5 py-0.5 bg-slate-800 border border-slate-700 rounded text-slate-200 font-bold">ESC</kbd> để đóng GM Panel</span>
-          <span className="text-rose-400 font-bold">CHIẾN LONG BÁ • GRADUATION PROJECT</span>
+          <span className="text-rose-400 font-bold">CHIẾN LONG BÁ • REALM OF LEGENDS MMORPG</span>
         </div>
 
       </div>

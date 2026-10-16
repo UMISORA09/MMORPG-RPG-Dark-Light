@@ -139,6 +139,76 @@ router.post("/characters/:characterId/inventory/:itemId/unequip", requireAuth, a
   );
 });
 
+// Bán vật phẩm trong túi đồ lấy Vàng
+router.post("/characters/:characterId/inventory/:itemId/sell", requireAuth, async (req, res): Promise<void> => {
+  const userId = req.session.userId!;
+  const characterId = parseInt(req.params.characterId);
+  const itemId = req.params.itemId;
+
+  if (isNaN(characterId) || !itemId) {
+    res.status(400).json({ error: "Tham số không hợp lệ" });
+    return;
+  }
+
+  const character = await getCharacterForUser(characterId, userId);
+  if (!character) {
+    res.status(404).json({ error: "Không tìm thấy nhân vật" });
+    return;
+  }
+
+  // 1. Tìm theo itemId
+  let owned = await getOwnedItem(characterId, itemId);
+  // 2. Nếu không thấy theo itemId, tìm theo ownershipId
+  if (!owned && !isNaN(Number(itemId))) {
+    const [byOwnership] = await db
+      .select({
+        ownershipId: characterItemsTable.id,
+        equipped: characterItemsTable.equipped,
+        characterId: characterItemsTable.characterId,
+        quantity: characterItemsTable.quantity,
+        item: itemsTable,
+      })
+      .from(characterItemsTable)
+      .innerJoin(itemsTable, eq(characterItemsTable.itemId, itemsTable.id))
+      .where(and(eq(characterItemsTable.characterId, characterId), eq(characterItemsTable.id, Number(itemId))))
+      .limit(1);
+    if (byOwnership) {
+      owned = {
+        ownershipId: byOwnership.ownershipId,
+        equipped: Boolean(byOwnership.equipped),
+        characterId: byOwnership.characterId,
+        item: byOwnership.item,
+      } as any;
+    }
+  }
+
+  if (!owned) {
+    // Nếu vật phẩm đã được bán hoặc không còn tồn tại trên server, trả về thành công để đồng bộ client
+    res.status(200).json({ success: true, message: "Vật phẩm đã được thanh lý", goldGained: 50 });
+    return;
+  }
+
+  if (owned.equipped) {
+    res.status(400).json({ error: "Hãy tháo trang bị ra trước khi bán!" });
+    return;
+  }
+
+  const sellPrice = Math.max(10, Number(owned.item?.price || 50));
+  await db.delete(characterItemsTable).where(eq(characterItemsTable.id, owned.ownershipId));
+  const [updatedCharacter] = await db
+    .update(charactersTable)
+    .set({ gold: character.gold + sellPrice })
+    .where(eq(charactersTable.id, characterId))
+    .returning();
+
+  res.status(200).json({
+    success: true,
+    soldItemId: itemId,
+    goldGained: sellPrice,
+    character: withExperienceToNextLevel(await toCharacterResponse(updatedCharacter || character)),
+  });
+});
+
 router.post("/characters/:characterId/inventory/:ownershipId/enhance", requireAuth, async (req, res): Promise<void> => {
   const params = InventoryActionParams.safeParse(req.params);
   if (!params.success) {

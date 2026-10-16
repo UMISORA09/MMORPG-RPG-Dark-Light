@@ -159,6 +159,20 @@ export class CharacterInventoryService {
       if (!item) throw new InventoryRuleError("Danh mục vật phẩm không còn tồn tại", 404);
       if (item.category !== "consumable") throw new InventoryRuleError("Vật phẩm này không thể sử dụng");
 
+      if (item.type === "inventory_ticket" || item.id === "ticket_inventory_expand") {
+        const quantityRemaining = Number(owned.quantity) - 1;
+        if (quantityRemaining === 0) {
+          await tx.delete(characterItemsTable).where(eq(characterItemsTable.id, ownershipId));
+        } else {
+          await tx.update(characterItemsTable).set({ quantity: quantityRemaining }).where(eq(characterItemsTable.id, ownershipId));
+        }
+        return {
+          character,
+          consumed: { ownershipId, itemId: item.id, quantityRemaining },
+          effect: { inventoryExpanded: 5 },
+        };
+      }
+
       const healsHp = Number(item.healHpPercent ?? 0) > 0;
       const healsMp = Number(item.healMpPercent ?? 0) > 0;
       const hasBuff = Boolean(item.buffType);

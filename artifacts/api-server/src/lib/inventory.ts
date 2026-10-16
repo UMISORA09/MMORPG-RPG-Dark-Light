@@ -39,24 +39,104 @@ export async function ensureStarterInventory(characterId: number, classId: strin
     return;
   }
 
-  const starterItems = ITEM_CATALOG.filter((item) =>
-    item.id.startsWith("starter-") && item.classId === classId && item.requiredLevel === 1,
+  const validClassId = classId || "fighter";
+  // 1. Gather class starter gear or common starter gear
+  const starterGears = ITEM_CATALOG.filter((item) =>
+    (item.id.startsWith(`gear_${validClassId}_`) && item.id.endsWith("_common")) ||
+    (item.id.startsWith("starter-") && item.classId === validClassId)
   );
 
-  if (starterItems.length === 0) {
-    return;
+  const fallbackGears = starterGears.length > 0
+    ? starterGears
+    : ITEM_CATALOG.filter((item) => item.id.startsWith("starter-") && item.requiredLevel === 1);
+
+  const itemsToInsert: any[] = [];
+  let slotIndex = 0;
+  const equippedSlots = new Set<string>();
+
+  // Equip each slot
+  for (const gear of fallbackGears) {
+    const slot = gear.equipSlot || (gear.type === "weapon" ? "main_weapon" : gear.type === "armor" ? "armor" : "none");
+    if (slot && slot !== "none" && !equippedSlots.has(slot)) {
+      equippedSlots.add(slot);
+      itemsToInsert.push({
+        characterId,
+        itemId: gear.id,
+        equipped: true,
+        equippedSlot: slot,
+        slotIndex: slotIndex++,
+        quantity: 1,
+      });
+    }
   }
 
-  await db.insert(characterItemsTable).values(
-    starterItems.map((item, slotIndex) => ({
+  // Ensure weapon & armor exist if not added
+  if (!equippedSlots.has("main_weapon") && !equippedSlots.has("weapon")) {
+    const fallbackWeapon = ITEM_CATALOG.find((it) => it.type === "weapon" && it.requiredLevel === 1);
+    if (fallbackWeapon) {
+      itemsToInsert.push({
+        characterId,
+        itemId: fallbackWeapon.id,
+        equipped: true,
+        equippedSlot: "main_weapon",
+        slotIndex: slotIndex++,
+        quantity: 1,
+      });
+    }
+  }
+
+  if (!equippedSlots.has("armor")) {
+    const fallbackArmor = ITEM_CATALOG.find((it) => it.type === "armor" && it.requiredLevel === 1);
+    if (fallbackArmor) {
+      itemsToInsert.push({
+        characterId,
+        itemId: fallbackArmor.id,
+        equipped: true,
+        equippedSlot: "armor",
+        slotIndex: slotIndex++,
+        quantity: 1,
+      });
+    }
+  }
+
+  // 2. Starter Bag Consumables: 2x Phiếu Tăng Hành Trang + Potions
+  const ticketItem = ITEM_CATALOG.find((it) => it.id === "ticket_inventory_expand") || { id: "ticket_inventory_expand" };
+  itemsToInsert.push({
+    characterId,
+    itemId: ticketItem.id,
+    equipped: false,
+    equippedSlot: "none",
+    slotIndex: slotIndex++,
+    quantity: 2,
+  });
+
+  const hpItem = ITEM_CATALOG.find((it) => it.id === "potion_hp_minor" || it.id === "potion_hp_greater");
+  if (hpItem) {
+    itemsToInsert.push({
       characterId,
-      itemId: item.id,
-      equipped: true,
-      equippedSlot: item.equipSlot ?? "none",
-      slotIndex,
-      quantity: 1,
-    })),
-  ).onConflictDoNothing();
+      itemId: hpItem.id,
+      equipped: false,
+      equippedSlot: "none",
+      slotIndex: slotIndex++,
+      quantity: 5,
+    });
+  }
+
+  const mpItem = ITEM_CATALOG.find((it) => it.id === "potion_mp_minor" || it.id === "potion_mp_super");
+  if (mpItem) {
+    itemsToInsert.push({
+      characterId,
+      itemId: mpItem.id,
+      equipped: false,
+      equippedSlot: "none",
+      slotIndex: slotIndex++,
+      quantity: 5,
+    });
+  }
+
+  if (itemsToInsert.length > 0) {
+    await db.insert(characterItemsTable).values(itemsToInsert).onConflictDoNothing();
+  }
 }
 
 export async function toCharacterResponse(character: Character) {

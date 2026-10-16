@@ -23,6 +23,10 @@
       "source": "/(.*)",
       "headers": [
         {
+          "key": "x-vercel-toolbar",
+          "value": "disable"
+        },
+        {
           "key": "X-Content-Type-Options",
           "value": "nosniff"
         },

@@ -10,7 +10,7 @@
 //   cường hóa trang bị (+1 -> +15) tăng 10% chỉ số kèm hiệu ứng và âm thanh rực rỡ.
 // ==============================================================================
 
-import { useState, useMemo, memo, type ReactElement } from "react";
+import { useState, useMemo, useEffect, useCallback, memo, type ReactElement } from "react";
 import { 
   Heart, 
   Shield, 
@@ -27,12 +27,15 @@ import {
   Users, 
   Flame, 
   Package, 
-  User,
-  ArrowUpDown,
-  Trash2,
-  BarChart3,
-  Sparkle,
-  Plus
+  User, 
+  ArrowUpDown, 
+  Trash2, 
+  BarChart3, 
+  Sparkle, 
+  Plus,
+  Lock,
+  Unlock,
+  Ticket
 } from "lucide-react";
 import { ClassSprite } from "@/components/ClassSprite";
 import { useGameWorldStore } from "@/stores/useGameWorldStore";
@@ -767,6 +770,362 @@ function getRarityColor(rarity: ItemRarity) {
   }
 }
 
+function getRarityLabel(rarity: ItemRarity): string {
+  switch (rarity) {
+    case "mythic":
+      return "Thần Khí";
+    case "legendary":
+      return "Thần Thoại";
+    case "epic":
+      return "Sử Thi";
+    case "rare":
+      return "Hiếm";
+    default:
+      return "Phổ Biến";
+  }
+}
+
+function getEquipmentSlotName(slotType: string): string {
+  const t = (slotType || "").toLowerCase();
+  if (t.includes("weapon") || t.includes("sword") || t.includes("dagger") || t.includes("bow") || t.includes("hammer") || t.includes("blaster")) return "Vũ Khí Chính";
+  if (t.includes("helm") || t.includes("cap") || t.includes("crown")) return "Mũ Chiến";
+  if (t.includes("armor") || t.includes("chest") || t.includes("robe") || t.includes("plate")) return "Áo Giáp";
+  if (t.includes("gloves") || t.includes("gauntlet") || t.includes("bracer")) return "Găng Tay";
+  if (t.includes("pants") || t.includes("legs") || t.includes("greaves")) return "Quần Giáp";
+  if (t.includes("boots") || t.includes("shoes")) return "Giày Bốt";
+  if (t.includes("shield") || t.includes("offhand")) return "Vũ Khí Phụ / Khiên";
+  if (t.includes("necklace") || t.includes("amulet") || t.includes("pendant")) return "Dây Chuyền";
+  if (t.includes("earring")) return "Hoa Tai";
+  if (t.includes("ring")) return "Nhẫn Giới Chỉ";
+  if (t.includes("belt") || t.includes("sash")) return "Thắt Lưng";
+  if (t.includes("ticket")) return "Phiếu Mở Rộng";
+  if (t.includes("potion")) return "Dược Phẩm";
+  if (t.includes("food")) return "Thực Phẩm";
+  if (t.includes("material") || t.includes("stone")) return "Nguyên Liệu";
+  return "Vật Phẩm";
+}
+
+function mapBackendItemToUnified(it: any): UnifiedItem {
+  return {
+    id: String(it.ownershipId || it.id),
+    name: it.name || "Vật phẩm",
+    category: it.category || (it.type === "weapon" || it.type === "armor" || it.type === "accessory" ? "equipment" : "consumable"),
+    type: it.type || (it.equipSlot ? it.equipSlot : "weapon"),
+    rarity: (it.rarity as ItemRarity) || "common",
+    equipped: Boolean(it.equipped),
+    icon: it.icon || (it.category === "consumable" ? "🧪" : "⚔️"),
+    quantity: it.quantity || 1,
+    enhanceLevel: it.enhanceLevel || 0,
+    requiredLevel: it.requiredLevel || 1,
+    atkBoost: it.atkBoost || 0,
+    defBoost: it.defBoost || 0,
+    hpBoost: it.hpBoost || 0,
+    spdBoost: it.spdBoost || 0,
+    critBoost: it.critRateBoost || 0,
+    description: it.description || "",
+    lore: it.lore || it.description || "",
+    price: it.price || 50,
+  };
+}
+
+export function getStarterItemsForClass(classId: string = "fighter"): UnifiedItem[] {
+  const cid = (classId || "fighter").toLowerCase();
+  
+  let weaponName = "Quyền Giáp Hỏa Long (Tân Thủ)";
+  let weaponType = "weapon";
+  let weaponIcon = "🥊";
+  let weaponAtk = 14;
+  let weaponSpd = 2;
+  let weaponCrit = 4;
+
+  if (cid.includes("tank") || cid.includes("ho_ve")) {
+    weaponName = "Trọng Búa Thánh Quang (Tân Thủ)";
+    weaponIcon = "🔨";
+    weaponAtk = 10;
+    weaponSpd = 0;
+    weaponCrit = 2;
+  } else if (cid.includes("assassin") || cid.includes("sat_thu")) {
+    weaponName = "Song Đao Bóng Tối (Tân Thủ)";
+    weaponIcon = "🗡️";
+    weaponAtk = 16;
+    weaponSpd = 4;
+    weaponCrit = 8;
+  } else if (cid.includes("gunner") || cid.includes("xa_thu")) {
+    weaponName = "Súng Plasma Mk-I (Tân Thủ)";
+    weaponIcon = "🔫";
+    weaponAtk = 15;
+    weaponSpd = 3;
+    weaponCrit = 6;
+  }
+
+  return [
+    // 1. Vũ Khí Chính (Đang Mặc)
+    {
+      id: `starter-${cid}-weapon`,
+      name: weaponName,
+      category: "equipment",
+      type: weaponType,
+      rarity: "common",
+      equipped: true,
+      icon: weaponIcon,
+      enhanceLevel: 0,
+      requiredLevel: 1,
+      atkBoost: weaponAtk,
+      defBoost: 2,
+      hpBoost: 20,
+      spdBoost: weaponSpd,
+      critBoost: weaponCrit,
+      description: "Vũ khí nhập môn tiêu chuẩn được rèn từ quặng thép Làng Long Tộc.",
+      lore: "Bảo khí sơ cấp cho anh hùng bắt đầu hành trình trừ gian diệt bạo.",
+      price: 50,
+    },
+    // 2. Mũ Chiến Binh (Đang Mặc)
+    {
+      id: `starter-${cid}-helm`,
+      name: "Mũ Sắt Tân Thủ",
+      category: "equipment",
+      type: "helmet",
+      rarity: "common",
+      equipped: true,
+      icon: "🪖",
+      enhanceLevel: 0,
+      requiredLevel: 1,
+      atkBoost: 0,
+      defBoost: 5,
+      hpBoost: 25,
+      spdBoost: 0,
+      critBoost: 0,
+      description: "Mũ bảo hộ tiêu chuẩn giúp che chắn khỏi những đòn chí mạng ban đầu.",
+      lore: "Đúc bằng đồng thau dày dặn nơi xưởng rèn Long Vương Điện.",
+      price: 40,
+    },
+    // 3. Áo Giáp (Đang Mặc)
+    {
+      id: `starter-${cid}-armor`,
+      name: "Chiến Giáp Tân Thủ",
+      category: "equipment",
+      type: "armor",
+      rarity: "common",
+      equipped: true,
+      icon: "🥋",
+      enhanceLevel: 0,
+      requiredLevel: 1,
+      atkBoost: 2,
+      defBoost: 8,
+      hpBoost: 40,
+      spdBoost: 0,
+      critBoost: 0,
+      description: "Áo giáp sơ cấp làm từ da thú bọc vảy sắt kiên cố.",
+      lore: "Trang bị nhập môn của mọi tân binh quân đoàn Long Tộc.",
+      price: 50,
+    },
+    // 4. Găng Tay (Đang Mặc)
+    {
+      id: `starter-${cid}-gloves`,
+      name: "Găng Tay Tân Binh",
+      category: "equipment",
+      type: "gloves",
+      rarity: "common",
+      equipped: true,
+      icon: "🧤",
+      enhanceLevel: 0,
+      requiredLevel: 1,
+      atkBoost: 4,
+      defBoost: 3,
+      hpBoost: 15,
+      spdBoost: 1,
+      critBoost: 2,
+      description: "Găng tay da đệm thép tăng độ bám và lực vung vũ khí.",
+      lore: "Đường chỉ may tỉ mỉ của các bậc thầy da thủ.",
+      price: 35,
+    },
+    // 5. Quần Giáp (Đang Mặc)
+    {
+      id: `starter-${cid}-pants`,
+      name: "Quần Giáp Tân Thủ",
+      category: "equipment",
+      type: "pants",
+      rarity: "common",
+      equipped: true,
+      icon: "👖",
+      enhanceLevel: 0,
+      requiredLevel: 1,
+      atkBoost: 0,
+      defBoost: 6,
+      hpBoost: 25,
+      spdBoost: 0,
+      critBoost: 0,
+      description: "Quần giáp vải thô bọc đệm gối sắt bảo vệ chân khi chiến đấu.",
+      lore: "Nhẹ nhàng và linh hoạt cho mọi bước di chuyển trên địa hình gồ ghề.",
+      price: 40,
+    },
+    // 6. Giày Bốt (Đang Mặc)
+    {
+      id: `starter-${cid}-boots`,
+      name: "Giày Chiến Tân Thủ",
+      category: "equipment",
+      type: "boots",
+      rarity: "common",
+      equipped: true,
+      icon: "🥾",
+      enhanceLevel: 0,
+      requiredLevel: 1,
+      atkBoost: 0,
+      defBoost: 3,
+      hpBoost: 15,
+      spdBoost: 3,
+      critBoost: 1,
+      description: "Đôi giày đế da dày giúp tăng tốc độ di chuyển trên thảo nguyên.",
+      lore: "Thích hợp cho những chặng đường hành quân dài ngày.",
+      price: 35,
+    },
+    // 7. Vũ Khí Phụ / Khiên (Đang Mặc)
+    {
+      id: `starter-${cid}-shield`,
+      name: "Khiên Gỗ Tân Thủ",
+      category: "equipment",
+      type: "shield",
+      rarity: "common",
+      equipped: true,
+      icon: "🛡️",
+      enhanceLevel: 0,
+      requiredLevel: 1,
+      atkBoost: 1,
+      defBoost: 6,
+      hpBoost: 25,
+      spdBoost: 0,
+      critBoost: 0,
+      description: "Tấm khiên gỗ sồi gia cố đinh đồng giảm sát thương cận chiến.",
+      lore: "Vật bất ly thân của các dũng sĩ phòng ngự.",
+      price: 40,
+    },
+    // 8. Dây Chuyền (Đang Mặc)
+    {
+      id: `starter-${cid}-necklace`,
+      name: "Dây Chuyền Hộ Mệnh",
+      category: "equipment",
+      type: "necklace",
+      rarity: "common",
+      equipped: true,
+      icon: "📿",
+      enhanceLevel: 0,
+      requiredLevel: 1,
+      atkBoost: 2,
+      defBoost: 2,
+      hpBoost: 30,
+      spdBoost: 1,
+      critBoost: 2,
+      description: "Chuỗi hạt khắc thần chú cầu phúc bình an từ Trưởng Làng.",
+      lore: "Tỏa ra hơi ấm nhè nhẹ xua tan tà khí ban đêm.",
+      price: 40,
+    },
+    // 9. Nhẫn Thần Binh 1 (Đang Mặc)
+    {
+      id: `starter-${cid}-ring1`,
+      name: "Nhẫn Đồng Cổ",
+      category: "equipment",
+      type: "ring1",
+      rarity: "common",
+      equipped: true,
+      icon: "💍",
+      enhanceLevel: 0,
+      requiredLevel: 1,
+      atkBoost: 3,
+      defBoost: 2,
+      hpBoost: 15,
+      spdBoost: 0,
+      critBoost: 3,
+      description: "Chiếc nhẫn đồng rèn thô gia tăng nội công cho người đeo.",
+      lore: "Nhặt được từ phế tích ven dòng sông Hắc Long.",
+      price: 35,
+    },
+    // 10. Phiếu Tăng Hành Trang x2 (Trong túi, dùng được)
+    {
+      id: "starter-ticket-expand",
+      name: "Phiếu Tăng Hành Trang",
+      category: "consumable",
+      type: "inventory_ticket",
+      rarity: "rare",
+      equipped: false,
+      icon: "🎫",
+      quantity: 2,
+      enhanceLevel: 0,
+      requiredLevel: 1,
+      atkBoost: 0,
+      defBoost: 0,
+      hpBoost: 0,
+      spdBoost: 0,
+      critBoost: 0,
+      description: "Vật phẩm thương hội quý giá. Bấm 'Sử Dụng' để mở rộng thêm +5 ô chứa hành trang (tối đa 30 ô).",
+      lore: "Thẻ bài có khắc ấn hoa văn Long Tộc, biểu trưng cho sự thăng tiến sức chứa.",
+      price: 200,
+    },
+    // 11. Bình Máu Tân Thủ x5 (Trong túi)
+    {
+      id: "starter-potion-hp",
+      name: "Bình Máu Tân Thủ",
+      category: "consumable",
+      type: "potion_hp",
+      rarity: "common",
+      equipped: false,
+      icon: "🧪",
+      quantity: 5,
+      enhanceLevel: 0,
+      requiredLevel: 1,
+      atkBoost: 0,
+      defBoost: 0,
+      hpBoost: 150,
+      spdBoost: 0,
+      critBoost: 0,
+      description: "Hồi phục 150 HP ngay lập tức khi sử dụng.",
+      lore: "Dược phương sơ cấp được điều chế từ thảo dược thần thánh quanh Làng Long Tộc.",
+      price: 20,
+    },
+    // 12. Bình Mana Tân Thủ x5 (Trong túi)
+    {
+      id: "starter-potion-mp",
+      name: "Bình Mana Tân Thủ",
+      category: "consumable",
+      type: "potion_mp",
+      rarity: "common",
+      equipped: false,
+      icon: "💧",
+      quantity: 5,
+      enhanceLevel: 0,
+      requiredLevel: 1,
+      atkBoost: 0,
+      defBoost: 0,
+      hpBoost: 0,
+      spdBoost: 0,
+      critBoost: 0,
+      description: "Hồi phục năng lượng và nội lực tức thì.",
+      lore: "Nước tăng lực ma pháp tinh khiết chắt lọc từ suối nguồn thần.",
+      price: 25,
+    },
+    // 13. Thịt Nướng Long Tộc x3 (Trong túi)
+    {
+      id: "starter-food-grill",
+      name: "Thịt Nướng Long Tộc",
+      category: "consumable",
+      type: "food",
+      rarity: "common",
+      equipped: false,
+      icon: "🍖",
+      quantity: 3,
+      enhanceLevel: 0,
+      requiredLevel: 1,
+      atkBoost: 10,
+      defBoost: 0,
+      hpBoost: 200,
+      spdBoost: 0,
+      critBoost: 0,
+      description: "Thịt nướng thơm lừng tăng sinh lực và tăng thêm 10 ATK trong 5 phút.",
+      lore: "Món ăn yêu thích của các chiến binh sau mỗi trận thắng dã ngoại.",
+      price: 30,
+    },
+  ];
+}
+
 // ── Master Component ──────────────────────────────────────────────────────────
 export const CharacterInventoryModal = memo(function CharacterInventoryModal({
   character: propChar,
@@ -788,6 +1147,11 @@ export const CharacterInventoryModal = memo(function CharacterInventoryModal({
   const healPlayer = useGameWorldStore((s) => s.healPlayer);
   const playerStoreGold = useGameStore((s) => s.player?.gold);
 
+  // Effective character and storage keys
+  const effectiveCharId = propChar?.id || (useGameWorldStore.getState().activeCharacterId) || playerName || "hero_default";
+  const storageKey = `clb_inventory_${effectiveCharId}`;
+  const slotsKey = `clb_unlocked_slots_${effectiveCharId}`;
+
   // Fallbacks
   const effectiveName = propChar?.name || playerName || "DạXoa_70";
   const effectiveLevel = propChar?.level || playerLevel || 7;
@@ -803,13 +1167,55 @@ export const CharacterInventoryModal = memo(function CharacterInventoryModal({
     return "★ Hậu Duệ Long Thần ★";
   }, [effectiveClassId]);
 
-  // Items State (Initialized with comprehensive rich items)
-  const [items, setItems] = useState<UnifiedItem[]>(INITIAL_MOCK_ITEMS);
-  const [selectedItem, setSelectedItem] = useState<UnifiedItem | null>(() => INITIAL_MOCK_ITEMS[0]);
+  // Max Unlocked Slots: starts at 15, max 30, expanded with tickets
+  const [maxUnlockedSlots, setMaxUnlockedSlots] = useState<number>(() => {
+    try {
+      const saved = localStorage.getItem(slotsKey);
+      if (saved) {
+        const num = parseInt(saved, 10);
+        if (!isNaN(num) && num >= 15 && num <= 30) return num;
+      }
+    } catch (e) {}
+    return 15; // Mặc định 15 ô chuẩn yêu cầu
+  });
+
+  // Items State (Persistent per character, initialized with class-tailored gear + tickets)
+  const [items, setItems] = useState<UnifiedItem[]>(() => {
+    try {
+      const saved = localStorage.getItem(storageKey);
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        if (Array.isArray(parsed) && parsed.length > 0) {
+          return parsed;
+        }
+      }
+    } catch (e) {}
+    if (propInv && propInv.length > 0) {
+      return propInv.map(mapBackendItemToUnified);
+    }
+    return getStarterItemsForClass(effectiveClassId);
+  });
+
+  const [selectedItem, setSelectedItem] = useState<UnifiedItem | null>(() => items[0] || null);
   const [activeTab, setActiveTab] = useState<TabType>("all");
   const [leftViewMode, setLeftViewMode] = useState<"character" | "stats">("character");
   const [toastMessage, setToastMessage] = useState<string | null>(null);
   const [enhanceSparkle, setEnhanceSparkle] = useState<boolean>(false);
+  const [unlockModalOpen, setUnlockModalOpen] = useState<boolean>(false);
+
+  // Sync items to localStorage whenever they change
+  useEffect(() => {
+    try {
+      localStorage.setItem(storageKey, JSON.stringify(items));
+    } catch (e) {}
+  }, [items, storageKey]);
+
+  // Sync unlocked slots to localStorage
+  useEffect(() => {
+    try {
+      localStorage.setItem(slotsKey, String(maxUnlockedSlots));
+    } catch (e) {}
+  }, [maxUnlockedSlots, slotsKey]);
 
   // Toast trigger helper
   const showToast = (msg: string) => {
@@ -822,6 +1228,13 @@ export const CharacterInventoryModal = memo(function CharacterInventoryModal({
     if (propOnClose) propOnClose();
     else closeWorldModal();
   };
+
+  // Count available expansion tickets
+  const expansionTicketCount = useMemo(() => {
+    return items
+      .filter((it) => it.type === "inventory_ticket" || it.id.includes("ticket") || it.name.includes("Phiếu Tăng Hành Trang"))
+      .reduce((sum, it) => sum + (it.quantity || 1), 0);
+  }, [items]);
 
   // 12 Slots Equipped Map
   const slotEquippedMap = useMemo(() => {
@@ -879,23 +1292,28 @@ export const CharacterInventoryModal = memo(function CharacterInventoryModal({
     return items.filter((it) => it.category === activeTab);
   }, [items, activeTab]);
 
-  // 30 grid cells (6 columns x 5 rows)
+  // Total 30 slots (6 columns x 5 rows)
   const totalSlotsCount = 30;
   const gridCells = useMemo(() => {
-    const cells: (UnifiedItem | null)[] = [];
+    const cells: { item: UnifiedItem | null; isLocked: boolean; slotIndex: number }[] = [];
     for (let i = 0; i < totalSlotsCount; i++) {
-      cells.push(filteredItems[i] || null);
+      const isLocked = i >= maxUnlockedSlots;
+      cells.push({
+        item: isLocked ? null : (filteredItems[i] || null),
+        isLocked,
+        slotIndex: i,
+      });
     }
     return cells;
-  }, [filteredItems]);
+  }, [filteredItems, maxUnlockedSlots]);
 
   // Equip / Unequip Toggle
   const handleToggleEquip = (target: UnifiedItem) => {
     if (target.category !== "equipment") return;
     playCombatSFX("holy_bell", 0.4);
 
-    setItems((prev) =>
-      prev.map((it) => {
+    setItems((prev) => {
+      const next = prev.map((it) => {
         if (it.id === target.id) {
           const nextState = !it.equipped;
           return { ...it, equipped: nextState };
@@ -905,8 +1323,12 @@ export const CharacterInventoryModal = memo(function CharacterInventoryModal({
           return { ...it, equipped: false };
         }
         return it;
-      })
-    );
+      });
+      try {
+        localStorage.setItem(storageKey, JSON.stringify(next));
+      } catch (e) {}
+      return next;
+    });
 
     const nextEquipped = !target.equipped;
     setSelectedItem((prev) => (prev && prev.id === target.id ? { ...prev, equipped: nextEquipped } : prev));
@@ -918,10 +1340,68 @@ export const CharacterInventoryModal = memo(function CharacterInventoryModal({
     }
   };
 
-  // Consume / Use Potion or Food
+  // Expand Inventory Slots (+5 slots up to 30)
+  const handleExpandInventory = (useTicket: boolean) => {
+    if (maxUnlockedSlots >= 30) {
+      showToast("Hành trang đã mở rộng tối đa (30 ô)!");
+      return;
+    }
+
+    if (useTicket) {
+      const ticketIdx = items.findIndex(
+        (it) => it.type === "inventory_ticket" || it.id.includes("ticket") || it.name.includes("Phiếu Tăng Hành Trang")
+      );
+      if (ticketIdx === -1) {
+        showToast("Bạn không có Phiếu Tăng Hành Trang!");
+        return;
+      }
+
+      setItems((prev) => {
+        const next = prev
+          .map((it, idx) => {
+            if (idx === ticketIdx) {
+              const nextQty = (it.quantity || 1) - 1;
+              return { ...it, quantity: nextQty };
+            }
+            return it;
+          })
+          .filter((it) => it.quantity === undefined || it.quantity > 0);
+        try {
+          localStorage.setItem(storageKey, JSON.stringify(next));
+        } catch (e) {}
+        return next;
+      });
+
+      const nextSlots = Math.min(30, maxUnlockedSlots + 5);
+      setMaxUnlockedSlots(nextSlots);
+      playCombatSFX("holy_bell", 0.5);
+      showToast(`🎉 Dùng phiếu thành công! Mở thêm +5 ô hành trang (${nextSlots}/30 ô)!`);
+      setUnlockModalOpen(false);
+    } else {
+      const cost = 200;
+      if (effectiveGold < cost) {
+        playCombatSFX("laser_pew", 0.3);
+        showToast(`Không đủ Vàng! Cần ${cost} Vàng để mở rộng hành trang.`);
+        return;
+      }
+
+      addGold(-cost);
+      const nextSlots = Math.min(30, maxUnlockedSlots + 5);
+      setMaxUnlockedSlots(nextSlots);
+      playCombatSFX("holy_bell", 0.5);
+      showToast(`🎉 Mở khóa thành công +5 ô bằng ${cost} Vàng (${nextSlots}/30 ô)!`);
+      setUnlockModalOpen(false);
+    }
+  };
+
+  // Consume / Use Potion, Food or Expansion Ticket
   const handleUseItem = (target: UnifiedItem) => {
-    if (target.category !== "consumable") return;
     playCombatSFX("holy_bell", 0.5);
+
+    if (target.type === "inventory_ticket" || target.id.includes("ticket") || target.name.includes("Phiếu Tăng Hành Trang")) {
+      handleExpandInventory(true);
+      return;
+    }
 
     if (target.type === "potion_hp" || target.type === "food") {
       healPlayer(target.hpBoost || 150);
@@ -929,12 +1409,12 @@ export const CharacterInventoryModal = memo(function CharacterInventoryModal({
     } else if (target.type === "potion_mp") {
       showToast(`Hồi phục năng lượng từ ${target.name}!`);
     } else {
-      showToast(`Đã kích hoạt thần chú từ ${target.name}!`);
+      showToast(`Đã sử dụng ${target.name}!`);
     }
 
     // Decrement quantity or remove if empty
-    setItems((prev) =>
-      prev
+    setItems((prev) => {
+      const next = prev
         .map((it) => {
           if (it.id === target.id) {
             const nextQty = (it.quantity || 1) - 1;
@@ -942,8 +1422,12 @@ export const CharacterInventoryModal = memo(function CharacterInventoryModal({
           }
           return it;
         })
-        .filter((it) => (it.quantity === undefined || it.quantity > 0))
-    );
+        .filter((it) => it.quantity === undefined || it.quantity > 0);
+      try {
+        localStorage.setItem(storageKey, JSON.stringify(next));
+      } catch (e) {}
+      return next;
+    });
 
     setSelectedItem((prev) => {
       if (!prev || prev.id !== target.id) return prev;
@@ -973,8 +1457,8 @@ export const CharacterInventoryModal = memo(function CharacterInventoryModal({
     setEnhanceSparkle(true);
     setTimeout(() => setEnhanceSparkle(false), 1200);
 
-    setItems((prev) =>
-      prev.map((it) => {
+    setItems((prev) => {
+      const next = prev.map((it) => {
         if (it.id === target.id) {
           const nextLvl = currentEnhance + 1;
           return {
@@ -986,8 +1470,12 @@ export const CharacterInventoryModal = memo(function CharacterInventoryModal({
           };
         }
         return it;
-      })
-    );
+      });
+      try {
+        localStorage.setItem(storageKey, JSON.stringify(next));
+      } catch (e) {}
+      return next;
+    });
 
     setSelectedItem((prev) =>
       prev && prev.id === target.id
@@ -1004,8 +1492,8 @@ export const CharacterInventoryModal = memo(function CharacterInventoryModal({
     showToast(`✨ Cường hóa thành công! ${target.name} đạt +${currentEnhance + 1}`);
   };
 
-  // Quick Sell Item for Gold
-  const handleQuickSell = (target: UnifiedItem) => {
+  // Quick Sell Item for Gold (Permanently persists removal and adds gold)
+  const handleQuickSell = async (target: UnifiedItem) => {
     if (target.equipped) {
       showToast("Hãy tháo trang bị ra trước khi bán!");
       return;
@@ -1014,9 +1502,28 @@ export const CharacterInventoryModal = memo(function CharacterInventoryModal({
     addGold(sellPrice);
     playCombatSFX("coin_chime", 0.4);
 
-    setItems((prev) => prev.filter((it) => it.id !== target.id));
+    setItems((prev) => {
+      const next = prev.filter((it) => it.id !== target.id);
+      try {
+        localStorage.setItem(storageKey, JSON.stringify(next));
+      } catch (e) {}
+      return next;
+    });
     setSelectedItem(null);
     showToast(`💰 Đã bán ${target.name} thu về +${sellPrice} Vàng!`);
+
+    // Sync deletion with backend API if characterId exists
+    try {
+      const charId = propChar?.id;
+      if (charId) {
+        await fetch(`/api/characters/${charId}/inventory/${target.id}/sell`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+        });
+      }
+    } catch (err) {
+      console.warn("Backend sell sync notice:", err);
+    }
   };
 
   // Sort Inventory Items (Equipped first, then rarity weight, then enhanceLevel)
@@ -1038,6 +1545,9 @@ export const CharacterInventoryModal = memo(function CharacterInventoryModal({
         if (diffRarity !== 0) return diffRarity;
         return (b.enhanceLevel || 0) - (a.enhanceLevel || 0);
       });
+      try {
+        localStorage.setItem(storageKey, JSON.stringify(sorted));
+      } catch (e) {}
       return sorted;
     });
 
@@ -1419,12 +1929,23 @@ export const CharacterInventoryModal = memo(function CharacterInventoryModal({
              ───────────────────────────────────────────────────────────────── */}
           <div className="lg:col-span-7 bg-[#141824] rounded-[24px] border border-[#1e2536] p-3.5 flex flex-col justify-between gap-2.5">
             
-            {/* Header: Title + 5 Filter Tabs + Utility Buttons */}
+            {/* Header: Title + Expansion Button + 5 Filter Tabs + Utility Buttons */}
             <div className="flex flex-col gap-2">
-              <div className="flex items-center justify-between text-xs px-1">
-                <span className="font-bold text-white flex items-center gap-1.5">
-                  <Package className="w-4 h-4 text-cyan-400" /> Túi Hành Trang ({items.length}/30)
-                </span>
+              <div className="flex items-center justify-between text-xs px-1 flex-wrap gap-2">
+                <div className="flex items-center gap-2">
+                  <span className="font-bold text-white flex items-center gap-1.5">
+                    <Package className="w-4 h-4 text-cyan-400" /> Túi Hành Trang ({filteredItems.length}/{maxUnlockedSlots} ô)
+                  </span>
+                  {maxUnlockedSlots < 30 && (
+                    <button
+                      onClick={() => setUnlockModalOpen(true)}
+                      className="px-2 py-0.5 rounded-full bg-gradient-to-r from-amber-500/20 to-cyan-500/20 border border-amber-400/50 hover:border-amber-300 text-amber-300 hover:text-white text-[10px] font-black transition flex items-center gap-1 cursor-pointer shadow-[0_0_10px_rgba(245,158,11,0.25)] animate-pulse"
+                      title="Mở thêm ô hành trang bằng Phiếu Tăng Hành Trang hoặc Vàng"
+                    >
+                      <Ticket className="w-3 h-3 text-amber-400" /> + Mở Rộng
+                    </button>
+                  )}
+                </div>
                 
                 {/* 2 Utility Buttons: Sắp Xếp & Thùng Rác */}
                 <div className="flex items-center gap-1.5">
@@ -1477,20 +1998,41 @@ export const CharacterInventoryModal = memo(function CharacterInventoryModal({
               </div>
             </div>
 
-            {/* 30 Item Grid (6 columns x 5 rows) */}
+            {/* 30 Item Grid (6 columns x 5 rows: Active 15 slots initially, locked slots require Ticket) */}
             <div className="grid grid-cols-6 gap-2 my-0.5 max-h-[220px] overflow-y-auto custom-scrollbar p-1">
-              {gridCells.map((item, idx) => {
-                if (!item) {
+              {gridCells.map((cell, idx) => {
+                // 1. Locked Slot (Requires Ticket or Gold to expand)
+                if (cell.isLocked) {
+                  return (
+                    <button
+                      key={`locked-${idx}`}
+                      onClick={() => {
+                        playCombatSFX("holy_bell", 0.3);
+                        setUnlockModalOpen(true);
+                      }}
+                      className="w-full aspect-square rounded-2xl bg-[#0e121b]/90 border border-dashed border-[#283244] hover:border-amber-400/80 hover:bg-[#161c28] flex flex-col items-center justify-center text-slate-500 hover:text-amber-300 transition-all cursor-pointer group shadow-inner"
+                      title="Ô bị khóa (Mở rộng bằng Phiếu Tăng Hành Trang hoặc Vàng)"
+                    >
+                      <Lock className="w-4 h-4 text-slate-600 group-hover:text-amber-400 group-hover:scale-110 transition-transform" />
+                      <span className="text-[8px] font-black mt-0.5 tracking-wider uppercase text-slate-500 group-hover:text-amber-300">Khóa</span>
+                    </button>
+                  );
+                }
+
+                // 2. Unlocked but Empty Slot
+                if (!cell.item) {
                   return (
                     <div
                       key={`empty-${idx}`}
-                      className="w-full aspect-square rounded-2xl bg-[#151a26] border border-slate-800/80 flex items-center justify-center text-slate-600/40 select-none"
+                      className="w-full aspect-square rounded-2xl bg-[#151a26]/70 border border-slate-800/80 flex items-center justify-center text-slate-700/60 select-none shadow-inner"
                     >
                       <span className="text-xs">✦</span>
                     </div>
                   );
                 }
 
+                // 3. Unlocked Slot with Item
+                const item = cell.item;
                 const isSelected = selectedItem?.id === item.id;
                 const isEquipped = item.equipped;
                 const rarityInfo = getRarityColor(item.rarity);
@@ -1538,59 +2080,53 @@ export const CharacterInventoryModal = memo(function CharacterInventoryModal({
               })}
             </div>
 
-            {/* Selected Item Inspector Card */}
+            {/* Standard Dark Fantasy Selected Item Inspector Card */}
             {selectedItem ? (
               <div
-                className={`p-2.5 rounded-2xl bg-[#161c28] border border-[#232b3d] flex flex-col gap-2 relative transition-all ${
-                  enhanceSparkle ? "ring-2 ring-amber-400 shadow-[0_0_25px_rgba(245,158,11,0.5)]" : ""
+                className={`p-3 rounded-2xl bg-[#18151b] border border-[#48373f] flex flex-col gap-2.5 relative transition-all shadow-[0_8px_30px_rgba(0,0,0,0.7)] ${
+                  enhanceSparkle ? "ring-2 ring-amber-400 shadow-[0_0_25px_rgba(245,158,11,0.6)]" : ""
                 }`}
               >
-                {/* Upper Row: Icon, Name, Rarity, Comparison Diff */}
+                {/* Upper Row: Icon, Slot Tag, Name, Rarity, Comparison Diff */}
                 <div className="flex items-start justify-between gap-3">
-                  <div className="flex items-center gap-2.5 min-w-0">
+                  <div className="flex items-center gap-3 min-w-0">
                     <div
-                      className={`w-10 h-10 rounded-2xl border flex items-center justify-center text-xl shrink-0 ${
+                      className={`w-12 h-12 rounded-2xl border-2 flex items-center justify-center text-2xl shrink-0 shadow-lg ${
                         getRarityColor(selectedItem.rarity).border
-                      } ${getRarityColor(selectedItem.rarity).bg}`}
+                      } ${getRarityColor(selectedItem.rarity).bg} ${getRarityColor(selectedItem.rarity).glow}`}
                     >
                       {selectedItem.icon}
                     </div>
 
                     <div className="min-w-0">
-                      <p className="text-xs font-black truncate text-white flex items-center gap-1.5">
-                        {selectedItem.name}
-                        {selectedItem.enhanceLevel ? (
-                          <span className="text-amber-300 font-mono font-black">
-                            +{selectedItem.enhanceLevel}
-                          </span>
-                        ) : null}
+                      {/* Slot badge & Rarity badge */}
+                      <div className="flex items-center gap-1.5 mb-0.5 flex-wrap">
+                        <span className="text-[9px] font-black uppercase px-2 py-0.5 rounded-md bg-[#251d24] border border-[#5d464f] text-cyan-300 tracking-wider">
+                          {getEquipmentSlotName(selectedItem.type)}
+                        </span>
                         <span
-                          className={`text-[9px] uppercase px-1.5 py-0.2 rounded font-black border ${
+                          className={`text-[9px] uppercase px-2 py-0.5 rounded-md font-black border tracking-wider ${
                             getRarityColor(selectedItem.rarity).badge
                           }`}
                         >
-                          {selectedItem.rarity}
+                          {getRarityLabel(selectedItem.rarity)}
                         </span>
-                      </p>
-
-                      {/* Stat summary pills */}
-                      <div className="flex items-center gap-2 text-[10px] font-mono mt-0.5 flex-wrap">
-                        {selectedItem.atkBoost > 0 && (
-                          <span className="text-amber-400 font-bold">+{selectedItem.atkBoost} ATK</span>
-                        )}
-                        {selectedItem.defBoost > 0 && (
-                          <span className="text-sky-400 font-bold">+{selectedItem.defBoost} DEF</span>
-                        )}
-                        {selectedItem.hpBoost > 0 && (
-                          <span className="text-rose-400 font-bold">+{selectedItem.hpBoost} HP</span>
-                        )}
-                        {selectedItem.spdBoost > 0 && (
-                          <span className="text-emerald-400 font-bold">+{selectedItem.spdBoost} SPD</span>
-                        )}
-                        {selectedItem.critBoost ? (
-                          <span className="text-yellow-400 font-bold">+{selectedItem.critBoost}% Crit</span>
+                        {selectedItem.requiredLevel ? (
+                          <span className="text-[9px] font-mono text-slate-400 bg-slate-900/60 px-1.5 py-0.5 rounded border border-slate-800">
+                            Cấp {selectedItem.requiredLevel}
+                          </span>
                         ) : null}
                       </div>
+
+                      {/* Item Name */}
+                      <p className="text-sm font-black truncate text-white flex items-center gap-1.5">
+                        {selectedItem.name}
+                        {selectedItem.enhanceLevel ? (
+                          <span className="text-amber-300 font-mono font-black drop-shadow">
+                            +{selectedItem.enhanceLevel}
+                          </span>
+                        ) : null}
+                      </p>
                     </div>
                   </div>
 
@@ -1598,74 +2134,119 @@ export const CharacterInventoryModal = memo(function CharacterInventoryModal({
                   {comparisonDiff && !comparisonDiff.isSameItem && (
                     <div className="text-right shrink-0">
                       {comparisonDiff.diff > 0 ? (
-                        <span className="text-[10px] font-black font-mono text-emerald-400 bg-emerald-950/60 border border-emerald-500/40 px-2 py-0.5 rounded-lg flex items-center gap-0.5">
+                        <span className="text-[10px] font-black font-mono text-emerald-300 bg-emerald-950/70 border border-emerald-500/50 px-2 py-0.5 rounded-lg flex items-center gap-0.5 shadow-[0_0_10px_rgba(16,185,129,0.3)]">
                           ▲ +{comparisonDiff.diff} Lực chiến
                         </span>
                       ) : comparisonDiff.diff < 0 ? (
-                        <span className="text-[10px] font-black font-mono text-rose-400 bg-rose-950/60 border border-rose-500/40 px-2 py-0.5 rounded-lg flex items-center gap-0.5">
+                        <span className="text-[10px] font-black font-mono text-rose-300 bg-rose-950/70 border border-rose-500/50 px-2 py-0.5 rounded-lg flex items-center gap-0.5">
                           ▼ {comparisonDiff.diff} Lực chiến
                         </span>
                       ) : (
-                        <span className="text-[10px] font-bold font-mono text-slate-400 bg-slate-800/60 px-2 py-0.5 rounded-lg">
-                          ― Lực chiến tương đương
+                        <span className="text-[10px] font-bold font-mono text-slate-300 bg-slate-800/70 px-2 py-0.5 rounded-lg border border-slate-700">
+                          ― Lực chiến ngang bằng
                         </span>
                       )}
-                      <p className="text-[9px] text-slate-500 mt-0.5 truncate max-w-[120px]">
+                      <p className="text-[9px] text-slate-400 mt-0.5 truncate max-w-[125px]">
                         so với {comparisonDiff.equippedItemName}
                       </p>
                     </div>
                   )}
                 </div>
 
-                {/* Lore / Description */}
-                <p className="text-[10px] text-slate-400 italic line-clamp-1 border-t border-[#1f2638] pt-1">
-                  "{selectedItem.lore || selectedItem.description}"
-                </p>
+                {/* Stat boost pills */}
+                <div className="flex items-center gap-1.5 text-[10px] font-mono flex-wrap bg-[#120f13] p-1.5 rounded-xl border border-[#35272b]">
+                  {selectedItem.atkBoost > 0 && (
+                    <span className="text-amber-300 font-black px-2 py-0.5 rounded bg-amber-950/40 border border-amber-500/30">
+                      +{selectedItem.atkBoost} ATK
+                    </span>
+                  )}
+                  {selectedItem.defBoost > 0 && (
+                    <span className="text-sky-300 font-black px-2 py-0.5 rounded bg-sky-950/40 border border-sky-500/30">
+                      +{selectedItem.defBoost} DEF
+                    </span>
+                  )}
+                  {selectedItem.hpBoost > 0 && (
+                    <span className="text-rose-300 font-black px-2 py-0.5 rounded bg-rose-950/40 border border-rose-500/30">
+                      +{selectedItem.hpBoost} HP
+                    </span>
+                  )}
+                  {selectedItem.spdBoost > 0 && (
+                    <span className="text-emerald-300 font-black px-2 py-0.5 rounded bg-emerald-950/40 border border-emerald-500/30">
+                      +{selectedItem.spdBoost} SPD
+                    </span>
+                  )}
+                  {selectedItem.critBoost ? (
+                    <span className="text-yellow-300 font-black px-2 py-0.5 rounded bg-yellow-950/40 border border-yellow-500/30">
+                      +{selectedItem.critBoost}% Crit
+                    </span>
+                  ) : null}
+                  {selectedItem.quantity && selectedItem.quantity > 1 ? (
+                    <span className="text-purple-300 font-black px-2 py-0.5 rounded bg-purple-950/40 border border-purple-500/30 ml-auto">
+                      Số lượng: x{selectedItem.quantity}
+                    </span>
+                  ) : null}
+                </div>
+
+                {/* Lore / Description in Dark Fantasy frame */}
+                <div className="bg-[#120f13] border border-[#2f2227] rounded-xl p-2 text-[10.5px] text-slate-300 italic leading-relaxed">
+                  <p className="text-slate-200 not-italic font-medium mb-0.5">{selectedItem.description}</p>
+                  {selectedItem.lore && (
+                    <p className="text-amber-200/70 text-[10px]">"{selectedItem.lore}"</p>
+                  )}
+                </div>
 
                 {/* Action Buttons: Equip/Use, Enhance, Quick Sell */}
-                <div className="flex items-center justify-between gap-2 pt-1">
-                  <div className="text-[10px] font-mono text-amber-300 font-bold flex items-center gap-1">
-                    <span>Giá bán:</span> <span>{selectedItem.price || 50} 🪙</span>
+                <div className="flex items-center justify-between gap-2 pt-0.5">
+                  <div className="text-[11px] font-mono text-amber-300 font-black flex items-center gap-1.5 px-2.5 py-1 rounded-xl bg-[#20181b] border border-amber-500/30">
+                    <Coins className="w-3.5 h-3.5 text-amber-400" />
+                    <span>{selectedItem.price || 50} 🪙</span>
                   </div>
 
                   <div className="flex items-center gap-2">
                     {/* 1. Quick Sell */}
                     <button
                       onClick={() => handleQuickSell(selectedItem)}
-                      className="px-2.5 py-1.5 rounded-xl bg-[#22161b] hover:bg-[#341b23] border border-rose-900/60 text-rose-300 text-[10px] font-bold transition cursor-pointer flex items-center gap-1"
-                      title="Bán nhanh lấy Vàng"
+                      className="px-3 py-1.5 rounded-xl bg-[#28151c] hover:bg-[#3d1825] border border-rose-800/80 text-rose-300 text-[10px] font-black transition cursor-pointer flex items-center gap-1 shadow-[0_0_10px_rgba(244,63,94,0.15)]"
+                      title="Bán ngay món đồ này lấy Vàng"
                     >
-                      <Coins className="w-3 h-3 text-amber-400" /> Bán Nhanh
+                      <Trash2 className="w-3 h-3 text-rose-400" /> Bán Nhanh
                     </button>
 
                     {/* 2. Enhance (+10% Stats) */}
                     {selectedItem.category === "equipment" && (
                       <button
                         onClick={() => handleEnhance(selectedItem)}
-                        className="px-3 py-1.5 rounded-xl bg-[#282013] hover:bg-[#3d2e18] border border-[#a87a2a] text-[#fbbf24] text-[10px] font-black transition flex items-center gap-1 shadow-[0_0_10px_rgba(245,158,11,0.25)] cursor-pointer"
+                        className="px-3 py-1.5 rounded-xl bg-gradient-to-r from-[#2e2112] to-[#422e17] hover:from-[#3e2c18] hover:to-[#573d1f] border border-[#d97706] text-amber-300 text-[10px] font-black transition flex items-center gap-1 shadow-[0_0_12px_rgba(245,158,11,0.3)] cursor-pointer"
                         title={`Cường hóa trang bị (Tốn ${100 * ((selectedItem.enhanceLevel || 0) + 1)} Vàng)`}
                       >
-                        <ChevronsUp className="w-3 h-3 text-amber-400" /> Nâng Cấp (+
+                        <ChevronsUp className="w-3.5 h-3.5 text-amber-400" /> Cường Hóa (+
                         {(selectedItem.enhanceLevel || 0) + 1})
                       </button>
                     )}
 
-                    {/* 3. Equip / Unequip / Use */}
+                    {/* 3. Equip / Unequip / Use / Expand */}
                     {selectedItem.category === "equipment" ? (
                       <button
                         onClick={() => handleToggleEquip(selectedItem)}
-                        className={`px-3.5 py-1.5 rounded-xl text-[10px] font-black transition cursor-pointer flex items-center gap-1 ${
+                        className={`px-4 py-1.5 rounded-xl text-[10px] font-black transition cursor-pointer flex items-center gap-1 ${
                           selectedItem.equipped
                             ? "bg-[#18202e] hover:bg-rose-950/80 border border-[#2c374d] text-slate-300 hover:text-rose-300"
-                            : "bg-cyan-500 hover:bg-cyan-400 text-slate-950 shadow-[0_0_12px_rgba(40,195,225,0.45)]"
+                            : "bg-cyan-500 hover:bg-cyan-400 text-slate-950 shadow-[0_0_15px_rgba(40,195,225,0.5)]"
                         }`}
                       >
-                        {selectedItem.equipped ? "Tháo Ra" : "Mặc Vào"}
+                        {selectedItem.equipped ? "Tháo Ra" : "Trang Bị"}
+                      </button>
+                    ) : selectedItem.type === "inventory_ticket" || selectedItem.id.includes("ticket") || selectedItem.name.includes("Phiếu Tăng Hành Trang") ? (
+                      <button
+                        onClick={() => handleUseItem(selectedItem)}
+                        className="px-4 py-1.5 rounded-xl text-[10px] font-black bg-gradient-to-r from-amber-500 to-cyan-500 hover:from-amber-400 hover:to-cyan-400 text-slate-950 shadow-[0_0_15px_rgba(245,158,11,0.5)] transition cursor-pointer flex items-center gap-1"
+                      >
+                        <Ticket className="w-3.5 h-3.5" /> Dùng Vé (+5 Ô)
                       </button>
                     ) : selectedItem.category === "consumable" ? (
                       <button
                         onClick={() => handleUseItem(selectedItem)}
-                        className="px-3.5 py-1.5 rounded-xl text-[10px] font-black bg-emerald-500 hover:bg-emerald-400 text-slate-950 shadow-[0_0_12px_rgba(16,185,129,0.45)] transition cursor-pointer flex items-center gap-1"
+                        className="px-4 py-1.5 rounded-xl text-[10px] font-black bg-emerald-500 hover:bg-emerald-400 text-slate-950 shadow-[0_0_12px_rgba(16,185,129,0.45)] transition cursor-pointer flex items-center gap-1"
                       >
                         <Zap className="w-3 h-3 fill-slate-950" /> Sử Dụng
                       </button>
@@ -1674,8 +2255,9 @@ export const CharacterInventoryModal = memo(function CharacterInventoryModal({
                 </div>
               </div>
             ) : (
-              <div className="p-3 rounded-2xl bg-[#161c28] border border-[#232b3d] text-center text-xs text-slate-500">
-                Chọn một món đồ trong túi để xem chi tiết, cường hóa hoặc trang bị
+              <div className="p-4 rounded-2xl bg-[#18151b] border border-[#3d2f34] text-center text-xs text-slate-400 flex flex-col items-center justify-center gap-1">
+                <span className="text-xl">⚔️</span>
+                <span>Chọn một món đồ trong túi để xem chi tiết thông số, cường hóa hoặc trang bị</span>
               </div>
             )}
 
@@ -1783,6 +2365,89 @@ export const CharacterInventoryModal = memo(function CharacterInventoryModal({
           </div>
 
         </div>
+
+        {/* ── EXPANSION UNLOCK MODAL DIALOG ── */}
+        {unlockModalOpen && (
+          <div
+            className="absolute inset-0 z-50 rounded-[30px] bg-black/85 backdrop-blur-md flex items-center justify-center p-4 animate-in fade-in zoom-in-95 duration-150"
+            onClick={(e) => {
+              if (e.target === e.currentTarget) setUnlockModalOpen(false);
+            }}
+          >
+            <div className="w-full max-w-[420px] rounded-3xl bg-[#1b151b] border-2 border-[#5c464e] p-5 shadow-[0_20px_60px_rgba(0,0,0,0.9),0_0_30px_rgba(245,158,11,0.25)] flex flex-col gap-4 text-center">
+              
+              <div className="flex items-center justify-between border-b border-[#3b2b32] pb-3">
+                <div className="flex items-center gap-2 text-amber-300 font-black text-sm">
+                  <Ticket className="w-4 h-4 text-amber-400" />
+                  <span>MỞ RỘNG TÚI HÀNH TRANG</span>
+                </div>
+                <button
+                  onClick={() => setUnlockModalOpen(false)}
+                  className="w-7 h-7 rounded-full bg-[#291e23] hover:bg-[#3b2830] text-slate-400 hover:text-white flex items-center justify-center cursor-pointer transition text-xs font-bold"
+                >
+                  ✕
+                </button>
+              </div>
+
+              <div className="flex flex-col items-center gap-1.5 py-1">
+                <div className="w-14 h-14 rounded-2xl bg-amber-500/15 border border-amber-500/40 flex items-center justify-center text-3xl shadow-[0_0_20px_rgba(245,158,11,0.3)] mb-1">
+                  🎒
+                </div>
+                <p className="text-sm font-bold text-white">
+                  Mở thêm <span className="text-cyan-300 font-black">+5 Ô Hành Trang</span>
+                </p>
+                <p className="text-xs text-slate-400">
+                  Sức chứa hiện tại: <span className="font-mono font-bold text-amber-300">{maxUnlockedSlots}/30 ô</span>.
+                  Sau khi mở sẽ đạt <span className="font-mono font-bold text-emerald-300">{Math.min(30, maxUnlockedSlots + 5)}/30 ô</span>.
+                </p>
+              </div>
+
+              {/* 2 Options */}
+              <div className="flex flex-col gap-2.5">
+                {/* Option 1: Use Ticket */}
+                <button
+                  onClick={() => handleExpandInventory(true)}
+                  disabled={expansionTicketCount <= 0}
+                  className={`w-full py-2.5 px-4 rounded-2xl font-black text-xs transition flex items-center justify-between shadow-lg cursor-pointer ${
+                    expansionTicketCount > 0
+                      ? "bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-400 hover:to-amber-500 text-slate-950 shadow-[0_0_15px_rgba(245,158,11,0.4)]"
+                      : "bg-[#251d22] border border-[#3f2f36] text-slate-500 cursor-not-allowed opacity-60"
+                  }`}
+                >
+                  <div className="flex items-center gap-2">
+                    <Ticket className="w-4 h-4" />
+                    <span>Dùng Phiếu Tăng Hành Trang</span>
+                  </div>
+                  <span className="font-mono text-[11px] px-2 py-0.5 rounded-full bg-black/30">
+                    Đang có: {expansionTicketCount} vé
+                  </span>
+                </button>
+
+                {/* Option 2: Buy with 200 Gold */}
+                <button
+                  onClick={() => handleExpandInventory(false)}
+                  className="w-full py-2.5 px-4 rounded-2xl font-black text-xs bg-[#241a22] hover:bg-[#342430] border border-amber-500/50 hover:border-amber-400 text-amber-300 hover:text-white transition flex items-center justify-between cursor-pointer shadow-md"
+                >
+                  <div className="flex items-center gap-2">
+                    <Coins className="w-4 h-4 text-amber-400" />
+                    <span>Mở Bằng Vàng (200 Vàng)</span>
+                  </div>
+                  <span className="font-mono text-[11px] text-slate-400">
+                    Ví: {effectiveGold.toLocaleString()} 🪙
+                  </span>
+                </button>
+              </div>
+
+              <button
+                onClick={() => setUnlockModalOpen(false)}
+                className="w-full py-1.5 text-xs text-slate-400 hover:text-slate-200 transition font-medium cursor-pointer"
+              >
+                Để sau
+              </button>
+
+            </div>
+          </div>
+        )}
 
       </div>
     </div>

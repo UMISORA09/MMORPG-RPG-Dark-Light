@@ -15,7 +15,6 @@ import {
   CheckCircle2, 
   Lock, 
   Crown, 
-  RotateCcw,
   Star,
   ShieldCheck,
   PackageCheck
@@ -167,16 +166,6 @@ export const DailyLoginModal = memo(function DailyLoginModal({
     }
   };
 
-  const handleResetDemo = () => {
-    setClaimedDays(0);
-    setLastClaimDate("");
-    if (typeof window !== "undefined") {
-      localStorage.removeItem("clb_daily_login_claimed_days");
-      localStorage.removeItem("clb_daily_login_last_date");
-    }
-    playCombatSFX("coin_chime", 0.4);
-  };
-
   const getRarityStyle = (rarity: DailyRewardDay["rarity"]) => {
     switch (rarity) {
       case "legendary":
@@ -238,15 +227,6 @@ export const DailyLoginModal = memo(function DailyLoginModal({
           </div>
 
           <div className="flex items-center gap-2">
-            <button
-              onClick={handleResetDemo}
-              className="p-1.5 rounded-xl bg-slate-800/60 hover:bg-slate-700 text-slate-400 hover:text-slate-200 border border-slate-700 text-[11px] font-bold flex items-center gap-1 transition cursor-pointer"
-              title="Đặt lại trạng thái điểm danh để thử nghiệm demo"
-            >
-              <RotateCcw className="w-3.5 h-3.5" />
-              <span className="hidden sm:inline">Đặt Lại Demo</span>
-            </button>
-
             <button
               onClick={close}
               className="p-2 rounded-full bg-slate-800/60 hover:bg-red-500/20 hover:text-red-300 text-slate-400 border border-slate-700 transition cursor-pointer"

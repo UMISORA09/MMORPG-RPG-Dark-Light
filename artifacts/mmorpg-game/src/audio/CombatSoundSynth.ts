@@ -48,43 +48,48 @@ class CombatSoundSynthesizer {
 
   public play(preset: SFXSynthPreset, volume: number = 0.35) {
     if (this.isMuted) return;
-    const ctx = this.getContext();
-    if (!ctx) return;
 
-    try {
-      const now = ctx.currentTime;
-      switch (preset) {
-        case "laser_pew":
-          this.synthesizeLaserPew(ctx, now, volume);
-          break;
-        case "blade_slash":
-          this.synthesizeBladeSlash(ctx, now, volume);
-          break;
-        case "heavy_slam":
-          this.synthesizeHeavySlam(ctx, now, volume);
-          break;
-        case "dragon_roar":
-          this.synthesizeDragonRoar(ctx, now, volume);
-          break;
-        case "holy_bell":
-          this.synthesizeHolyBell(ctx, now, volume);
-          break;
-        case "coin_chime":
-          this.synthesizeCoinChime(ctx, now, volume);
-          break;
-        case "loot_drop":
-          this.synthesizeLootDrop(ctx, now, volume);
-          break;
-        case "rarity_chime":
-          this.synthesizeRarityChime(ctx, now, volume);
-          break;
-        case "level_up_fanfare":
-          this.synthesizeLevelUpFanfare(ctx, now, volume);
-          break;
+    // Decouple AudioContext creation & synthesis from synchronous event handlers.
+    // This allows the browser to paint the frame immediately (<16ms) and eliminates INP (Interaction to Next Paint) latency!
+    setTimeout(() => {
+      const ctx = this.getContext();
+      if (!ctx) return;
+
+      try {
+        const now = ctx.currentTime;
+        switch (preset) {
+          case "laser_pew":
+            this.synthesizeLaserPew(ctx, now, volume);
+            break;
+          case "blade_slash":
+            this.synthesizeBladeSlash(ctx, now, volume);
+            break;
+          case "heavy_slam":
+            this.synthesizeHeavySlam(ctx, now, volume);
+            break;
+          case "dragon_roar":
+            this.synthesizeDragonRoar(ctx, now, volume);
+            break;
+          case "holy_bell":
+            this.synthesizeHolyBell(ctx, now, volume);
+            break;
+          case "coin_chime":
+            this.synthesizeCoinChime(ctx, now, volume);
+            break;
+          case "loot_drop":
+            this.synthesizeLootDrop(ctx, now, volume);
+            break;
+          case "rarity_chime":
+            this.synthesizeRarityChime(ctx, now, volume);
+            break;
+          case "level_up_fanfare":
+            this.synthesizeLevelUpFanfare(ctx, now, volume);
+            break;
+        }
+      } catch {
+        // Audio autoplay policy fallback
       }
-    } catch {
-      // Audio autoplay policy fallback
-    }
+    }, 0);
   }
 
   // ── Laser Pew: Rapid pitch sweep downwards ─────────────────────────────────

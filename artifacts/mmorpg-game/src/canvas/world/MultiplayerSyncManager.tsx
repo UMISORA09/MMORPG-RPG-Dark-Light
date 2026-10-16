@@ -61,7 +61,7 @@ export const MultiplayerSyncManager = memo(function MultiplayerSyncManager() {
           }
         }
       } catch {
-        // Ignore network drops in offline / local demo
+        // Ignore transient network errors during sync
       }
     }, 250);
 

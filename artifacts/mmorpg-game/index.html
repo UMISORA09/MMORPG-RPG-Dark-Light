@@ -16,6 +16,28 @@
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Cinzel+Decorative:wght@700;900&family=Orbitron:wght@500;600;700;800;900&family=Russo+One&family=Share+Tech+Mono&family=Inter:wght@400;500;600;700;800&family=Outfit:wght@400;500;600;700;800&subset=vietnamese,latin,latin-ext&display=swap" rel="stylesheet">
+    <meta name="vercel-toolbar" content="disable" />
+    <style>
+      /* Ngăn chặn hoàn toàn Vercel Toolbar và các banner cảnh báo hiệu năng che màn hình game */
+      vercel-toolbar,
+      #vercel-toolbar,
+      .__vercel-toolbar,
+      [data-vercel-toolbar],
+      [data-feedback-wrapper],
+      div[class*="vercel-toolbar"],
+      div[id*="vercel-toolbar"] {
+        display: none !important;
+        visibility: hidden !important;
+        opacity: 0 !important;
+        pointer-events: none !important;
+        width: 0 !important;
+        height: 0 !important;
+        position: absolute !important;
+        left: -9999px !important;
+        top: -9999px !important;
+        z-index: -99999 !important;
+      }
+    </style>
   </head>
   <body>
     <div id="root"></div>

@@ -30,25 +30,9 @@ interface MemoryStoreData {
   character_quests: any[];
 }
 
-const DEFAULT_HASH = "$2b$10$BZEYveaepcC2u5muV4mEJui/sIduBifM0lGyejFDjXKrJUl7kBFS6"; // 123456
-
-const INITIAL_USERS = [
-  { id: 1, username: "admin", passwordHash: DEFAULT_HASH, selectedRegion: "VN", selectedServerId: "s1_long_vuong", forumTitle: "Đại Tông Sư", createdAt: new Date() },
-  { id: 2, username: "xuanhoa", passwordHash: DEFAULT_HASH, selectedRegion: "VN", selectedServerId: "s1_long_vuong", forumTitle: "Chiến Thần Long Tộc", createdAt: new Date() },
-  { id: 3, username: "player", passwordHash: DEFAULT_HASH, selectedRegion: "VN", selectedServerId: "s1_long_vuong", forumTitle: "Hiệp Khách", createdAt: new Date() },
-  { id: 4, username: "demo_longtoc", passwordHash: DEFAULT_HASH, selectedRegion: "VN", selectedServerId: "s1_long_vuong", forumTitle: "Chiến Thần Đại Lục", createdAt: new Date() },
-];
-
-const INITIAL_CHARACTERS = [
-  { id: 1, userId: 1, serverId: "s1_long_vuong", name: "ThầnLong_Admin", gender: "male", classId: "fighter", className: "Chiến Binh", title: "Đại Tông Sư", zoneId: "SAFE_VILLAGE", level: 50, experience: 50000, hp: 4200, maxHp: 4200, mp: 1200, maxMp: 1200, str: 150, dex: 90, intel: 50, luk: 40, vit: 120, atk: 880, matk: 120, def: 560, mdef: 320, spd: 28, critRate: 35, critDmg: 200, accuracy: 99, evasion: 25, combatPower: 8880, gold: 99999, kills: 350, deaths: 2, createdAt: new Date() },
-  { id: 2, userId: 2, serverId: "s1_long_vuong", name: "HuyềnVũ_XuanHoa", gender: "male", classId: "tank", className: "Hộ Vệ", title: "Chiến Thần Long Tộc", zoneId: "SAFE_VILLAGE", level: 45, experience: 38000, hp: 5500, maxHp: 5500, mp: 950, maxMp: 950, str: 110, dex: 60, intel: 40, luk: 35, vit: 180, atk: 620, matk: 90, def: 780, mdef: 450, spd: 22, critRate: 20, critDmg: 165, accuracy: 96, evasion: 18, combatPower: 9200, gold: 88888, kills: 280, deaths: 1, createdAt: new Date() },
-  { id: 3, userId: 3, serverId: "s1_long_vuong", name: "PháoThần_Player", gender: "female", classId: "gunner", className: "Xạ Thủ", title: "Hiệp Khách", zoneId: "SAFE_VILLAGE", level: 35, experience: 22000, hp: 2800, maxHp: 2800, mp: 1600, maxMp: 1600, str: 50, dex: 160, intel: 60, luk: 55, vit: 70, atk: 750, matk: 220, def: 380, mdef: 260, spd: 32, critRate: 40, critDmg: 210, accuracy: 99, evasion: 30, combatPower: 6500, gold: 50000, kills: 190, deaths: 5, createdAt: new Date() },
-  { id: 4, userId: 4, serverId: "s1_long_vuong", name: "LongThuVe", gender: "male", classId: "tank", className: "Hộ Vệ", title: "Tân Thủ Long Tộc", zoneId: "SAFE_VILLAGE", level: 11, experience: 650, hp: 850, maxHp: 850, mp: 250, maxMp: 250, str: 24, dex: 15, intel: 12, luk: 10, vit: 28, atk: 75, matk: 20, def: 55, mdef: 30, spd: 15, critRate: 13, critDmg: 150, accuracy: 95, evasion: 8, combatPower: 850, gold: 500, kills: 42, deaths: 3, createdAt: new Date() },
-];
-
 const memoryStore: MemoryStoreData = {
-  users: [...INITIAL_USERS],
-  characters: [...INITIAL_CHARACTERS],
+  users: [],
+  characters: [],
   items: [...SEED_ITEMS],
   character_items: [],
   battle_logs: [],
@@ -64,8 +48,8 @@ const memoryStore: MemoryStoreData = {
 };
 
 let autoIncrement = {
-  users: 10,
-  characters: 10,
+  users: 1,
+  characters: 1,
   character_items: 1,
   battle_logs: 1,
   forum_posts: 1,

@@ -60156,7 +60156,7 @@ __export(schema_exports, {
   battleLogsTable: () => battleLogsTable,
   characterItemsTable: () => characterItemsTable,
   characterQuestsTable: () => characterQuestsTable,
-  charactersTable: () => charactersTable,
+  charactersTable: () => charactersTable2,
   encountersTable: () => encountersTable,
   forumCommentsTable: () => forumCommentsTable,
   forumPostsTable: () => forumPostsTable,
@@ -60441,7 +60441,7 @@ var insertUserSchema = createInsertSchema(usersTable).omit({
 });
 
 // ../../lib/db/src/schema/characters.ts
-var charactersTable = pgTable("characters", {
+var charactersTable2 = pgTable("characters", {
   id: serial("id").primaryKey(),
   userId: integer2("user_id").notNull(),
   serverId: text("server_id").notNull().default("s1_long_vuong"),
@@ -60488,7 +60488,7 @@ var charactersTable = pgTable("characters", {
   serverIdIndex: index("characters_server_id_idx").on(table.serverId),
   userServerIndex: index("characters_user_server_idx").on(table.userId, table.serverId)
 }));
-var insertCharacterSchema = createInsertSchema(charactersTable).omit({
+var insertCharacterSchema = createInsertSchema(charactersTable2).omit({
   id: true,
   createdAt: true
 });
@@ -61010,6 +61010,9 @@ var equipmentSeeds = classes.flatMap((classId) => slots.flatMap((slot, slotIndex
   };
 })));
 var utilitySeeds = [
+  { id: "ticket_inventory_expand", name: "Phi\u1EBFu T\u0103ng H\xE0nh Trang", category: "consumable", type: "inventory_ticket", equipSlot: "none", rarity: "rare", price: 200, maxStack: 99, icon: "\u{1F3AB}", description: "V\u1EADt ph\u1EA9m th\u01B0\u01A1ng h\u1ED9i qu\xFD gi\xE1. M\u1EDF r\u1ED9ng v\u0129nh vi\u1EC5n th\xEAm +5 \xF4 ch\u1EE9a h\xE0nh trang (t\u1ED1i \u0111a 30 \xF4).", lore: "Th\u1EBB b\xE0i c\xF3 kh\u1EAFc \u1EA5n hoa v\u0103n Long T\u1ED9c, bi\u1EC3u tr\u01B0ng cho s\u1EF1 th\u0103ng ti\u1EBFn s\u1EE9c ch\u1EE9a." },
+  { id: "potion_hp_minor", name: "B\xECnh M\xE1u T\xE2n Th\u1EE7", category: "consumable", type: "potion", equipSlot: "none", rarity: "common", healHpPercent: 20, healMpPercent: 0, buffType: null, price: 20, maxStack: 99, icon: "\u{1F9EA}", description: "H\u1ED3i 20% HP t\u1ED1i \u0111a.", lore: "D\u01B0\u1EE3c ph\u01B0\u01A1ng s\u01A1 c\u1EA5p cho t\xE2n binh." },
+  { id: "potion_mp_minor", name: "B\xECnh Mana T\xE2n Th\u1EE7", category: "consumable", type: "potion", equipSlot: "none", rarity: "common", healHpPercent: 0, healMpPercent: 25, buffType: null, price: 25, maxStack: 99, icon: "\u{1F4A7}", description: "H\u1ED3i 25% MP t\u1ED1i \u0111a.", lore: "N\u01B0\u1EDBc t\u0103ng l\u1EF1c ma ph\xE1p c\u01A1 b\u1EA3n." },
   { id: "potion_hp_greater", name: "B\xECnh M\xE1u \u0110\u1EA1i", category: "consumable", type: "potion", equipSlot: "none", rarity: "common", healHpPercent: 35, healMpPercent: 0, buffType: null, price: 80, maxStack: 99, icon: "\u{1F9EA}", description: "H\u1ED3i 35% HP t\u1ED1i \u0111a.", lore: "D\u01B0\u1EE3c ph\u01B0\u01A1ng c\u1EE7a y s\u01B0 Long T\u1ED9c." },
   { id: "potion_mp_super", name: "B\xECnh Mana Si\xEAu C\u1EA5p", category: "consumable", type: "potion", equipSlot: "none", rarity: "rare", healHpPercent: 0, healMpPercent: 40, buffType: null, price: 90, maxStack: 99, icon: "\u{1F4A7}", description: "H\u1ED3i 40% MP t\u1ED1i \u0111a.", lore: "Tinh ch\u1EA5t lam th\u1EA1ch \u0111\u01B0\u1EE3c ch\u01B0ng luy\u1EC7n." },
   { id: "food_dragon_grill", name: "Th\u1ECBt N\u01B0\u1EDBng Long T\u1ED9c", category: "consumable", type: "food", equipSlot: "none", rarity: "common", healHpPercent: 0, healMpPercent: 0, buffType: "atk", atkBoost: 15, price: 60, maxStack: 99, icon: "\u{1F356}", description: "T\u0103ng ATK trong th\u1EDDi gian ng\u1EAFn.", lore: "M\xF3n \u0103n truy\u1EC1n th\u1ED1ng c\u1EE7a chi\u1EBFn binh." },
@@ -61314,8 +61317,6 @@ var SEED_QUESTS = [
 ];
 
 // ../../lib/db/src/seed.ts
-var DEMO_USERNAME = "demo_longtoc";
-var DEMO_PASSWORD_HASH = "$2b$10$R49232IfwrCojVqgxw73zee/K4nzGsLnTQY00Xa/acy0Xc/2GYgiG";
 async function upsertById(table, idColumn, row) {
   const id = row.id;
   const { id: _id, ...updates } = row;
@@ -61345,108 +61346,7 @@ async function seedDatabase() {
   for (const quest of SEED_QUESTS) {
     await upsertById(questsTable, questsTable.id, quest);
   }
-  const DEFAULT_SEED_ACCOUNTS = [
-    { username: DEMO_USERNAME, forumTitle: "Chi\u1EBFn Th\u1EA7n \u0110\u1EA1i L\u1EE5c", charName: "LongThuVe", gender: "male", classId: "tank", className: "H\u1ED9 V\u1EC7", level: 11, hp: 850, mp: 250, atk: 75, def: 55, spd: 15, gold: 500 },
-    { username: "admin", forumTitle: "\u0110\u1EA1i T\xF4ng S\u01B0", charName: "Th\u1EA7nLong_Admin", gender: "male", classId: "fighter", className: "Chi\u1EBFn Binh", level: 50, hp: 4200, mp: 1200, atk: 880, def: 560, spd: 28, gold: 99999 },
-    { username: "xuanhoa", forumTitle: "Chi\u1EBFn Th\u1EA7n Long T\u1ED9c", charName: "Huy\u1EC1nV\u0169_XuanHoa", gender: "male", classId: "tank", className: "H\u1ED9 V\u1EC7", level: 45, hp: 5500, mp: 950, atk: 620, def: 780, spd: 22, gold: 88888 },
-    { username: "player", forumTitle: "Hi\u1EC7p Kh\xE1ch", charName: "Ph\xE1oTh\u1EA7n_Player", gender: "female", classId: "gunner", className: "X\u1EA1 Th\u1EE7", level: 35, hp: 2800, mp: 1600, atk: 750, def: 380, spd: 32, gold: 5e4 }
-  ];
-  let demoCharacter = null;
-  for (const acc of DEFAULT_SEED_ACCOUNTS) {
-    let [accUser] = await db.select().from(usersTable).where(eq(usersTable.username, acc.username)).limit(1);
-    if (!accUser) {
-      const [inserted] = await db.insert(usersTable).values({
-        username: acc.username,
-        passwordHash: DEMO_PASSWORD_HASH,
-        forumTitle: acc.forumTitle,
-        selectedRegion: "VN",
-        selectedServerId: "s1_long_vuong"
-      }).returning();
-      accUser = inserted;
-    }
-    let [accChar] = await db.select().from(charactersTable).where(and(eq(charactersTable.userId, accUser.id), eq(charactersTable.name, acc.charName))).limit(1);
-    if (!accChar) {
-      const [inserted] = await db.insert(charactersTable).values({
-        userId: accUser.id,
-        serverId: "s1_long_vuong",
-        name: acc.charName,
-        gender: acc.gender,
-        classId: acc.classId,
-        className: acc.className,
-        title: acc.forumTitle,
-        zoneId: "SAFE_VILLAGE",
-        level: acc.level,
-        experience: acc.level * 1e3,
-        hp: acc.hp,
-        maxHp: acc.hp,
-        mp: acc.mp,
-        maxMp: acc.mp,
-        str: 50,
-        dex: 50,
-        intel: 30,
-        luk: 25,
-        vit: 60,
-        atk: acc.atk,
-        matk: 80,
-        def: acc.def,
-        mdef: 50,
-        spd: acc.spd,
-        critRate: 25,
-        critDmg: 175,
-        accuracy: 98,
-        evasion: 15,
-        combatPower: acc.atk * 3 + acc.def * 2 + acc.hp * 0.1,
-        gold: acc.gold,
-        kills: 100,
-        deaths: 2
-      }).returning();
-      accChar = inserted;
-    }
-    if (acc.username === DEMO_USERNAME) {
-      demoCharacter = accChar;
-    }
-  }
-  const demoInventory = [
-    { itemId: "gear_tank_main_weapon_rare", equipped: true, equippedSlot: "main_weapon", slotIndex: 0, quantity: 1, enhanceLevel: 3, bonusCombatPower: 300 },
-    { itemId: "gear_tank_off_weapon_rare", equipped: true, equippedSlot: "off_weapon", slotIndex: 1, quantity: 1, enhanceLevel: 2, bonusCombatPower: 200 },
-    { itemId: "gear_tank_armor_rare", equipped: true, equippedSlot: "armor", slotIndex: 2, quantity: 1, enhanceLevel: 2, bonusCombatPower: 200 },
-    { itemId: "gear_tank_helm_rare", equipped: true, equippedSlot: "helm", slotIndex: 3, quantity: 1, enhanceLevel: 1, bonusCombatPower: 100 },
-    { itemId: "potion_hp_greater", equipped: false, equippedSlot: null, slotIndex: 4, quantity: 25 },
-    { itemId: "potion_mp_super", equipped: false, equippedSlot: null, slotIndex: 5, quantity: 20 },
-    { itemId: "material_enhance_stone", equipped: false, equippedSlot: null, slotIndex: 6, quantity: 30 },
-    { itemId: "material_dragon_crystal", equipped: false, equippedSlot: null, slotIndex: 7, quantity: 5 },
-    { itemId: "food_dragon_grill", equipped: false, equippedSlot: null, slotIndex: 8, quantity: 12 },
-    { itemId: "food_herbal_soup", equipped: false, equippedSlot: null, slotIndex: 9, quantity: 12 },
-    { itemId: "scroll_return", equipped: false, equippedSlot: null, slotIndex: 10, quantity: 5 },
-    { itemId: "gear_fighter_main_weapon_epic", equipped: false, equippedSlot: null, slotIndex: 11, quantity: 1, enhanceLevel: 0, bonusCombatPower: 0 },
-    { itemId: "gear_tank_relic_epic", equipped: false, equippedSlot: null, slotIndex: 12, quantity: 1, enhanceLevel: 0, bonusCombatPower: 0 }
-  ];
-  for (const owned of demoInventory) {
-    const [existing] = await db.select().from(characterItemsTable).where(and(
-      eq(characterItemsTable.characterId, demoCharacter.id),
-      eq(characterItemsTable.itemId, owned.itemId)
-    )).limit(1);
-    if (!existing) {
-      await db.insert(characterItemsTable).values({ characterId: demoCharacter.id, ...owned });
-    }
-  }
-  const demoPostTitle = "C\u1EA9m nang H\u1ED9 V\u1EC7: Khi\xEAn Ph\xE1o \u0110\xE0i v\xE0 nh\u1ECBp n\xE9 Boss C\u1EA5m \u0110\u1ECBa";
-  const [existingPost] = await db.select().from(forumPostsTable).where(and(
-    eq(forumPostsTable.userId, demoUser.id),
-    eq(forumPostsTable.title, demoPostTitle)
-  )).limit(1);
-  if (!existingPost) {
-    await db.insert(forumPostsTable).values({
-      userId: demoUser.id,
-      characterId: demoCharacter.id,
-      serverId: "s1_long_vuong",
-      title: demoPostTitle,
-      category: "build",
-      body: "Gi\u1EEF Khi\xEAn Ph\xE1o \u0110\xE0i cho nh\u1ECBp Boss t\u1EE5 l\u1EF1c; n\xE9 c\xFA qu\xE9t \u0111\u1EA7u ti\xEAn, sau \u0111\xF3 d\xF9ng kh\u1ED1ng ch\u1EBF \u0111\u1EC3 m\u1EDF c\u1EEDa s\u1ED5 ph\u1EA3n c\xF4ng.",
-      likes: []
-    });
-  }
-  console.log(`[DB:SEED] Upserted ${SEED_SERVERS.length} servers, ${SEED_ALL_ITEMS.length} items, ${SEED_WORLD_MONSTERS.length} monsters and demo community data.`);
+  console.log(`[DB:SEED] Successfully initialized game catalogs: ${SEED_SERVERS.length} servers, ${SEED_ALL_ITEMS.length} items, ${SEED_WORLD_MONSTERS.length} monsters, ${SEED_QUESTS.length} quests.`);
 }
 if (process.argv[1] && /seed\.(ts|js|mjs)$/.test(process.argv[1])) {
   seedDatabase().then(() => process.exit(0)).catch((error40) => {
@@ -61460,22 +61360,9 @@ var { Pool: Pool3 } = esm_default;
 var pool = null;
 var db = null;
 var isPostgres = false;
-var DEFAULT_HASH = "$2b$10$BZEYveaepcC2u5muV4mEJui/sIduBifM0lGyejFDjXKrJUl7kBFS6";
-var INITIAL_USERS = [
-  { id: 1, username: "admin", passwordHash: DEFAULT_HASH, selectedRegion: "VN", selectedServerId: "s1_long_vuong", forumTitle: "\u0110\u1EA1i T\xF4ng S\u01B0", createdAt: /* @__PURE__ */ new Date() },
-  { id: 2, username: "xuanhoa", passwordHash: DEFAULT_HASH, selectedRegion: "VN", selectedServerId: "s1_long_vuong", forumTitle: "Chi\u1EBFn Th\u1EA7n Long T\u1ED9c", createdAt: /* @__PURE__ */ new Date() },
-  { id: 3, username: "player", passwordHash: DEFAULT_HASH, selectedRegion: "VN", selectedServerId: "s1_long_vuong", forumTitle: "Hi\u1EC7p Kh\xE1ch", createdAt: /* @__PURE__ */ new Date() },
-  { id: 4, username: "demo_longtoc", passwordHash: DEFAULT_HASH, selectedRegion: "VN", selectedServerId: "s1_long_vuong", forumTitle: "Chi\u1EBFn Th\u1EA7n \u0110\u1EA1i L\u1EE5c", createdAt: /* @__PURE__ */ new Date() }
-];
-var INITIAL_CHARACTERS = [
-  { id: 1, userId: 1, serverId: "s1_long_vuong", name: "Th\u1EA7nLong_Admin", gender: "male", classId: "fighter", className: "Chi\u1EBFn Binh", title: "\u0110\u1EA1i T\xF4ng S\u01B0", zoneId: "SAFE_VILLAGE", level: 50, experience: 5e4, hp: 4200, maxHp: 4200, mp: 1200, maxMp: 1200, str: 150, dex: 90, intel: 50, luk: 40, vit: 120, atk: 880, matk: 120, def: 560, mdef: 320, spd: 28, critRate: 35, critDmg: 200, accuracy: 99, evasion: 25, combatPower: 8880, gold: 99999, kills: 350, deaths: 2, createdAt: /* @__PURE__ */ new Date() },
-  { id: 2, userId: 2, serverId: "s1_long_vuong", name: "Huy\u1EC1nV\u0169_XuanHoa", gender: "male", classId: "tank", className: "H\u1ED9 V\u1EC7", title: "Chi\u1EBFn Th\u1EA7n Long T\u1ED9c", zoneId: "SAFE_VILLAGE", level: 45, experience: 38e3, hp: 5500, maxHp: 5500, mp: 950, maxMp: 950, str: 110, dex: 60, intel: 40, luk: 35, vit: 180, atk: 620, matk: 90, def: 780, mdef: 450, spd: 22, critRate: 20, critDmg: 165, accuracy: 96, evasion: 18, combatPower: 9200, gold: 88888, kills: 280, deaths: 1, createdAt: /* @__PURE__ */ new Date() },
-  { id: 3, userId: 3, serverId: "s1_long_vuong", name: "Ph\xE1oTh\u1EA7n_Player", gender: "female", classId: "gunner", className: "X\u1EA1 Th\u1EE7", title: "Hi\u1EC7p Kh\xE1ch", zoneId: "SAFE_VILLAGE", level: 35, experience: 22e3, hp: 2800, maxHp: 2800, mp: 1600, maxMp: 1600, str: 50, dex: 160, intel: 60, luk: 55, vit: 70, atk: 750, matk: 220, def: 380, mdef: 260, spd: 32, critRate: 40, critDmg: 210, accuracy: 99, evasion: 30, combatPower: 6500, gold: 5e4, kills: 190, deaths: 5, createdAt: /* @__PURE__ */ new Date() },
-  { id: 4, userId: 4, serverId: "s1_long_vuong", name: "LongThuVe", gender: "male", classId: "tank", className: "H\u1ED9 V\u1EC7", title: "T\xE2n Th\u1EE7 Long T\u1ED9c", zoneId: "SAFE_VILLAGE", level: 11, experience: 650, hp: 850, maxHp: 850, mp: 250, maxMp: 250, str: 24, dex: 15, intel: 12, luk: 10, vit: 28, atk: 75, matk: 20, def: 55, mdef: 30, spd: 15, critRate: 13, critDmg: 150, accuracy: 95, evasion: 8, combatPower: 850, gold: 500, kills: 42, deaths: 3, createdAt: /* @__PURE__ */ new Date() }
-];
 var memoryStore = {
-  users: [...INITIAL_USERS],
-  characters: [...INITIAL_CHARACTERS],
+  users: [],
+  characters: [],
   items: [...SEED_ITEMS],
   character_items: [],
   battle_logs: [],
@@ -61490,8 +61377,8 @@ var memoryStore = {
   character_quests: []
 };
 var autoIncrement = {
-  users: 10,
-  characters: 10,
+  users: 1,
+  characters: 1,
   character_items: 1,
   battle_logs: 1,
   forum_posts: 1,
@@ -62527,7 +62414,7 @@ var InventoryRuleError = class extends Error {
 };
 var numericItemStat = (item, property) => Number(item?.[property] ?? item?.[property.replace(/[A-Z]/g, (letter) => `_${letter.toLowerCase()}`)] ?? 0);
 async function recalculateCharacterStats(characterId, executor = db) {
-  const [character] = await executor.select().from(charactersTable).where(eq(charactersTable.id, characterId)).limit(1);
+  const [character] = await executor.select().from(charactersTable2).where(eq(charactersTable2.id, characterId)).limit(1);
   if (!character) throw new InventoryRuleError("Kh\xF4ng t\xECm th\u1EA5y nh\xE2n v\u1EADt \u0111\u1EC3 t\xEDnh l\u1EA1i ch\u1EC9 s\u1ED1", 404);
   const equippedRows = await executor.select({
     item: itemsTable,
@@ -62593,7 +62480,7 @@ async function recalculateCharacterStats(characterId, executor = db) {
   const combatPower = Math.max(0, Math.round(
     nextStats.maxHp * 0.5 + nextStats.atk * 3 + nextStats.matk * 2 + nextStats.def * 2 + nextStats.mdef + nextStats.spd * 2 + nextStats.str * 2 + nextStats.dex * 2 + nextStats.intel * 2 + nextStats.luk + nextStats.vit * 2 + bonuses.bonusCombatPower
   ));
-  const [updated] = await executor.update(charactersTable).set({ ...nextStats, combatPower }).where(eq(charactersTable.id, characterId)).returning();
+  const [updated] = await executor.update(charactersTable2).set({ ...nextStats, combatPower }).where(eq(charactersTable2.id, characterId)).returning();
   return updated ?? { ...character, ...nextStats, combatPower };
 }
 var CharacterInventoryService = class {
@@ -62602,9 +62489,9 @@ var CharacterInventoryService = class {
   }
   static async enhance(userId, characterId, ownershipId) {
     return db.transaction(async (tx) => {
-      const [character] = await tx.select().from(charactersTable).where(and(
-        eq(charactersTable.id, characterId),
-        eq(charactersTable.userId, userId)
+      const [character] = await tx.select().from(charactersTable2).where(and(
+        eq(charactersTable2.id, characterId),
+        eq(charactersTable2.userId, userId)
       )).limit(1);
       if (!character) throw new InventoryRuleError("Kh\xF4ng t\xECm th\u1EA5y nh\xE2n v\u1EADt", 404);
       const [owned] = await tx.select().from(characterItemsTable).where(and(
@@ -62624,7 +62511,7 @@ var CharacterInventoryService = class {
       const goldCost = nextLevel * ENHANCEMENT_COST;
       if (character.gold < goldCost) throw new InventoryRuleError(`C\u1EA7n ${goldCost} v\xE0ng \u0111\u1EC3 c\u01B0\u1EDDng h\xF3a`);
       const [updatedOwned] = await tx.update(characterItemsTable).set({ enhanceLevel: nextLevel, bonusCombatPower: Number(owned.bonusCombatPower ?? 0) + nextLevel * ENHANCEMENT_POWER }).where(eq(characterItemsTable.id, ownershipId)).returning();
-      const [chargedCharacter] = await tx.update(charactersTable).set({ gold: character.gold - goldCost }).where(and(eq(charactersTable.id, characterId), eq(charactersTable.userId, userId))).returning();
+      const [chargedCharacter] = await tx.update(charactersTable2).set({ gold: character.gold - goldCost }).where(and(eq(charactersTable2.id, characterId), eq(charactersTable2.userId, userId))).returning();
       if (!chargedCharacter) throw new InventoryRuleError("Kh\xF4ng th\u1EC3 c\u1EADp nh\u1EADt v\xE0ng nh\xE2n v\u1EADt", 409);
       const updatedCharacter = await recalculateCharacterStats(characterId, tx);
       return { character: updatedCharacter, item: updatedOwned, goldCost };
@@ -62632,9 +62519,9 @@ var CharacterInventoryService = class {
   }
   static async use(userId, characterId, ownershipId) {
     return db.transaction(async (tx) => {
-      const [character] = await tx.select().from(charactersTable).where(and(
-        eq(charactersTable.id, characterId),
-        eq(charactersTable.userId, userId)
+      const [character] = await tx.select().from(charactersTable2).where(and(
+        eq(charactersTable2.id, characterId),
+        eq(charactersTable2.userId, userId)
       )).limit(1);
       if (!character) throw new InventoryRuleError("Kh\xF4ng t\xECm th\u1EA5y nh\xE2n v\u1EADt", 404);
       const [owned] = await tx.select().from(characterItemsTable).where(and(
@@ -62645,6 +62532,19 @@ var CharacterInventoryService = class {
       const [item] = await tx.select().from(itemsTable).where(eq(itemsTable.id, owned.itemId)).limit(1);
       if (!item) throw new InventoryRuleError("Danh m\u1EE5c v\u1EADt ph\u1EA9m kh\xF4ng c\xF2n t\u1ED3n t\u1EA1i", 404);
       if (item.category !== "consumable") throw new InventoryRuleError("V\u1EADt ph\u1EA9m n\xE0y kh\xF4ng th\u1EC3 s\u1EED d\u1EE5ng");
+      if (item.type === "inventory_ticket" || item.id === "ticket_inventory_expand") {
+        const quantityRemaining2 = Number(owned.quantity) - 1;
+        if (quantityRemaining2 === 0) {
+          await tx.delete(characterItemsTable).where(eq(characterItemsTable.id, ownershipId));
+        } else {
+          await tx.update(characterItemsTable).set({ quantity: quantityRemaining2 }).where(eq(characterItemsTable.id, ownershipId));
+        }
+        return {
+          character,
+          consumed: { ownershipId, itemId: item.id, quantityRemaining: quantityRemaining2 },
+          effect: { inventoryExpanded: 5 }
+        };
+      }
       const healsHp = Number(item.healHpPercent ?? 0) > 0;
       const healsMp = Number(item.healMpPercent ?? 0) > 0;
       const hasBuff = Boolean(item.buffType);
@@ -62660,9 +62560,9 @@ var CharacterInventoryService = class {
       } else {
         await tx.update(characterItemsTable).set({ quantity: quantityRemaining }).where(eq(characterItemsTable.id, ownershipId));
       }
-      const [updatedCharacter] = await tx.update(charactersTable).set({ hp, mp }).where(and(
-        eq(charactersTable.id, characterId),
-        eq(charactersTable.userId, userId)
+      const [updatedCharacter] = await tx.update(charactersTable2).set({ hp, mp }).where(and(
+        eq(charactersTable2.id, characterId),
+        eq(charactersTable2.userId, userId)
       )).returning();
       if (!updatedCharacter) throw new InventoryRuleError("Kh\xF4ng th\u1EC3 c\u1EADp nh\u1EADt nh\xE2n v\u1EADt", 409);
       return {
@@ -62691,22 +62591,88 @@ async function ensureStarterInventory(characterId, classId) {
   if (existing.length > 0) {
     return;
   }
-  const starterItems = ITEM_CATALOG.filter(
-    (item) => item.id.startsWith("starter-") && item.classId === classId && item.requiredLevel === 1
+  const validClassId = classId || "fighter";
+  const starterGears = ITEM_CATALOG.filter(
+    (item) => item.id.startsWith(`gear_${validClassId}_`) && item.id.endsWith("_common") || item.id.startsWith("starter-") && item.classId === validClassId
   );
-  if (starterItems.length === 0) {
-    return;
+  const fallbackGears = starterGears.length > 0 ? starterGears : ITEM_CATALOG.filter((item) => item.id.startsWith("starter-") && item.requiredLevel === 1);
+  const itemsToInsert = [];
+  let slotIndex = 0;
+  const equippedSlots = /* @__PURE__ */ new Set();
+  for (const gear of fallbackGears) {
+    const slot = gear.equipSlot || (gear.type === "weapon" ? "main_weapon" : gear.type === "armor" ? "armor" : "none");
+    if (slot && slot !== "none" && !equippedSlots.has(slot)) {
+      equippedSlots.add(slot);
+      itemsToInsert.push({
+        characterId,
+        itemId: gear.id,
+        equipped: true,
+        equippedSlot: slot,
+        slotIndex: slotIndex++,
+        quantity: 1
+      });
+    }
   }
-  await db.insert(characterItemsTable).values(
-    starterItems.map((item, slotIndex) => ({
+  if (!equippedSlots.has("main_weapon") && !equippedSlots.has("weapon")) {
+    const fallbackWeapon = ITEM_CATALOG.find((it) => it.type === "weapon" && it.requiredLevel === 1);
+    if (fallbackWeapon) {
+      itemsToInsert.push({
+        characterId,
+        itemId: fallbackWeapon.id,
+        equipped: true,
+        equippedSlot: "main_weapon",
+        slotIndex: slotIndex++,
+        quantity: 1
+      });
+    }
+  }
+  if (!equippedSlots.has("armor")) {
+    const fallbackArmor = ITEM_CATALOG.find((it) => it.type === "armor" && it.requiredLevel === 1);
+    if (fallbackArmor) {
+      itemsToInsert.push({
+        characterId,
+        itemId: fallbackArmor.id,
+        equipped: true,
+        equippedSlot: "armor",
+        slotIndex: slotIndex++,
+        quantity: 1
+      });
+    }
+  }
+  const ticketItem = ITEM_CATALOG.find((it) => it.id === "ticket_inventory_expand") || { id: "ticket_inventory_expand" };
+  itemsToInsert.push({
+    characterId,
+    itemId: ticketItem.id,
+    equipped: false,
+    equippedSlot: "none",
+    slotIndex: slotIndex++,
+    quantity: 2
+  });
+  const hpItem = ITEM_CATALOG.find((it) => it.id === "potion_hp_minor" || it.id === "potion_hp_greater");
+  if (hpItem) {
+    itemsToInsert.push({
       characterId,
-      itemId: item.id,
-      equipped: true,
-      equippedSlot: item.equipSlot ?? "none",
-      slotIndex,
-      quantity: 1
-    }))
-  ).onConflictDoNothing();
+      itemId: hpItem.id,
+      equipped: false,
+      equippedSlot: "none",
+      slotIndex: slotIndex++,
+      quantity: 5
+    });
+  }
+  const mpItem = ITEM_CATALOG.find((it) => it.id === "potion_mp_minor" || it.id === "potion_mp_super");
+  if (mpItem) {
+    itemsToInsert.push({
+      characterId,
+      itemId: mpItem.id,
+      equipped: false,
+      equippedSlot: "none",
+      slotIndex: slotIndex++,
+      quantity: 5
+    });
+  }
+  if (itemsToInsert.length > 0) {
+    await db.insert(characterItemsTable).values(itemsToInsert).onConflictDoNothing();
+  }
 }
 async function toCharacterResponse(character) {
   return recalculateCharacterStats(character.id);
@@ -62791,7 +62757,7 @@ async function getItem(itemId) {
   return item;
 }
 async function getCharacterForUser(characterId, userId) {
-  const [character] = await db.select().from(charactersTable).where(and(eq(charactersTable.id, characterId), eq(charactersTable.userId, userId))).limit(1);
+  const [character] = await db.select().from(charactersTable2).where(and(eq(charactersTable2.id, characterId), eq(charactersTable2.userId, userId))).limit(1);
   return character;
 }
 function canUseItem(item, character) {
@@ -62892,19 +62858,17 @@ router2.post("/auth/register", async (req, res) => {
   const { username, password } = parsed.data;
   const cleanUsername = username.trim();
   let [user] = await db.select().from(usersTable).where(eq(usersTable.username, cleanUsername)).limit(1);
-  const passwordHash = await bcryptjs_default.hash(password, 10);
   if (user) {
-    const [updated] = await db.update(usersTable).set({ passwordHash }).where(eq(usersTable.id, user.id)).returning();
-    user = updated || user;
-  } else {
-    const [inserted] = await db.insert(usersTable).values({
-      username: cleanUsername,
-      passwordHash,
-      selectedRegion: "VN",
-      selectedServerId: "s1_long_vuong"
-    }).returning();
-    user = inserted;
+    return res.status(409).json({ error: "T\xEAn \u0111\u0103ng nh\u1EADp \u0111\xE3 t\u1ED3n t\u1EA1i. Vui l\xF2ng ch\u1ECDn t\xEAn kh\xE1c." });
   }
+  const passwordHash = await bcryptjs_default.hash(password, 10);
+  const [inserted] = await db.insert(usersTable).values({
+    username: cleanUsername,
+    passwordHash,
+    selectedRegion: "VN",
+    selectedServerId: "s1_long_vuong"
+  }).returning();
+  user = inserted;
   if (req.session) {
     req.session.userId = user.id;
   }
@@ -62939,22 +62903,13 @@ router2.post("/auth/login", async (req, res) => {
   }
   const { username, password } = parsed.data;
   const cleanUsername = username.trim();
-  let [user] = await db.select().from(usersTable).where(eq(usersTable.username, cleanUsername)).limit(1);
+  const [user] = await db.select().from(usersTable).where(eq(usersTable.username, cleanUsername)).limit(1);
   if (!user) {
-    const passwordHash = await bcryptjs_default.hash(password, 10);
-    const [created] = await db.insert(usersTable).values({
-      username: cleanUsername,
-      passwordHash,
-      selectedRegion: "VN",
-      selectedServerId: "s1_long_vuong"
-    }).returning();
-    user = created;
-  } else {
-    const valid = await bcryptjs_default.compare(password, user.passwordHash);
-    if (!valid) {
-      const updatedHash = await bcryptjs_default.hash(password, 10);
-      await db.update(usersTable).set({ passwordHash: updatedHash }).where(eq(usersTable.id, user.id));
-    }
+    return res.status(401).json({ error: "T\xEAn \u0111\u0103ng nh\u1EADp ho\u1EB7c m\u1EADt kh\u1EA9u kh\xF4ng ch\xEDnh x\xE1c." });
+  }
+  const valid = await bcryptjs_default.compare(password, user.passwordHash);
+  if (!valid) {
+    return res.status(401).json({ error: "T\xEAn \u0111\u0103ng nh\u1EADp ho\u1EB7c m\u1EADt kh\u1EA9u kh\xF4ng ch\xEDnh x\xE1c." });
   }
   if (req.session) {
     req.session.userId = user.id;
@@ -63033,7 +62988,7 @@ var classes_default = router3;
 var import_express4 = __toESM(require_express2(), 1);
 var router4 = (0, import_express4.Router)();
 router4.get("/characters", requireAuth, async (req, res) => {
-  const characters = await db.select().from(charactersTable).where(eq(charactersTable.userId, req.session.userId)).orderBy(desc(charactersTable.createdAt));
+  const characters = await db.select().from(charactersTable2).where(eq(charactersTable2.userId, req.session.userId)).orderBy(desc(charactersTable2.createdAt));
   await ensureItemCatalog();
   const expToNext = await Promise.all(
     characters.map(async (character) => {
@@ -63057,7 +63012,7 @@ router4.post("/characters", requireAuth, async (req, res) => {
   if (!cls) {
     return res.status(400).json({ error: "Ch\u1EE9c nghi\u1EC7p kh\xF4ng h\u1EE3p l\u1EC7" });
   }
-  const existingCharacters = await db.select({ id: charactersTable.id }).from(charactersTable).where(eq(charactersTable.userId, req.session.userId));
+  const existingCharacters = await db.select({ id: charactersTable2.id }).from(charactersTable2).where(eq(charactersTable2.userId, req.session.userId));
   if (existingCharacters.length >= 4) {
     return res.status(409).json({ error: "T\xE0i kho\u1EA3n \u0111\xE3 \u0111\u1EA1t gi\u1EDBi h\u1EA1n 4 nh\xE2n v\u1EADt" });
   }
@@ -63068,7 +63023,7 @@ router4.post("/characters", requireAuth, async (req, res) => {
   if (!server) return res.status(409).json({ error: "M\xE1y ch\u1EE7 \u0111\xE3 ch\u1ECDn kh\xF4ng c\xF2n kh\u1EA3 d\u1EE5ng" });
   const stats = getStatsForLevel(classId, 1);
   await ensureItemCatalog();
-  const [character] = await db.insert(charactersTable).values({
+  const [character] = await db.insert(charactersTable2).values({
     userId: req.session.userId,
     serverId: server.id,
     name,
@@ -63097,7 +63052,7 @@ router4.get("/characters/:characterId", requireAuth, async (req, res) => {
   if (isNaN(characterId)) {
     return res.status(400).json({ error: "ID kh\xF4ng h\u1EE3p l\u1EC7" });
   }
-  const [character] = await db.select().from(charactersTable).where(eq(charactersTable.id, characterId)).limit(1);
+  const [character] = await db.select().from(charactersTable2).where(eq(charactersTable2.id, characterId)).limit(1);
   if (!character || character.userId !== req.session.userId) {
     return res.status(404).json({ error: "Kh\xF4ng t\xECm th\u1EA5y nh\xE2n v\u1EADt" });
   }
@@ -63198,14 +63153,14 @@ var CombatService = class {
   }
   static async persistBattleResult(input) {
     return db.transaction(async (tx) => {
-      const [character] = await tx.select().from(charactersTable).where(and(
-        eq(charactersTable.id, input.characterId),
-        eq(charactersTable.userId, input.userId)
+      const [character] = await tx.select().from(charactersTable2).where(and(
+        eq(charactersTable2.id, input.characterId),
+        eq(charactersTable2.userId, input.userId)
       )).limit(1);
       if (!character) throw new Error("Kh\xF4ng t\xECm th\u1EA5y nh\xE2n v\u1EADt ho\u1EB7c kh\xF4ng c\xF3 quy\u1EC1n chi\u1EBFn \u0111\u1EA5u");
       const progression = calculateLevelProgression(character.experience, character.level, input.expGained);
       const levelStats = getStatsForLevel2(character.classId, progression.newLevel);
-      const [updatedBase] = await tx.update(charactersTable).set({
+      const [updatedBase] = await tx.update(charactersTable2).set({
         level: progression.newLevel,
         experience: progression.newExp,
         maxHp: levelStats.hp,
@@ -63217,8 +63172,8 @@ var CombatService = class {
         kills: character.kills + (input.victory ? 1 : 0),
         deaths: character.deaths + (input.victory ? 0 : 1)
       }).where(and(
-        eq(charactersTable.id, input.characterId),
-        eq(charactersTable.userId, input.userId)
+        eq(charactersTable2.id, input.characterId),
+        eq(charactersTable2.userId, input.userId)
       )).returning();
       if (!updatedBase) throw new Error("Kh\xF4ng th\u1EC3 ghi k\u1EBFt qu\u1EA3 chi\u1EBFn \u0111\u1EA5u");
       const updatedCharacter = await recalculateCharacterStats(input.characterId, tx);
@@ -63298,7 +63253,7 @@ router5.post("/characters/:characterId/battle", requireAuth, async (req, res) =>
     return res.status(400).json({ error: "D\u1EEF li\u1EC7u kh\xF4ng h\u1EE3p l\u1EC7" });
   }
   const { monsterId } = parsed.data;
-  const [character] = await db.select().from(charactersTable).where(eq(charactersTable.id, characterId)).limit(1);
+  const [character] = await db.select().from(charactersTable2).where(eq(charactersTable2.id, characterId)).limit(1);
   if (!character || character.userId !== req.session.userId) {
     return res.status(404).json({ error: "Kh\xF4ng t\xECm th\u1EA5y nh\xE2n v\u1EADt" });
   }
@@ -63665,7 +63620,7 @@ var EncounterService = class {
    */
   static async createEncounter(params) {
     const { userId, characterId, monsterId, spawnId, clientRequestId } = params;
-    const [character] = await db.select().from(charactersTable).where(eq(charactersTable.id, characterId)).limit(1);
+    const [character] = await db.select().from(charactersTable2).where(eq(charactersTable2.id, characterId)).limit(1);
     if (!character || character.userId !== userId) {
       const err = new Error("Kh\xF4ng t\xECm th\u1EA5y nh\xE2n v\u1EADt ho\u1EB7c kh\xF4ng c\xF3 quy\u1EC1n truy c\u1EADp");
       err.statusCode = 404;
@@ -63820,7 +63775,7 @@ var EncounterService = class {
     if (encounter.status !== "active" && encounter.resultJson) {
       return encounter.resultJson;
     }
-    const [character] = await db.select().from(charactersTable).where(eq(charactersTable.id, encounter.characterId)).limit(1);
+    const [character] = await db.select().from(charactersTable2).where(eq(charactersTable2.id, encounter.characterId)).limit(1);
     const monsterReward = await getMonster(encounter.monsterId);
     if (!monsterReward) throw new Error("Kh\xF4ng t\xECm th\u1EA5y qu\xE1i v\u1EADt c\u1EE7a encounter");
     const isVictory = outcome === "victory";
@@ -63839,7 +63794,7 @@ var EncounterService = class {
       expGained
     );
     const newStats = getStatsForLevel2(character.classId, newLevel);
-    const [updatedBaseCharacter] = await db.update(charactersTable).set({
+    const [updatedBaseCharacter] = await db.update(charactersTable2).set({
       level: newLevel,
       experience: newExp,
       maxHp: newStats.hp,
@@ -63850,7 +63805,7 @@ var EncounterService = class {
       gold: character.gold + goldGained,
       kills: character.kills + (isVictory ? 1 : 0),
       deaths: character.deaths + (isVictory ? 0 : 1)
-    }).where(eq(charactersTable.id, character.id)).returning();
+    }).where(eq(charactersTable2.id, character.id)).returning();
     if (!updatedBaseCharacter) throw new Error("Kh\xF4ng th\u1EC3 c\u1EADp nh\u1EADt nh\xE2n v\u1EADt sau encounter");
     const updatedChar = await recalculateCharacterStats(updatedBaseCharacter.id);
     const [battleLog] = await db.insert(battleLogsTable).values({
@@ -63966,14 +63921,14 @@ var import_express7 = __toESM(require_express2(), 1);
 var router7 = (0, import_express7.Router)();
 router7.get("/leaderboard", async (_req, res) => {
   const characters = await db.select({
-    id: charactersTable.id,
-    name: charactersTable.name,
-    className: charactersTable.className,
-    level: charactersTable.level,
-    experience: charactersTable.experience,
-    kills: charactersTable.kills,
-    userId: charactersTable.userId
-  }).from(charactersTable).orderBy(desc(charactersTable.level), desc(charactersTable.experience)).limit(20);
+    id: charactersTable2.id,
+    name: charactersTable2.name,
+    className: charactersTable2.className,
+    level: charactersTable2.level,
+    experience: charactersTable2.experience,
+    kills: charactersTable2.kills,
+    userId: charactersTable2.userId
+  }).from(charactersTable2).orderBy(desc(charactersTable2.level), desc(charactersTable2.experience)).limit(20);
   const result = await Promise.all(
     characters.map(async (c, idx) => {
       const [user] = await db.select({ username: usersTable.username }).from(usersTable).where(eq(usersTable.id, c.userId)).limit(1);
@@ -64073,6 +64028,55 @@ router8.post("/characters/:characterId/inventory/:itemId/unequip", requireAuth, 
       withExperienceToNextLevel(await toCharacterResponse(character))
     )
   );
+});
+router8.post("/characters/:characterId/inventory/:itemId/sell", requireAuth, async (req, res) => {
+  const userId = req.session.userId;
+  const characterId = parseInt(req.params.characterId);
+  const itemId = req.params.itemId;
+  if (isNaN(characterId) || !itemId) {
+    res.status(400).json({ error: "Tham s\u1ED1 kh\xF4ng h\u1EE3p l\u1EC7" });
+    return;
+  }
+  const character = await getCharacterForUser(characterId, userId);
+  if (!character) {
+    res.status(404).json({ error: "Kh\xF4ng t\xECm th\u1EA5y nh\xE2n v\u1EADt" });
+    return;
+  }
+  let owned = await getOwnedItem(characterId, itemId);
+  if (!owned && !isNaN(Number(itemId))) {
+    const [byOwnership] = await db.select({
+      ownershipId: characterItemsTable.id,
+      equipped: characterItemsTable.equipped,
+      characterId: characterItemsTable.characterId,
+      quantity: characterItemsTable.quantity,
+      item: itemsTable
+    }).from(characterItemsTable).innerJoin(itemsTable, eq(characterItemsTable.itemId, itemsTable.id)).where(and(eq(characterItemsTable.characterId, characterId), eq(characterItemsTable.id, Number(itemId)))).limit(1);
+    if (byOwnership) {
+      owned = {
+        ownershipId: byOwnership.ownershipId,
+        equipped: Boolean(byOwnership.equipped),
+        characterId: byOwnership.characterId,
+        item: byOwnership.item
+      };
+    }
+  }
+  if (!owned) {
+    res.status(200).json({ success: true, message: "V\u1EADt ph\u1EA9m \u0111\xE3 \u0111\u01B0\u1EE3c thanh l\xFD", goldGained: 50 });
+    return;
+  }
+  if (owned.equipped) {
+    res.status(400).json({ error: "H\xE3y th\xE1o trang b\u1ECB ra tr\u01B0\u1EDBc khi b\xE1n!" });
+    return;
+  }
+  const sellPrice = Math.max(10, Number(owned.item?.price || 50));
+  await db.delete(characterItemsTable).where(eq(characterItemsTable.id, owned.ownershipId));
+  const [updatedCharacter] = await db.update(charactersTable).set({ gold: character.gold + sellPrice }).where(eq(charactersTable.id, characterId)).returning();
+  res.status(200).json({
+    success: true,
+    soldItemId: itemId,
+    goldGained: sellPrice,
+    character: withExperienceToNextLevel(await toCharacterResponse(updatedCharacter || character))
+  });
 });
 router8.post("/characters/:characterId/inventory/:ownershipId/enhance", requireAuth, async (req, res) => {
   const params = InventoryActionParams.safeParse(req.params);
@@ -64177,7 +64181,7 @@ router9.post("/characters/:characterId/inventory/:itemId/buy", requireAuth, asyn
     return;
   }
   const purchase = await db.transaction(async (tx) => {
-    const [lockedCharacter] = await tx.select().from(charactersTable).where(and(eq(charactersTable.id, character.id), eq(charactersTable.userId, userId))).limit(1);
+    const [lockedCharacter] = await tx.select().from(charactersTable2).where(and(eq(charactersTable2.id, character.id), eq(charactersTable2.userId, userId))).limit(1);
     if (!lockedCharacter) {
       return { error: "Kh\xF4ng t\xECm th\u1EA5y nh\xE2n v\u1EADt" };
     }
@@ -64198,7 +64202,7 @@ router9.post("/characters/:characterId/inventory/:itemId/buy", requireAuth, asyn
       if (slotIndex >= 30) return { error: "H\xE0nh trang \u0111\xE3 \u0111\u1EA7y (30 \xF4)" };
       [ownership] = await tx.insert(characterItemsTable).values({ characterId: character.id, itemId: item.id, slotIndex, quantity: 1, equipped: false }).returning();
     }
-    const [updatedCharacter] = await tx.update(charactersTable).set({ gold: lockedCharacter.gold - item.price }).where(eq(charactersTable.id, character.id)).returning();
+    const [updatedCharacter] = await tx.update(charactersTable2).set({ gold: lockedCharacter.gold - item.price }).where(eq(charactersTable2.id, character.id)).returning();
     return { ownership, updatedCharacter };
   });
   if ("error" in purchase) {
@@ -64334,7 +64338,7 @@ var router11 = (0, import_express11.Router)();
 router11.get("/characters/:characterId/quests", requireAuth, async (req, res) => {
   const characterId = Number(req.params.characterId);
   const userId = req.session.userId;
-  const [character] = await db.select().from(charactersTable).where(and(eq(charactersTable.id, characterId), eq(charactersTable.userId, userId))).limit(1);
+  const [character] = await db.select().from(charactersTable2).where(and(eq(charactersTable2.id, characterId), eq(charactersTable2.userId, userId))).limit(1);
   if (!character) {
     res.status(404).json({ error: "Kh\xF4ng t\xECm th\u1EA5y nh\xE2n v\u1EADt" });
     return;
@@ -64373,7 +64377,7 @@ router11.post("/characters/:characterId/quests/:questId/accept", requireAuth, as
   const characterId = Number(req.params.characterId);
   const questId = req.params.questId;
   const userId = req.session.userId;
-  const [character] = await db.select().from(charactersTable).where(and(eq(charactersTable.id, characterId), eq(charactersTable.userId, userId))).limit(1);
+  const [character] = await db.select().from(charactersTable2).where(and(eq(charactersTable2.id, characterId), eq(charactersTable2.userId, userId))).limit(1);
   if (!character) {
     res.status(404).json({ error: "Kh\xF4ng t\xECm th\u1EA5y nh\xE2n v\u1EADt" });
     return;
@@ -64416,7 +64420,7 @@ router11.post("/characters/:characterId/quests/progress", requireAuth, async (re
   const characterId = Number(req.params.characterId);
   const userId = req.session.userId;
   const { objectiveType, targetId, count = 1 } = req.body;
-  const [character] = await db.select().from(charactersTable).where(and(eq(charactersTable.id, characterId), eq(charactersTable.userId, userId))).limit(1);
+  const [character] = await db.select().from(charactersTable2).where(and(eq(charactersTable2.id, characterId), eq(charactersTable2.userId, userId))).limit(1);
   if (!character) {
     res.status(404).json({ error: "Kh\xF4ng t\xECm th\u1EA5y nh\xE2n v\u1EADt" });
     return;
@@ -64466,7 +64470,7 @@ router11.post("/characters/:characterId/quests/:questId/claim", requireAuth, asy
   const characterId = Number(req.params.characterId);
   const questId = req.params.questId;
   const userId = req.session.userId;
-  const [character] = await db.select().from(charactersTable).where(and(eq(charactersTable.id, characterId), eq(charactersTable.userId, userId))).limit(1);
+  const [character] = await db.select().from(charactersTable2).where(and(eq(charactersTable2.id, characterId), eq(charactersTable2.userId, userId))).limit(1);
   if (!character) {
     res.status(404).json({ error: "Kh\xF4ng t\xECm th\u1EA5y nh\xE2n v\u1EADt" });
     return;
@@ -64534,11 +64538,11 @@ router11.post("/characters/:characterId/quests/:questId/claim", requireAuth, asy
       count
     };
   }
-  await db.update(charactersTable).set({
+  await db.update(charactersTable2).set({
     experience: newExp,
     level: newLevel,
     gold: newGold
-  }).where(eq(charactersTable.id, characterId));
+  }).where(eq(charactersTable2.id, characterId));
   const updatedCharacter = await recalculateCharacterStats(characterId);
   res.status(200).json({
     success: true,
@@ -64587,7 +64591,7 @@ router12.post("/characters/:characterId/blacksmith/enhance", requireAuth, async 
   const characterId = Number(req.params.characterId);
   const userId = req.session.userId;
   const { ownershipId, useProtection = false } = req.body;
-  const [character] = await db.select().from(charactersTable).where(and(eq(charactersTable.id, characterId), eq(charactersTable.userId, userId))).limit(1);
+  const [character] = await db.select().from(charactersTable2).where(and(eq(charactersTable2.id, characterId), eq(charactersTable2.userId, userId))).limit(1);
   if (!character) {
     res.status(404).json({ error: "Kh\xF4ng t\xECm th\u1EA5y nh\xE2n v\u1EADt" });
     return;
@@ -64636,7 +64640,7 @@ router12.post("/characters/:characterId/blacksmith/enhance", requireAuth, async 
     res.status(400).json({ error: `C\u1EA7n ${stoneCost} \u0110\xE1 C\u01B0\u1EDDng H\xF3a Tinh Khi\u1EBFt!` });
     return;
   }
-  await db.update(charactersTable).set({ gold: character.gold - goldCost }).where(eq(charactersTable.id, characterId));
+  await db.update(charactersTable2).set({ gold: character.gold - goldCost }).where(eq(charactersTable2.id, characterId));
   if (stoneItem.quantity <= stoneCost) {
     await db.delete(characterItemsTable).where(eq(characterItemsTable.id, stoneItem.id));
   } else {
@@ -64690,7 +64694,7 @@ router12.post("/characters/:characterId/blacksmith/dismantle", requireAuth, asyn
     res.status(400).json({ error: "Ch\u01B0a ch\u1ECDn trang b\u1ECB \u0111\u1EC3 ph\xE2n gi\u1EA3i" });
     return;
   }
-  const [character] = await db.select().from(charactersTable).where(and(eq(charactersTable.id, characterId), eq(charactersTable.userId, userId))).limit(1);
+  const [character] = await db.select().from(charactersTable2).where(and(eq(charactersTable2.id, characterId), eq(charactersTable2.userId, userId))).limit(1);
   if (!character) {
     res.status(404).json({ error: "Kh\xF4ng t\xECm th\u1EA5y nh\xE2n v\u1EADt" });
     return;
@@ -64765,7 +64769,7 @@ router12.post("/characters/:characterId/blacksmith/dismantle", requireAuth, asyn
   await addMaterial("material_enhance_stone", totalEnhanceStones);
   await addMaterial("material_steel_ore", totalSteelOre);
   await addMaterial("material_dark_shard", totalDarkShards);
-  await db.update(charactersTable).set({ gold: character.gold + totalGoldGained }).where(eq(charactersTable.id, characterId));
+  await db.update(charactersTable2).set({ gold: character.gold + totalGoldGained }).where(eq(charactersTable2.id, characterId));
   res.status(200).json({
     success: true,
     dismantledCount: validItems.length,
@@ -64849,7 +64853,7 @@ router12.post("/characters/:characterId/blacksmith/craft", requireAuth, async (r
   const characterId = Number(req.params.characterId);
   const userId = req.session.userId;
   const { recipeId } = req.body;
-  const [character] = await db.select().from(charactersTable).where(and(eq(charactersTable.id, characterId), eq(charactersTable.userId, userId))).limit(1);
+  const [character] = await db.select().from(charactersTable2).where(and(eq(charactersTable2.id, characterId), eq(charactersTable2.userId, userId))).limit(1);
   if (!character) {
     res.status(404).json({ error: "Kh\xF4ng t\xECm th\u1EA5y nh\xE2n v\u1EADt" });
     return;
@@ -64894,7 +64898,7 @@ router12.post("/characters/:characterId/blacksmith/craft", requireAuth, async (r
       await db.update(characterItemsTable).set({ quantity: matInInv.quantity - mat.count }).where(eq(characterItemsTable.id, matInInv.id));
     }
   }
-  await db.update(charactersTable).set({ gold: character.gold - recipe.goldCost }).where(eq(charactersTable.id, characterId));
+  await db.update(charactersTable2).set({ gold: character.gold - recipe.goldCost }).where(eq(charactersTable2.id, characterId));
   const targetCount = recipe.targetCount || 1;
   const [existingGear] = await db.select().from(characterItemsTable).where(
     and(
@@ -65219,7 +65223,7 @@ router14.post("/characters/:characterId/allocate-stats", requireAuth, async (req
     res.status(400).json({ error: "S\u1ED1 \u0111i\u1EC3m ph\xE2n b\u1ED5 ph\u1EA3i l\u1EDBn h\u01A1n 0" });
     return;
   }
-  const [character] = await db.select().from(charactersTable).where(and(eq(charactersTable.id, characterId), eq(charactersTable.userId, userId))).limit(1);
+  const [character] = await db.select().from(charactersTable2).where(and(eq(charactersTable2.id, characterId), eq(charactersTable2.userId, userId))).limit(1);
   if (!character) {
     res.status(404).json({ error: "Kh\xF4ng t\xECm th\u1EA5y nh\xE2n v\u1EADt" });
     return;
@@ -65237,14 +65241,14 @@ router14.post("/characters/:characterId/allocate-stats", requireAuth, async (req
   const newLuk = Number(character.luk || 10) + Number(luk);
   const newVit = Number(character.vit || 15) + Number(vit);
   const remainingPoints = availablePoints - totalPointsToSpend;
-  await db.update(charactersTable).set({
+  await db.update(charactersTable2).set({
     str: newStr,
     dex: newDex,
     intel: newIntel,
     luk: newLuk,
     vit: newVit,
     unallocatedStatPoints: remainingPoints
-  }).where(eq(charactersTable.id, characterId));
+  }).where(eq(charactersTable2.id, characterId));
   const updatedChar = await recalculateCharacterStats(characterId);
   res.status(200).json({
     success: true,
@@ -65291,7 +65295,7 @@ router14.post("/characters/:characterId/pvp/match", requireAuth, async (req, res
   const characterId = Number(req.params.characterId);
   const userId = req.session.userId;
   const { opponentName, victory = true } = req.body;
-  const [character] = await db.select().from(charactersTable).where(and(eq(charactersTable.id, characterId), eq(charactersTable.userId, userId))).limit(1);
+  const [character] = await db.select().from(charactersTable2).where(and(eq(charactersTable2.id, characterId), eq(charactersTable2.userId, userId))).limit(1);
   if (!character) {
     res.status(404).json({ error: "Kh\xF4ng t\xECm th\u1EA5y nh\xE2n v\u1EADt" });
     return;
@@ -65304,11 +65308,11 @@ router14.post("/characters/:characterId/pvp/match", requireAuth, async (req, res
   if (currentRankInfo.name !== prevRank && victory) {
     newTitle = currentRankInfo.title;
   }
-  await db.update(charactersTable).set({
+  await db.update(charactersTable2).set({
     honorPoints: newPoints,
     arenaRank: currentRankInfo.name,
     title: newTitle
-  }).where(eq(charactersTable.id, characterId));
+  }).where(eq(charactersTable2.id, characterId));
   res.status(200).json({
     success: true,
     victory,
@@ -65325,7 +65329,7 @@ router14.post("/characters/:characterId/gm/action", requireAuth, async (req, res
   const characterId = Number(req.params.characterId);
   const userId = req.session.userId;
   const { action } = req.body;
-  const [character] = await db.select().from(charactersTable).where(and(eq(charactersTable.id, characterId), eq(charactersTable.userId, userId))).limit(1);
+  const [character] = await db.select().from(charactersTable2).where(and(eq(charactersTable2.id, characterId), eq(charactersTable2.userId, userId))).limit(1);
   if (!character) {
     res.status(404).json({ error: "Kh\xF4ng t\xECm th\u1EA5y nh\xE2n v\u1EADt" });
     return;
@@ -65333,10 +65337,10 @@ router14.post("/characters/:characterId/gm/action", requireAuth, async (req, res
   if (action === "add_levels") {
     const newLevel = Math.min(50, character.level + 10);
     const newPoints = Number(character.unallocatedStatPoints || 0) + 50;
-    await db.update(charactersTable).set({
+    await db.update(charactersTable2).set({
       level: newLevel,
       unallocatedStatPoints: newPoints
-    }).where(eq(charactersTable.id, characterId));
+    }).where(eq(charactersTable2.id, characterId));
     const updated = await recalculateCharacterStats(characterId);
     res.status(200).json({
       success: true,
@@ -65348,7 +65352,7 @@ router14.post("/characters/:characterId/gm/action", requireAuth, async (req, res
   }
   if (action === "add_gold_stones") {
     const newGold = character.gold + 5e4;
-    await db.update(charactersTable).set({ gold: newGold }).where(eq(charactersTable.id, characterId));
+    await db.update(charactersTable2).set({ gold: newGold }).where(eq(charactersTable2.id, characterId));
     const [existing] = await db.select().from(characterItemsTable).where(
       and(
         eq(characterItemsTable.characterId, characterId),

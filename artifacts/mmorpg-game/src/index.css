@@ -678,4 +678,13 @@
   box-shadow: 0 0 10px rgba(40, 195, 225, 0.65);
 }
 
+@keyframes shrinkTimer {
+  0% { width: 100%; }
+  100% { width: 0%; }
+}
+
+.animate-shrink-timer {
+  animation: shrinkTimer 2.6s linear forwards;
+}
+
 

@@ -53,37 +53,25 @@ export interface WorldMessage {
 
 const starterPosts: ForumPost[] = [
   {
-    id: "starter-build",
-    title: "[Hướng dẫn] Cách nâng cấp Khiên Pháo Đài và né chiêu Boss Cấm Địa cho hệ Đỡ Đòn",
-    body: "Canh nhịp khi Boss giơ vũ khí, giữ kỹ năng khống chế cho lần tụ lực thứ hai. Khiên lên cấp an toàn trước, sau đó mới dồn vàng vào chỉ số phòng thủ phụ.",
-    category: "build",
-    author: "LongThuVe",
-    className: "Hộ Vệ",
-    serverName: "S1 - Long Vương Điện",
-    createdAt: new Date().toISOString(),
-    likes: ["system-seed"],
-    comments: [{ id: "seed-comment-1", author: "MocNhan", body: "Mẹo né đòn cuối rất hữu ích!", createdAt: new Date().toISOString() }],
-  },
-  {
-    id: "starter-event",
-    title: "[Sự kiện] Đua Top Lực Chiến Máy Chủ S3 - Thiên Phạt nhận vũ khí Legendary",
-    body: "Thiên Phạt Chi Địa mở cửa! Tích lũy lực chiến trong tuần khai mở để tranh hạng và nhận phần thưởng mùa giải.",
+    id: "notice-launch",
+    title: "[Thông Báo] Khai Mở Chính Thức Thế Giới MMORPG Chiến Long Bá",
+    body: "Chào mừng toàn thể anh hùng dũng sĩ bước vào thế giới Chiến Long Bá! Hệ thống máy chủ đã sẵn sàng tiếp đón người chơi với chuỗi sự kiện Đua Top Tân Thủ, Quà Đăng Nhập 7 Ngày và Săn Boss Thế Giới.",
     category: "notice",
-    author: "QuanTriVien",
-    className: "Chiến Binh",
-    serverName: "S3 - Thiên Phạt Chi Địa",
+    author: "Ban Quản Trị",
+    className: "Hệ Thống",
+    serverName: "Toàn Máy Chủ",
     createdAt: new Date().toISOString(),
     likes: [],
     comments: [],
   },
   {
-    id: "starter-boss",
-    title: "Tuyển đội Cấm Địa tối nay: thiếu một Xạ Thủ và một Hộ Vệ",
-    body: "Ưu tiên người chơi cấp 10 trở lên, biết gọi nhịp né. Tập trung tại cổng Long Môn lúc 20:30.",
-    category: "boss",
-    author: "DaXoa_70",
-    className: "Sát Thủ",
-    serverName: "S1 - Long Vương Điện",
+    id: "guide-combat",
+    title: "[Cẩm Nang] Hệ Thống Chiến Đấu Combo, Đỡ Đòn Phản Kích và Cưỡi Ngựa",
+    body: "Hiệp khách có thể sử dụng chuỗi combo Phím J (Đánh Thường) hoặc Chuột Trái để kích hoạt combo 4 đòn liên hoàn. Nhấn Phím K để Nhảy, L để Lướt Né (Dodge Roll), Phím I/B mở Túi Đồ, Phím Z/M để Cưỡi Thú tăng 70% tốc độ di chuyển.",
+    category: "build",
+    author: "Ban Quản Trị",
+    className: "Hệ Thống",
+    serverName: "Toàn Máy Chủ",
     createdAt: new Date().toISOString(),
     likes: [],
     comments: [],
@@ -91,10 +79,16 @@ const starterPosts: ForumPost[] = [
 ];
 
 const starterMessages: WorldMessage[] = [
-  { id: "chat-1", channel: "world", serverName: "S1 - Long Vương Điện", characterName: "DaXoa_70", className: "Sát Thủ", level: 70, body: "📢 Hệ thống: Chúc mừng [DạXoa_70] tại S1 - Long Vương Điện vừa cường hóa thành công Khiên Pháo Đài!", system: true },
-  { id: "chat-2", channel: "world", serverName: "S2 - Hắc Ám Thâm Uyên", characterName: "MocNhan", className: "Hộ Vệ", level: 24, body: "Ai lập đội săn Cấm Địa không? Mình tank được." },
-  { id: "chat-3", channel: "server", serverName: "S1 - Long Vương Điện", characterName: "PhongHan", className: "Xạ Thủ", level: 18, body: "Chợ đang có cung tím giá tốt ở quảng trường." },
-  { id: "chat-4", channel: "party", serverName: "S1 - Long Vương Điện", characterName: "CoLong", className: "Chiến Binh", level: 31, body: "Đợi đủ đội rồi mình xuất phát nhé." },
+  {
+    id: "sys-welcome",
+    channel: "world",
+    serverName: "Toàn Máy Chủ",
+    characterName: "Hệ Thống",
+    className: "BQT",
+    level: 99,
+    body: "📢 [Chiến Long Bá]: Chúc quý hiệp khách có những giây phút phiêu lưu thám hiểm tuyệt vời!",
+    system: true,
+  },
 ];
 
 interface CommunityPortalState {

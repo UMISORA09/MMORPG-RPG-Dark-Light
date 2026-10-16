@@ -1147,7 +1147,7 @@ export const MonsterManager25D = memo(function MonsterManager25D() {
       useGameWorldStore.getState().progressQuest("CLEAR_DUNGEON", "dragon", 1);
     }
 
-    // Battle Report: Trigger Victory Card for Bosses, Elites or Rare Loot encounters
+    // Battle Report: Epic Boss gets full modal, Regular Monsters get compact auto-dismiss tab
     const worldStore = useGameWorldStore.getState();
     const dmgDealt = Math.max(m.maxHp, worldStore.currentFightDamageDealt);
     const crits = Math.max(1, worldStore.currentFightCritHits);
@@ -1155,22 +1155,28 @@ export const MonsterManager25D = memo(function MonsterManager25D() {
     const expGain = m.isBoss ? 450 : m.level * 35;
     const goldGain = m.isBoss ? 280 : m.level * 18;
 
-    if (m.isBoss || m.level >= 5 || lootResult.hasRareDrop) {
-      worldStore.openBattleReport({
-        victory: true,
-        monsterName: m.name,
-        monsterLevel: m.level,
-        isBoss: m.isBoss,
-        totalDamageDealt: dmgDealt,
-        critHits: crits,
-        durationSeconds: duration,
-        expGained: expGain,
-        goldGained: goldGain,
-        drops: lootResult.drops,
-        highestRarity: lootResult.highestRarity,
-      });
-      worldStore.resetCombatMetrics();
+    const reportData = {
+      victory: true,
+      monsterName: m.name,
+      monsterLevel: m.level,
+      isBoss: m.isBoss,
+      totalDamageDealt: dmgDealt,
+      critHits: crits,
+      durationSeconds: duration,
+      expGained: expGain,
+      goldGained: goldGain,
+      drops: lootResult.drops,
+      highestRarity: lootResult.highestRarity,
+    };
+
+    if (m.isBoss) {
+      // Chỉ khi tiêu diệt BOSS lớn mới hiển thị Bảng Báo Cáo Chiến Đấu toàn màn hình
+      worldStore.openBattleReport(reportData);
+    } else {
+      // Quái nhỏ: Chỉ hiện tab thông báo nhỏ gọn gàng, tự động biến mất nhanh sau 2.5s không che tầm nhìn
+      worldStore.showCombatKillToast(reportData);
     }
+    worldStore.resetCombatMetrics();
 
     // Call backend mutation to sync database
     if (onDefeatMonsterCallback) {
