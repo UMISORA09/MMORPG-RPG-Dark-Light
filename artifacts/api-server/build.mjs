@@ -122,14 +122,13 @@ globalThis.__dirname = __bannerPath.dirname(globalThis.__filename);
   // Also bundle Vercel Serverless Function adapter
   const rootDir = path.resolve(artifactDir, "../..");
   const vercelHandlerEntry = path.resolve(artifactDir, "src/vercel-handler.ts");
-  const apiOut = path.resolve(rootDir, "api/index.mjs");
-
   await esbuild({
-    entryPoints: [vercelHandlerEntry],
+    entryPoints: { index: vercelHandlerEntry },
     platform: "node",
     bundle: true,
     format: "esm",
-    outfile: apiOut,
+    outdir: path.resolve(rootDir, "api"),
+    outExtension: { ".js": ".mjs" },
     external: [
       "*.node",
       "sharp",
@@ -138,10 +137,12 @@ globalThis.__dirname = __bannerPath.dirname(globalThis.__filename);
       "pg-native",
       "fsevents",
       "isolated-vm",
-      "dtrace-provider",
-      "pino-pretty"
+      "dtrace-provider"
     ],
     sourcemap: false,
+    plugins: [
+      esbuildPluginPino({ transports: ["pino-pretty"] })
+    ],
     banner: {
       js: `import { createRequire as __bannerCrReq } from 'node:module';
 import __bannerPath from 'node:path';

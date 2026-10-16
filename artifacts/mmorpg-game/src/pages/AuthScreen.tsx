@@ -50,7 +50,15 @@ export default function AuthScreen() {
   };
 
   // Auth Success Navigation
-  const handleAuthSuccess = async () => {
+  const handleAuthSuccess = async (data?: any) => {
+    if (data?.token) {
+      try {
+        localStorage.setItem("clb_token", data.token);
+      } catch {}
+    }
+    if (data?.user) {
+      queryClient.setQueryData(getGetMeQueryKey(), data.user);
+    }
     await queryClient.invalidateQueries({ queryKey: getGetMeQueryKey() });
     await queryClient.invalidateQueries({ queryKey: getGetCharactersQueryKey() });
     setLocation("/portal");
@@ -65,12 +73,12 @@ export default function AuthScreen() {
       loginMutation.mutate(
         { data: { username, password } },
         {
-          onSuccess: () => {
+          onSuccess: (data: any) => {
             toast({
               title: "⚡ Đăng nhập thành công!",
               description: `Chào mừng ${username} bước vào Chiến Long Bá!`,
             });
-            handleAuthSuccess();
+            handleAuthSuccess(data);
           },
           onError: (err: any) => {
             toast({
@@ -85,12 +93,12 @@ export default function AuthScreen() {
       registerMutation.mutate(
         { data: { username, password } },
         {
-          onSuccess: () => {
+          onSuccess: (data: any) => {
             toast({
               title: "✨ Khởi tạo tài khoản thành công!",
               description: `Tài khoản ${username} đã sẵn sàng khởi tạo nhân vật!`,
             });
-            handleAuthSuccess();
+            handleAuthSuccess(data);
           },
           onError: (err: any) => {
             toast({

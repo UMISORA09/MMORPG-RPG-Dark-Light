@@ -117,6 +117,10 @@ export default function CharacterSelectScreen() {
   const handleLogout = () => {
     logout.mutate(undefined, {
       onSuccess: async () => {
+        try {
+          localStorage.removeItem("clb_token");
+        } catch {}
+        queryClient.setQueryData(getGetMeQueryKey(), null);
         await queryClient.invalidateQueries({ queryKey: getGetMeQueryKey() });
         toast({ title: "Đã đăng xuất" });
         setLocation("/");

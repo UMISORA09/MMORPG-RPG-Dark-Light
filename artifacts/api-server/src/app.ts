@@ -2,6 +2,7 @@ import express, { type Express } from "express";
 import cors from "cors";
 import pinoHttp from "pino-http";
 import session from "express-session";
+import cookieParser from "cookie-parser";
 import connectPgSimple from "connect-pg-simple";
 import path from "node:path";
 import fs from "node:fs";
@@ -10,6 +11,8 @@ import { logger } from "./lib/logger";
 import { pool, isPostgres } from "@workspace/db";
 
 const app: Express = express();
+app.set("trust proxy", 1);
+
 
 app.use(
   pinoHttp({
@@ -40,6 +43,7 @@ app.use(
 
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
+app.use(cookieParser());
 
 // Determine session store (PostgreSQL or In-Memory fallback)
 let sessionStore: any;
@@ -67,7 +71,7 @@ export const sessionMiddleware = session({
   cookie: {
     maxAge: 30 * 24 * 60 * 60 * 1000, // 30 days
     httpOnly: true,
-    secure: process.env.NODE_ENV === "production" && process.env.VERCEL === "1",
+    secure: "auto",
     sameSite: "lax",
   },
 });

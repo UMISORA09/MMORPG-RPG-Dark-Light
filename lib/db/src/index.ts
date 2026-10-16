@@ -2,6 +2,8 @@ import { drizzle } from "drizzle-orm/node-postgres";
 import pg from "pg";
 import * as schema from "./schema";
 import { SEED_ITEMS } from "./seed-data";
+import fs from "node:fs";
+import path from "node:path";
 
 const { Pool } = pg;
 
@@ -52,6 +54,38 @@ let autoIncrement = {
   forum_posts: 1,
   world_chats: 1,
 };
+
+const STORE_FILE = path.join(
+  process.env.VERCEL ? "/tmp" : (process.env.APPDATA || process.cwd()),
+  ".clb_memory_db.json"
+);
+
+function persistMemoryStore() {
+  try {
+    fs.writeFileSync(STORE_FILE, JSON.stringify({ memoryStore, autoIncrement }), "utf8");
+  } catch {}
+}
+
+function restoreMemoryStore() {
+  try {
+    if (fs.existsSync(STORE_FILE)) {
+      const content = fs.readFileSync(STORE_FILE, "utf8");
+      const parsed = JSON.parse(content);
+      if (parsed.memoryStore) {
+        for (const key of Object.keys(parsed.memoryStore)) {
+          if (Array.isArray(parsed.memoryStore[key]) && parsed.memoryStore[key].length > 0) {
+            (memoryStore as any)[key] = parsed.memoryStore[key];
+          }
+        }
+      }
+      if (parsed.autoIncrement) {
+        Object.assign(autoIncrement, parsed.autoIncrement);
+      }
+    }
+  } catch {}
+}
+
+restoreMemoryStore();
 
 function createMemoryDb() {
   const getTableData = (table: any): any[] => {
@@ -240,6 +274,7 @@ function createMemoryDb() {
           if (newItem.passwordHash !== undefined && newItem.password_hash === undefined) newItem.password_hash = newItem.passwordHash;
 
           target.push(newItem);
+          persistMemoryStore();
           return newItem;
         });
 
@@ -256,6 +291,7 @@ function createMemoryDb() {
               const resultIndex = inserted.indexOf(row);
               if (resultIndex >= 0) inserted.splice(resultIndex, 1);
             }
+            persistMemoryStore();
             return builder;
           },
           onConflictDoUpdate: (options: any) => {
@@ -271,6 +307,7 @@ function createMemoryDb() {
               const resultIndex = inserted.indexOf(row);
               if (resultIndex >= 0) inserted.splice(resultIndex, 1, conflict);
             }
+            persistMemoryStore();
             return builder;
           },
           then: (resolve: any, reject: any) => Promise.resolve(inserted).then(resolve, reject),
@@ -292,6 +329,7 @@ function createMemoryDb() {
               updated.push(target[i]);
             }
           }
+          if (updated.length > 0) persistMemoryStore();
           const builder: any = {
             returning: () => Promise.resolve(updated),
             then: (resolve: any, reject: any) => Promise.resolve(updated).then(resolve, reject),
@@ -306,6 +344,7 @@ function createMemoryDb() {
         const remaining = target.filter((item) => !matchesPredicate(item, predicate));
         target.length = 0;
         target.push(...remaining);
+        persistMemoryStore();
         return Promise.resolve();
       },
     }),

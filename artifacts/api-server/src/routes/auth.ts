@@ -1,11 +1,11 @@
 import { Router } from "express";
 import bcrypt from "bcryptjs";
-import { db, usersTable } from "@workspace/db";
+import { db, usersTable, serversTable } from "@workspace/db";
 import { eq } from "drizzle-orm";
 import { RegisterBody, LoginBody, SetServerBody } from "@workspace/api-zod";
-import { serversTable } from "@workspace/db";
-import { requireAuth } from "../middlewares/requireAuth";
+import { requireAuth, extractAuthUser } from "../middlewares/requireAuth";
 import { ensureServerCatalog } from "../lib/inventory";
+import { signToken } from "../lib/token";
 
 declare module "express-session" {
   interface SessionData {
@@ -58,13 +58,33 @@ router.post("/auth/register", async (req, res) => {
     .values({ username, passwordHash })
     .returning();
 
-  req.session.userId = user.id;
+  if (req.session) {
+    req.session.userId = user.id;
+  }
+
+  const token = signToken({
+    id: user.id,
+    username: user.username,
+    selectedRegion: user.selectedRegion,
+    selectedServerId: user.selectedServerId,
+  });
+
+  res.cookie("clb_token", token, {
+    httpOnly: true,
+    maxAge: 30 * 24 * 60 * 60 * 1000,
+    sameSite: "lax",
+    secure: process.env.NODE_ENV === "production",
+    path: "/",
+  });
 
   return res.status(201).json({
+    token,
     user: {
       id: user.id,
       username: user.username,
       createdAt: user.createdAt,
+      selectedRegion: user.selectedRegion,
+      selectedServerId: user.selectedServerId,
     },
   });
 });
@@ -92,42 +112,57 @@ router.post("/auth/login", async (req, res) => {
     return res.status(401).json({ error: "Tên đăng nhập hoặc mật khẩu không đúng" });
   }
 
-  req.session.userId = user.id;
+  if (req.session) {
+    req.session.userId = user.id;
+  }
+
+  const token = signToken({
+    id: user.id,
+    username: user.username,
+    selectedRegion: user.selectedRegion,
+    selectedServerId: user.selectedServerId,
+  });
+
+  res.cookie("clb_token", token, {
+    httpOnly: true,
+    maxAge: 30 * 24 * 60 * 60 * 1000,
+    sameSite: "lax",
+    secure: process.env.NODE_ENV === "production",
+    path: "/",
+  });
 
   return res.status(200).json({
+    token,
     user: {
       id: user.id,
       username: user.username,
       createdAt: user.createdAt,
+      selectedRegion: user.selectedRegion,
+      selectedServerId: user.selectedServerId,
     },
   });
 });
 
 router.post("/auth/logout", (req, res) => {
-  req.session.destroy(() => {});
+  if (req.session?.destroy) {
+    req.session.destroy(() => {});
+  }
+  res.clearCookie("clb_token", { path: "/" });
   return res.status(200).json({ success: true });
 });
 
 router.get("/auth/me", async (req, res) => {
-  if (!req.session.userId) {
-    return res.status(401).json({ error: "Chưa đăng nhập" });
-  }
-
-  const [user] = await db
-    .select()
-    .from(usersTable)
-    .where(eq(usersTable.id, req.session.userId))
-    .limit(1);
-
+  const user = await extractAuthUser(req);
   if (!user) {
-    req.session.destroy(() => {});
-    return res.status(401).json({ error: "Phiên đăng nhập không hợp lệ" });
+    return res.status(401).json({ error: "Chưa đăng nhập" });
   }
 
   return res.status(200).json({
     id: user.id,
     username: user.username,
     createdAt: user.createdAt,
+    selectedRegion: user.selectedRegion,
+    selectedServerId: user.selectedServerId,
   });
 });
 

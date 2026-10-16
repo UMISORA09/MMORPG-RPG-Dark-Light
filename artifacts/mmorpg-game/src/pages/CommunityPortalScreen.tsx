@@ -132,6 +132,10 @@ export default function CommunityPortalScreen() {
 
   const handleLogout = () => logout.mutate(undefined, {
     onSuccess: async () => {
+      try {
+        localStorage.removeItem("clb_token");
+      } catch {}
+      queryClient.setQueryData(getGetMeQueryKey(), null);
       await queryClient.invalidateQueries({ queryKey: getGetMeQueryKey() });
       setLocation("/login");
     },
