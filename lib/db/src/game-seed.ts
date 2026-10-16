@@ -85,7 +85,7 @@ const equipmentSeeds = classes.flatMap((classId) => slots.flatMap((slot, slotInd
 })));
 
 const utilitySeeds = [
-  { id: "ticket_inventory_expand", name: "Phiếu Tăng Hành Trang", category: "consumable", type: "inventory_ticket", equipSlot: "none", rarity: "rare", price: 200, maxStack: 99, icon: "🎫", description: "Vật phẩm thương hội quý giá. Mở rộng vĩnh viễn thêm +5 ô chứa hành trang (tối đa 30 ô).", lore: "Thẻ bài có khắc ấn hoa văn Long Tộc, biểu trưng cho sự thăng tiến sức chứa." },
+  { id: "ticket_inventory_expand", name: "Phiếu Tăng Hành Trang", category: "consumable", type: "scroll", equipSlot: "none", rarity: "rare", price: 200, maxStack: 99, icon: "🎫", description: "Vật phẩm thương hội quý giá. Mở rộng vĩnh viễn thêm +5 ô chứa hành trang (tối đa 30 ô).", lore: "Thẻ bài có khắc ấn hoa văn Long Tộc, biểu trưng cho sự thăng tiến sức chứa." },
   { id: "potion_hp_minor", name: "Bình Máu Tân Thủ", category: "consumable", type: "potion", equipSlot: "none", rarity: "common", healHpPercent: 20, healMpPercent: 0, buffType: null, price: 20, maxStack: 99, icon: "🧪", description: "Hồi 20% HP tối đa.", lore: "Dược phương sơ cấp cho tân binh." },
   { id: "potion_mp_minor", name: "Bình Mana Tân Thủ", category: "consumable", type: "potion", equipSlot: "none", rarity: "common", healHpPercent: 0, healMpPercent: 25, buffType: null, price: 25, maxStack: 99, icon: "💧", description: "Hồi 25% MP tối đa.", lore: "Nước tăng lực ma pháp cơ bản." },
   { id: "potion_hp_greater", name: "Bình Máu Đại", category: "consumable", type: "potion", equipSlot: "none", rarity: "common", healHpPercent: 35, healMpPercent: 0, buffType: null, price: 80, maxStack: 99, icon: "🧪", description: "Hồi 35% HP tối đa.", lore: "Dược phương của y sư Long Tộc." },

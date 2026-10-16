@@ -55,7 +55,9 @@ router.get("/characters/:characterId/inventory", requireAuth, async (req, res): 
 
   await ensureItemCatalog();
   await ensureStarterInventory(character.id, character.classId);
-  res.status(200).json(GetInventoryResponse.parse(await listInventory(character.id)));
+  const rawList = await listInventory(character.id);
+  const parsed = GetInventoryResponse.safeParse(rawList);
+  res.status(200).json(parsed.success ? parsed.data : rawList);
 });
 
 // Trang bị vật phẩm vào người

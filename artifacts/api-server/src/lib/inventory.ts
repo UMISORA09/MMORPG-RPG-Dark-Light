@@ -167,8 +167,8 @@ export async function listInventory(characterId: number) {
       return {
         id: it.id,
         name: it.name || "Vật phẩm",
-        category: it.category ?? "equipment",
-        type: it.type || "weapon",
+        category: (["equipment", "consumable", "material", "quest"].includes(it.category) ? it.category : "equipment"),
+        type: (["weapon", "armor", "accessory", "potion", "scroll", "food", "stone", "chest"].includes(it.type) ? it.type : (it.category === "consumable" ? "scroll" : "weapon")),
         equipSlot: it.equipSlot ?? it.equip_slot ?? "none",
         description: it.description || "",
         lore: it.lore ?? "",

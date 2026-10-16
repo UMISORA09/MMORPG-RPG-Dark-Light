@@ -61010,7 +61010,7 @@ var equipmentSeeds = classes.flatMap((classId) => slots.flatMap((slot, slotIndex
   };
 })));
 var utilitySeeds = [
-  { id: "ticket_inventory_expand", name: "Phi\u1EBFu T\u0103ng H\xE0nh Trang", category: "consumable", type: "inventory_ticket", equipSlot: "none", rarity: "rare", price: 200, maxStack: 99, icon: "\u{1F3AB}", description: "V\u1EADt ph\u1EA9m th\u01B0\u01A1ng h\u1ED9i qu\xFD gi\xE1. M\u1EDF r\u1ED9ng v\u0129nh vi\u1EC5n th\xEAm +5 \xF4 ch\u1EE9a h\xE0nh trang (t\u1ED1i \u0111a 30 \xF4).", lore: "Th\u1EBB b\xE0i c\xF3 kh\u1EAFc \u1EA5n hoa v\u0103n Long T\u1ED9c, bi\u1EC3u tr\u01B0ng cho s\u1EF1 th\u0103ng ti\u1EBFn s\u1EE9c ch\u1EE9a." },
+  { id: "ticket_inventory_expand", name: "Phi\u1EBFu T\u0103ng H\xE0nh Trang", category: "consumable", type: "scroll", equipSlot: "none", rarity: "rare", price: 200, maxStack: 99, icon: "\u{1F3AB}", description: "V\u1EADt ph\u1EA9m th\u01B0\u01A1ng h\u1ED9i qu\xFD gi\xE1. M\u1EDF r\u1ED9ng v\u0129nh vi\u1EC5n th\xEAm +5 \xF4 ch\u1EE9a h\xE0nh trang (t\u1ED1i \u0111a 30 \xF4).", lore: "Th\u1EBB b\xE0i c\xF3 kh\u1EAFc \u1EA5n hoa v\u0103n Long T\u1ED9c, bi\u1EC3u tr\u01B0ng cho s\u1EF1 th\u0103ng ti\u1EBFn s\u1EE9c ch\u1EE9a." },
   { id: "potion_hp_minor", name: "B\xECnh M\xE1u T\xE2n Th\u1EE7", category: "consumable", type: "potion", equipSlot: "none", rarity: "common", healHpPercent: 20, healMpPercent: 0, buffType: null, price: 20, maxStack: 99, icon: "\u{1F9EA}", description: "H\u1ED3i 20% HP t\u1ED1i \u0111a.", lore: "D\u01B0\u1EE3c ph\u01B0\u01A1ng s\u01A1 c\u1EA5p cho t\xE2n binh." },
   { id: "potion_mp_minor", name: "B\xECnh Mana T\xE2n Th\u1EE7", category: "consumable", type: "potion", equipSlot: "none", rarity: "common", healHpPercent: 0, healMpPercent: 25, buffType: null, price: 25, maxStack: 99, icon: "\u{1F4A7}", description: "H\u1ED3i 25% MP t\u1ED1i \u0111a.", lore: "N\u01B0\u1EDBc t\u0103ng l\u1EF1c ma ph\xE1p c\u01A1 b\u1EA3n." },
   { id: "potion_hp_greater", name: "B\xECnh M\xE1u \u0110\u1EA1i", category: "consumable", type: "potion", equipSlot: "none", rarity: "common", healHpPercent: 35, healMpPercent: 0, buffType: null, price: 80, maxStack: 99, icon: "\u{1F9EA}", description: "H\u1ED3i 35% HP t\u1ED1i \u0111a.", lore: "D\u01B0\u1EE3c ph\u01B0\u01A1ng c\u1EE7a y s\u01B0 Long T\u1ED9c." },
@@ -62693,8 +62693,8 @@ async function listInventory(characterId) {
     return {
       id: it.id,
       name: it.name || "V\u1EADt ph\u1EA9m",
-      category: it.category ?? "equipment",
-      type: it.type || "weapon",
+      category: ["equipment", "consumable", "material", "quest"].includes(it.category) ? it.category : "equipment",
+      type: ["weapon", "armor", "accessory", "potion", "scroll", "food", "stone", "chest"].includes(it.type) ? it.type : it.category === "consumable" ? "scroll" : "weapon",
       equipSlot: it.equipSlot ?? it.equip_slot ?? "none",
       description: it.description || "",
       lore: it.lore ?? "",
@@ -63970,7 +63970,9 @@ router8.get("/characters/:characterId/inventory", requireAuth, async (req, res) 
   }
   await ensureItemCatalog();
   await ensureStarterInventory(character.id, character.classId);
-  res.status(200).json(GetInventoryResponse.parse(await listInventory(character.id)));
+  const rawList = await listInventory(character.id);
+  const parsed = GetInventoryResponse.safeParse(rawList);
+  res.status(200).json(parsed.success ? parsed.data : rawList);
 });
 router8.post("/characters/:characterId/inventory/:itemId/equip", requireAuth, async (req, res) => {
   const userId = req.session.userId;
