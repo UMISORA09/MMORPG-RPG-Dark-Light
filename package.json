@@ -2,6 +2,7 @@
   "name": "workspace",
   "version": "0.0.0",
   "license": "MIT",
+  "type": "module",
   "scripts": {
     "preinstall": "node -e \"if(process.env.npm_config_user_agent && !process.env.npm_config_user_agent.startsWith('pnpm')) { console.warn('Please use pnpm'); }\"",
     "codegen": "pnpm --filter @workspace/api-spec run codegen",
