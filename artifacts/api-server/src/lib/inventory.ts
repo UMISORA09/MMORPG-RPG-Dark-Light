@@ -38,8 +38,8 @@ export async function toCharacterResponse(character: Character) {
   return recalculateCharacterStats(character.id);
 }
 
-export async function listInventory(characterId: number) {
-  const rows = await db
+export async function listInventory(characterId: number, executor: any = db) {
+  const rows = await executor
     .select({
       item: itemsTable,
       ownershipId: characterItemsTable.id,

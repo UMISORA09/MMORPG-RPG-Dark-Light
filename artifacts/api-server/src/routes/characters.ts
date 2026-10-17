@@ -5,6 +5,7 @@ import { CreateCharacterBody } from "@workspace/api-zod";
 import { CHARACTER_CLASSES, getStatsForLevel } from "../data/classes";
 import { requireAuth } from "../middlewares/requireAuth";
 import { recalculateCharacterStats } from "../services/CharacterInventoryService";
+import { CharacterPersistenceService } from "../services/CharacterPersistenceService";
 import {
   ensureItemCatalog,
   ensureServerCatalog,
@@ -489,6 +490,50 @@ router.post("/characters/:characterId/3d-reward", requireAuth, async (_req, res)
     error: "Lỗi bảo mật: Không chấp nhận phần thưởng client tự khai báo.",
     message: "Endpoint /3d-reward đã bị khóa. Mọi tiến trình phải được server xác thực qua POST /characters/:characterId/battle.",
   });
+});
+
+// ── HẠNG MỤC 2: Giao Dịch Nguyên Tử & Toàn Vẹn Full-State Snapshot ──
+const handleFullSync = async (req: any, res: any) => {
+  const characterId = parseInt(req.params.characterId);
+  if (isNaN(characterId)) {
+    return res.status(400).json({ error: "ID nhân vật không hợp lệ" });
+  }
+
+  try {
+    const result = await CharacterPersistenceService.fullSync(
+      req.session.userId!,
+      characterId,
+      req.body
+    );
+    return res.status(200).json(result);
+  } catch (err: any) {
+    console.error(`[FullSync] Error syncing character ${characterId}:`, err);
+    return res.status(err.statusCode || 500).json({
+      error: err.message || "Không thể đồng bộ trạng thái nhân vật",
+    });
+  }
+};
+
+router.put("/characters/:characterId/full-sync", requireAuth, handleFullSync);
+router.post("/characters/:characterId/full-sync", requireAuth, handleFullSync);
+
+router.get("/characters/:characterId/full-state", requireAuth, async (req, res) => {
+  const characterId = parseInt(req.params.characterId);
+  if (isNaN(characterId)) {
+    return res.status(400).json({ error: "ID nhân vật không hợp lệ" });
+  }
+
+  try {
+    const result = await CharacterPersistenceService.getFullState(
+      req.session.userId!,
+      characterId
+    );
+    return res.status(200).json(result);
+  } catch (err: any) {
+    return res.status(err.statusCode || 500).json({
+      error: err.message || "Không thể tải trạng thái nhân vật",
+    });
+  }
 });
 
 function getExpForLevel(level: number): number {

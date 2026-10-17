@@ -8,6 +8,7 @@
 import { memo, useState } from "react";
 import { useGameWorldStore } from "@/stores/useGameWorldStore";
 import { MinimapRadar } from "./MinimapRadar";
+import { SaveStatusIndicator } from "./SaveStatusIndicator";
 import {
   Box,
   Backpack,
@@ -63,10 +64,13 @@ export const RightTopMinimapAndDrawer = memo(function RightTopMinimapAndDrawer({
 
   return (
     <div
-      className="pointer-events-auto flex flex-col items-end gap-2 select-none font-sans z-30"
+      className="pointer-events-auto flex flex-col items-end gap-1.5 select-none font-sans z-30"
       onPointerDown={(e) => e.stopPropagation()}
       onClick={(e) => e.stopPropagation()}
     >
+      {/* ── 0. SAVE STATUS INDICATOR (FULL-STATE SNAPSHOT & PERSISTENCE) ── */}
+      <SaveStatusIndicator />
+
       {/* ── 1. MINIMAP CONTAINER (WITH ZOOM & COLLAPSE CONTROLS) ── */}
       <div className="relative flex flex-col items-end group">
         {/* Quick Toolbar on top of Minimap: [Zoom +/-] & [▲/▼ Collapse] */}

@@ -13,6 +13,8 @@ export const characterItemsTable = pgTable("character_items", {
     enhanceLevel: integer("enhance_level").notNull().default(0),
     rarity: text("rarity").notNull().default("common"),
     bonusCombatPower: integer("bonus_combat_power").notNull().default(0),
+    miraclePassive1: text("miracle_passive_1"),
+    miraclePassive2: text("miracle_passive_2"),
     acquiredAt: timestamp("acquired_at").defaultNow().notNull(),
   }, (table) => ({
     characterIdIndex: index("character_items_character_id_idx").on(table.characterId),

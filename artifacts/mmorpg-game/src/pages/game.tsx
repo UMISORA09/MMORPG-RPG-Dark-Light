@@ -24,6 +24,7 @@ import { UnifiedOverlayModals } from "@/components/UnifiedOverlayModals";
 import { useCharacterAutoSave, triggerGlobalAutoSave } from "@/hooks/useCharacterAutoSave";
 import { AutoSaveIndicator } from "@/components/AutoSaveIndicator";
 import { playCombatSFX } from "@/audio/CombatSoundSynth";
+import { PersistenceManager, usePersistenceStore } from "@/persistence/PersistenceManager";
 
 export default function GamePage() {
   const [, setLocation] = useLocation();
@@ -92,11 +93,53 @@ export default function GamePage() {
   const activeCharacter = characterDetail || character || localSelectedChar;
 
   useEffect(() => {
-    if (activeCharacter) {
-      useGameStore.getState().syncFromCharacter(activeCharacter);
-      useGameWorldStore.getState().syncFromBackendCharacter(activeCharacter);
-    }
-  }, [activeCharacter]);
+    if (!activeCharacter?.id) return;
+
+    useGameStore.getState().syncFromCharacter(activeCharacter);
+    useGameWorldStore.getState().syncFromBackendCharacter(activeCharacter);
+
+    // ── HẠNG MỤC 4: Full-State Hydration & Reconciliation với Local WAL ──
+    const wal = PersistenceManager.getLocalWal(activeCharacter.id);
+    const walIsFresh = wal && Date.now() - wal.timestamp < 24 * 60 * 60 * 1000;
+
+    fetch(`/api/characters/${activeCharacter.id}/full-state`)
+      .then((res) => (res.ok ? res.json() : null))
+      .then((data) => {
+        if (!data?.character) return;
+        const srv = data.character;
+
+        // Nếu Local WAL mới hơn Server (do mất mạng hoặc tắt máy đột ngột), khôi phục từ WAL và đồng bộ lên server
+        if (walIsFresh && wal && (wal.revision > (srv.revision || 1) || wal.timestamp > new Date(srv.lastSavedAt || 0).getTime())) {
+          console.log(`[Hydration] Local WAL mới hơn Server! Phục hồi từ WAL (Rev #${wal.revision})...`);
+          useGameWorldStore.getState().syncFromBackendCharacter({
+            ...srv,
+            posX: wal.posX,
+            posZ: wal.posZ,
+            facing: wal.facing,
+            level: wal.level,
+            experience: wal.experience,
+            gold: wal.gold,
+            hp: wal.hp,
+            mp: wal.mp,
+            unallocatedStatPoints: wal.statPoints,
+            unlockedSlots: wal.unlockedSlots,
+            isMounted: wal.isMounted,
+            inventory: data.inventory,
+          });
+          PersistenceManager.flushImmediate(activeCharacter.id, "Khôi phục sau tắt tab đột ngột").catch(() => {});
+        } else {
+          // Server là nguồn chuẩn xác nhất
+          useGameWorldStore.getState().syncFromBackendCharacter({
+            ...srv,
+            inventory: data.inventory,
+          });
+          usePersistenceStore.getState().setStatus("synced", srv.revision || 1, "Tải từ máy chủ");
+        }
+      })
+      .catch((err) => {
+        console.warn("[Hydration] Fetch full-state notice:", err);
+      });
+  }, [activeCharacter?.id]);
 
   // Store latest character detail in a ref to avoid stale closure in callbacks
   const charRef = useRef<Character | null>(null);

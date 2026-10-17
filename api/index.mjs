@@ -60471,15 +60471,27 @@ var charactersTable = pgTable("characters", {
   classId: text("class_id").notNull(),
   className: text("class_name").notNull(),
   title: text("title").notNull().default("Th\u01B0\u1EE3ng C\u1EA5p Chi\u1EBFn S\u0129"),
+  // --- Versioning & Concurrency Protection ---
+  revision: integer2("revision").notNull().default(1),
+  lastSavedAt: timestamp("last_saved_at").defaultNow().notNull(),
+  // --- Precise World Position & Orientation (Real Precision) ---
   zoneId: text("zone_id").notNull().default("SAFE_VILLAGE"),
-  posX: integer2("pos_x").notNull().default(0),
-  posZ: integer2("pos_z").notNull().default(0),
+  posX: real("pos_x").notNull().default(0),
+  posZ: real("pos_z").notNull().default(0),
+  facing: text("facing").notNull().default("down"),
+  // 'up' | 'down' | 'left' | 'right'
+  isMounted: boolean4("is_mounted").notNull().default(false),
+  activeMountId: text("active_mount_id").notNull().default("dark_steed"),
+  activePetId: text("active_pet_id").notNull().default("spirit_orb"),
+  // --- Progression & Core Stats ---
   level: integer2("level").notNull().default(1),
   experience: integer2("experience").notNull().default(0),
   hp: integer2("hp").notNull(),
   maxHp: integer2("max_hp").notNull(),
   mp: integer2("mp").notNull().default(65),
   maxMp: integer2("max_mp").notNull().default(65),
+  statPoints: integer2("stat_points").notNull().default(0),
+  skillPoints: integer2("skill_points").notNull().default(0),
   str: integer2("str").notNull().default(10),
   dex: integer2("dex").notNull().default(7),
   intel: integer2("intel").notNull().default(5),
@@ -60495,6 +60507,7 @@ var charactersTable = pgTable("characters", {
   accuracy: integer2("accuracy").notNull().default(95),
   evasion: integer2("evasion").notNull().default(6),
   combatPower: integer2("combat_power").notNull().default(250),
+  rageGauge: integer2("rage_gauge").notNull().default(0),
   gold: integer2("gold").notNull().default(1e3),
   kills: integer2("kills").notNull().default(0),
   deaths: integer2("deaths").notNull().default(0),
@@ -60503,7 +60516,11 @@ var charactersTable = pgTable("characters", {
   arenaRank: text("arena_rank").notNull().default("\u0110\u1ED3ng IV"),
   activeMount: text("active_mount").notNull().default("shadow_steed"),
   activePet: text("active_pet").notNull().default("fairy_spirit"),
-  unlockedSlots: integer2("unlocked_slots").notNull().default(15),
+  // --- Inventory & UI State Snapshots ---
+  unlockedSlots: integer2("unlocked_slots").notNull().default(18),
+  hotbarConfigJson: text("hotbar_config_json").notNull().default(""),
+  activeBuffsJson: text("active_buffs_json").notNull().default("[]"),
+  uiPreferencesJson: text("ui_preferences_json").notNull().default(""),
   createdAt: timestamp("created_at").defaultNow().notNull()
 }, (table) => ({
   userIdIndex: index("characters_user_id_idx").on(table.userId),
@@ -60582,6 +60599,8 @@ var characterItemsTable = pgTable("character_items", {
   enhanceLevel: integer2("enhance_level").notNull().default(0),
   rarity: text("rarity").notNull().default("common"),
   bonusCombatPower: integer2("bonus_combat_power").notNull().default(0),
+  miraclePassive1: text("miracle_passive_1"),
+  miraclePassive2: text("miracle_passive_2"),
   acquiredAt: timestamp("acquired_at").defaultNow().notNull()
 }, (table) => ({
   characterIdIndex: index("character_items_character_id_idx").on(table.characterId),
@@ -61790,6 +61809,20 @@ async function initDatabase() {
         ALTER TABLE characters ADD COLUMN IF NOT EXISTS accuracy INTEGER DEFAULT 95 NOT NULL;
         ALTER TABLE characters ADD COLUMN IF NOT EXISTS evasion INTEGER DEFAULT 10 NOT NULL;
         ALTER TABLE characters ADD COLUMN IF NOT EXISTS combat_power INTEGER DEFAULT 500 NOT NULL;
+        ALTER TABLE characters ALTER COLUMN pos_x TYPE REAL;
+        ALTER TABLE characters ALTER COLUMN pos_z TYPE REAL;
+        ALTER TABLE characters ADD COLUMN IF NOT EXISTS revision INTEGER DEFAULT 1 NOT NULL;
+        ALTER TABLE characters ADD COLUMN IF NOT EXISTS last_saved_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP NOT NULL;
+        ALTER TABLE characters ADD COLUMN IF NOT EXISTS facing TEXT DEFAULT 'down' NOT NULL;
+        ALTER TABLE characters ADD COLUMN IF NOT EXISTS is_mounted BOOLEAN DEFAULT FALSE NOT NULL;
+        ALTER TABLE characters ADD COLUMN IF NOT EXISTS active_mount_id TEXT DEFAULT 'dark_steed' NOT NULL;
+        ALTER TABLE characters ADD COLUMN IF NOT EXISTS active_pet_id TEXT DEFAULT 'spirit_orb' NOT NULL;
+        ALTER TABLE characters ADD COLUMN IF NOT EXISTS stat_points INTEGER DEFAULT 0 NOT NULL;
+        ALTER TABLE characters ADD COLUMN IF NOT EXISTS skill_points INTEGER DEFAULT 0 NOT NULL;
+        ALTER TABLE characters ADD COLUMN IF NOT EXISTS rage_gauge INTEGER DEFAULT 0 NOT NULL;
+        ALTER TABLE characters ADD COLUMN IF NOT EXISTS hotbar_config_json TEXT DEFAULT '' NOT NULL;
+        ALTER TABLE characters ADD COLUMN IF NOT EXISTS active_buffs_json TEXT DEFAULT '[]' NOT NULL;
+        ALTER TABLE characters ADD COLUMN IF NOT EXISTS ui_preferences_json TEXT DEFAULT '' NOT NULL;
 
         CREATE TABLE IF NOT EXISTS items (
           id TEXT PRIMARY KEY,
@@ -61858,6 +61891,8 @@ async function initDatabase() {
         ALTER TABLE character_items ADD COLUMN IF NOT EXISTS enhance_level INTEGER DEFAULT 0 NOT NULL;
         ALTER TABLE character_items ADD COLUMN IF NOT EXISTS bonus_combat_power INTEGER DEFAULT 0 NOT NULL;
         ALTER TABLE character_items ADD COLUMN IF NOT EXISTS rarity TEXT DEFAULT 'common' NOT NULL;
+        ALTER TABLE character_items ADD COLUMN IF NOT EXISTS miracle_passive_1 TEXT;
+        ALTER TABLE character_items ADD COLUMN IF NOT EXISTS miracle_passive_2 TEXT;
         DROP INDEX IF EXISTS character_item_unique;
 
         CREATE TABLE IF NOT EXISTS battle_logs (
@@ -62682,8 +62717,8 @@ async function ensureItemCatalog() {
 async function toCharacterResponse(character) {
   return recalculateCharacterStats(character.id);
 }
-async function listInventory(characterId) {
-  const rows = await db.select({
+async function listInventory(characterId, executor = db) {
+  const rows = await executor.select({
     item: itemsTable,
     ownershipId: characterItemsTable.id,
     equipped: characterItemsTable.equipped,
@@ -63065,6 +63100,228 @@ var classes_default = router3;
 
 // src/routes/characters.ts
 var import_express4 = __toESM(require_express2(), 1);
+
+// src/services/CharacterPersistenceService.ts
+var CharacterPersistenceService = class {
+  /**
+   * Bộ kiểm toán tự chữa lành túi đồ:
+   * - Quy tắc 1 (Đồ đang mặc): equipped = true, equippedSlot hợp lệ, slotIndex = -1. Đảm bảo 1 món/slot.
+   * - Quy tắc 2 (Đồ trong túi): equipped = false, 0 <= slotIndex < unlockedSlots, không trùng lặp slotIndex.
+   */
+  static auditAndNormalizeInventory(unlockedSlots, items) {
+    const safeUnlockedSlots = Math.min(30, Math.max(15, Number(unlockedSlots) || 18));
+    const equippedSlotsSeen = /* @__PURE__ */ new Set();
+    const bagSlotsOccupied = /* @__PURE__ */ new Set();
+    const normalized = [];
+    const findNextAvailableBagSlot = () => {
+      for (let s = 0; s < safeUnlockedSlots; s++) {
+        if (!bagSlotsOccupied.has(s)) {
+          bagSlotsOccupied.add(s);
+          return s;
+        }
+      }
+      return safeUnlockedSlots - 1;
+    };
+    for (const rawItem of items) {
+      if (Boolean(rawItem.equipped) && rawItem.equippedSlot && rawItem.equippedSlot !== "none") {
+        const slotKey = rawItem.equippedSlot.toLowerCase().trim();
+        if (!equippedSlotsSeen.has(slotKey)) {
+          equippedSlotsSeen.add(slotKey);
+          normalized.push({
+            ...rawItem,
+            equipped: true,
+            equippedSlot: slotKey,
+            slotIndex: -1,
+            quantity: 1,
+            enhanceLevel: Math.min(15, Math.max(0, Number(rawItem.enhanceLevel) || 0)),
+            rarity: (rawItem.rarity || "common").toLowerCase()
+          });
+          continue;
+        }
+      }
+    }
+    for (const rawItem of items) {
+      const isAlreadyEquipped = normalized.some((n) => n === rawItem || n.id && rawItem.id && n.id === rawItem.id);
+      if (isAlreadyEquipped) continue;
+      let targetSlot = Number(rawItem.slotIndex);
+      if (isNaN(targetSlot) || targetSlot < 0 || targetSlot >= safeUnlockedSlots || bagSlotsOccupied.has(targetSlot)) {
+        targetSlot = findNextAvailableBagSlot();
+      } else {
+        bagSlotsOccupied.add(targetSlot);
+      }
+      normalized.push({
+        ...rawItem,
+        equipped: false,
+        equippedSlot: null,
+        slotIndex: targetSlot,
+        quantity: Math.max(1, Number(rawItem.quantity) || 1),
+        enhanceLevel: Math.min(15, Math.max(0, Number(rawItem.enhanceLevel) || 0)),
+        rarity: (rawItem.rarity || "common").toLowerCase()
+      });
+    }
+    return normalized;
+  }
+  /**
+   * Endpoint Đồng Bộ Toàn Diện Thực Thi Trong db.transaction()
+   * Đảm bảo tính nguyên tử tuyệt đối (Atomic Persistence & Zero Data Loss).
+   */
+  static async fullSync(userId, characterId, payload) {
+    return await db.transaction(async (tx) => {
+      const [existingChar] = await tx.select().from(charactersTable).where(and(eq(charactersTable.id, characterId), eq(charactersTable.userId, userId))).limit(1);
+      if (!existingChar) {
+        throw new InventoryRuleError("Kh\xF4ng t\xECm th\u1EA5y nh\xE2n v\u1EADt ho\u1EB7c kh\xF4ng c\xF3 quy\u1EC1n s\u1EDF h\u1EEFu.", 404);
+      }
+      const currentRev = Number(existingChar.revision || 1);
+      const clientRev = payload.revision !== void 0 ? Number(payload.revision) : currentRev;
+      const nextRev = Math.max(currentRev, clientRev) + 1;
+      const unlockedSlots = payload.unlockedSlots ? Math.min(30, Math.max(15, Number(payload.unlockedSlots))) : Number(existingChar.unlockedSlots || 18);
+      if (Array.isArray(payload.inventory)) {
+        const normalizedItems = this.auditAndNormalizeInventory(unlockedSlots, payload.inventory);
+        const currentDbItems = await tx.select().from(characterItemsTable).where(eq(characterItemsTable.characterId, characterId));
+        const incomingIds = /* @__PURE__ */ new Set();
+        for (const item of normalizedItems) {
+          const numId = Number(item.id);
+          const isExisting = !isNaN(numId) && currentDbItems.some((dbIt) => dbIt.id === numId);
+          if (isExisting) {
+            incomingIds.add(numId);
+            await tx.update(characterItemsTable).set({
+              itemId: item.itemId,
+              equipped: Boolean(item.equipped),
+              equippedSlot: item.equipped ? item.equippedSlot : null,
+              slotIndex: item.equipped ? -1 : Number(item.slotIndex ?? 0),
+              quantity: Number(item.quantity ?? 1),
+              enhanceLevel: Number(item.enhanceLevel ?? 0),
+              rarity: item.rarity ?? "common",
+              bonusCombatPower: Number(item.bonusCombatPower ?? 0),
+              miraclePassive1: item.miraclePassive1 ?? null,
+              miraclePassive2: item.miraclePassive2 ?? null
+            }).where(and(eq(characterItemsTable.id, numId), eq(characterItemsTable.characterId, characterId)));
+          } else {
+            const [created] = await tx.insert(characterItemsTable).values({
+              characterId,
+              itemId: item.itemId,
+              equipped: Boolean(item.equipped),
+              equippedSlot: item.equipped ? item.equippedSlot : null,
+              slotIndex: item.equipped ? -1 : Number(item.slotIndex ?? 0),
+              quantity: Number(item.quantity ?? 1),
+              enhanceLevel: Number(item.enhanceLevel ?? 0),
+              rarity: item.rarity ?? "common",
+              bonusCombatPower: Number(item.bonusCombatPower ?? 0),
+              miraclePassive1: item.miraclePassive1 ?? null,
+              miraclePassive2: item.miraclePassive2 ?? null
+            }).returning();
+            if (created?.id) incomingIds.add(created.id);
+          }
+        }
+        const itemsToDelete = currentDbItems.filter((dbIt) => !incomingIds.has(dbIt.id));
+        if (itemsToDelete.length > 0) {
+          const idsToDelete = itemsToDelete.map((it) => it.id);
+          await tx.delete(characterItemsTable).where(
+            and(
+              eq(characterItemsTable.characterId, characterId),
+              inArray(characterItemsTable.id, idsToDelete)
+            )
+          );
+        }
+      }
+      if (Array.isArray(payload.quests)) {
+        for (const q of payload.quests) {
+          if (!q.questId) continue;
+          const questKey = `${characterId}_${q.questId}`;
+          const [existingQ] = await tx.select().from(characterQuestsTable).where(eq(characterQuestsTable.id, questKey)).limit(1);
+          if (existingQ) {
+            await tx.update(characterQuestsTable).set({
+              progress: Math.max(Number(existingQ.progress || 0), Number(q.progress || 0)),
+              status: q.status || existingQ.status,
+              updatedAt: /* @__PURE__ */ new Date()
+            }).where(eq(characterQuestsTable.id, questKey));
+          } else {
+            await tx.insert(characterQuestsTable).values({
+              id: questKey,
+              characterId,
+              questId: q.questId,
+              progress: Number(q.progress || 0),
+              status: q.status || "AVAILABLE"
+            });
+          }
+        }
+      }
+      const stringifyJson = (val, fallback = "") => {
+        if (val === void 0) return void 0;
+        if (typeof val === "string") return val;
+        try {
+          return JSON.stringify(val);
+        } catch {
+          return fallback;
+        }
+      };
+      const statPointsVal = payload.statPoints ?? payload.unallocatedStatPoints ?? existingChar.unallocatedStatPoints;
+      const updateData = {
+        revision: nextRev,
+        lastSavedAt: /* @__PURE__ */ new Date(),
+        unlockedSlots
+      };
+      if (payload.posX !== void 0) updateData.posX = Number(payload.posX);
+      if (payload.posZ !== void 0) updateData.posZ = Number(payload.posZ);
+      if (payload.facing !== void 0) updateData.facing = String(payload.facing);
+      if (payload.zoneId !== void 0) updateData.zoneId = String(payload.zoneId);
+      if (payload.isMounted !== void 0) updateData.isMounted = Boolean(payload.isMounted);
+      if (payload.activeMountId !== void 0) updateData.activeMountId = String(payload.activeMountId);
+      if (payload.activePetId !== void 0) updateData.activePetId = String(payload.activePetId);
+      if (payload.level !== void 0) updateData.level = Number(payload.level);
+      if (payload.experience !== void 0) updateData.experience = Number(payload.experience);
+      if (payload.gold !== void 0) updateData.gold = Number(payload.gold);
+      if (payload.hp !== void 0) updateData.hp = Math.max(0, Number(payload.hp));
+      if (payload.mp !== void 0) updateData.mp = Math.max(0, Number(payload.mp));
+      if (statPointsVal !== void 0) {
+        updateData.statPoints = Number(statPointsVal);
+        updateData.unallocatedStatPoints = Number(statPointsVal);
+      }
+      if (payload.skillPoints !== void 0) updateData.skillPoints = Number(payload.skillPoints);
+      if (payload.str !== void 0) updateData.str = Number(payload.str);
+      if (payload.dex !== void 0) updateData.dex = Number(payload.dex);
+      if (payload.intel !== void 0) updateData.intel = Number(payload.intel);
+      if (payload.luk !== void 0) updateData.luk = Number(payload.luk);
+      if (payload.vit !== void 0) updateData.vit = Number(payload.vit);
+      if (payload.rageGauge !== void 0) updateData.rageGauge = Math.min(100, Math.max(0, Number(payload.rageGauge)));
+      const hotbar = stringifyJson(payload.hotbarConfigJson);
+      if (hotbar !== void 0) updateData.hotbarConfigJson = hotbar;
+      const buffs = stringifyJson(payload.activeBuffsJson);
+      if (buffs !== void 0) updateData.activeBuffsJson = buffs;
+      const ui = stringifyJson(payload.uiPreferencesJson);
+      if (ui !== void 0) updateData.uiPreferencesJson = ui;
+      await tx.update(charactersTable).set(updateData).where(eq(charactersTable.id, characterId));
+      const freshCharacter = await recalculateCharacterStats(characterId, tx);
+      const freshInventory = await listInventory(characterId, tx);
+      return {
+        success: true,
+        revision: nextRev,
+        lastSavedAt: (/* @__PURE__ */ new Date()).toISOString(),
+        character: freshCharacter,
+        inventory: freshInventory
+      };
+    });
+  }
+  /**
+   * Đọc toàn bộ ảnh chụp trạng thái nhân vật cho Exact State Hydration
+   */
+  static async getFullState(userId, characterId) {
+    const [character] = await db.select().from(charactersTable).where(and(eq(charactersTable.id, characterId), eq(charactersTable.userId, userId))).limit(1);
+    if (!character) {
+      throw new InventoryRuleError("Kh\xF4ng t\xECm th\u1EA5y nh\xE2n v\u1EADt", 404);
+    }
+    const inventory = await listInventory(characterId);
+    const quests = await db.select().from(characterQuestsTable).where(eq(characterQuestsTable.characterId, characterId));
+    return {
+      success: true,
+      character,
+      inventory,
+      quests
+    };
+  }
+};
+
+// src/routes/characters.ts
 var router4 = (0, import_express4.Router)();
 router4.post("/characters/sync", requireAuth, async (req, res) => {
   const characters = Array.isArray(req.body.characters) ? req.body.characters : [];
@@ -63442,6 +63699,44 @@ router4.post("/characters/:characterId/3d-reward", requireAuth, async (_req, res
     error: "L\u1ED7i b\u1EA3o m\u1EADt: Kh\xF4ng ch\u1EA5p nh\u1EADn ph\u1EA7n th\u01B0\u1EDFng client t\u1EF1 khai b\xE1o.",
     message: "Endpoint /3d-reward \u0111\xE3 b\u1ECB kh\xF3a. M\u1ECDi ti\u1EBFn tr\xECnh ph\u1EA3i \u0111\u01B0\u1EE3c server x\xE1c th\u1EF1c qua POST /characters/:characterId/battle."
   });
+});
+var handleFullSync = async (req, res) => {
+  const characterId = parseInt(req.params.characterId);
+  if (isNaN(characterId)) {
+    return res.status(400).json({ error: "ID nh\xE2n v\u1EADt kh\xF4ng h\u1EE3p l\u1EC7" });
+  }
+  try {
+    const result = await CharacterPersistenceService.fullSync(
+      req.session.userId,
+      characterId,
+      req.body
+    );
+    return res.status(200).json(result);
+  } catch (err) {
+    console.error(`[FullSync] Error syncing character ${characterId}:`, err);
+    return res.status(err.statusCode || 500).json({
+      error: err.message || "Kh\xF4ng th\u1EC3 \u0111\u1ED3ng b\u1ED9 tr\u1EA1ng th\xE1i nh\xE2n v\u1EADt"
+    });
+  }
+};
+router4.put("/characters/:characterId/full-sync", requireAuth, handleFullSync);
+router4.post("/characters/:characterId/full-sync", requireAuth, handleFullSync);
+router4.get("/characters/:characterId/full-state", requireAuth, async (req, res) => {
+  const characterId = parseInt(req.params.characterId);
+  if (isNaN(characterId)) {
+    return res.status(400).json({ error: "ID nh\xE2n v\u1EADt kh\xF4ng h\u1EE3p l\u1EC7" });
+  }
+  try {
+    const result = await CharacterPersistenceService.getFullState(
+      req.session.userId,
+      characterId
+    );
+    return res.status(200).json(result);
+  } catch (err) {
+    return res.status(err.statusCode || 500).json({
+      error: err.message || "Kh\xF4ng th\u1EC3 t\u1EA3i tr\u1EA1ng th\xE1i nh\xE2n v\u1EADt"
+    });
+  }
 });
 function getExpForLevel2(level) {
   return Math.floor(100 * Math.pow(1.5, level - 1));

@@ -82,6 +82,13 @@ export const PlayerEntity25D = memo(function PlayerEntity25D() {
     facingLeftRef.current = false;
   }, [respawnTriggerCount]);
 
+  // ── HẠNG MỤC 4: Khôi phục tọa độ 3D chính xác khi Hydration hoặc Dịch chuyển ──
+  useEffect(() => {
+    if (pos.current.distanceTo(playerPosition) > 0.3) {
+      pos.current.copy(playerPosition);
+    }
+  }, [playerPosition]);
+
   const jumpForce = 9.0;
   const gravity = -22.0;
 

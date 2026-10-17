@@ -1,4 +1,4 @@
-import { index, pgTable, serial, text, integer, timestamp } from "drizzle-orm/pg-core";
+import { index, pgTable, serial, text, integer, timestamp, boolean, real } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod/v4";
 
@@ -11,15 +11,29 @@ export const charactersTable = pgTable("characters", {
   classId: text("class_id").notNull(),
   className: text("class_name").notNull(),
   title: text("title").notNull().default("Thượng Cấp Chiến Sĩ"),
+
+  // --- Versioning & Concurrency Protection ---
+  revision: integer("revision").notNull().default(1),
+  lastSavedAt: timestamp("last_saved_at").defaultNow().notNull(),
+
+  // --- Precise World Position & Orientation (Real Precision) ---
   zoneId: text("zone_id").notNull().default("SAFE_VILLAGE"),
-  posX: integer("pos_x").notNull().default(0),
-  posZ: integer("pos_z").notNull().default(0),
+  posX: real("pos_x").notNull().default(0),
+  posZ: real("pos_z").notNull().default(0),
+  facing: text("facing").notNull().default("down"), // 'up' | 'down' | 'left' | 'right'
+  isMounted: boolean("is_mounted").notNull().default(false),
+  activeMountId: text("active_mount_id").notNull().default("dark_steed"),
+  activePetId: text("active_pet_id").notNull().default("spirit_orb"),
+
+  // --- Progression & Core Stats ---
   level: integer("level").notNull().default(1),
   experience: integer("experience").notNull().default(0),
   hp: integer("hp").notNull(),
   maxHp: integer("max_hp").notNull(),
   mp: integer("mp").notNull().default(65),
   maxMp: integer("max_mp").notNull().default(65),
+  statPoints: integer("stat_points").notNull().default(0),
+  skillPoints: integer("skill_points").notNull().default(0),
   str: integer("str").notNull().default(10),
   dex: integer("dex").notNull().default(7),
   intel: integer("intel").notNull().default(5),
@@ -35,6 +49,8 @@ export const charactersTable = pgTable("characters", {
   accuracy: integer("accuracy").notNull().default(95),
   evasion: integer("evasion").notNull().default(6),
   combatPower: integer("combat_power").notNull().default(250),
+  rageGauge: integer("rage_gauge").notNull().default(0),
+
   gold: integer("gold").notNull().default(1000),
   kills: integer("kills").notNull().default(0),
   deaths: integer("deaths").notNull().default(0),
@@ -43,7 +59,13 @@ export const charactersTable = pgTable("characters", {
   arenaRank: text("arena_rank").notNull().default("Đồng IV"),
   activeMount: text("active_mount").notNull().default("shadow_steed"),
   activePet: text("active_pet").notNull().default("fairy_spirit"),
-  unlockedSlots: integer("unlocked_slots").notNull().default(15),
+
+  // --- Inventory & UI State Snapshots ---
+  unlockedSlots: integer("unlocked_slots").notNull().default(18),
+  hotbarConfigJson: text("hotbar_config_json").notNull().default(""),
+  activeBuffsJson: text("active_buffs_json").notNull().default("[]"),
+  uiPreferencesJson: text("ui_preferences_json").notNull().default(""),
+
   createdAt: timestamp("created_at").defaultNow().notNull(),
 }, (table) => ({
   userIdIndex: index("characters_user_id_idx").on(table.userId),

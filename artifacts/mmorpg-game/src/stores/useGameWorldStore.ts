@@ -1890,7 +1890,7 @@ export const useGameWorldStore = create<GameWorldState>((set, get) => ({
         playerGold: char.gold !== undefined ? char.gold : s.playerGold,
         playerKills: char.kills !== undefined ? char.kills : s.playerKills,
         activeCharacterId: char.id || s.activeCharacterId,
-        unlockedSlots: char.unlockedSlots || s.unlockedSlots || 15,
+        unlockedSlots: char.unlockedSlots || s.unlockedSlots || 18,
         unallocatedStatPoints: char.unallocatedStatPoints !== undefined ? char.unallocatedStatPoints : s.unallocatedStatPoints,
         playerStr: char.str !== undefined ? char.str : s.playerStr,
         playerDex: char.dex !== undefined ? char.dex : s.playerDex,
@@ -1904,6 +1904,13 @@ export const useGameWorldStore = create<GameWorldState>((set, get) => ({
         playerCritRate: char.critRate !== undefined ? char.critRate : s.playerCritRate,
         playerEvasion: char.evasion !== undefined ? char.evasion : s.playerEvasion,
         combatPower: char.combatPower !== undefined ? char.combatPower : s.combatPower,
+        playerPosition:
+          char.posX !== undefined && char.posZ !== undefined && (char.hp === undefined || char.hp > 0)
+            ? new THREE.Vector3(Number(char.posX), 0, Number(char.posZ))
+            : s.playerPosition,
+        playerFacingLeft: char.facing === "left" ? true : char.facing === "right" ? false : s.playerFacingLeft,
+        currentZone: (char.zoneId as any) || s.currentZone,
+        isMounted: char.isMounted !== undefined ? Boolean(char.isMounted) : s.isMounted,
       };
     });
   },

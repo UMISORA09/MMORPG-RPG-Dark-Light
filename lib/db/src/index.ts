@@ -463,6 +463,20 @@ export async function initDatabase() {
         ALTER TABLE characters ADD COLUMN IF NOT EXISTS accuracy INTEGER DEFAULT 95 NOT NULL;
         ALTER TABLE characters ADD COLUMN IF NOT EXISTS evasion INTEGER DEFAULT 10 NOT NULL;
         ALTER TABLE characters ADD COLUMN IF NOT EXISTS combat_power INTEGER DEFAULT 500 NOT NULL;
+        ALTER TABLE characters ALTER COLUMN pos_x TYPE REAL;
+        ALTER TABLE characters ALTER COLUMN pos_z TYPE REAL;
+        ALTER TABLE characters ADD COLUMN IF NOT EXISTS revision INTEGER DEFAULT 1 NOT NULL;
+        ALTER TABLE characters ADD COLUMN IF NOT EXISTS last_saved_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP NOT NULL;
+        ALTER TABLE characters ADD COLUMN IF NOT EXISTS facing TEXT DEFAULT 'down' NOT NULL;
+        ALTER TABLE characters ADD COLUMN IF NOT EXISTS is_mounted BOOLEAN DEFAULT FALSE NOT NULL;
+        ALTER TABLE characters ADD COLUMN IF NOT EXISTS active_mount_id TEXT DEFAULT 'dark_steed' NOT NULL;
+        ALTER TABLE characters ADD COLUMN IF NOT EXISTS active_pet_id TEXT DEFAULT 'spirit_orb' NOT NULL;
+        ALTER TABLE characters ADD COLUMN IF NOT EXISTS stat_points INTEGER DEFAULT 0 NOT NULL;
+        ALTER TABLE characters ADD COLUMN IF NOT EXISTS skill_points INTEGER DEFAULT 0 NOT NULL;
+        ALTER TABLE characters ADD COLUMN IF NOT EXISTS rage_gauge INTEGER DEFAULT 0 NOT NULL;
+        ALTER TABLE characters ADD COLUMN IF NOT EXISTS hotbar_config_json TEXT DEFAULT '' NOT NULL;
+        ALTER TABLE characters ADD COLUMN IF NOT EXISTS active_buffs_json TEXT DEFAULT '[]' NOT NULL;
+        ALTER TABLE characters ADD COLUMN IF NOT EXISTS ui_preferences_json TEXT DEFAULT '' NOT NULL;
 
         CREATE TABLE IF NOT EXISTS items (
           id TEXT PRIMARY KEY,
@@ -531,6 +545,8 @@ export async function initDatabase() {
         ALTER TABLE character_items ADD COLUMN IF NOT EXISTS enhance_level INTEGER DEFAULT 0 NOT NULL;
         ALTER TABLE character_items ADD COLUMN IF NOT EXISTS bonus_combat_power INTEGER DEFAULT 0 NOT NULL;
         ALTER TABLE character_items ADD COLUMN IF NOT EXISTS rarity TEXT DEFAULT 'common' NOT NULL;
+        ALTER TABLE character_items ADD COLUMN IF NOT EXISTS miracle_passive_1 TEXT;
+        ALTER TABLE character_items ADD COLUMN IF NOT EXISTS miracle_passive_2 TEXT;
         DROP INDEX IF EXISTS character_item_unique;
 
         CREATE TABLE IF NOT EXISTS battle_logs (
