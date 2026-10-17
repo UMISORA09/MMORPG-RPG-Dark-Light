@@ -94,6 +94,9 @@ class CombatSoundSynthesizer {
           case "buff":
             this.synthesizeRarityChime(ctx, now, volume);
             break;
+          case "chest_open":
+            this.synthesizeChestOpen(ctx, now, volume);
+            break;
         }
       } catch {
         // Audio autoplay policy fallback
@@ -349,12 +352,48 @@ class CombatSoundSynthesizer {
     osc.start(t);
     osc.stop(t + 0.045);
   }
+
+  // ── Chest Open: Resonant lock unlatch + celestial treasure chime ───────────
+  private synthesizeChestOpen(ctx: AudioContext, t: number, vol: number) {
+    // 1. Heavy latch unlock thud
+    const oscThud = ctx.createOscillator();
+    const gainThud = ctx.createGain();
+    oscThud.type = "sine";
+    oscThud.frequency.setValueAtTime(320, t);
+    oscThud.frequency.exponentialRampToValueAtTime(80, t + 0.12);
+    gainThud.gain.setValueAtTime(vol * 0.9, t);
+    gainThud.gain.exponentialRampToValueAtTime(0.001, t + 0.14);
+    oscThud.connect(gainThud);
+    gainThud.connect(ctx.destination);
+    oscThud.start(t);
+    oscThud.stop(t + 0.15);
+
+    // 2. Shimmering treasure chord arpeggio [C5, E5, G5, B5, C6]
+    const chord = [523.25, 659.25, 783.99, 987.77, 1046.5];
+    chord.forEach((freq, idx) => {
+      const startT = t + 0.08 + idx * 0.045;
+      const osc = ctx.createOscillator();
+      const gain = ctx.createGain();
+      osc.type = "sine";
+      osc.frequency.setValueAtTime(freq, startT);
+      gain.gain.setValueAtTime((vol * 0.7) / (1 + idx * 0.15), startT);
+      gain.gain.exponentialRampToValueAtTime(0.001, startT + 0.55);
+      osc.connect(gain);
+      gain.connect(ctx.destination);
+      osc.start(startT);
+      osc.stop(startT + 0.6);
+    });
+  }
 }
 
 export const combatSoundSynth = new CombatSoundSynthesizer();
 
 export function playCombatSFX(preset: SFXSynthPreset, volume: number = 0.35) {
   combatSoundSynth.play(preset, volume);
+}
+
+export function playChestOpen(volume: number = 0.55) {
+  combatSoundSynth.play("chest_open", volume);
 }
 
 export function playButtonClick(volume: number = 0.3) {

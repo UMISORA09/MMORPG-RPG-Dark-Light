@@ -18,6 +18,7 @@ export const MinimapRadar = memo(function MinimapRadar({ zoomMultiplier = 1 }: M
   const currentZone = useGameWorldStore((s) => s.currentZone);
   const monsterMarkers = useGameWorldStore((s) => s.monsterMarkers);
   const droppedLoot = useGameWorldStore((s) => s.droppedLoot);
+  const activeTreasureChests = useGameWorldStore((s) => s.activeTreasureChests);
   const bossActive = useGameWorldStore((s) => s.bossActive);
 
   // Radar display properties
@@ -129,6 +130,33 @@ export const MinimapRadar = memo(function MinimapRadar({ zoomMultiplier = 1 }: M
               title={`Vật phẩm rơi: ${loot.name}`}
             >
               <Star className="w-2.5 h-2.5 fill-amber-300" />
+            </div>
+          );
+        })}
+
+        {/* ── Active Treasure Chests (🎁 Icon within 35m) ── */}
+        {activeTreasureChests.map((chest) => {
+          if (chest.isOpened) return null;
+          const distToPlayer = Math.hypot(
+            playerPos.x - chest.position[0],
+            playerPos.z - chest.position[2]
+          );
+          if (distToPlayer > 35.0) return null;
+
+          const cPos = toRadar(chest.position[0], chest.position[2]);
+          const isMiracle = chest.tier === "MIRACLE_CHEST";
+          const isGolden = chest.tier === "GOLDEN";
+
+          return (
+            <div
+              key={`chest-radar-${chest.id}`}
+              className="absolute -translate-x-1/2 -translate-y-1/2 z-20 text-[10px] animate-pulse cursor-pointer pointer-events-auto"
+              style={{ left: cPos.x, top: cPos.y }}
+              title={`${chest.tierName}: [${Math.round(chest.position[0])}, ${Math.round(chest.position[2])}]`}
+            >
+              <span className="drop-shadow-[0_0_6px_#fbbf24] select-none text-[10px]">
+                {isMiracle ? "💖" : isGolden ? "🎁" : "📦"}
+              </span>
             </div>
           );
         })}

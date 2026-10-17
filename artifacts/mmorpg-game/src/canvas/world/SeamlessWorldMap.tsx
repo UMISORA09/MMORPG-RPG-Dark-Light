@@ -25,6 +25,7 @@ import { getMapById } from "@/world/WorldMapRegistry";
 import { ProceduralBiomeMonuments } from "./ProceduralBiomeMonuments";
 import { InteractiveRelics } from "./InteractiveRelics";
 import { DimensionalPortals3D } from "./DimensionalPortals3D";
+import { DynamicTreasureChests3D } from "./DynamicTreasureChests3D";
 
 export const SeamlessWorldMap = memo(function SeamlessWorldMap() {
   const bossRingRef = useRef<THREE.Mesh>(null);
@@ -69,6 +70,9 @@ export const SeamlessWorldMap = memo(function SeamlessWorldMap() {
 
       {/* ── 2.9 3D DIMENSIONAL PORTALS (Village Plaza & End of Maps) ── */}
       <DimensionalPortals3D currentZone={currentZone} />
+
+      {/* ── 2.95 DYNAMIC RESPAWNING TREASURE CHESTS (5 Active per Map) ── */}
+      <DynamicTreasureChests3D />
 
       {/* ── 3. PIXEL ART ENVIRONMENTAL PROPS (ANCIENT TREES, FALLING LEAVES, GROUNDED ROCKS, GRASS TUFTS) ── */}
       <PixelWorldEnvironmentProps />

@@ -66023,6 +66023,41 @@ router8.post("/characters/:characterId/loot/:dropId", requireAuth, async (req, r
     res.status(500).json({ error: error40.message || "L\u1ED7i nh\u1EB7t v\u1EADt ph\u1EA9m" });
   }
 });
+router8.post("/characters/:characterId/open-chest", requireAuth, async (req, res) => {
+  const userId = req.session.userId;
+  const characterId = parseInt(req.params.characterId);
+  if (isNaN(characterId)) {
+    res.status(400).json({ error: "ID nh\xE2n v\u1EADt kh\xF4ng h\u1EE3p l\u1EC7" });
+    return;
+  }
+  const { chestId, tier, chestPosition, playerPosition } = req.body;
+  const character = await getCharacterForUser(characterId, userId);
+  if (!character) {
+    res.status(404).json({ error: "Kh\xF4ng t\xECm th\u1EA5y nh\xE2n v\u1EADt" });
+    return;
+  }
+  if (character.hp <= 0) {
+    res.status(400).json({ error: "Nh\xE2n v\u1EADt \u0111\xE3 t\u1EED tr\u1EADn, kh\xF4ng th\u1EC3 m\u1EDF r\u01B0\u01A1ng!" });
+    return;
+  }
+  if (Array.isArray(chestPosition) && Array.isArray(playerPosition) && chestPosition.length >= 3 && playerPosition.length >= 3) {
+    const dist = Math.hypot(
+      playerPosition[0] - chestPosition[0],
+      playerPosition[2] - chestPosition[2]
+    );
+    if (dist > 5.5) {
+      res.status(400).json({ error: "Kho\u1EA3ng c\xE1ch \u0111\u1EBFn r\u01B0\u01A1ng qu\xE1 xa (> 5.5m)" });
+      return;
+    }
+  }
+  res.status(200).json({
+    success: true,
+    message: "M\u1EDF r\u01B0\u01A1ng kho b\xE1u th\xE0nh c\xF4ng!",
+    chestId,
+    tier,
+    characterLevel: character.level
+  });
+});
 router8.post("/characters/:characterId/inventory/swap-slots", requireAuth, async (req, res) => {
   const userId = req.session.userId;
   const characterId = parseInt(req.params.characterId);

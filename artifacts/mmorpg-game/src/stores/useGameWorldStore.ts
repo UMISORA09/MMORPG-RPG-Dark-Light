@@ -1,8 +1,16 @@
 import { create } from "zustand";
 import * as THREE from "three";
 import { getCharacterBlueprint, type SkillVFXConfig, type SkillBlueprint, type CombatSkillSpec } from "@/skills";
-import { playCombatSFX, setAudioMuted, isAudioMuted } from "@/audio/CombatSoundSynth";
+import { playCombatSFX, playChestOpen, setAudioMuted, isAudioMuted } from "@/audio/CombatSoundSynth";
 import type { DroppedItem } from "@/canvas/loot/loot.types";
+import {
+  type ActiveTreasureChest,
+  initializeActiveMapChests,
+  generateSafeChestPosition,
+  createTreasureChestInstance,
+  rollChestTier,
+  generateChestLootBurst,
+} from "@/canvas/world/TreasureChestSpawnerEngine";
 
 export interface BattleReportData {
   victory: boolean;
@@ -221,6 +229,10 @@ export interface GameWorldState {
   inventoryItems: CharacterInventoryItem[];
   hasMiracleEquipped: boolean;
   setHasMiracleEquipped: (active: boolean) => void;
+  activeTreasureChests: ActiveTreasureChest[];
+  setActiveTreasureChests: (chests: ActiveTreasureChest[]) => void;
+  openTreasureChestById: (chestId: string) => Promise<void>;
+  spawnGMTestChest: (tier?: "GOLDEN" | "MIRACLE_CHEST") => void;
   monsterMarkers: { id: number; x: number; z: number; isBoss: boolean; name: string }[];
   nearbyTargetEnemies: { id: number; name: string; hp: number; maxHp: number; dist: number; color: string }[];
 
@@ -662,6 +674,9 @@ export const useGameWorldStore = create<GameWorldState>((set, get) => ({
   ],
   hasMiracleEquipped: false,
   setHasMiracleEquipped: (hasMiracleEquipped: boolean) => set({ hasMiracleEquipped }),
+
+  activeTreasureChests: initializeActiveMapChests(5),
+  setActiveTreasureChests: (activeTreasureChests) => set({ activeTreasureChests }),
 
   monsterMarkers: [],
   updateMonsterMarkers: (markers) => set({ monsterMarkers: markers }),
@@ -1114,6 +1129,87 @@ export const useGameWorldStore = create<GameWorldState>((set, get) => ({
     set((s) => ({
       droppedLoot: s.droppedLoot.filter((item) => item.id !== id),
     }));
+  },
+
+  spawnGMTestChest: (tier = "GOLDEN") => {
+    const s = get();
+    const p = s.playerPosition;
+    const forwardOffset = s.playerFacingLeft ? -2.8 : 2.8;
+    const testChest = createTreasureChestInstance(tier, [
+      p.x + forwardOffset,
+      0.2,
+      p.z + (Math.random() - 0.5) * 1.5,
+    ]);
+    set((state) => ({
+      activeTreasureChests: [...state.activeTreasureChests, testChest],
+      zoneNotification: `🎁 [GM ADMIN] Đã triệu hồi ${testChest.tierName} trước mặt!`,
+      zoneNotificationTimer: 4.5,
+    }));
+    s.addFloatingText(`🎁 ${testChest.tierName}!`, new THREE.Vector3(p.x + forwardOffset, 2.5, p.z), "#fbbf24");
+    playCombatSFX("holy_bell", 0.6);
+  },
+
+  openTreasureChestById: async (chestId: string) => {
+    const s = get();
+    const chest = s.activeTreasureChests.find((c) => c.id === chestId);
+    if (!chest || chest.isOpened) return;
+
+    // 1. Mark chest opened & trigger lid animation
+    playChestOpen(0.65);
+    const updatedChests = s.activeTreasureChests.map((c) =>
+      c.id === chestId ? { ...c, isOpened: true, openProgress: 1.0 } : c
+    );
+    set({ activeTreasureChests: updatedChests });
+
+    // 2. Generate 5-10 Level-Scaled Items
+    const charLevel = s.playerLevel;
+    const charClass = s.playerClassId;
+    const burstDrops = generateChestLootBurst(chest, charLevel, charClass);
+
+    // 3. Spray items out into 3D world with parabolic physics
+    set((state) => ({
+      droppedLoot: [...state.droppedLoot, ...burstDrops],
+      zoneNotification: `✨ [MỞ KHO BÁU] ${chest.tierName} bùng nổ ${burstDrops.length} Món Đồ Cấp ${charLevel}!`,
+      zoneNotificationTimer: 5.0,
+    }));
+
+    s.addFloatingText(
+      `✨ ${chest.tierName.toUpperCase()} (+${burstDrops.length} Món Đồ Lv.${charLevel})!`,
+      new THREE.Vector3(chest.position[0], 2.8, chest.position[2]),
+      chest.beamColor
+    );
+
+    // 4. Try backend sync if logged in
+    if (s.activeCharacterId) {
+      fetch(`/api/characters/${s.activeCharacterId}/open-chest`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          chestId: chest.id,
+          tier: chest.tier,
+          chestPosition: chest.position,
+          playerPosition: [s.playerPosition.x, s.playerPosition.y, s.playerPosition.z],
+        }),
+      }).catch(() => {});
+    }
+
+    // 5. Within 0.6s: Instant Despawn of opened chest & Instant Respawn of a new chest >= 22m away
+    setTimeout(() => {
+      const cur = get();
+      // Filter out the opened chest
+      const remaining = cur.activeTreasureChests.filter((c) => c.id !== chestId);
+      
+      // Spawn 1 new chest at a safe remote position >= 22m from opened chest
+      const newTier = rollChestTier();
+      const newPos = generateSafeChestPosition(remaining, chest.position);
+      const newChest = createTreasureChestInstance(newTier, newPos);
+
+      set({
+        activeTreasureChests: [...remaining, newChest],
+        zoneNotification: `✨ Một Rương Báu vừa xuất hiện ở tọa độ mới trên bản đồ!`,
+        zoneNotificationTimer: 4.0,
+      });
+    }, 600);
   },
 
   pickUpLoot: async (item) => {

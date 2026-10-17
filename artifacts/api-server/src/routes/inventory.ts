@@ -541,6 +541,55 @@ router.post("/characters/:characterId/loot/:dropId", requireAuth, async (req, re
   }
 });
 
+// ── MỞ RƯƠNG KHO BÁU TỰ SINH (Dynamic Respawing Treasure Chest) ────────────────
+router.post("/characters/:characterId/open-chest", requireAuth, async (req, res): Promise<void> => {
+  const userId = req.session.userId!;
+  const characterId = parseInt(req.params.characterId);
+  if (isNaN(characterId)) {
+    res.status(400).json({ error: "ID nhân vật không hợp lệ" });
+    return;
+  }
+
+  const { chestId, tier, chestPosition, playerPosition } = req.body;
+
+  const character = await getCharacterForUser(characterId, userId);
+  if (!character) {
+    res.status(404).json({ error: "Không tìm thấy nhân vật" });
+    return;
+  }
+
+  if (character.hp <= 0) {
+    res.status(400).json({ error: "Nhân vật đã tử trận, không thể mở rương!" });
+    return;
+  }
+
+  // Distance validation (loot radius 3.5m + ping tolerance 2.0m = 5.5m)
+  if (
+    Array.isArray(chestPosition) &&
+    Array.isArray(playerPosition) &&
+    chestPosition.length >= 3 &&
+    playerPosition.length >= 3
+  ) {
+    const dist = Math.hypot(
+      playerPosition[0] - chestPosition[0],
+      playerPosition[2] - chestPosition[2]
+    );
+    if (dist > 5.5) {
+      res.status(400).json({ error: "Khoảng cách đến rương quá xa (> 5.5m)" });
+      return;
+    }
+  }
+
+  res.status(200).json({
+    success: true,
+    message: "Mở rương kho báu thành công!",
+    chestId,
+    tier,
+    characterLevel: character.level,
+  });
+});
+
+
 // ── ĐỔI VỊ TRÍ Ô ĐỒ / DRAG-AND-DROP (Swap Slots) ──────────────────────────────
 router.post("/characters/:characterId/inventory/swap-slots", requireAuth, async (req, res): Promise<void> => {
   const userId = req.session.userId!;

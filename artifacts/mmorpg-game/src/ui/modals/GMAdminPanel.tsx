@@ -19,6 +19,7 @@ import {
   Terminal,
   MapPin,
   Rocket,
+  Gift,
 } from "lucide-react";
 
 export const GMAdminPanel = memo(function GMAdminPanel() {
@@ -200,6 +201,17 @@ export const GMAdminPanel = memo(function GMAdminPanel() {
       setLoadingAction(null);
     }
   };
+
+  // Triệu hồi Rương Kho Báu Tự Sinh (Dynamic Respawing Treasure Chest)
+  const handleSpawnDynamicChest = (tier: "GOLDEN" | "MIRACLE_CHEST" = "GOLDEN") => {
+    useGameWorldStore.getState().spawnGMTestChest(tier);
+    showFeedback(
+      tier === "MIRACLE_CHEST"
+        ? "✨ Đã triệu hồi Rương Thần Tích Hư Không (10 Món Kì Tích Cực Phẩm) trước mặt!"
+        : "🎁 Đã triệu hồi Rương Hoàng Kim Long Tộc (8-9 Món Theo Cấp) trước mặt!"
+    );
+  };
+
 
   // 4. Triệu hồi Hỏa Long Ma Thần (World Boss)
   const handleSummonBoss = () => {
@@ -429,6 +441,45 @@ export const GMAdminPanel = memo(function GMAdminPanel() {
                 </div>
                 <ChevronRight className="w-4 h-4 text-slate-500 group-hover:text-orange-400 transition" />
               </button>
+
+              {/* 3.1 Spawn Ngay Rương Hoàng Kim Trước Mặt */}
+              <button
+                onClick={() => handleSpawnDynamicChest("GOLDEN")}
+                className="p-3.5 rounded-2xl bg-[#231505] hover:bg-[#321e07] border border-amber-500/40 hover:border-amber-400 transition flex items-center justify-between group cursor-pointer text-left shadow-[0_0_15px_rgba(245,158,11,0.15)]"
+              >
+                <div className="flex items-center gap-3">
+                  <div className="w-9 h-9 rounded-xl bg-amber-500/20 border border-amber-400/50 flex items-center justify-center text-amber-400 group-hover:scale-110 transition-transform">
+                    <Gift className="w-4 h-4" />
+                  </div>
+                  <div>
+                    <h4 className="text-xs font-black text-amber-300 group-hover:text-amber-100 transition-colors">
+                      🎁 Spawn Rương Hoàng Kim (8-9 Món)
+                    </h4>
+                    <p className="text-[11px] text-amber-400/70">Rương 3D hào quang vàng, rơi đồ chuẩn theo Lv</p>
+                  </div>
+                </div>
+                <ChevronRight className="w-4 h-4 text-amber-400 group-hover:translate-x-1 transition-transform" />
+              </button>
+
+              {/* 3.2 Spawn Ngay Rương Kì Tích Hư Không Trước Mặt */}
+              <button
+                onClick={() => handleSpawnDynamicChest("MIRACLE_CHEST")}
+                className="p-3.5 rounded-2xl bg-[#2a0822] hover:bg-[#3b0b30] border border-fuchsia-500/50 hover:border-fuchsia-400 transition flex items-center justify-between group cursor-pointer text-left shadow-[0_0_20px_rgba(217,70,239,0.25)]"
+              >
+                <div className="flex items-center gap-3">
+                  <div className="w-9 h-9 rounded-xl bg-fuchsia-500/20 border border-fuchsia-400/60 flex items-center justify-center text-fuchsia-400 group-hover:scale-110 transition-transform">
+                    <Sparkles className="w-4 h-4 animate-spin" />
+                  </div>
+                  <div>
+                    <h4 className="text-xs font-black text-fuchsia-300 group-hover:text-fuchsia-100 transition-colors">
+                      ✨ Spawn Rương Kì Tích (10 Món Siêu Cấp)
+                    </h4>
+                    <p className="text-[11px] text-fuchsia-400/80">Cột sáng chọc trời, 10 món Miracle cực hiếm</p>
+                  </div>
+                </div>
+                <ChevronRight className="w-4 h-4 text-fuchsia-400 group-hover:translate-x-1 transition-transform" />
+              </button>
+
 
               {/* 4. Triệu hồi Hỏa Long Ma Thần */}
               <button

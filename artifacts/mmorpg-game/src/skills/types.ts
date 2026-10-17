@@ -78,7 +78,8 @@ export type SFXSynthPreset =
   | "level_up_fanfare"
   | "button_click"
   | "teleport"
-  | "buff";
+  | "buff"
+  | "chest_open";
 
 export interface GameFeelSpec {
   cameraShake: number; // 0.0 to 1.0 (screen impulse)
