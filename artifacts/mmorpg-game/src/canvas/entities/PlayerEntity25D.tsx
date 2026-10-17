@@ -1,4 +1,4 @@
-import { memo, useRef, useEffect } from "react";
+import { memo, useRef, useEffect, useState } from "react";
 import * as THREE from "three";
 import { useFrame, useThree } from "@react-three/fiber";
 import { Text } from "@react-three/drei";
@@ -34,36 +34,54 @@ const ClassCombatVFXHalo = memo(function ClassCombatVFXHalo({
 }) {
   const ringRef = useRef<THREE.Mesh>(null);
   const coreRef = useRef<THREE.Mesh>(null);
+  const runeRef = useRef<THREE.Mesh>(null);
 
   const colors = {
-    fighter: { main: "#f97316", secondary: "#fbbf24" },
-    assassin: { main: "#f43f5e", secondary: "#c084fc" },
-    gunner: { main: "#00f2ff", secondary: "#38bdf8" },
-    tank: { main: "#fbbf24", secondary: "#fef08a" },
-  }[classId] || { main: "#f97316", secondary: "#fbbf24" };
+    fighter: { main: "#f97316", secondary: "#fbbf24", rune: "#ea580c" },
+    assassin: { main: "#f43f5e", secondary: "#c084fc", rune: "#e11d48" },
+    gunner: { main: "#00f2ff", secondary: "#38bdf8", rune: "#0284c7" },
+    tank: { main: "#fbbf24", secondary: "#fef08a", rune: "#d97706" },
+  }[classId] || { main: "#f97316", secondary: "#fbbf24", rune: "#ea580c" };
 
   useFrame(({ clock }) => {
     const t = clock.getElapsedTime();
     if (ringRef.current) {
-      ringRef.current.rotation.z = t * (isRunning ? 3.8 : 1.2);
+      ringRef.current.rotation.z = t * (isRunning ? 4.2 : 1.2);
       const scaleBase = isAttacking ? 1.35 : isRunning ? 1.15 : 1.0;
       const pulse = 1.0 + Math.sin(t * 6) * 0.06;
       ringRef.current.scale.set(scaleBase * pulse, scaleBase * pulse, 1);
     }
     if (coreRef.current) {
-      coreRef.current.rotation.z = -t * 2.0;
+      coreRef.current.rotation.z = -t * 2.4;
+    }
+    if (runeRef.current) {
+      runeRef.current.rotation.z = t * (isRunning ? 2.5 : 0.8);
+      const runePulse = 1.0 + Math.cos(t * 4) * 0.05;
+      runeRef.current.scale.set(runePulse, runePulse, 1);
     }
   });
 
   return (
     <group position={[position.x, 0.03, position.z]}>
-      {/* Ground Elemental Magic Rune Circle */}
+      {/* Outer Elemental Rune Orbit Ring */}
       <mesh ref={ringRef} rotation={[-Math.PI / 2, 0, 0]}>
         <ringGeometry args={[0.55, 1.25, 32]} />
         <meshBasicMaterial
           color={colors.main}
           transparent
           opacity={isAttacking ? 0.75 : isRunning ? 0.45 : 0.28}
+          depthWrite={false}
+          side={THREE.DoubleSide}
+        />
+      </mesh>
+
+      {/* Middle Sacred Glyphs Orbit */}
+      <mesh ref={runeRef} rotation={[-Math.PI / 2, 0, 0]}>
+        <ringGeometry args={[0.82, 1.05, 16]} />
+        <meshBasicMaterial
+          color={colors.rune}
+          transparent
+          opacity={isAttacking ? 0.55 : isRunning ? 0.35 : 0.18}
           depthWrite={false}
           side={THREE.DoubleSide}
         />
@@ -86,6 +104,7 @@ const ClassCombatVFXHalo = memo(function ClassCombatVFXHalo({
 // Module-level scratch vectors to prevent GC thrashing in useFrame
 const _camOffset = new THREE.Vector3();
 const _targetCamPos = new THREE.Vector3();
+const _zeroVec = new THREE.Vector3(0, 0, 0);
 
 export const PlayerEntity25D = memo(function PlayerEntity25D() {
   const { camera } = useThree();
@@ -134,8 +153,10 @@ export const PlayerEntity25D = memo(function PlayerEntity25D() {
   const triggerComboAttack = useGameWorldStore((s) => s.triggerComboAttack);
   const tickWorld = useGameWorldStore((s) => s.tickWorld);
 
-  // Local physics variables
+  // Local physics variables & 60/144 FPS smooth visual anchor
+  const playerVisualGroupRef = useRef<THREE.Group>(null);
   const pos = useRef(playerPosition.clone());
+  const currentVelocity = useRef(new THREE.Vector3(0, 0, 0));
   const velocityY = useRef(0);
   const isGrounded = useRef(true);
   const attackCooldown = useRef(0);
@@ -144,7 +165,11 @@ export const PlayerEntity25D = memo(function PlayerEntity25D() {
   const footstepDustTimer = useRef(0);
   const ghostSpawnTimer = useRef(0);
 
-  // 60FPS to 5Hz throttle synchronization refs
+  // High-frequency visual states for instantaneous, smooth animation switching
+  const [visualAnim, setVisualAnim] = useState<import("../sprites/SpriteBillboard25D").EntityAnimationState>("idle");
+  const [visualFacingLeft, setVisualFacingLeft] = useState<boolean>(playerFacingLeft);
+
+  // Store synchronization throttle refs
   const lastSyncTime = useRef(0);
   const prevAnimRef = useRef<string>("idle");
   const prevFacingRef = useRef<boolean>(playerFacingLeft);
@@ -152,15 +177,23 @@ export const PlayerEntity25D = memo(function PlayerEntity25D() {
   // ── HẠNG MỤC 1: Dịch Chuyển Bắt Buộc Về Tâm Nhà Chính (0, 0, 0) Khi Hồi Sinh ──
   useEffect(() => {
     pos.current.set(0, 0, 0);
+    currentVelocity.current.set(0, 0, 0);
     velocityY.current = 0;
     isGrounded.current = true;
     facingLeftRef.current = false;
+    if (playerVisualGroupRef.current) {
+      playerVisualGroupRef.current.position.set(0, 0, 0);
+    }
   }, [respawnTriggerCount]);
 
   // ── HẠNG MỤC 4: Khôi phục tọa độ 3D chính xác khi Hydration hoặc Dịch chuyển ──
   useEffect(() => {
-    if (pos.current.distanceTo(playerPosition) > 0.3) {
+    if (pos.current.distanceTo(playerPosition) > 0.4) {
       pos.current.copy(playerPosition);
+      currentVelocity.current.set(0, 0, 0);
+      if (playerVisualGroupRef.current) {
+        playerVisualGroupRef.current.position.copy(playerPosition);
+      }
     }
   }, [playerPosition]);
 
@@ -243,13 +276,14 @@ export const PlayerEntity25D = memo(function PlayerEntity25D() {
     const moveX = forwardX * inputForward + rightX * inputRight;
     const moveZ = forwardZ * inputForward + rightZ * inputRight;
 
-    // Determine facing direction
-    if (inputRight < -0.05) facingLeftRef.current = true;
-    else if (inputRight > 0.05) facingLeftRef.current = false;
-    else if (moveX < -0.05) facingLeftRef.current = true;
-    else if (moveX > 0.05) facingLeftRef.current = false;
+    // Determine facing direction with deadzone hysteresis to avoid jittering
+    if (Math.abs(inputRight) > 0.12) {
+      facingLeftRef.current = inputRight < 0;
+    } else if (Math.abs(moveX) > 0.15) {
+      facingLeftRef.current = moveX < 0;
+    }
 
-    // 3. Jump Physics
+    // 3. Jump Physics with landing impact
     const wantsJump = !isStunned && (input.jump || mobileState.jump) && isGrounded.current;
     if (wantsJump) {
       velocityY.current = jumpForce;
@@ -261,16 +295,29 @@ export const PlayerEntity25D = memo(function PlayerEntity25D() {
     pos.current.y += velocityY.current * dt;
 
     if (pos.current.y <= 0) {
+      if (!isGrounded.current) {
+        // Landing dust puff
+        addDustPuff(pos.current.clone(), 0.55);
+      }
       pos.current.y = 0;
       velocityY.current = 0;
       isGrounded.current = true;
     }
 
-    // Speed derived from playerSpd stat
-    const baseSpeed = 4.5 + Math.min(10, (playerSpd || 10) * 0.25);
+    // ── Ultra-Fluid Velocity Interpolation (Snappy Ramp-up & Natural Deceleration) ──
+    const baseSpeed = 4.8 + Math.min(10, (playerSpd || 10) * 0.25);
     const effectiveSpeed = baseSpeed * (isStunned ? 0 : slowSpeedMultiplier) * (isMounted ? mountSpeedMultiplier : 1.0);
-    pos.current.x += moveX * effectiveSpeed * dt;
-    pos.current.z += moveZ * effectiveSpeed * dt;
+    const targetVelX = moveX * effectiveSpeed;
+    const targetVelZ = moveZ * effectiveSpeed;
+
+    // Responsive acceleration (26/s) & organic ease-out deceleration (18/s)
+    const accelRate = inputMag > 0.05 ? 26.0 : 18.0;
+    const lerpT = 1.0 - Math.exp(-accelRate * dt);
+    currentVelocity.current.x = THREE.MathUtils.lerp(currentVelocity.current.x, targetVelX, lerpT);
+    currentVelocity.current.z = THREE.MathUtils.lerp(currentVelocity.current.z, targetVelZ, lerpT);
+
+    pos.current.x += currentVelocity.current.x * dt;
+    pos.current.z += currentVelocity.current.z * dt;
 
     // 3.5 Dash / I-Frame Roll (Spacebar while moving or Shift)
     const wantsDash = !isStunned && Boolean(input.dash);
@@ -288,7 +335,7 @@ export const PlayerEntity25D = memo(function PlayerEntity25D() {
       pos.current.z += dashDirection.z * dashSpeed * dt;
 
       ghostSpawnTimer.current += dt;
-      if (ghostSpawnTimer.current >= 0.055) {
+      if (ghostSpawnTimer.current >= 0.05) {
         ghostSpawnTimer.current = 0;
         addAfterimageGhost(pos.current.clone(), "run", facingLeftRef.current, "#00f2ff");
       }
@@ -307,9 +354,9 @@ export const PlayerEntity25D = memo(function PlayerEntity25D() {
     if (wantsAttack) {
       if (attackCooldown.current <= 0) {
         // Deliberate Attack Cadence: Lv.1 attacks slowly & deliberately (~0.65s cooldown), scaling down with level
-        const isNovice = playerLevel <= 1;
         const cooldownTime = playerLevel === 1 ? 0.65 : playerLevel === 2 ? 0.55 : Math.max(0.32, 0.48 - (playerLevel - 2) * 0.035);
-        const animLockTime = Math.min(cooldownTime * 0.85, 0.45);
+        // Snappy recovery window (0.26s) so player can fluidly transition back to running without feeling locked
+        const animLockTime = Math.min(cooldownTime * 0.45, 0.28);
         attackCooldown.current = cooldownTime;
         animLockTimer.current = animLockTime;
         mobileState.attack = false;
@@ -330,7 +377,7 @@ export const PlayerEntity25D = memo(function PlayerEntity25D() {
       }
     } else if (!isGrounded.current) {
       currentAnim = velocityY.current > 0 ? "jump" : "fall";
-    } else if (inputMag > 0.1 || isDashing) {
+    } else if (inputMag > 0.05 || currentVelocity.current.lengthSq() > 0.1 || isDashing) {
       currentAnim = "run";
     }
 
@@ -347,18 +394,31 @@ export const PlayerEntity25D = memo(function PlayerEntity25D() {
     // Solid Obstacle and World Boundary Collisions Resolution
     resolveWorldCollisions(pos.current, 0.45);
 
-    // Push coordinates to Zustand store (Throttled to 5Hz / 200ms or on state change to prevent 60FPS DOM thrashing)
+    // ── Update 60/144 FPS Player Visual Group Direct Transform (Zero-Lag Smooth Movement) ──
+    if (playerVisualGroupRef.current) {
+      playerVisualGroupRef.current.position.copy(pos.current);
+    }
+
+    // High-frequency visual state updates
+    if (prevAnimRef.current !== currentAnim) {
+      prevAnimRef.current = currentAnim;
+      setVisualAnim(currentAnim);
+    }
+    if (prevFacingRef.current !== facingLeftRef.current) {
+      prevFacingRef.current = facingLeftRef.current;
+      setVisualFacingLeft(facingLeftRef.current);
+    }
+
+    // Push coordinates to Zustand store (Throttled to 20Hz / 50ms for UI/Radar/Network sync)
     const now = performance.now();
     const animChanged = prevAnimRef.current !== currentAnim;
     const facingChanged = prevFacingRef.current !== facingLeftRef.current;
-    if (now - lastSyncTime.current > 200 || animChanged || facingChanged) {
+    if (now - lastSyncTime.current > 50 || animChanged || facingChanged) {
       lastSyncTime.current = now;
-      prevAnimRef.current = currentAnim;
-      prevFacingRef.current = facingLeftRef.current;
       updatePlayerPosition(pos.current, facingLeftRef.current, currentAnim);
     }
 
-    // 5. Smooth 2.5D Action RPG Camera Follow with Locked Polar Angle (35°-55°) & Wheel Zoom
+    // 5. Smooth 2.5D Action RPG Camera Follow with Frame-Rate Independent Exponential Dampening
     cameraControls.zoom += (cameraControls.targetZoom - cameraControls.zoom) * cameraControls.dampingFactor;
 
     const clampedPitch = Math.max(PITCH_MIN, Math.min(PITCH_MAX, cameraControls.pitch));
@@ -379,69 +439,119 @@ export const PlayerEntity25D = memo(function PlayerEntity25D() {
     }
 
     _targetCamPos.copy(pos.current).add(_camOffset);
-    camera.position.lerp(_targetCamPos, 0.08);
+    const camLerp = 1.0 - Math.exp(-12.0 * dt);
+    camera.position.lerp(_targetCamPos, camLerp);
     camera.lookAt(pos.current.x, pos.current.y + 1.2, pos.current.z);
   });
 
   return (
     <group>
-      {/* ── Class-Specific Elemental Combat & Movement Halo ── */}
-      <ClassCombatVFXHalo
-        classId={playerClassId}
-        isAttacking={animLockTimer.current > 0}
-        isRunning={playerAnimState === "run"}
-        position={playerPosition}
-      />
-
-      {/* Mount Visual (Horse / Wolf / Dragon) when Mounted */}
-      {isMounted && (
-        <MountVisual25D
-          position={playerPosition}
-          facingLeft={playerFacingLeft}
-          isRunning={playerAnimState === "run"}
+      {/* ── 60FPS / 144FPS Ultra-Smooth Player Visual Anchor Group ── */}
+      <group ref={playerVisualGroupRef} position={[pos.current.x, pos.current.y, pos.current.z]}>
+        {/* Class-Specific Elemental Combat & Movement Halo */}
+        <ClassCombatVFXHalo
+          classId={playerClassId}
+          isAttacking={animLockTimer.current > 0}
+          isRunning={visualAnim === "run"}
+          position={_zeroVec}
         />
-      )}
 
-      {/* Auto-Magnet Loot Pet Companion */}
+        {/* Mount Visual (Horse / Wolf / Dragon) when Mounted */}
+        {isMounted && (
+          <MountVisual25D
+            position={_zeroVec}
+            facingLeft={visualFacingLeft}
+            isRunning={visualAnim === "run"}
+          />
+        )}
+
+        {/* Weapon Enhancement Particle Aura (+7 to +15) */}
+        {highestEnhanceLevel >= 7 && (
+          <WeaponEnhanceAura
+            enhanceLevel={highestEnhanceLevel}
+            position={_zeroVec}
+          />
+        )}
+
+        {/* Miracle Tier Radiant Rose-Purple Aura */}
+        {hasMiracleEquipped && (
+          <MiracleRadiantAura position={_zeroVec} />
+        )}
+
+        {/* Overhead Chat Speech Bubble */}
+        {overheadChatBubble && (
+          <OverheadChatBubble
+            message={overheadChatBubble}
+            position={_zeroVec}
+          />
+        )}
+
+        {/* Slow Ground Frost Swirl */}
+        {slowSpeedMultiplier < 0.95 && (
+          <mesh position={[0, 0.03, 0]} rotation={[-Math.PI / 2, 0, 0]}>
+            <ringGeometry args={[0.6, 1.4, 24]} />
+            <meshBasicMaterial color="#38bdf8" transparent opacity={0.65} depthWrite={false} side={THREE.DoubleSide} />
+          </mesh>
+        )}
+
+        {/* Stun Overhead Spinning Stars */}
+        {isStunned && (
+          <group position={[0, 2.35, 0]}>
+            <Text fontSize={0.28} anchorX="center" anchorY="middle" outlineWidth={0.03} outlineColor="#000000">
+              💫 ✨ 💫
+            </Text>
+          </group>
+        )}
+
+        {characterRenderMode === "3d_model" ? (
+          <group position={[0, 0, 0]}>
+            <RPGCharacterModel3D
+              classId={playerClassId}
+              animState={visualAnim}
+              facingLeft={visualFacingLeft}
+              color={playerColorHex}
+              weaponType={
+                playerClassId === "gunner"
+                  ? "gun"
+                  : playerClassId === "assassin"
+                  ? "daggers"
+                  : playerClassId === "tank"
+                  ? "shield"
+                  : "sword"
+              }
+            />
+          </group>
+        ) : (
+          /* 2.5D Billboard Sprite for Player with High-Contrast Pixel Chibi Art & Foot Halo */
+          <SpriteBillboard25D
+            position={[0, 0, 0]}
+            state={visualAnim}
+            facingLeft={visualFacingLeft}
+            textureKey={`player_${playerClassId}`}
+            color={playerColorHex}
+            weaponType={
+              playerClassId === "gunner"
+                ? "gun"
+                : playerClassId === "assassin"
+                ? "daggers"
+                : playerClassId === "tank"
+                ? "shield"
+                : "sword"
+            }
+            name={playerName}
+            level={playerLevel}
+            hp={playerHealth}
+            maxHp={playerMaxHealth}
+            isPlayer={true}
+            isInvincible={isInvincible}
+            hitFlash={hitFlashTimer > 0}
+            debuffBadges={playerDebuffs.map((d) => d.icon)}
+          />
+        )}
+      </group>
+
+      {/* Auto-Magnet Loot Pet Companion (World-space follower) */}
       <BattlePetCompanion />
-
-      {/* Weapon Enhancement Particle Aura (+7 to +15) */}
-      {highestEnhanceLevel >= 7 && (
-        <WeaponEnhanceAura
-          enhanceLevel={highestEnhanceLevel}
-          position={playerPosition}
-        />
-      )}
-
-      {/* ── Miracle Tier Radiant Rose-Purple Aura (Hào Quang Kì Tích Tối Thượng) ── */}
-      {hasMiracleEquipped && (
-        <MiracleRadiantAura position={playerPosition} />
-      )}
-
-      {/* Overhead Chat Speech Bubble */}
-      {overheadChatBubble && (
-        <OverheadChatBubble
-          message={overheadChatBubble}
-          position={playerPosition}
-        />
-      )}
-
-      {/* Slow Ground Frost Swirl */}
-      {slowSpeedMultiplier < 0.95 && (
-        <mesh position={[playerPosition.x, 0.03, playerPosition.z]} rotation={[-Math.PI / 2, 0, 0]}>
-          <ringGeometry args={[0.6, 1.4, 24]} />
-          <meshBasicMaterial color="#38bdf8" transparent opacity={0.65} depthWrite={false} side={THREE.DoubleSide} />
-        </mesh>
-      )}
-
-      {/* Stun Overhead Spinning Stars */}
-      {isStunned && (
-        <group position={[playerPosition.x, playerPosition.y + 2.35, playerPosition.z]}>
-          <Text fontSize={0.28} anchorX="center" anchorY="middle" outlineWidth={0.03} outlineColor="#000000">
-            💫 ✨ 💫
-          </Text>
-        </group>
-      )}
 
       {/* ── Dust Puffs (Running and Dash Foot Planting Ground Particles) ── */}
       {dustPuffs.map((dust) => (
@@ -476,52 +586,6 @@ export const PlayerEntity25D = memo(function PlayerEntity25D() {
           />
         </group>
       ))}
-
-      {characterRenderMode === "3d_model" ? (
-        <group position={playerPosition}>
-          <RPGCharacterModel3D
-            classId={playerClassId}
-            animState={playerAnimState}
-            facingLeft={playerFacingLeft}
-            color={playerColorHex}
-            weaponType={
-              playerClassId === "gunner"
-                ? "gun"
-                : playerClassId === "assassin"
-                ? "daggers"
-                : playerClassId === "tank"
-                ? "shield"
-                : "sword"
-            }
-          />
-        </group>
-      ) : (
-        /* 2.5D Billboard Sprite for Player with High-Contrast Pixel Chibi Art & Foot Halo */
-        <SpriteBillboard25D
-          position={playerPosition}
-          state={playerAnimState}
-          facingLeft={playerFacingLeft}
-          textureKey={`player_${playerClassId}`}
-          color={playerColorHex}
-          weaponType={
-            playerClassId === "gunner"
-              ? "gun"
-              : playerClassId === "assassin"
-              ? "daggers"
-              : playerClassId === "tank"
-              ? "shield"
-              : "sword"
-          }
-          name={playerName}
-          level={playerLevel}
-          hp={playerHealth}
-          maxHp={playerMaxHealth}
-          isPlayer={true}
-          isInvincible={isInvincible}
-          hitFlash={hitFlashTimer > 0}
-          debuffBadges={playerDebuffs.map((d) => d.icon)}
-        />
-      )}
     </group>
   );
 });

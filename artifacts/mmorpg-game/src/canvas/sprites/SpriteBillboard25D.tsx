@@ -166,13 +166,18 @@ export const SpriteBillboard25D = memo(function SpriteBillboard25D({
   useFrame((threeState, delta) => {
     const time = threeState.clock.getElapsedTime();
 
-    // 1. Immediately reset animation frame when state changes
-    if (prevState.current !== state || prevFacing.current !== facingLeft) {
+    // 1. Immediately update UV when state or facing changes (DO NOT reset frame on facing change alone!)
+    const stateChanged = prevState.current !== state;
+    const facingChanged = prevFacing.current !== facingLeft;
+
+    if (stateChanged || facingChanged) {
       prevState.current = state;
       prevFacing.current = facingLeft;
-      currentFrame.current = 0;
-      frameTimer.current = 0;
-      applyUV(0, rowIndex, facingLeft);
+      if (stateChanged) {
+        currentFrame.current = 0;
+        frameTimer.current = 0;
+      }
+      applyUV(currentFrame.current, rowIndex, facingLeft);
     }
 
     // 2. Animation frame advancement FPS tuning
@@ -201,30 +206,46 @@ export const SpriteBillboard25D = memo(function SpriteBillboard25D({
       applyUV(currentFrame.current, rowIndex, facingLeft);
     }
 
-    // 3. Subtle Life & Movement Physics (Idle Breathing, Run Bobbing, Stun Shaking)
+    // 3. Subtle Life & Advanced Movement Physics (Fluid Stride, Lean, Squash & Stretch)
     if (meshRef.current) {
       if (state === "idle") {
-        // Subtle vertical bobbing (1-2px / ~0.035m) & Chest breathing
-        const breath = Math.sin(time * 3.5);
+        // Dual-harmonic organic chest breathing & subtle posture sway
+        const breath = Math.sin(time * 3.2);
+        const microSway = Math.sin(time * 1.6) * 0.015;
         meshRef.current.position.y = breath * 0.035;
-        meshRef.current.position.x = 0;
-        meshRef.current.rotation.z = 0;
-        meshRef.current.scale.set(1.0 - breath * 0.008, 1.0 + breath * 0.018, 1.0);
+        meshRef.current.position.x = microSway;
+        meshRef.current.rotation.z = microSway * 0.5;
+        meshRef.current.scale.set(1.0 - breath * 0.012, 1.0 + breath * 0.022, 1.0);
       } else if (state === "run" || state === "walk") {
-        // Weight shifting stride bobbing & slight torso tilt
-        const stride = Math.sin(time * (state === "run" ? 12 : 8));
-        meshRef.current.position.y = Math.abs(stride) * 0.055;
+        // High-speed lean, dynamic stride bobbing & running squash-stretch
+        const runCycle = time * (state === "run" ? 13 : 8.5);
+        const stride = Math.sin(runCycle);
+        const squashStretch = Math.cos(runCycle * 2) * 0.035;
+        meshRef.current.position.y = Math.abs(stride) * 0.06;
         meshRef.current.position.x = 0;
-        meshRef.current.rotation.z = stride * 0.04 * (facingLeft ? -1 : 1);
-        meshRef.current.scale.set(1, 1, 1);
+        // Dynamic banking / tilt in running direction
+        meshRef.current.rotation.z = stride * 0.045 * (facingLeft ? -1 : 1);
+        meshRef.current.scale.set(1.0 - squashStretch, 1.0 + squashStretch, 1.0);
+      } else if (state === "jump") {
+        // Aerodynamic vertical stretch during ascent
+        meshRef.current.position.set(0, 0.04, 0);
+        meshRef.current.rotation.z = 0;
+        meshRef.current.scale.set(0.92, 1.08, 1.0);
+      } else if (state === "fall") {
+        // Broadening / parachute squash during descent
+        meshRef.current.position.set(0, 0, 0);
+        meshRef.current.rotation.z = 0;
+        meshRef.current.scale.set(1.06, 0.94, 1.0);
       } else if (state.startsWith("attack") || state === "air_attack") {
         // Dramatic Attack Slash Pose - Dynamic forward thrust & weapon follow-through
         const attackPhase = (currentFrame.current / 8) * Math.PI;
-        const forwardLunge = Math.sin(attackPhase) * 0.14 * (facingLeft ? -1 : 1);
+        const forwardLunge = Math.sin(attackPhase) * 0.16 * (facingLeft ? -1 : 1);
         meshRef.current.position.x = forwardLunge;
-        meshRef.current.position.y = 0.02 + Math.sin(attackPhase) * 0.04;
-        meshRef.current.rotation.z = Math.sin(attackPhase) * 0.07 * (facingLeft ? -1 : 1);
-        meshRef.current.scale.set(1.12, 1.05, 1.0);
+        meshRef.current.position.y = 0.03 + Math.sin(attackPhase) * 0.05;
+        meshRef.current.rotation.z = Math.sin(attackPhase) * 0.09 * (facingLeft ? -1 : 1);
+        const isImpactFrame = currentFrame.current >= 2 && currentFrame.current <= 4;
+        const attackScale = isImpactFrame ? 1.15 : 1.06;
+        meshRef.current.scale.set(attackScale, attackScale * 0.96, 1.0);
       } else if (state === "hurt") {
         // Erratic horizontal hit stagger shaking
         meshRef.current.position.x = Math.sin(time * 45) * 0.04;
