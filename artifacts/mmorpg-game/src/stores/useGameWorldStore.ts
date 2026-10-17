@@ -1684,9 +1684,9 @@ export const useGameWorldStore = create<GameWorldState>((set, get) => ({
 
     // ── Level Scaling (Lv.1 Untrained Novice vs Mastered Combatant) ──
     const isNovice = s.playerLevel <= 1;
-    // Lv.1 has 0.85x base multiplier, smaller 1.4m hitbox, and slightly slower recovery
-    const levelDmgScale = isNovice ? 0.85 : Math.min(1.8, 1.0 + (s.playerLevel - 1) * 0.08);
-    const aoeRadiusScale = isNovice ? 1.4 : Math.min(2.4, 1.6 + (s.playerLevel - 1) * 0.08);
+    // Lv.1 deals visibly weak novice damage (0.55x) with tight 1.15m hitbox
+    const levelDmgScale = isNovice ? 0.55 : Math.min(2.2, 0.85 + (s.playerLevel - 1) * 0.15);
+    const aoeRadiusScale = isNovice ? 1.15 : Math.min(2.6, 1.4 + (s.playerLevel - 1) * 0.12);
 
     // ── Combo Chain Attributes (1. Song Trảm ➔ 2. Huyết Nguyệt ➔ 3. Trảm Long) ──
     let comboName = "⚔️ SONG TRẢM (Combo I)";
@@ -1696,17 +1696,17 @@ export const useGameWorldStore = create<GameWorldState>((set, get) => ({
     let extraShake = 0.15;
 
     if (currentStep === 0) {
-      comboName = "⚔️ SONG TRẢM (Combo I)";
+      comboName = isNovice ? "🗡️ SONG TRẢM (Đòn Yếu Lv.1)" : "⚔️ SONG TRẢM (Combo I)";
       comboMultiplier = 1.0;
-      comboColor = "#00f2ff";
+      comboColor = isNovice ? "#94a3b8" : "#00f2ff";
       extraShake = 0.2;
     } else if (currentStep === 1) {
-      comboName = "🩸 HUYẾT NGUYỆT (Combo II)";
+      comboName = isNovice ? "🩸 HUYẾT NGUYỆT (Đòn Yếu Lv.1)" : "🩸 HUYẾT NGUYỆT (Combo II)";
       comboMultiplier = 1.35;
       comboColor = "#f43f5e";
       extraShake = 0.35;
     } else {
-      comboName = "🐉 TRẢM LONG (Combo III - Kết Liễu)!";
+      comboName = isNovice ? "🐉 TRẢM LONG (Kết Liễu Lv.1)" : "🐉 TRẢM LONG (Combo III - Kết Liễu)!";
       comboMultiplier = 1.85;
       comboColor = "#fbbf24";
       extraShake = 0.65;
@@ -1728,6 +1728,12 @@ export const useGameWorldStore = create<GameWorldState>((set, get) => ({
     // If combo 3 finisher, trigger 48ms hit-stop micro-freeze
     if (triggerHitStopOnHit) {
       s.triggerHitStop(0.048);
+    }
+
+    // Basic Attack Restores +4 Mana (MP/PP)
+    const newPp = Math.min(s.playerMaxPp, s.playerPp + 4);
+    if (newPp > s.playerPp) {
+      s.addFloatingText("+4 MP ⚡", newPos.clone().add(new THREE.Vector3(forwardDir * 0.4, 1.6, 0)), "#38bdf8");
     }
 
     // Projectile or Melee Visuals
@@ -1769,8 +1775,9 @@ export const useGameWorldStore = create<GameWorldState>((set, get) => ({
     set({
       playerPosition: newPos,
       playerAnimState: currentStep === 0 ? "attack1" : currentStep === 1 ? "attack2" : "attack3",
+      playerPp: newPp,
       comboIndex: nextStep,
-      comboTimer: isNovice ? 1.0 : 0.85, // Novice has slightly more lenient window
+      comboTimer: isNovice ? 1.1 : 0.85, // Novice has slightly more deliberate recovery window
       passiveCounter: nextPassiveCounter,
       passiveActive: isGunnerCrit,
       cameraShakeIntensity: shake,
@@ -1801,8 +1808,8 @@ export const useGameWorldStore = create<GameWorldState>((set, get) => ({
     const requiredMp = mpCosts[skillIndex] || 15;
 
     if (s.playerPp < requiredMp) {
-      s.addFloatingText("⚠️ KHÔNG ĐỦ NĂNG LƯỢNG (MP)!", s.playerPosition.clone().add(new THREE.Vector3(0, 2.3, 0)), "#38bdf8");
-      playCombatSFX("holy_bell", 0.35);
+      s.addFloatingText(`⚠️ KHÔNG ĐỦ MANA (${s.playerPp}/${requiredMp} MP)!`, s.playerPosition.clone().add(new THREE.Vector3(0, 2.3, 0)), "#38bdf8");
+      playCombatSFX("holy_bell", 0.4);
       return;
     }
 

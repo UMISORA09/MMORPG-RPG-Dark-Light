@@ -94,6 +94,7 @@ const CLASS_COMBAT_THEMES: Record<string, {
 export const ActionCombatBar = memo(function ActionCombatBar() {
   const playerClassId = useGameWorldStore((s) => s.playerClassId);
   const playerColorHex = useGameWorldStore((s) => s.playerColorHex);
+  const playerPp = useGameWorldStore((s) => s.playerPp);
   const comboIndex = useGameWorldStore((s) => s.comboIndex);
   const comboTimer = useGameWorldStore((s) => s.comboTimer);
   const skillCooldowns = useGameWorldStore((s) => s.skillCooldowns);
@@ -180,8 +181,11 @@ export const ActionCombatBar = memo(function ActionCombatBar() {
         <button
           onClick={triggerComboAttack}
           className="relative w-13 h-13 sm:w-15 sm:h-15 rounded-xl bg-gradient-to-br from-[#1e1333] to-[#0f081d] border-2 border-amber-400 hover:border-amber-300 flex flex-col items-center justify-center transition-all cursor-pointer shadow-[0_0_15px_rgba(245,158,11,0.35)] hover:scale-105 active:scale-95"
-          title={`${blueprint.comboAttacks[0]?.name || "Đánh Thường"} (Chuột Trái hoặc phím J)`}
+          title={`${blueprint.comboAttacks[0]?.name || "Đánh Thường"} (Chuột Trái hoặc phím J) — Hồi +4 Mana mỗi đòn đánh`}
         >
+          <span className="absolute -top-1.5 -left-1 px-1 py-0.2 rounded bg-cyan-950/90 text-cyan-300 font-mono text-[8px] font-black border border-cyan-500/60 shadow">
+            +4 MP
+          </span>
           <span className="text-xl drop-shadow select-none">{theme.basicIcon}</span>
           <span className="text-[9px] font-black text-slate-200 mt-0.5 truncate max-w-[50px]">
             {theme.basicLabel}
@@ -191,17 +195,24 @@ export const ActionCombatBar = memo(function ActionCombatBar() {
           </span>
         </button>
 
-        {/* Slot 1: Skill 1 (1 / Q) */}
+        {/* Slot 1: Skill 1 (1 / Q - 15 MP) */}
         <button
           disabled={cd1 > 0}
           onClick={() => triggerSkill(1)}
           className={`relative w-13 h-13 sm:w-15 sm:h-15 rounded-xl flex flex-col items-center justify-center transition-all border-2 overflow-hidden ${
             cd1 > 0
               ? "bg-[#140e21] border-slate-700 opacity-80 cursor-not-allowed"
+              : playerPp < 15
+              ? "bg-[#140e21] border-red-500/70 opacity-85 hover:border-red-400 cursor-pointer"
               : `bg-gradient-to-br ${theme.skill1Grad} ${theme.skill1Border} hover:scale-105 active:scale-95 ${theme.skill1Glow} cursor-pointer`
           }`}
-          title={`${skill1Spec?.name || "Kỹ năng 1"}: ${skill1Spec?.description || ""} (Phím 1 hoặc Q)`}
+          title={`${skill1Spec?.name || "Kỹ năng 1"}: ${skill1Spec?.description || ""} (Tốn 15 MP | Phím 1 hoặc Q)`}
         >
+          <span className={`absolute -top-1.5 -left-1 px-1 py-0.2 rounded font-mono text-[8px] font-black border shadow ${
+            playerPp < 15 ? "bg-red-950/90 text-red-300 border-red-500" : "bg-sky-950/90 text-sky-300 border-sky-500/60"
+          }`}>
+            15 MP
+          </span>
           {renderCooldownOverlay(cd1, maxCd1)}
           <span className="text-xl drop-shadow select-none">{theme.skill1Icon}</span>
           <span className="text-[9px] font-black text-slate-100 mt-0.5 truncate max-w-[50px]">
@@ -212,17 +223,24 @@ export const ActionCombatBar = memo(function ActionCombatBar() {
           </span>
         </button>
 
-        {/* Slot 2: Skill 2 (2 / E) */}
+        {/* Slot 2: Skill 2 (2 / E - 25 MP) */}
         <button
           disabled={cd2 > 0}
           onClick={() => triggerSkill(2)}
           className={`relative w-13 h-13 sm:w-15 sm:h-15 rounded-xl flex flex-col items-center justify-center transition-all border-2 overflow-hidden ${
             cd2 > 0
               ? "bg-[#140e21] border-slate-700 opacity-80 cursor-not-allowed"
+              : playerPp < 25
+              ? "bg-[#140e21] border-red-500/70 opacity-85 hover:border-red-400 cursor-pointer"
               : `bg-gradient-to-br ${theme.skill2Grad} ${theme.skill2Border} hover:scale-105 active:scale-95 ${theme.skill2Glow} cursor-pointer`
           }`}
-          title={`${skill2Spec?.name || "Kỹ năng 2"}: ${skill2Spec?.description || ""} (Phím 2 hoặc E)`}
+          title={`${skill2Spec?.name || "Kỹ năng 2"}: ${skill2Spec?.description || ""} (Tốn 25 MP | Phím 2 hoặc E)`}
         >
+          <span className={`absolute -top-1.5 -left-1 px-1 py-0.2 rounded font-mono text-[8px] font-black border shadow ${
+            playerPp < 25 ? "bg-red-950/90 text-red-300 border-red-500" : "bg-sky-950/90 text-sky-300 border-sky-500/60"
+          }`}>
+            25 MP
+          </span>
           {renderCooldownOverlay(cd2, maxCd2)}
           <span className="text-xl drop-shadow select-none">{theme.skill2Icon}</span>
           <span className="text-[9px] font-black text-slate-100 mt-0.5 truncate max-w-[50px]">
@@ -233,17 +251,24 @@ export const ActionCombatBar = memo(function ActionCombatBar() {
           </span>
         </button>
 
-        {/* Slot 3: Ultimate Skill 3 (3 / R) */}
+        {/* Slot 3: Ultimate Skill 3 (3 / R - 50 MP) */}
         <button
           disabled={cd3 > 0}
           onClick={() => triggerSkill(3)}
           className={`relative w-13 h-13 sm:w-15 sm:h-15 rounded-xl flex flex-col items-center justify-center transition-all border-2 overflow-hidden ${
             cd3 > 0
               ? "bg-[#140e21] border-slate-700 opacity-80 cursor-not-allowed"
+              : playerPp < 50
+              ? "bg-[#140e21] border-red-500/70 opacity-85 hover:border-red-400 cursor-pointer"
               : `bg-gradient-to-br ${theme.skill3Grad} ${theme.skill3Border} hover:scale-105 active:scale-95 ${theme.skill3Glow} cursor-pointer`
           }`}
-          title={`${skill3Spec?.name || "Tuyệt Kỹ"}: ${skill3Spec?.description || ""} (Phím 3 hoặc R)`}
+          title={`${skill3Spec?.name || "Tuyệt Kỹ"}: ${skill3Spec?.description || ""} (Tốn 50 MP | Phím 3 hoặc R)`}
         >
+          <span className={`absolute -top-1.5 -left-1 px-1 py-0.2 rounded font-mono text-[8px] font-black border shadow ${
+            playerPp < 50 ? "bg-red-950/90 text-red-300 border-red-500" : "bg-sky-950/90 text-sky-300 border-sky-500/60"
+          }`}>
+            50 MP
+          </span>
           {renderCooldownOverlay(cd3, maxCd3)}
           <span className="text-xl drop-shadow select-none animate-pulse">{theme.skill3Icon}</span>
           <span className="text-[9px] font-black text-amber-200 mt-0.5 truncate max-w-[50px]">

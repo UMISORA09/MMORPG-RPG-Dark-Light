@@ -217,6 +217,14 @@ export const SpriteBillboard25D = memo(function SpriteBillboard25D({
         meshRef.current.position.x = 0;
         meshRef.current.rotation.z = stride * 0.04 * (facingLeft ? -1 : 1);
         meshRef.current.scale.set(1, 1, 1);
+      } else if (state.startsWith("attack") || state === "air_attack") {
+        // Dramatic Attack Slash Pose - Dynamic forward thrust & weapon follow-through
+        const attackPhase = (currentFrame.current / 8) * Math.PI;
+        const forwardLunge = Math.sin(attackPhase) * 0.14 * (facingLeft ? -1 : 1);
+        meshRef.current.position.x = forwardLunge;
+        meshRef.current.position.y = 0.02 + Math.sin(attackPhase) * 0.04;
+        meshRef.current.rotation.z = Math.sin(attackPhase) * 0.07 * (facingLeft ? -1 : 1);
+        meshRef.current.scale.set(1.12, 1.05, 1.0);
       } else if (state === "hurt") {
         // Erratic horizontal hit stagger shaking
         meshRef.current.position.x = Math.sin(time * 45) * 0.04;
@@ -242,6 +250,10 @@ export const SpriteBillboard25D = memo(function SpriteBillboard25D({
         // Red hurt / invincibility pulse
         materialRef.current.emissive.set("#ff2222");
         materialRef.current.emissiveIntensity = 0.95 + Math.sin(Date.now() * 0.03) * 0.35;
+      } else if (state.startsWith("attack")) {
+        // High-energy combat weapon blade gleam
+        materialRef.current.emissive.set(color);
+        materialRef.current.emissiveIntensity = 0.55;
       } else if (isBleed) {
         // Crimson dripping bleed pulse
         materialRef.current.emissive.set("#dc2626");

@@ -20,6 +20,69 @@ if (typeof window !== "undefined") {
   initInputRouter();
 }
 
+// ── Class-Specific Elemental Combat & Movement Halo ─────────────────────────
+const ClassCombatVFXHalo = memo(function ClassCombatVFXHalo({
+  classId,
+  isAttacking,
+  isRunning,
+  position,
+}: {
+  classId: string;
+  isAttacking: boolean;
+  isRunning: boolean;
+  position: THREE.Vector3;
+}) {
+  const ringRef = useRef<THREE.Mesh>(null);
+  const coreRef = useRef<THREE.Mesh>(null);
+
+  const colors = {
+    fighter: { main: "#f97316", secondary: "#fbbf24" },
+    assassin: { main: "#f43f5e", secondary: "#c084fc" },
+    gunner: { main: "#00f2ff", secondary: "#38bdf8" },
+    tank: { main: "#fbbf24", secondary: "#fef08a" },
+  }[classId] || { main: "#f97316", secondary: "#fbbf24" };
+
+  useFrame(({ clock }) => {
+    const t = clock.getElapsedTime();
+    if (ringRef.current) {
+      ringRef.current.rotation.z = t * (isRunning ? 3.8 : 1.2);
+      const scaleBase = isAttacking ? 1.35 : isRunning ? 1.15 : 1.0;
+      const pulse = 1.0 + Math.sin(t * 6) * 0.06;
+      ringRef.current.scale.set(scaleBase * pulse, scaleBase * pulse, 1);
+    }
+    if (coreRef.current) {
+      coreRef.current.rotation.z = -t * 2.0;
+    }
+  });
+
+  return (
+    <group position={[position.x, 0.03, position.z]}>
+      {/* Ground Elemental Magic Rune Circle */}
+      <mesh ref={ringRef} rotation={[-Math.PI / 2, 0, 0]}>
+        <ringGeometry args={[0.55, 1.25, 32]} />
+        <meshBasicMaterial
+          color={colors.main}
+          transparent
+          opacity={isAttacking ? 0.75 : isRunning ? 0.45 : 0.28}
+          depthWrite={false}
+          side={THREE.DoubleSide}
+        />
+      </mesh>
+
+      {/* Inner Radiant Core */}
+      <mesh ref={coreRef} rotation={[-Math.PI / 2, 0, 0]}>
+        <circleGeometry args={[0.42, 16]} />
+        <meshBasicMaterial
+          color={colors.secondary}
+          transparent
+          opacity={isAttacking ? 0.55 : isRunning ? 0.35 : 0.18}
+          depthWrite={false}
+        />
+      </mesh>
+    </group>
+  );
+});
+
 // Module-level scratch vectors to prevent GC thrashing in useFrame
 const _camOffset = new THREE.Vector3();
 const _targetCamPos = new THREE.Vector3();
@@ -243,9 +306,12 @@ export const PlayerEntity25D = memo(function PlayerEntity25D() {
 
     if (wantsAttack) {
       if (attackCooldown.current <= 0) {
+        // Deliberate Attack Cadence: Lv.1 attacks slowly & deliberately (~0.65s cooldown), scaling down with level
         const isNovice = playerLevel <= 1;
-        attackCooldown.current = isNovice ? 0.42 : 0.28;
-        animLockTimer.current = isNovice ? 0.42 : 0.32;
+        const cooldownTime = playerLevel === 1 ? 0.65 : playerLevel === 2 ? 0.55 : Math.max(0.32, 0.48 - (playerLevel - 2) * 0.035);
+        const animLockTime = Math.min(cooldownTime * 0.85, 0.45);
+        attackCooldown.current = cooldownTime;
+        animLockTimer.current = animLockTime;
         mobileState.attack = false;
         mobileState.shoot = false;
 
@@ -319,6 +385,14 @@ export const PlayerEntity25D = memo(function PlayerEntity25D() {
 
   return (
     <group>
+      {/* ── Class-Specific Elemental Combat & Movement Halo ── */}
+      <ClassCombatVFXHalo
+        classId={playerClassId}
+        isAttacking={animLockTimer.current > 0}
+        isRunning={playerAnimState === "run"}
+        position={playerPosition}
+      />
+
       {/* Mount Visual (Horse / Wolf / Dragon) when Mounted */}
       {isMounted && (
         <MountVisual25D
