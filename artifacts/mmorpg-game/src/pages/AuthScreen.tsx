@@ -33,7 +33,7 @@ export default function AuthScreen() {
 
   useEffect(() => {
     if (!userLoading && user) {
-      setLocation("/game");
+      setLocation("/characters");
     }
   }, [user, userLoading, setLocation]);
 
@@ -61,7 +61,7 @@ export default function AuthScreen() {
     return Object.keys(errors).length === 0;
   };
 
-  // Auth Success Navigation -> Straight to Game!
+  // Auth Success Navigation -> Real Character Selection
   const handleAuthSuccess = async (data?: any) => {
     if (data?.token) {
       try {
@@ -82,34 +82,7 @@ export default function AuthScreen() {
     }
     await queryClient.invalidateQueries({ queryKey: getGetMeQueryKey() });
     await queryClient.invalidateQueries({ queryKey: getGetCharactersQueryKey() });
-    setLocation("/game");
-  };
-
-  // One-Click Guest Quick Play
-  const handleGuestQuickPlay = () => {
-    const randomSuffix = Math.floor(1000 + Math.random() * 9000);
-    const guestUser = `hiepkhach_${randomSuffix}`;
-    const guestPass = "chienlongba123";
-    registerMutation.mutate(
-      { data: { username: guestUser, password: guestPass } },
-      {
-        onSuccess: (data: any) => {
-          toast({
-            title: "⚔️ Vào Game Nhanh!",
-            description: `Khởi tạo hiệp khách ${guestUser}...`,
-          });
-          handleAuthSuccess(data);
-        },
-        onError: () => {
-          loginMutation.mutate(
-            { data: { username: "demo_player", password: "password123" } },
-            {
-              onSuccess: (data: any) => handleAuthSuccess(data),
-            }
-          );
-        },
-      }
-    );
+    setLocation("/characters");
   };
 
   // Submit Handler
@@ -306,16 +279,6 @@ export default function AuthScreen() {
                   ) : (
                     <span>{mode === "login" ? "Đăng Nhập" : "Tạo Tài Khoản"}</span>
                   )}
-                </button>
-
-                {/* Instant Quick Play (One-Click Play Directly on Vercel) */}
-                <button
-                  type="button"
-                  onClick={handleGuestQuickPlay}
-                  disabled={loginMutation.isPending || registerMutation.isPending}
-                  className="w-full h-10 rounded-full border border-amber-400/60 bg-gradient-to-r from-amber-500/20 to-orange-500/20 hover:from-amber-500/30 hover:to-orange-500/30 text-amber-300 font-bold text-xs tracking-wide shadow-md transition-all active:scale-[0.99] flex items-center justify-center gap-2 cursor-pointer mt-2.5"
-                >
-                  <span>⚡ VÀO CHƠI NGAY (CHƠI NHANH / DEMO)</span>
                 </button>
               </form>
 
