@@ -19,6 +19,10 @@ if (typeof window !== "undefined") {
   initInputRouter();
 }
 
+// Module-level scratch vectors to prevent GC thrashing in useFrame
+const _camOffset = new THREE.Vector3();
+const _targetCamPos = new THREE.Vector3();
+
 export const PlayerEntity25D = memo(function PlayerEntity25D() {
   const { camera } = useThree();
 
@@ -40,6 +44,9 @@ export const PlayerEntity25D = memo(function PlayerEntity25D() {
   const slowSpeedMultiplier = useGameWorldStore((s) => s.slowSpeedMultiplier);
   const hitFlashTimer = useGameWorldStore((s) => s.hitFlashTimer);
   const playerDebuffs = useGameWorldStore((s) => s.playerDebuffs);
+  const isDead = useGameWorldStore((s) => s.isDead);
+  const respawnTriggerCount = useGameWorldStore((s) => s.respawnTriggerCount);
+  const playerSpd = useGameWorldStore((s) => s.playerSpd);
 
   // Mount, Pet, Aura & Chat
   const isMounted = useGameWorldStore((s) => s.isMounted);
@@ -60,7 +67,19 @@ export const PlayerEntity25D = memo(function PlayerEntity25D() {
   const animLockTimer = useRef(0);
   const facingLeftRef = useRef(playerFacingLeft);
 
-  const speed = 7.0;
+  // 60FPS to 5Hz throttle synchronization refs
+  const lastSyncTime = useRef(0);
+  const prevAnimRef = useRef<string>("idle");
+  const prevFacingRef = useRef<boolean>(playerFacingLeft);
+
+  // ── HẠNG MỤC 1: Dịch Chuyển Bắt Buộc Về Tâm Nhà Chính (0, 0, 0) Khi Hồi Sinh ──
+  useEffect(() => {
+    pos.current.set(0, 0, 0);
+    velocityY.current = 0;
+    isGrounded.current = true;
+    facingLeftRef.current = false;
+  }, [respawnTriggerCount]);
+
   const jumpForce = 9.0;
   const gravity = -22.0;
 
@@ -73,6 +92,23 @@ export const PlayerEntity25D = memo(function PlayerEntity25D() {
     if (attackCooldown.current > 0) attackCooldown.current -= dt;
     if (animLockTimer.current > 0) animLockTimer.current -= dt;
 
+    // ── HẠNG MỤC 1: Khóa Ngay Mọi Thao Tác Khi Tử Trận (isDead) ──
+    if (isDead) {
+      mobileState.jump = false;
+      mobileState.attack = false;
+      mobileState.shoot = false;
+      velocityY.current = 0;
+
+      // Throttle sync death state to store
+      const now = performance.now();
+      if (now - lastSyncTime.current > 200 || prevAnimRef.current !== "death") {
+        lastSyncTime.current = now;
+        prevAnimRef.current = "death";
+        updatePlayerPosition(pos.current, facingLeftRef.current, "death");
+      }
+      return;
+    }
+
     // 2. Read Keyboard & Mobile Joystick inputs with Camera-Relative Orientation
     const input = getInputState();
     const joyX = mobileState.joystick.x;
@@ -82,11 +118,6 @@ export const PlayerEntity25D = memo(function PlayerEntity25D() {
     let inputForward = 0; // +1 = Forward (Away from camera), -1 = Backward (Towards camera)
     let inputRight = 0;   // +1 = Right, -1 = Left relative to screen view
 
-    // Keyboard Input (WASD & Arrow Keys) via InputRouter
-    if (input.forward) inputForward += 1;
-    if (input.back) inputForward -= 1;
-    if (input.right) inputRight += 1;
-    if (input.left) inputRight -= 1;
     // If stunned, lock movement and inputs
     if (isStunned) {
       mobileState.jump = false;
@@ -99,11 +130,6 @@ export const PlayerEntity25D = memo(function PlayerEntity25D() {
       if (input.right) inputRight += 1;
       if (input.left) inputRight -= 1;
 
-    // Mobile Virtual Joystick (joyY < 0 is dragging UP on screen)
-    if (joyY < -deadzone) inputForward += -joyY;
-    if (joyY > deadzone) inputForward += -joyY;
-    if (joyX > deadzone) inputRight += joyX;
-    if (joyX < -deadzone) inputRight += joyX;
       // Mobile Virtual Joystick (joyY < 0 is dragging UP on screen)
       if (joyY < -deadzone) inputForward += -joyY;
       if (joyY > deadzone) inputForward += -joyY;
@@ -119,7 +145,6 @@ export const PlayerEntity25D = memo(function PlayerEntity25D() {
     }
 
     // ── Calculate Camera-Relative Movement Vector ──
-    // cameraControls.yaw is camera orbit rotation angle around Y axis
     const yaw = cameraControls.yaw;
     const forwardX = -Math.sin(yaw);
     const forwardZ = -Math.cos(yaw);
@@ -129,7 +154,7 @@ export const PlayerEntity25D = memo(function PlayerEntity25D() {
     const moveX = forwardX * inputForward + rightX * inputRight;
     const moveZ = forwardZ * inputForward + rightZ * inputRight;
 
-    // Determine facing direction (flip left/right sprite based on screen orientation)
+    // Determine facing direction
     if (inputRight < -0.05) facingLeftRef.current = true;
     else if (inputRight > 0.05) facingLeftRef.current = false;
     else if (moveX < -0.05) facingLeftRef.current = true;
@@ -152,8 +177,9 @@ export const PlayerEntity25D = memo(function PlayerEntity25D() {
       isGrounded.current = true;
     }
 
-    // Move in X/Z plane smoothly with slow speed multiplier and Mount Speed (+70%)
-    const effectiveSpeed = speed * (isStunned ? 0 : slowSpeedMultiplier) * (isMounted ? mountSpeedMultiplier : 1.0);
+    // Speed derived from playerSpd stat
+    const baseSpeed = 4.5 + Math.min(10, (playerSpd || 10) * 0.25);
+    const effectiveSpeed = baseSpeed * (isStunned ? 0 : slowSpeedMultiplier) * (isMounted ? mountSpeedMultiplier : 1.0);
     pos.current.x += moveX * effectiveSpeed * dt;
     pos.current.z += moveZ * effectiveSpeed * dt;
 
@@ -196,8 +222,16 @@ export const PlayerEntity25D = memo(function PlayerEntity25D() {
     // Solid Obstacle and World Boundary Collisions Resolution
     resolveWorldCollisions(pos.current, 0.45);
 
-    // Push coordinates to Zustand store
-    updatePlayerPosition(pos.current, facingLeftRef.current, currentAnim);
+    // Push coordinates to Zustand store (Throttled to 5Hz / 200ms or on state change to prevent 60FPS DOM thrashing)
+    const now = performance.now();
+    const animChanged = prevAnimRef.current !== currentAnim;
+    const facingChanged = prevFacingRef.current !== facingLeftRef.current;
+    if (now - lastSyncTime.current > 200 || animChanged || facingChanged) {
+      lastSyncTime.current = now;
+      prevAnimRef.current = currentAnim;
+      prevFacingRef.current = facingLeftRef.current;
+      updatePlayerPosition(pos.current, facingLeftRef.current, currentAnim);
+    }
 
     // 5. Smooth 2.5D Action RPG Camera Follow with Locked Polar Angle (35°-55°) & Wheel Zoom
     cameraControls.zoom += (cameraControls.targetZoom - cameraControls.zoom) * cameraControls.dampingFactor;
@@ -209,18 +243,18 @@ export const PlayerEntity25D = memo(function PlayerEntity25D() {
     const camX = horizDist * Math.sin(cameraControls.yaw);
     const camZ = horizDist * Math.cos(cameraControls.yaw);
 
-    const camOffset = new THREE.Vector3(camX, camY, camZ);
+    _camOffset.set(camX, camY, camZ);
 
     // Camera Shake jitter
     if (cameraShakeIntensity > 0.02) {
       const shakeAmt = cameraShakeIntensity * 0.45 * (cameraControls.reduceShake ? 0.2 : 1);
-      camOffset.x += (Math.random() - 0.5) * shakeAmt;
-      camOffset.y += (Math.random() - 0.5) * shakeAmt;
-      camOffset.z += (Math.random() - 0.5) * shakeAmt;
+      _camOffset.x += (Math.random() - 0.5) * shakeAmt;
+      _camOffset.y += (Math.random() - 0.5) * shakeAmt;
+      _camOffset.z += (Math.random() - 0.5) * shakeAmt;
     }
 
-    const targetCamPos = pos.current.clone().add(camOffset);
-    camera.position.lerp(targetCamPos, 0.08);
+    _targetCamPos.copy(pos.current).add(_camOffset);
+    camera.position.lerp(_targetCamPos, 0.08);
     camera.lookAt(pos.current.x, pos.current.y + 1.2, pos.current.z);
   });
 

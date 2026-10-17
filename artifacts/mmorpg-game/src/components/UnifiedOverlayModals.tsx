@@ -12,6 +12,7 @@ import { BattleReportModal } from "@/ui/modals/BattleReportModal";
 import { AchievementsModal } from "@/ui/modals/AchievementsModal";
 import { DailyLoginModal } from "@/ui/modals/DailyLoginModal";
 import { LoadingTransitionScreen } from "@/ui/transition/LoadingTransitionScreen";
+import { PlayerDeathRespawnModal } from "./PlayerDeathRespawnModal";
 import {
   useGetInventory,
   getGetInventoryQueryKey,
@@ -161,6 +162,9 @@ export const UnifiedOverlayModals = memo(function UnifiedOverlayModals({
 
   return (
     <>
+      {/* 0.0 Death & Town Respawn System Modal */}
+      <PlayerDeathRespawnModal />
+
       {/* 0. GM Admin Floating Panel (F12 or /gm) */}
       <GMAdminPanel />
 

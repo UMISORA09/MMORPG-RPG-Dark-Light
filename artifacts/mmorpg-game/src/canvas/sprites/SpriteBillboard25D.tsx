@@ -40,6 +40,7 @@ export interface SpriteBillboard25DProps {
   isInvincible?: boolean;
   hitFlash?: boolean;
   debuffBadges?: string[];
+  showOverhead?: boolean;
   onClick?: () => void;
 }
 
@@ -66,6 +67,7 @@ export const SpriteBillboard25D = memo(function SpriteBillboard25D({
   isInvincible = false,
   hitFlash = false,
   debuffBadges = [],
+  showOverhead = true,
   onClick,
 }: SpriteBillboard25DProps) {
   const meshRef = useRef<THREE.Mesh>(null);
@@ -285,53 +287,55 @@ export const SpriteBillboard25D = memo(function SpriteBillboard25D({
         </mesh>
 
         {/* --- Overhead Floating HUD: Single-line Name & Compact HP Bar (Pill Background) --- */}
-        <group ref={overheadRef} position={[0, entityHeight + 0.32, 0]}>
-          {/* Black Translucent Background Pill */}
-          <mesh position={[0, 0.1, -0.02]}>
-            <planeGeometry args={[barWidth + 0.3, 0.34]} />
-            <meshBasicMaterial color="#000000" transparent opacity={0.72} depthWrite={false} />
-          </mesh>
+        {showOverhead && (
+          <group ref={overheadRef} position={[0, entityHeight + 0.32, 0]}>
+            {/* Black Translucent Background Pill */}
+            <mesh position={[0, 0.1, -0.02]}>
+              <planeGeometry args={[barWidth + 0.3, 0.34]} />
+              <meshBasicMaterial color="#000000" transparent opacity={0.72} depthWrite={false} />
+            </mesh>
 
-          {/* Active Debuff Badges */}
-          {debuffBadges && debuffBadges.length > 0 && (
-            <Text
-              position={[0, 0.35, 0]}
-              fontSize={0.16}
-              anchorX="center"
-              anchorY="middle"
-            >
-              {debuffBadges.join(" ")}
-            </Text>
-          )}
+            {/* Active Debuff Badges */}
+            {debuffBadges && debuffBadges.length > 0 && (
+              <Text
+                position={[0, 0.35, 0]}
+                fontSize={0.16}
+                anchorX="center"
+                anchorY="middle"
+              >
+                {debuffBadges.join(" ")}
+              </Text>
+            )}
 
-          {/* Single-line Entity Name & Level */}
-          {name && (
-            <Text
-              position={[0, 0.17, 0]}
-              fontSize={isBoss ? 0.26 : 0.18}
-              color={isBoss ? "#ef4444" : "#ffffff"}
-              anchorX="center"
-              anchorY="middle"
-              outlineWidth={0.025}
-              outlineColor="#020617"
-            >
-              {level ? `Lv.${level} ` : ""}
-              {name}
-            </Text>
-          )}
+            {/* Single-line Entity Name & Level */}
+            {name && (
+              <Text
+                position={[0, 0.17, 0]}
+                fontSize={isBoss ? 0.26 : 0.18}
+                color={isBoss ? "#ef4444" : "#ffffff"}
+                anchorX="center"
+                anchorY="middle"
+                outlineWidth={0.025}
+                outlineColor="#020617"
+              >
+                {level ? `Lv.${level} ` : ""}
+                {name}
+              </Text>
+            )}
 
-          {/* Compact HP Bar Track */}
-          <mesh position={[0, 0.03, -0.01]}>
-            <planeGeometry args={[barWidth, 0.06]} />
-            <meshBasicMaterial color="#1a202c" />
-          </mesh>
+            {/* Compact HP Bar Track */}
+            <mesh position={[0, 0.03, -0.01]}>
+              <planeGeometry args={[barWidth, 0.06]} />
+              <meshBasicMaterial color="#1a202c" />
+            </mesh>
 
-          {/* Compact HP Bar Fill */}
-          <mesh position={[(-barWidth * (1 - hpPct)) / 2, 0.03, 0]}>
-            <planeGeometry args={[Math.max(0.01, barWidth * hpPct), 0.06]} />
-            <meshBasicMaterial color={hpColor} />
-          </mesh>
-        </group>
+            {/* Compact HP Bar Fill */}
+            <mesh position={[(-barWidth * (1 - hpPct)) / 2, 0.03, 0]}>
+              <planeGeometry args={[Math.max(0.01, barWidth * hpPct), 0.06]} />
+              <meshBasicMaterial color={hpColor} />
+            </mesh>
+          </group>
+        )}
       </Billboard>
     </group>
   );

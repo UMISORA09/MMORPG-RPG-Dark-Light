@@ -15,7 +15,7 @@ export const WorldAtmosphere = memo(function WorldAtmosphere() {
         intensity={1.8}
         color="#fffbeb"
         castShadow
-        shadow-mapSize={[2048, 2048]}
+        shadow-mapSize={[1024, 1024]}
         shadow-camera-near={1}
         shadow-camera-far={140}
         shadow-camera-left={-75}

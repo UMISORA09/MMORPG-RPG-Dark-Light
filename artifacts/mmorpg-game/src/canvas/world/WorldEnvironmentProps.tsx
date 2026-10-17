@@ -131,6 +131,12 @@ export const WorldEnvironmentProps = memo(function WorldEnvironmentProps() {
     }
   });
 
+  const playerPosition = useGameWorldStore((s) => s.playerPosition);
+  const isNearMemorial = Math.hypot(playerPosition.x - 0, playerPosition.z - 7.5) <= 16;
+  const isNearMainPortal = Math.hypot(playerPosition.x - 0, playerPosition.z - (-42)) <= 18;
+  const isNearLeftPortal = Math.hypot(playerPosition.x - (-22), playerPosition.z - (-48)) <= 18;
+  const isNearRightPortal = Math.hypot(playerPosition.x - 22, playerPosition.z - (-48)) <= 18;
+
   const handlePortalClick = () => {
     playCombatSFX("dragon_roar", 0.5);
     useGameWorldStore.getState().openDungeonModal();
@@ -291,19 +297,21 @@ export const WorldEnvironmentProps = memo(function WorldEnvironmentProps() {
         {/* Ambient Gold Point Light */}
         <pointLight position={[0, 3.2, 1.2]} color="#fbbf24" intensity={2.8} distance={8} />
 
-        {/* 3D Floating Interactive Pill (Low z-index so it never covers 2D UI) */}
-        <Html position={[0, 5.5, 0]} center distanceFactor={14} zIndexRange={[10, 0]}>
-          <button
-            onClick={handleMemorialClick}
-            className="flex items-center gap-1.5 px-3 py-1.5 bg-[#0f131c]/95 border-2 border-amber-500 rounded-full shadow-[0_0_20px_rgba(245,158,11,0.5)] text-amber-300 font-bold text-xs tracking-wider uppercase hover:scale-105 active:scale-95 transition-all whitespace-nowrap cursor-pointer pointer-events-auto"
-          >
-            <span>🏆</span>
-            <span>Bia Tưởng Niệm & Xếp Hạng</span>
-            <span className="bg-amber-500/20 text-amber-200 px-1.5 py-0.5 rounded text-[10px] border border-amber-500/40 font-mono">
-              [F / Click]
-            </span>
-          </button>
-        </Html>
+        {/* 3D Floating Interactive Pill (Low z-index so it never covers 2D UI, distance-culled) */}
+        {isNearMemorial && (
+          <Html position={[0, 5.5, 0]} center distanceFactor={14} zIndexRange={[10, 0]}>
+            <button
+              onClick={handleMemorialClick}
+              className="flex items-center gap-1.5 px-3 py-1.5 bg-[#0f131c]/95 border-2 border-amber-500 rounded-full shadow-[0_0_20px_rgba(245,158,11,0.5)] text-amber-300 font-bold text-xs tracking-wider uppercase hover:scale-105 active:scale-95 transition-all whitespace-nowrap cursor-pointer pointer-events-auto"
+            >
+              <span>🏆</span>
+              <span>Bia Tưởng Niệm & Xếp Hạng</span>
+              <span className="bg-amber-500/20 text-amber-200 px-1.5 py-0.5 rounded text-[10px] border border-amber-500/40 font-mono">
+                [F / Click]
+              </span>
+            </button>
+          </Html>
+        )}
       </group>
 
       {/* ── 3. VILLAGE WOODEN PERIMETER FENCE & WATER MOAT ── */}
@@ -509,19 +517,21 @@ export const WorldEnvironmentProps = memo(function WorldEnvironmentProps() {
           distance={18}
         />
 
-        {/* 3D Floating Interactive Pill */}
-        <Html position={[0, 9.2, 0]} center distanceFactor={15} zIndexRange={[10, 0]}>
-          <button
-            onClick={handlePortalClick}
-            className="flex items-center gap-2 px-3.5 py-1.5 bg-[#0f131c]/95 border-2 border-purple-500 rounded-full shadow-[0_0_25px_rgba(168,85,247,0.6)] text-purple-300 font-bold text-xs tracking-wider uppercase hover:scale-105 active:scale-95 transition-all whitespace-nowrap cursor-pointer pointer-events-auto"
-          >
-            <span>🌀</span>
-            <span>Cổng Hang Động Phó Bản</span>
-            <span className="bg-purple-500/20 text-purple-200 px-1.5 py-0.5 rounded text-[10px] border border-purple-500/40 font-mono">
-              [F / Click]
-            </span>
-          </button>
-        </Html>
+        {/* 3D Floating Interactive Pill (Distance-culled) */}
+        {isNearMainPortal && (
+          <Html position={[0, 9.2, 0]} center distanceFactor={15} zIndexRange={[10, 0]}>
+            <button
+              onClick={handlePortalClick}
+              className="flex items-center gap-2 px-3.5 py-1.5 bg-[#0f131c]/95 border-2 border-purple-500 rounded-full shadow-[0_0_25px_rgba(168,85,247,0.6)] text-purple-300 font-bold text-xs tracking-wider uppercase hover:scale-105 active:scale-95 transition-all whitespace-nowrap cursor-pointer pointer-events-auto"
+            >
+              <span>🌀</span>
+              <span>Cổng Hang Động Phó Bản</span>
+              <span className="bg-purple-500/20 text-purple-200 px-1.5 py-0.5 rounded text-[10px] border border-purple-500/40 font-mono">
+                [F / Click]
+              </span>
+            </button>
+          </Html>
+        )}
       </group>
 
       {/* ── 6.5 2 SIDE ANCIENT DUNGEON PORTALS ([-22, -48] & [22, -48]) ── */}
@@ -545,15 +555,17 @@ export const WorldEnvironmentProps = memo(function WorldEnvironmentProps() {
           <meshBasicMaterial color="#10b981" transparent opacity={0.8} side={THREE.DoubleSide} />
         </mesh>
         <pointLight position={[0, 3.0, 1.0]} color="#10b981" intensity={3.0} distance={12} />
-        <Html position={[0, 7.2, 0]} center distanceFactor={15} zIndexRange={[10, 0]}>
-          <button
-            onClick={handlePortalClick}
-            className="flex items-center gap-1.5 px-3 py-1 bg-[#061e12]/95 border border-emerald-500 rounded-full text-emerald-300 font-bold text-[11px] shadow-[0_0_15px_rgba(16,185,129,0.5)] whitespace-nowrap cursor-pointer pointer-events-auto"
-          >
-            <span>🕷️</span>
-            <span>Hang Nhện Độc (Lv.5)</span>
-          </button>
-        </Html>
+        {isNearLeftPortal && (
+          <Html position={[0, 7.2, 0]} center distanceFactor={15} zIndexRange={[10, 0]}>
+            <button
+              onClick={handlePortalClick}
+              className="flex items-center gap-1.5 px-3 py-1 bg-[#061e12]/95 border border-emerald-500 rounded-full text-emerald-300 font-bold text-[11px] shadow-[0_0_15px_rgba(16,185,129,0.5)] whitespace-nowrap cursor-pointer pointer-events-auto"
+            >
+              <span>🕷️</span>
+              <span>Hang Nhện Độc (Lv.5)</span>
+            </button>
+          </Html>
+        )}
       </group>
 
       {/* Right Side Portal: Hầm Ngục Hắc Ám (Lv.10 - Lv.14, Crimson Red) */}
@@ -576,15 +588,17 @@ export const WorldEnvironmentProps = memo(function WorldEnvironmentProps() {
           <meshBasicMaterial color="#f43f5e" transparent opacity={0.8} side={THREE.DoubleSide} />
         </mesh>
         <pointLight position={[0, 3.0, 1.0]} color="#f43f5e" intensity={3.0} distance={12} />
-        <Html position={[0, 7.2, 0]} center distanceFactor={15} zIndexRange={[10, 0]}>
-          <button
-            onClick={handlePortalClick}
-            className="flex items-center gap-1.5 px-3 py-1 bg-[#1e060c]/95 border border-rose-500 rounded-full text-rose-300 font-bold text-[11px] shadow-[0_0_15px_rgba(244,63,94,0.5)] whitespace-nowrap cursor-pointer pointer-events-auto"
-          >
-            <span>💀</span>
-            <span>Hầm Ngục Hắc Ám (Lv.10)</span>
-          </button>
-        </Html>
+        {isNearRightPortal && (
+          <Html position={[0, 7.2, 0]} center distanceFactor={15} zIndexRange={[10, 0]}>
+            <button
+              onClick={handlePortalClick}
+              className="flex items-center gap-1.5 px-3 py-1 bg-[#1e060c]/95 border border-rose-500 rounded-full text-rose-300 font-bold text-[11px] shadow-[0_0_15px_rgba(244,63,94,0.5)] whitespace-nowrap cursor-pointer pointer-events-auto"
+            >
+              <span>💀</span>
+              <span>Hầm Ngục Hắc Ám (Lv.10)</span>
+            </button>
+          </Html>
+        )}
       </group>
 
       {/* ── 7. INSTANCED CRYSTAL ROCKS IN WILDERNESS ── */}

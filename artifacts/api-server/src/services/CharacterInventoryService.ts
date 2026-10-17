@@ -5,7 +5,7 @@ import {
   charactersTable,
   itemsTable,
 } from "@workspace/db";
-import { getStatsForLevel } from "../data/classes";
+import { getStatsForLevel, CHARACTER_CLASSES } from "../data/classes";
 
 const ENHANCEMENT_LIMIT = 15;
 const ENHANCEMENT_COST = 100;
@@ -55,43 +55,64 @@ export async function recalculateCharacterStats(characterId: number, executor: a
     }
   }
 
-  const base = getStatsForLevel(character.classId, character.level);
-  const baseMp = 200 + (character.level - 1) * 10;
-  const maxHp = base.hp + bonuses.hpBoost;
-  const maxMp = baseMp + bonuses.mpBoost;
+  const baseCls = CHARACTER_CLASSES.find((c) => c.id === character.classId) || CHARACTER_CLASSES[0];
+  const baseHp = baseCls.baseHp;
+  const baseMp = baseCls.baseMp;
+  const baseAtk = baseCls.baseAtk;
+  const baseMatk = 10;
+  const baseDef = baseCls.baseDef;
+  const baseSpd = baseCls.baseSpd;
+  const baseCrit = baseCls.critRate;
+  const baseEva = baseCls.evasion;
+
+  const str = Math.max((baseCls as any).baseStr || 8, character.str || 8);
+  const dex = Math.max((baseCls as any).baseDex || 5, character.dex || 5);
+  const intel = Math.max((baseCls as any).baseInt || 5, character.intel || 5);
+  const luk = Math.max((baseCls as any).baseLuk || 5, character.luk || 5);
+  const vit = Math.max((baseCls as any).baseVit || 5, character.vit || 5);
+
+  const maxHp = baseHp + (vit * 18) + bonuses.hpBoost;
+  const maxMp = baseMp + (intel * 10) + bonuses.mpBoost;
+  const atk = baseAtk + Math.floor(str * 1.5 + dex * 0.5) + bonuses.atkBoost;
+  const matk = baseMatk + Math.floor(intel * 1.8) + bonuses.matkBoost;
+  const def = baseDef + Math.floor(vit * 0.8 + str * 0.4) + bonuses.defBoost;
+  const spd = baseSpd + Math.min(8, Math.floor(dex * 0.15)) + bonuses.spdBoost;
+  const critRate = Math.min(75, baseCrit + Math.floor(luk * 0.4 + dex * 0.1) + bonuses.critRateBoost);
+  const evasion = Math.min(60, baseEva + Math.floor(dex * 0.3 + luk * 0.2));
+  const combatPower = Math.floor(
+    maxHp * 0.2 + maxMp * 0.1 + atk * 8 + matk * 6 + def * 10 + spd * 15 + critRate * 12 + bonuses.bonusCombatPower
+  );
+
   const currentHpRatio = character.maxHp > 0 ? Math.min(1, Math.max(0, character.hp / character.maxHp)) : 1;
   const currentMpRatio = character.maxMp > 0 ? Math.min(1, Math.max(0, character.mp / character.maxMp)) : 1;
+
   const nextStats = {
+    str,
+    dex,
+    intel,
+    luk,
+    vit,
     maxHp,
     hp: Math.min(maxHp, Math.round(currentHpRatio * maxHp)),
     maxMp,
     mp: Math.min(maxMp, Math.round(currentMpRatio * maxMp)),
-    atk: base.atk + bonuses.atkBoost,
-    matk: 20 + (character.level - 1) * 2 + bonuses.matkBoost,
-    def: base.def + bonuses.defBoost,
+    atk,
+    matk,
+    def,
     mdef: 15 + (character.level - 1) + bonuses.mdefBoost,
-    spd: Math.max(1, base.spd + bonuses.spdBoost),
-    str: 15 + (character.level - 1) + bonuses.strBoost,
-    dex: 15 + (character.level - 1) + bonuses.dexBoost,
-    intel: 15 + (character.level - 1) + bonuses.intBoost,
-    luk: 10 + Math.floor((character.level - 1) / 2) + bonuses.lukBoost,
-    vit: 15 + (character.level - 1) + bonuses.vitBoost,
-    critRate: 15 + bonuses.critRateBoost,
+    spd,
+    critRate,
     critDmg: 150,
     accuracy: 95,
-    evasion: 10,
+    evasion,
+    combatPower,
   };
-  const combatPower = Math.max(0, Math.round(
-    nextStats.maxHp * 0.5 + nextStats.atk * 3 + nextStats.matk * 2 + nextStats.def * 2
-    + nextStats.mdef + nextStats.spd * 2 + nextStats.str * 2 + nextStats.dex * 2
-    + nextStats.intel * 2 + nextStats.luk + nextStats.vit * 2 + bonuses.bonusCombatPower,
-  ));
 
   const [updated] = await executor.update(charactersTable)
-    .set({ ...nextStats, combatPower })
+    .set(nextStats)
     .where(eq(charactersTable.id, characterId))
     .returning();
-  return updated ?? { ...character, ...nextStats, combatPower };
+  return updated ?? { ...character, ...nextStats };
 }
 
 export class CharacterInventoryService {

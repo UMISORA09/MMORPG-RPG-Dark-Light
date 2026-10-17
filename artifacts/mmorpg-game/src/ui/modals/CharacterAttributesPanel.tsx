@@ -1,11 +1,17 @@
 import { memo, useState } from "react";
+import * as THREE from "three";
 import { useGameWorldStore } from "@/stores/useGameWorldStore";
+import { useGameStore } from "@/game/useGameStore";
 import { playCombatSFX } from "@/audio/CombatSoundSynth";
-import { X, Shield, Swords, Zap, Sparkles, Heart, Plus, RotateCcw } from "lucide-react";
+import { useQueryClient } from "@tanstack/react-query";
+import { getGetCharacterQueryKey, getGetCharactersQueryKey } from "@workspace/api-client-react";
+import { useToast } from "@/hooks/use-toast";
+import { X, Shield, Swords, Zap, Sparkles, Heart, Plus, RotateCcw, Save } from "lucide-react";
 
 export const CharacterAttributesPanel = memo(function CharacterAttributesPanel() {
   const activeModal = useGameWorldStore((s) => s.activeModal);
   const closeActiveModal = useGameWorldStore((s) => s.closeActiveModal);
+  const activeCharacterId = useGameWorldStore((s) => s.activeCharacterId);
   const unallocatedStatPoints = useGameWorldStore((s) => s.unallocatedStatPoints);
   const playerStr = useGameWorldStore((s) => s.playerStr);
   const playerDex = useGameWorldStore((s) => s.playerDex);
@@ -18,6 +24,9 @@ export const CharacterAttributesPanel = memo(function CharacterAttributesPanel()
   const addFloatingText = useGameWorldStore((s) => s.addFloatingText);
   const playerPosition = useGameWorldStore((s) => s.playerPosition);
   const updateBaseStats = useGameWorldStore((s) => s.updateBaseStats);
+
+  const queryClient = useQueryClient();
+  const { toast } = useToast();
 
   // Temporary staging points before confirming
   const [spentStr, setSpentStr] = useState(0);
@@ -56,9 +65,11 @@ export const CharacterAttributesPanel = memo(function CharacterAttributesPanel()
     setIsSaving(true);
     playCombatSFX("level_up_fanfare", 0.5);
 
+    const charId = activeCharacterId || 1;
+
     try {
-      const res = await fetch("/api/characters/1/allocate-stats", {
-        method: "POST",
+      const res = await fetch(`/api/characters/${charId}/stats`, {
+        method: "PUT",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           str: spentStr,
@@ -66,22 +77,44 @@ export const CharacterAttributesPanel = memo(function CharacterAttributesPanel()
           intel: spentInt,
           luk: spentLuk,
           vit: spentVit,
+          statPoints: remainingPoints,
         }),
       });
 
       if (res.ok) {
         const data = await res.json();
+        const char = data.character;
+
         updateBaseStats({
-          str: playerStr + spentStr,
-          dex: playerDex + spentDex,
-          intel: playerIntel + spentInt,
-          luk: playerLuk + spentLuk,
-          vit: playerVit + spentVit,
-          unallocatedStatPoints: remainingPoints,
+          str: char?.str ?? (playerStr + spentStr),
+          dex: char?.dex ?? (playerDex + spentDex),
+          intel: char?.intel ?? (playerIntel + spentInt),
+          luk: char?.luk ?? (playerLuk + spentLuk),
+          vit: char?.vit ?? (playerVit + spentVit),
+          unallocatedStatPoints: char?.unallocatedStatPoints ?? remainingPoints,
+          playerAtk: char?.atk,
+          playerMatk: char?.matk,
+          playerDef: char?.def,
+          playerSpd: char?.spd,
+          playerCritRate: char?.critRate,
+          playerEvasion: char?.evasion,
+          combatPower: char?.combatPower,
         });
 
-        addFloatingText(`✨ Đã phân bổ ${totalSpent} điểm tiềm năng!`, playerPosition.clone(), "#00f2ff");
+        // Invalidate react query cache
+        queryClient.invalidateQueries({ queryKey: getGetCharactersQueryKey() });
+        queryClient.invalidateQueries({ queryKey: getGetCharacterQueryKey(charId) });
+
+        const newCP = char?.combatPower || data.combatPower || "mới";
+        toast({
+          title: "✨ Đã lưu chỉ số thành công!",
+          description: `Lực chiến tăng lên: ${newCP}`,
+        });
+
+        addFloatingText(`✨ Lực chiến tăng: ${newCP}!`, playerPosition.clone().add(new THREE.Vector3(0, 2.5, 0)), "#00ff88");
         handleReset();
+      } else {
+        throw new Error("Server trả về lỗi");
       }
     } catch {
       // offline fallback
@@ -93,7 +126,7 @@ export const CharacterAttributesPanel = memo(function CharacterAttributesPanel()
         vit: playerVit + spentVit,
         unallocatedStatPoints: remainingPoints,
       });
-      addFloatingText(`✨ Đã phân bổ ${totalSpent} điểm tiềm năng!`, playerPosition.clone(), "#00f2ff");
+      addFloatingText(`✨ Đã phân bổ ${totalSpent} điểm tiềm năng!`, playerPosition.clone().add(new THREE.Vector3(0, 2.5, 0)), "#00f2ff");
       handleReset();
     } finally {
       setIsSaving(false);
@@ -245,9 +278,10 @@ export const CharacterAttributesPanel = memo(function CharacterAttributesPanel()
           <button
             onClick={handleConfirm}
             disabled={totalSpent === 0 || isSaving}
-            className="px-6 py-2 rounded-xl bg-cyan-500 hover:bg-cyan-400 text-slate-950 font-black text-xs transition disabled:opacity-40 shadow-[0_0_15px_rgba(0,242,255,0.4)] cursor-pointer"
+            className="px-6 py-2 rounded-xl bg-cyan-500 hover:bg-cyan-400 text-slate-950 font-black text-xs transition disabled:opacity-40 shadow-[0_0_15px_rgba(0,242,255,0.4)] cursor-pointer flex items-center gap-1.5"
           >
-            {isSaving ? "Đang Lưu..." : `Xác Nhận (+${totalSpent} Điểm)`}
+            <Save className="w-3.5 h-3.5" />
+            <span>{isSaving ? "Đang Lưu..." : `[💾 LƯU CHỈ SỐ] (+${totalSpent} Điểm)`}</span>
           </button>
         </div>
       </div>

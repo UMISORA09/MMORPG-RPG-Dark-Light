@@ -130,6 +130,12 @@ export interface GameWorldState {
   characterRenderMode: "2.5d_sprite" | "3d_model";
   hitFlashTimer: number; // 120ms hit flash reaction
 
+  // --- Death & Town Respawn System ---
+  isDead: boolean;
+  respawnCountdown: number;
+  respawnTriggerCount: number;
+  respawnAtTown: () => void;
+
   // --- Active Debuffs & Status Effects ---
   playerDebuffs: ActiveDebuff[];
   isStunned: boolean;
@@ -219,15 +225,37 @@ export interface GameWorldState {
   togglePet: () => void;
   setPetPosition: (pos: THREE.Vector3) => void;
 
-  // --- Stat Points Allocation System ---
+  // --- Stat Points Allocation System & Derived Stats ---
   unallocatedStatPoints: number;
   playerStr: number;
   playerDex: number;
   playerIntel: number;
   playerLuk: number;
   playerVit: number;
+  playerAtk: number;
+  playerMatk: number;
+  playerDef: number;
+  playerSpd: number;
+  playerCritRate: number;
+  playerEvasion: number;
+  combatPower: number;
   setUnallocatedStatPoints: (val: number) => void;
-  updateBaseStats: (stats: { str?: number; dex?: number; intel?: number; luk?: number; vit?: number; unallocatedStatPoints?: number }) => void;
+  updateBaseStats: (stats: {
+    str?: number;
+    dex?: number;
+    intel?: number;
+    luk?: number;
+    vit?: number;
+    unallocatedStatPoints?: number;
+    playerAtk?: number;
+    playerMatk?: number;
+    playerDef?: number;
+    playerSpd?: number;
+    playerCritRate?: number;
+    playerEvasion?: number;
+    combatPower?: number;
+  }) => void;
+  recomputeDerivedStats: () => void;
 
   // --- Ranked PvP Arena 1v1 ---
   pvpArenaActive: boolean;
@@ -420,10 +448,10 @@ export const useGameWorldStore = create<GameWorldState>((set, get) => ({
   playerVelocity: new THREE.Vector3(0, 0, 0),
   playerFacingLeft: false,
   playerAnimState: "idle",
-  playerHealth: 260,
-  playerMaxHealth: 260,
-  playerPp: 110,
-  playerMaxPp: 110,
+  playerHealth: 120,
+  playerMaxHealth: 120,
+  playerPp: 65,
+  playerMaxPp: 65,
   playerLevel: 1,
   playerExp: 0,
   playerExpToNext: 100,
@@ -442,6 +470,11 @@ export const useGameWorldStore = create<GameWorldState>((set, get) => ({
   invincibleTimer: 0,
   characterRenderMode: "2.5d_sprite",
   hitFlashTimer: 0,
+
+  // Death & Town Respawn System
+  isDead: false,
+  respawnCountdown: 0,
+  respawnTriggerCount: 0,
 
   // Active Debuffs & Status Effects
   playerDebuffs: [],
@@ -647,22 +680,91 @@ export const useGameWorldStore = create<GameWorldState>((set, get) => ({
   togglePet: () => set((s) => ({ petActive: !s.petActive })),
   setPetPosition: (pos) => set({ petPosition: pos }),
 
-  // Stat Points Allocation System
+  // Stat Points Allocation System & Derived Stats
   unallocatedStatPoints: 5,
-  playerStr: 15,
-  playerDex: 15,
-  playerIntel: 15,
-  playerLuk: 10,
-  playerVit: 15,
+  playerStr: 10,
+  playerDex: 7,
+  playerIntel: 5,
+  playerLuk: 5,
+  playerVit: 8,
+  playerAtk: 10,
+  playerMatk: 10,
+  playerDef: 4,
+  playerSpd: 10,
+  playerCritRate: 8,
+  playerEvasion: 6,
+  combatPower: 250,
   setUnallocatedStatPoints: (val) => set({ unallocatedStatPoints: val }),
-  updateBaseStats: (stats) => set((s) => ({
-    playerStr: stats.str !== undefined ? stats.str : s.playerStr,
-    playerDex: stats.dex !== undefined ? stats.dex : s.playerDex,
-    playerIntel: stats.intel !== undefined ? stats.intel : s.playerIntel,
-    playerLuk: stats.luk !== undefined ? stats.luk : s.playerLuk,
-    playerVit: stats.vit !== undefined ? stats.vit : s.playerVit,
-    unallocatedStatPoints: stats.unallocatedStatPoints !== undefined ? stats.unallocatedStatPoints : s.unallocatedStatPoints,
-  })),
+  updateBaseStats: (stats) => {
+    set((s) => {
+      const str = stats.str !== undefined ? stats.str : s.playerStr;
+      const dex = stats.dex !== undefined ? stats.dex : s.playerDex;
+      const intel = stats.intel !== undefined ? stats.intel : s.playerIntel;
+      const luk = stats.luk !== undefined ? stats.luk : s.playerLuk;
+      const vit = stats.vit !== undefined ? stats.vit : s.playerVit;
+      const unallocated = stats.unallocatedStatPoints !== undefined ? stats.unallocatedStatPoints : s.unallocatedStatPoints;
+
+      const blueprint = getCharacterBlueprint(s.playerClassId);
+      const baseHp = blueprint.baseStats.hp || 120;
+      const baseMp = 65;
+      const baseAtk = blueprint.baseStats.atk || 10;
+      const baseMatk = 10;
+      const baseDef = blueprint.baseStats.def || 4;
+      const baseSpd = blueprint.baseStats.spd || 10;
+      const baseCrit = 8;
+      const baseEva = 6;
+
+      let equipHpBoost = 0;
+      let equipMpBoost = 0;
+      let equipAtkBoost = 0;
+      let equipMatkBoost = 0;
+      let equipDefBoost = 0;
+      let equipSpdBoost = 0;
+      let equipCritBoost = 0;
+
+      s.inventoryItems.filter((i) => i.equipped).forEach((eq) => {
+        equipHpBoost += eq.hpBoost || 0;
+        equipAtkBoost += eq.atkBoost || 0;
+        equipDefBoost += eq.defBoost || 0;
+        equipSpdBoost += eq.spdBoost || 0;
+      });
+
+      const maxHp = stats.playerAtk !== undefined && stats.combatPower !== undefined
+        ? s.playerMaxHealth
+        : (baseHp + (vit * 18) + equipHpBoost);
+      const maxMp = baseMp + (intel * 10) + equipMpBoost;
+      const atk = stats.playerAtk !== undefined ? stats.playerAtk : (baseAtk + Math.floor(str * 1.5 + dex * 0.5) + equipAtkBoost);
+      const matk = stats.playerMatk !== undefined ? stats.playerMatk : (baseMatk + Math.floor(intel * 1.8) + equipMatkBoost);
+      const def = stats.playerDef !== undefined ? stats.playerDef : (baseDef + Math.floor(vit * 0.8 + str * 0.4) + equipDefBoost);
+      const spd = stats.playerSpd !== undefined ? stats.playerSpd : (baseSpd + Math.min(8, Math.floor(dex * 0.15)) + equipSpdBoost);
+      const critRate = stats.playerCritRate !== undefined ? stats.playerCritRate : Math.min(75, baseCrit + Math.floor(luk * 0.4 + dex * 0.1) + equipCritBoost);
+      const evasion = stats.playerEvasion !== undefined ? stats.playerEvasion : Math.min(60, baseEva + Math.floor(dex * 0.3 + luk * 0.2));
+      const combatPower = stats.combatPower !== undefined ? stats.combatPower : Math.floor(maxHp * 0.2 + maxMp * 0.1 + atk * 8 + matk * 6 + def * 10 + spd * 15 + critRate * 12);
+
+      return {
+        playerStr: str,
+        playerDex: dex,
+        playerIntel: intel,
+        playerLuk: luk,
+        playerVit: vit,
+        unallocatedStatPoints: unallocated,
+        playerMaxHealth: maxHp,
+        playerHealth: Math.min(maxHp, s.playerHealth),
+        playerMaxPp: maxMp,
+        playerPp: Math.min(maxMp, s.playerPp),
+        playerAtk: atk,
+        playerMatk: matk,
+        playerDef: def,
+        playerSpd: spd,
+        playerCritRate: critRate,
+        playerEvasion: evasion,
+        combatPower: combatPower,
+      };
+    });
+  },
+  recomputeDerivedStats: () => {
+    get().updateBaseStats({});
+  },
 
   // Ranked PvP Arena 1v1
   pvpArenaActive: false,
@@ -1012,20 +1114,20 @@ export const useGameWorldStore = create<GameWorldState>((set, get) => ({
     s.addFloatingText(`-${damageTaken}`, s.playerPosition.clone().add(new THREE.Vector3(0, 2.2, 0)), "#ff3333");
 
     if (newHp <= 0) {
-      // Player died: respawn at village center
+      // ── HẠNG MỤC 1: DEAD State, lock inputs, show countdown modal ──
       set({
-        playerHealth: s.playerMaxHealth,
-        playerPosition: new THREE.Vector3(0, 0, 0),
-        isInvincible: true,
-        invincibleTimer: 2.5,
-        zoneNotification: "💀 Bạn đã hồi sinh an toàn tại Làng Long Tộc!",
-        zoneNotificationTimer: 4.0,
-        cameraShakeIntensity: 0.5,
-        hitFlashTimer: 0.12,
+        playerHealth: 0,
+        isDead: true,
+        playerAnimState: "death",
+        cameraShakeIntensity: 0.7,
+        hitFlashTimer: 0.25,
+        respawnCountdown: 3,
         playerDebuffs: [],
         isStunned: false,
         slowSpeedMultiplier: 1.0,
       });
+
+      playCombatSFX("heavy_slam", 0.6);
 
       // Show Defeat Card
       get().openBattleReport({
@@ -1054,6 +1156,75 @@ export const useGameWorldStore = create<GameWorldState>((set, get) => ({
         cameraShakeIntensity: 0.25,
         hitFlashTimer: 0.12,
       });
+    }
+  },
+
+  respawnAtTown: () => {
+    const s = get();
+    const origin = new THREE.Vector3(0, 0, 0);
+
+    const expLoss = Math.floor(s.playerExp * 0.05);
+    const goldLoss = Math.floor(s.playerGold * 0.02);
+    const newExp = Math.max(0, s.playerExp - expLoss);
+    const newGold = Math.max(0, s.playerGold - goldLoss);
+
+    set({
+      playerPosition: origin.clone(),
+      playerHealth: s.playerMaxHealth,
+      playerPp: s.playerMaxPp,
+      isDead: false,
+      playerAnimState: "idle",
+      currentZone: "SAFE_VILLAGE",
+      isInvincible: true,
+      invincibleTimer: 4.0,
+      zoneNotification: "🏛️ Bạn đã hồi sinh an toàn tại Đài Phun Nước Làng Tân Thủ!",
+      zoneNotificationTimer: 4.0,
+      playerExp: newExp,
+      playerGold: newGold,
+      playerDebuffs: [],
+      isStunned: false,
+      slowSpeedMultiplier: 1.0,
+      respawnCountdown: 0,
+      respawnTriggerCount: (s.respawnTriggerCount || 0) + 1,
+    });
+
+    s.addSlashEffect({
+      id: nextSlashId++,
+      position: origin.clone(),
+      radius: 4.5,
+      color: "#00f2ff",
+      lifetime: 1.2,
+      maxLifetime: 1.2,
+    });
+    s.addSlashEffect({
+      id: nextSlashId++,
+      position: origin.clone(),
+      radius: 3.0,
+      color: "#ffd700",
+      lifetime: 1.5,
+      maxLifetime: 1.5,
+    });
+
+    playCombatSFX("holy_bell", 0.6);
+    s.addFloatingText("🏛️ HỒI SINH TẠI LÀNG TÂN THỦ! (SAFE ZONE)", origin.clone().add(new THREE.Vector3(0, 2.5, 0)), "#00ff88");
+    if (expLoss > 0 || goldLoss > 0) {
+      s.addFloatingText(`-5% EXP (-${expLoss}) / -2% Vàng (-${goldLoss})`, origin.clone().add(new THREE.Vector3(0, 1.8, 0)), "#f59e0b");
+    }
+
+    if (s.activeCharacterId) {
+      fetch(`/api/characters/${s.activeCharacterId}/autosave`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          posX: 0,
+          posZ: 0,
+          zoneId: "SAFE_VILLAGE",
+          hp: s.playerMaxHealth,
+          mp: s.playerMaxPp,
+          gold: newGold,
+          experience: newExp,
+        }),
+      }).catch(() => {});
     }
   },
 
@@ -1226,12 +1397,13 @@ export const useGameWorldStore = create<GameWorldState>((set, get) => ({
     const shake = Math.max(s.cameraShakeIntensity, attackSpec.gameFeel.cameraShake);
 
     // Projectile or Melee Visuals
+    const liveAtk = s.playerAtk || blueprint.baseStats.atk || 10;
     if (attackSpec.targetImpact.hitShape === "PROJECTILE_SINGLE" || attackSpec.targetImpact.hitShape === "LINE_PIERCE") {
       s.addBullet({
         id: nextBulletId++,
         position: newPos.clone().add(new THREE.Vector3(forwardDir * 0.8, 1.2, 0)),
         velocity: new THREE.Vector3(forwardDir * 20, 0, 0),
-        damage: Math.round(blueprint.baseStats.atk * attackSpec.targetImpact.damageMultiplier * (isGunnerCrit ? 2.0 : 1.0)),
+        damage: Math.round(liveAtk * attackSpec.targetImpact.damageMultiplier * (isGunnerCrit ? 2.0 : 1.0)),
         lifetime: 1.8,
         color: isGunnerCrit ? "#f43f5e" : attackSpec.vfx.primaryColor,
       });
@@ -1316,12 +1488,13 @@ export const useGameWorldStore = create<GameWorldState>((set, get) => ({
     s.spawnVFX(skill.vfx, vfxSpawnPos, facingAngle);
 
     // 6. Projectile or Slash for skills
+    const liveSkillAtk = s.playerAtk || blueprint.baseStats.atk || 10;
     if (skill.targetImpact.hitShape === "PROJECTILE_SINGLE" || skill.targetImpact.hitShape === "LINE_PIERCE") {
       s.addBullet({
         id: nextBulletId++,
         position: newPos.clone().add(new THREE.Vector3(forwardDir * 0.8, 1.2, 0)),
         velocity: new THREE.Vector3(forwardDir * 24, 0, 0),
-        damage: Math.round(blueprint.baseStats.atk * skill.targetImpact.damageMultiplier),
+        damage: Math.round(liveSkillAtk * skill.targetImpact.damageMultiplier),
         lifetime: 2.0,
         color: skill.vfx.primaryColor,
       });
@@ -1412,19 +1585,23 @@ export const useGameWorldStore = create<GameWorldState>((set, get) => ({
   },
 
   addFloatingText: (text, pos, color = "#ffd700") => {
-    set((s) => ({
-      floatingTexts: [
-        ...s.floatingTexts,
-        {
-          id: nextTextId++,
-          text,
-          position: pos.clone(),
-          color,
-          lifetime: 1.6,
-          maxLifetime: 1.6,
-        },
-      ],
-    }));
+    set((s) => {
+      // Object Pool: Cap floating numbers to at most 8 concurrent items to prevent DOM/render overload
+      const trimmed = s.floatingTexts.length >= 8 ? s.floatingTexts.slice(s.floatingTexts.length - 7) : s.floatingTexts;
+      return {
+        floatingTexts: [
+          ...trimmed,
+          {
+            id: nextTextId++,
+            text,
+            position: pos.clone(),
+            color,
+            lifetime: 1.4,
+            maxLifetime: 1.4,
+          },
+        ],
+      };
+    });
   },
 
   setBossHealth: (hp, maxHp) => {
@@ -1590,11 +1767,19 @@ export const useGameWorldStore = create<GameWorldState>((set, get) => ({
         playerKills: char.kills !== undefined ? char.kills : s.playerKills,
         activeCharacterId: char.id || s.activeCharacterId,
         unlockedSlots: char.unlockedSlots || s.unlockedSlots || 15,
+        unallocatedStatPoints: char.unallocatedStatPoints !== undefined ? char.unallocatedStatPoints : s.unallocatedStatPoints,
         playerStr: char.str !== undefined ? char.str : s.playerStr,
         playerDex: char.dex !== undefined ? char.dex : s.playerDex,
         playerIntel: char.intel !== undefined ? char.intel : s.playerIntel,
         playerLuk: char.luk !== undefined ? char.luk : s.playerLuk,
         playerVit: char.vit !== undefined ? char.vit : s.playerVit,
+        playerAtk: char.atk !== undefined ? char.atk : s.playerAtk,
+        playerMatk: char.matk !== undefined ? char.matk : s.playerMatk,
+        playerDef: char.def !== undefined ? char.def : s.playerDef,
+        playerSpd: char.spd !== undefined ? char.spd : s.playerSpd,
+        playerCritRate: char.critRate !== undefined ? char.critRate : s.playerCritRate,
+        playerEvasion: char.evasion !== undefined ? char.evasion : s.playerEvasion,
+        combatPower: char.combatPower !== undefined ? char.combatPower : s.combatPower,
       };
     });
   },

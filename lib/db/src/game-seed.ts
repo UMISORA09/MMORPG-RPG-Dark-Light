@@ -120,11 +120,11 @@ const legacySeeds = SEED_ITEMS.map((item) => ({
 export const SEED_ALL_ITEMS = [...legacySeeds, ...equipmentSeeds, ...utilitySeeds];
 
 const monsterDefinitions = [
-  { id: "slime", name: "Slime Đầm Lầy", level: 1, hp: 110, atk: 12, def: 4, archetype: "SWARM_PACK", spriteType: "slime" },
-  { id: "slime_red", name: "Slime Đỏ Bạo Thực", level: 3, hp: 150, atk: 22, def: 8, archetype: "SWARM_PACK", spriteType: "slime" },
-  { id: "wolf", name: "Sói Hoang Hoang Dã", level: 4, hp: 210, atk: 28, def: 12, archetype: "SWARM_PACK", spriteType: "goblin" },
-  { id: "goblin", name: "Yêu Tinh Thảo Nguyên", level: 5, hp: 260, atk: 32, def: 15, archetype: "SWARM_PACK", spriteType: "goblin" },
-  { id: "goblin_executioner", name: "Yêu Tinh Đao Phủ", level: 6, hp: 340, atk: 40, def: 18, archetype: "SWARM_PACK", spriteType: "goblin" },
+  { id: "slime", name: "Slime Đầm Lầy", level: 1, hp: 85, atk: 12, def: 3, archetype: "SWARM_PACK", spriteType: "slime" },
+  { id: "slime_red", name: "Slime Đỏ Bãi Cỏ", level: 2, hp: 130, atk: 16, def: 3, archetype: "SWARM_PACK", spriteType: "slime" },
+  { id: "wolf", name: "Sói Hoang Hoang Dã", level: 5, hp: 480, atk: 42, def: 18, archetype: "SWARM_PACK", spriteType: "goblin" },
+  { id: "goblin", name: "Yêu Tinh Thảo Nguyên", level: 5, hp: 480, atk: 42, def: 18, archetype: "SWARM_PACK", spriteType: "goblin" },
+  { id: "goblin_executioner", name: "Yêu Tinh Đao Phủ", level: 6, hp: 560, atk: 50, def: 22, archetype: "SWARM_PACK", spriteType: "goblin" },
   { id: "skeleton", name: "Chiến Binh Xương Khô", level: 7, hp: 550, atk: 55, def: 25, archetype: "LONE_PREDATOR", spriteType: "skeleton" },
   { id: "orc", name: "Chiến Binh Orc Cổ (Kẻ Cướp Orc)", level: 8, hp: 720, atk: 68, def: 34, archetype: "LONE_PREDATOR", spriteType: "orc" },
   { id: "dark_knight_elite", name: "Kỵ Sĩ Hắc Ám (Tinh Anh)", level: 9, hp: 1200, atk: 88, def: 50, archetype: "LONE_PREDATOR", spriteType: "skeleton" },

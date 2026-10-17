@@ -73,11 +73,11 @@ const INITIAL_MONSTERS_DATA = [
   {
     id: 1,
     monsterId: "slime",
-    name: "Slime Đỏ Đầu Đàn",
+    name: "Slime Đầm Lầy",
     level: 2,
-    hp: 95,
-    maxHp: 95,
-    atk: 12,
+    hp: 130,
+    maxHp: 130,
+    atk: 16,
     color: "#e6192e",
     weaponType: "claws" as const,
     isBoss: false,
@@ -93,9 +93,9 @@ const INITIAL_MONSTERS_DATA = [
     monsterId: "slime",
     name: "Slime Đỏ Rừng Sâu",
     level: 1,
-    hp: 80,
-    maxHp: 80,
-    atk: 10,
+    hp: 85,
+    maxHp: 85,
+    atk: 12,
     color: "#e6192e",
     weaponType: "claws" as const,
     isBoss: false,
@@ -111,9 +111,9 @@ const INITIAL_MONSTERS_DATA = [
     monsterId: "slime",
     name: "Slime Đỏ Bãi Cỏ",
     level: 1,
-    hp: 80,
-    maxHp: 80,
-    atk: 10,
+    hp: 85,
+    maxHp: 85,
+    atk: 12,
     color: "#e6192e",
     weaponType: "claws" as const,
     isBoss: false,
@@ -125,15 +125,15 @@ const INITIAL_MONSTERS_DATA = [
     spawnPos: new THREE.Vector3(-24.5, 0, -24.0),
   },
 
-  // ── 2. KHU VỰC 2: RỪNG NGUYÊN SINH (TÂY NAM) — SWARM PACK: Wolves (Lv.3 - Lv.4) ──
+  // ── 2. KHU VỰC 2: RỪNG NGUYÊN SINH (TÂY NAM) — SWARM PACK: Wolves (Lv.5) ──
   {
     id: 4,
     monsterId: "wolf",
     name: "Sói Đầu Đàn Hoang Dã",
-    level: 4,
-    hp: 175,
-    maxHp: 175,
-    atk: 22,
+    level: 5,
+    hp: 480,
+    maxHp: 480,
+    atk: 42,
     color: "#94a3b8",
     weaponType: "claws" as const,
     isBoss: false,
@@ -148,10 +148,10 @@ const INITIAL_MONSTERS_DATA = [
     id: 5,
     monsterId: "wolf",
     name: "Sói Hoang Hung Hãn",
-    level: 3,
-    hp: 140,
-    maxHp: 140,
-    atk: 18,
+    level: 5,
+    hp: 480,
+    maxHp: 480,
+    atk: 42,
     color: "#94a3b8",
     weaponType: "claws" as const,
     isBoss: false,
@@ -166,10 +166,10 @@ const INITIAL_MONSTERS_DATA = [
     id: 6,
     monsterId: "wolf",
     name: "Sói Hoang Nanh Băng",
-    level: 3,
-    hp: 140,
-    maxHp: 140,
-    atk: 18,
+    level: 5,
+    hp: 480,
+    maxHp: 480,
+    atk: 42,
     color: "#94a3b8",
     weaponType: "claws" as const,
     isBoss: false,
@@ -187,9 +187,9 @@ const INITIAL_MONSTERS_DATA = [
     monsterId: "goblin",
     name: "Yêu Tinh Đao Phủ Trưởng",
     level: 6,
-    hp: 260,
-    maxHp: 260,
-    atk: 30,
+    hp: 550,
+    maxHp: 550,
+    atk: 46,
     color: "#84cc16",
     weaponType: "sword" as const,
     isBoss: false,
@@ -205,9 +205,9 @@ const INITIAL_MONSTERS_DATA = [
     monsterId: "goblin",
     name: "Yêu Tinh Dao Găm",
     level: 5,
-    hp: 210,
-    maxHp: 210,
-    atk: 25,
+    hp: 480,
+    maxHp: 480,
+    atk: 42,
     color: "#84cc16",
     weaponType: "sword" as const,
     isBoss: false,
@@ -223,9 +223,9 @@ const INITIAL_MONSTERS_DATA = [
     monsterId: "goblin",
     name: "Yêu Tinh Tiễu Phỉ",
     level: 5,
-    hp: 210,
-    maxHp: 210,
-    atk: 25,
+    hp: 480,
+    maxHp: 480,
+    atk: 42,
     color: "#84cc16",
     weaponType: "sword" as const,
     isBoss: false,
@@ -243,9 +243,9 @@ const INITIAL_MONSTERS_DATA = [
     monsterId: "orc",
     name: "Chiến Binh Orc Cổ (Tinh Anh)",
     level: 8,
-    hp: 480,
-    maxHp: 480,
-    atk: 42,
+    hp: 850,
+    maxHp: 850,
+    atk: 68,
     color: "#dc2626",
     weaponType: "sword" as const,
     isBoss: false,
@@ -260,9 +260,9 @@ const INITIAL_MONSTERS_DATA = [
     monsterId: "skeleton",
     name: "Kỵ Sĩ Xương Cổ Đại (Tinh Anh)",
     level: 12,
-    hp: 620,
-    maxHp: 620,
-    atk: 55,
+    hp: 1200,
+    maxHp: 1200,
+    atk: 95,
     color: "#cbd5e1",
     weaponType: "sword" as const,
     isBoss: false,
@@ -277,9 +277,9 @@ const INITIAL_MONSTERS_DATA = [
     monsterId: "dragon",
     name: "Rồng Lửa Cổ Đại (Boss Cấp 20)",
     level: 20,
-    hp: 2400,
-    maxHp: 2400,
-    atk: 85,
+    hp: 4500,
+    maxHp: 4500,
+    atk: 130,
     color: "#ef4444",
     weaponType: "dragon" as const,
     isBoss: true,
@@ -290,6 +290,10 @@ const INITIAL_MONSTERS_DATA = [
 ];
 
 let nextTelegraphId = 8000;
+
+// Scratch vectors for zero GC allocation in frame loop
+const _scratchVel = new THREE.Vector3();
+const _scratchHitDir = new THREE.Vector3();
 
 export const MonsterManager25D = memo(function MonsterManager25D() {
   const playerPosition = useGameWorldStore((s) => s.playerPosition);
@@ -304,6 +308,8 @@ export const MonsterManager25D = memo(function MonsterManager25D() {
   const applyPlayerDebuff = useGameWorldStore((s) => s.applyPlayerDebuff);
   const playerLevel = useGameWorldStore((s) => s.playerLevel);
   const weather = useGameWorldStore((s) => s.weather);
+  const isDead = useGameWorldStore((s) => s.isDead);
+  const respawnTriggerCount = useGameWorldStore((s) => s.respawnTriggerCount);
 
   const bullets = useGameWorldStore((s) => s.bullets);
   const slashEffects = useGameWorldStore((s) => s.slashEffects);
@@ -368,6 +374,20 @@ export const MonsterManager25D = memo(function MonsterManager25D() {
     }
   }, [setBossRaidState]);
 
+  // Reset Aggro toàn bộ quái vật khi người chơi tử trận hoặc hồi sinh về Làng
+  useEffect(() => {
+    if (isDead || respawnTriggerCount > 0) {
+      monstersRef.current.forEach((m) => {
+        if (m.aiState === "AGGRO_CHASE" || m.aiState === "TELEGRAPH_WINDUP") {
+          m.aiState = "RETURNING_HOME";
+          m.currentPattern = null;
+          m.currentTelegraphId = null;
+        }
+      });
+      setActiveTelegraphs([]);
+    }
+  }, [isDead, respawnTriggerCount]);
+
   // ── Handle Ground Telegraph Detonation & Damage Calculation ────────────────
   const handleTelegraphDetonate = useCallback(
     (zone: ActiveTelegraphZone) => {
@@ -401,8 +421,9 @@ export const MonsterManager25D = memo(function MonsterManager25D() {
           const monster = monstersRef.current.find((m) => m.id === zone.monsterInstanceId);
           const baseAtk = monster ? monster.atk : 40;
           const enrageBonus = monster?.isBoss && monster.phase === 2 ? 1.25 : 1.0;
-          const isSuppressed = (monster?.level || 1) > playerLevel + 3;
-          const suppressionMult = isSuppressed ? 1.85 : 1.0;
+          const levelDiff = (monster?.level || 1) - playerLevel;
+          const isSuppressed = levelDiff >= 3;
+          const suppressionMult = isSuppressed ? 2.5 : 1.0;
           const weatherMult = weather === "BLOOD_MOON" ? 1.2 : 1.0;
           const finalDamage = Math.round(baseAtk * pattern.damageMultiplier * enrageBonus * suppressionMult * weatherMult);
 
@@ -412,7 +433,7 @@ export const MonsterManager25D = memo(function MonsterManager25D() {
           if (knockbackDir.length() < 0.1) knockbackDir.set(1, 0, 0);
 
           if (isSuppressed) {
-            addFloatingText("💥 ÁP CHẾ BẠO KÍCH (1.85X)!", playerPos.clone().add(new THREE.Vector3(0, 3.0, 0)), "#ef4444");
+            addFloatingText("💥 ÁP CHẾ BẠO KÍCH (2.5X)!", playerPos.clone().add(new THREE.Vector3(0, 3.0, 0)), "#ef4444");
           }
 
           damagePlayer(finalDamage, knockbackDir);
@@ -476,9 +497,9 @@ export const MonsterManager25D = memo(function MonsterManager25D() {
     const playerPos = playerPosition;
     const isPlayerInSafeZone = currentZone === "SAFE_VILLAGE";
 
-    // Track instant player velocity for Predictive Targeting
-    const playerVel = playerPos.clone().sub(prevPlayerPos.current).divideScalar(dt > 0.001 ? dt : 0.016);
-    playerVelRef.current.copy(playerVel);
+    // Track instant player velocity for Predictive Targeting (Zero-allocation scratch vector)
+    _scratchVel.copy(playerPos).sub(prevPlayerPos.current).divideScalar(dt > 0.001 ? dt : 0.016);
+    playerVelRef.current.copy(_scratchVel);
     prevPlayerPos.current.copy(playerPos);
 
     let stateChanged = false;
@@ -522,7 +543,7 @@ export const MonsterManager25D = memo(function MonsterManager25D() {
 
         if (dist <= hitRadius) {
           // Check Level Suppression: High Level Monsters have +25% evasion against lower level players
-          const isSuppressedMob = m.level > playerLevel + 3;
+          const isSuppressedMob = m.level > playerLevel + 2;
           if (isSuppressedMob && Math.random() < 0.25) {
             addFloatingText("💨 NÉ TRÁNH CẤP CAO!", m.currentPos.clone().add(new THREE.Vector3(0, 2.5, 0)), "#00f2ff");
             b.lifetime = -1;
@@ -534,9 +555,11 @@ export const MonsterManager25D = memo(function MonsterManager25D() {
           const dmgMultiplier = m.aiState === "STAGGERED" ? 1.5 : 1.0;
           let actualDamage = Math.round(b.damage * dmgMultiplier);
 
-          // Level Suppression: -40% damage penalty to higher level mobs
-          if (isSuppressedMob) {
-            actualDamage = Math.round(actualDamage * 0.6);
+          // Level Suppression: -22% damage per level diff (up to 85% max reduction)
+          const levelDiff = m.level - playerLevel;
+          if (levelDiff >= 2) {
+            const reductionPercent = Math.min(0.85, levelDiff * 0.22);
+            actualDamage = Math.max(1, Math.round(actualDamage * (1 - reductionPercent)));
           }
 
           // Boss Territory Buff: -25% damage taken when in Boss Altar / Dungeon unless staggered
@@ -606,26 +629,32 @@ export const MonsterManager25D = memo(function MonsterManager25D() {
       }
     }
 
-    // ── 2. Slash Effects hit detection ──────────────────────────────────────
+    // ── 2. Slash Effects hit detection (Live playerAtk + Level Suppression) ──
     for (const sl of slashEffects) {
       for (const m of monsters) {
         if (!m.isAlive) continue;
         const dist = sl.position.distanceTo(m.currentPos);
         if (dist <= sl.radius) {
           // Check Level Suppression: High Level Monsters have +25% evasion against lower level players
-          const isSuppressedMob = m.level > playerLevel + 3;
+          const isSuppressedMob = m.level > playerLevel + 2;
           if (isSuppressedMob && Math.random() < 0.25) {
             addFloatingText("💨 NÉ TRÁNH CẤP CAO!", m.currentPos.clone().add(new THREE.Vector3(0, 2.5, 0)), "#00f2ff");
             continue;
           }
 
           const dmgMultiplier = m.aiState === "STAGGERED" ? 1.5 : 1.0;
-          const baseSlashDmg = 75;
-          let actualDamage = Math.round(baseSlashDmg * dmgMultiplier);
+          // Đọc trực tiếp từ chỉ số thực tế playerAtk & playerCritRate đã lưu trong store
+          const livePlayerAtk = useGameWorldStore.getState().playerAtk || 10;
+          const liveCritRate = useGameWorldStore.getState().playerCritRate || 5;
+          const isCrit = Math.random() * 100 < liveCritRate;
+          const baseSlashDmg = isCrit ? Math.floor(livePlayerAtk * 1.5) : livePlayerAtk;
+          let actualDamage = Math.max(1, Math.round(baseSlashDmg * dmgMultiplier));
 
-          // Level Suppression: -40% damage penalty to higher level mobs
-          if (isSuppressedMob) {
-            actualDamage = Math.round(actualDamage * 0.6);
+          // Level Suppression: -22% damage per level diff (up to 85% reduction) if m.level - playerLevel >= 2
+          const levelDiff = m.level - playerLevel;
+          if (levelDiff >= 2) {
+            const reductionPercent = Math.min(0.85, levelDiff * 0.22);
+            actualDamage = Math.max(1, Math.round(actualDamage * (1 - reductionPercent)));
           }
 
           // Boss Territory Buff: -25% damage taken when in Boss Altar / Dungeon unless staggered
@@ -737,9 +766,14 @@ export const MonsterManager25D = memo(function MonsterManager25D() {
       const distToPlayer = m.currentPos.distanceTo(playerPos);
       const distFromSpawn = m.currentPos.distanceTo(m.spawnPos);
 
-      // Leash Check: Return home if pulled too far or player enters Safe Village
-      if (distFromSpawn > m.blueprint.leashRadius || (isPlayerInSafeZone && distToPlayer < 14)) {
-        m.aiState = "RETURNING_HOME";
+      // Leash Check: Return home if pulled too far, player is dead, or player enters Safe Village
+      if (isDead || isPlayerInSafeZone || distFromSpawn > m.blueprint.leashRadius) {
+        if (m.aiState === "AGGRO_CHASE" || m.aiState === "TELEGRAPH_WINDUP") {
+          m.aiState = "RETURNING_HOME";
+          m.currentPattern = null;
+          m.currentTelegraphId = null;
+          stateChanged = true;
+        }
       }
 
       // Lone Predator Special: Heavy Melee 30% Barrier & Enrage at <30% HP
@@ -911,8 +945,9 @@ export const MonsterManager25D = memo(function MonsterManager25D() {
             } else if (isEvaded) {
               addFloatingText("NÉ TRÁNH! (DODGED)", playerPos.clone().add(new THREE.Vector3(0, 2.3, 0)), "#00f2ff");
             } else {
-              const isSuppressed = m.level > playerLevel + 3;
-              const suppressionCrit = isSuppressed ? 1.85 : 1.0;
+              const levelDiff = m.level - playerLevel;
+              const isSuppressed = levelDiff >= 3;
+              const suppressionCrit = isSuppressed ? 2.5 : 1.0;
               const weatherBuff = weather === "BLOOD_MOON" ? 1.2 : 1.0;
               const basicDmg = Math.round(m.atk * (m.isEnraged ? 1.25 : 1.0) * suppressionCrit * weatherBuff);
               if (m.isBoss && (currentZone === "BOSS_ALTAR" || currentZone === "DUNGEON")) {
@@ -928,7 +963,7 @@ export const MonsterManager25D = memo(function MonsterManager25D() {
                 damagePlayer(basicDmg, chaseDir);
               }
               if (isSuppressed) {
-                addFloatingText("💥 ÁP CHẾ BẠO KÍCH (1.85X)!", playerPos.clone().add(new THREE.Vector3(0, 2.7, 0)), "#ef4444");
+                addFloatingText("💥 ÁP CHẾ BẠO KÍCH (2.5X)!", playerPos.clone().add(new THREE.Vector3(0, 2.7, 0)), "#ef4444");
               }
               addFloatingText(`-${basicDmg}`, playerPos.clone().add(new THREE.Vector3(0, 2.3, 0)), "#ef4444");
             }
@@ -1195,90 +1230,104 @@ export const MonsterManager25D = memo(function MonsterManager25D() {
         />
       ))}
 
-      {/* ── Render 2.5D Billboard Sprites for All Living Monsters ── */}
-      {monstersRef.current.map((monster) => {
-        if (!monster.isAlive) return null;
-        const overheadY = monster.currentPos.y + (monster.isBoss ? 4.9 : (monster.scale || 1.0) * 2.3);
-
-        return (
-          <group key={`mob-grp-${monster.id}`}>
-            {/* Lone Predator Ground Purple Aura Decal */}
-            {monster.archetype === "LONE_PREDATOR" && (
-              <mesh position={[monster.currentPos.x, 0.025, monster.currentPos.z]} rotation={[-Math.PI / 2, 0, 0]}>
-                <ringGeometry args={[1.0, 1.8, 32]} />
-                <meshBasicMaterial color="#a855f7" transparent opacity={0.55} side={THREE.DoubleSide} depthWrite={false} />
-              </mesh>
-            )}
-
-            {/* Lone Predator Barrier Shield Bubble when enrage shield is active */}
-            {monster.hasBarrier && (monster.barrierHp ?? 0) > 0 && (
-              <mesh position={[monster.currentPos.x, monster.currentPos.y + 1.1, monster.currentPos.z]}>
-                <sphereGeometry args={[1.35, 16, 16]} />
-                <meshBasicMaterial color="#a855f7" transparent opacity={0.28} wireframe={true} />
-              </mesh>
-            )}
-
-            {/* Monster State Overhead Icon: ! for Aggro / Warning for Cast (Positioned safely above name HUD) */}
-            {monster.aiState === "AGGRO_CHASE" && (
-              <Text
-                position={[monster.currentPos.x, overheadY, monster.currentPos.z]}
-                fontSize={0.36}
-                color="#ef4444"
-                outlineWidth={0.04}
-                outlineColor="#000000"
-              >
-                !
-              </Text>
-            )}
-            {monster.aiState === "TELEGRAPH_WINDUP" && (
-              <Text
-                position={[monster.currentPos.x, overheadY, monster.currentPos.z]}
-                fontSize={0.28}
-                color="#f59e0b"
-                outlineWidth={0.04}
-                outlineColor="#000000"
-              >
-                ⚠️ GỒNG CHIÊU
-              </Text>
-            )}
-            {monster.aiState === "STAGGERED" && (
-              <Text
-                position={[monster.currentPos.x, overheadY, monster.currentPos.z]}
-                fontSize={0.28}
-                color="#facc15"
-                outlineWidth={0.04}
-                outlineColor="#000000"
-              >
-                ⚡ CHOÁNG (1.5x)
-              </Text>
-            )}
-
-            <SpriteBillboard25D
-              position={monster.currentPos}
-              state={monster.state}
-              facingLeft={monster.facingLeft}
-              width={monster.isBoss ? 3.4 : (monster.scale || 1.0) * 1.5}
-              height={monster.isBoss ? 3.8 : (monster.scale || 1.0) * 1.8}
-              textureKey={`mob_${monster.monsterId}`}
-              color={monster.color}
-              weaponType={monster.weaponType}
-              name={monster.name}
-              level={monster.level}
-              hp={monster.hp}
-              maxHp={monster.maxHp}
-              isBoss={monster.isBoss}
-              hitFlash={Boolean(monster.hitFlashTimer && monster.hitFlashTimer > 0)}
-              debuffBadges={
-                monster.aiState === "STAGGERED"
-                  ? ["⚡"]
-                  : monster.hasBarrier
-                  ? ["🛡️", "🔥"]
-                  : []
-              }
-            />
-          </group>
+      {/* ── Render 2.5D Billboard Sprites for All Living Monsters with Overhead Culling ── */}
+      {(() => {
+        const aliveMobs = monstersRef.current.filter((m) => m.isAlive);
+        const playerPos = playerPosition;
+        // Optimization: Only top 4 nearest entities within 12m or boss / active hit get overhead HUD mounted
+        const visibleOverheadSet = new Set(
+          aliveMobs
+            .filter((m) => m.isBoss || (m.hitFlashTimer && m.hitFlashTimer > 0) || m.currentPos.distanceTo(playerPos) <= 12)
+            .sort((a, b) => a.currentPos.distanceTo(playerPos) - b.currentPos.distanceTo(playerPos))
+            .slice(0, 4)
+            .map((m) => m.id)
         );
-      })}
+
+        return aliveMobs.map((monster) => {
+          const overheadY = monster.currentPos.y + (monster.isBoss ? 4.9 : (monster.scale || 1.0) * 2.3);
+          const showOverhead = monster.isBoss || visibleOverheadSet.has(monster.id);
+
+          return (
+            <group key={`mob-grp-${monster.id}`}>
+              {/* Lone Predator Ground Purple Aura Decal */}
+              {monster.archetype === "LONE_PREDATOR" && (
+                <mesh position={[monster.currentPos.x, 0.025, monster.currentPos.z]} rotation={[-Math.PI / 2, 0, 0]}>
+                  <ringGeometry args={[1.0, 1.8, 32]} />
+                  <meshBasicMaterial color="#a855f7" transparent opacity={0.55} side={THREE.DoubleSide} depthWrite={false} />
+                </mesh>
+              )}
+
+              {/* Lone Predator Barrier Shield Bubble when enrage shield is active */}
+              {monster.hasBarrier && (monster.barrierHp ?? 0) > 0 && (
+                <mesh position={[monster.currentPos.x, monster.currentPos.y + 1.1, monster.currentPos.z]}>
+                  <sphereGeometry args={[1.35, 16, 16]} />
+                  <meshBasicMaterial color="#a855f7" transparent opacity={0.28} wireframe={true} />
+                </mesh>
+              )}
+
+              {/* Monster State Overhead Icon: ! for Aggro / Warning for Cast (Positioned safely above name HUD, culled for distant mobs) */}
+              {showOverhead && monster.aiState === "AGGRO_CHASE" && (
+                <Text
+                  position={[monster.currentPos.x, overheadY, monster.currentPos.z]}
+                  fontSize={0.36}
+                  color="#ef4444"
+                  outlineWidth={0.04}
+                  outlineColor="#000000"
+                >
+                  !
+                </Text>
+              )}
+              {showOverhead && monster.aiState === "TELEGRAPH_WINDUP" && (
+                <Text
+                  position={[monster.currentPos.x, overheadY, monster.currentPos.z]}
+                  fontSize={0.28}
+                  color="#f59e0b"
+                  outlineWidth={0.04}
+                  outlineColor="#000000"
+                >
+                  ⚠️ GỒNG CHIÊU
+                </Text>
+              )}
+              {showOverhead && monster.aiState === "STAGGERED" && (
+                <Text
+                  position={[monster.currentPos.x, overheadY, monster.currentPos.z]}
+                  fontSize={0.28}
+                  color="#facc15"
+                  outlineWidth={0.04}
+                  outlineColor="#000000"
+                >
+                  ⚡ CHOÁNG (1.5x)
+                </Text>
+              )}
+
+              <SpriteBillboard25D
+                position={monster.currentPos}
+                state={monster.state}
+                facingLeft={monster.facingLeft}
+                width={monster.isBoss ? 3.4 : (monster.scale || 1.0) * 1.5}
+                height={monster.isBoss ? 3.8 : (monster.scale || 1.0) * 1.8}
+                textureKey={`mob_${monster.monsterId}`}
+                color={monster.color}
+                weaponType={monster.weaponType}
+                name={monster.name}
+                level={monster.level}
+                hp={monster.hp}
+                maxHp={monster.maxHp}
+                isBoss={monster.isBoss}
+                showOverhead={showOverhead}
+                hitFlash={Boolean(monster.hitFlashTimer && monster.hitFlashTimer > 0)}
+                debuffBadges={
+                  monster.aiState === "STAGGERED"
+                    ? ["⚡"]
+                    : monster.hasBarrier
+                    ? ["🛡️", "🔥"]
+                    : []
+                }
+              />
+            </group>
+          );
+        });
+      })()}
 
       {/* ── 3D Melee Slash Effects Render ── */}
       {slashEffects.map((sl) => (

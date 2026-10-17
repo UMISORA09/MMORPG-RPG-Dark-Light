@@ -4,6 +4,7 @@ import { eq, desc } from "drizzle-orm";
 import { CreateCharacterBody } from "@workspace/api-zod";
 import { CHARACTER_CLASSES, getStatsForLevel } from "../data/classes";
 import { requireAuth } from "../middlewares/requireAuth";
+import { recalculateCharacterStats } from "../services/CharacterInventoryService";
 import {
   ensureItemCatalog,
   ensureServerCatalog,
@@ -143,6 +144,15 @@ router.post("/characters", requireAuth, async (req, res) => {
   const stats = getStatsForLevel(classId, 1);
   await ensureItemCatalog();
 
+  const baseStr = (cls as any).baseStr || 8;
+  const baseDex = (cls as any).baseDex || 5;
+  const baseInt = (cls as any).baseInt || 5;
+  const baseLuk = (cls as any).baseLuk || 5;
+  const baseVit = (cls as any).baseVit || 5;
+  const combatPower = Math.floor(
+    stats.hp * 0.2 + stats.mp * 0.1 + stats.atk * 8 + 10 * 6 + stats.def * 10 + stats.spd * 15 + stats.critRate * 12
+  );
+
   const [character] = await db
     .insert(charactersTable)
     .values({
@@ -156,16 +166,25 @@ router.post("/characters", requireAuth, async (req, res) => {
       experience: 0,
       hp: stats.hp,
       maxHp: stats.hp,
-      mp: 200,
-      maxMp: 200,
+      mp: stats.mp,
+      maxMp: stats.mp,
+      str: baseStr,
+      dex: baseDex,
+      intel: baseInt,
+      luk: baseLuk,
+      vit: baseVit,
       atk: stats.atk,
+      matk: 10,
       def: stats.def,
       spd: stats.spd,
+      critRate: stats.critRate,
+      evasion: stats.evasion,
       gold: 100,
       kills: 0,
       deaths: 0,
+      unallocatedStatPoints: 5,
       unlockedSlots: 15,
-      combatPower: Math.round(stats.hp * 0.5 + stats.atk * 3 + stats.def * 2 + stats.spd * 2 + 15 * 8 + 10),
+      combatPower,
     })
     .returning();
 
@@ -376,6 +395,72 @@ const handleCharacterAutoSave = async (req: any, res: any) => {
 router.put("/characters/:characterId/autosave", requireAuth, handleCharacterAutoSave);
 router.post("/characters/:characterId/autosave", requireAuth, handleCharacterAutoSave);
 router.patch("/characters/:characterId/autosave", requireAuth, handleCharacterAutoSave);
+
+// ── HẠNG MỤC 2: PUT /api/characters/:characterId/stats ──────────────────────────
+const handleAllocateStats = async (req: any, res: any) => {
+  const characterId = parseInt(req.params.characterId);
+  if (isNaN(characterId)) {
+    return res.status(400).json({ error: "ID không hợp lệ" });
+  }
+
+  let [character] = await db
+    .select()
+    .from(charactersTable)
+    .where(eq(charactersTable.id, characterId))
+    .limit(1);
+
+  if (!character) {
+    return res.status(404).json({ error: "Không tìm thấy nhân vật" });
+  }
+
+  const body = req.body || {};
+  const addStr = Math.max(0, Number(body.str ?? 0));
+  const addDex = Math.max(0, Number(body.dex ?? 0));
+  const addInt = Math.max(0, Number(body.intel ?? body.int ?? 0));
+  const addLuk = Math.max(0, Number(body.luk ?? 0));
+  const addVit = Math.max(0, Number(body.vit ?? 0));
+  const totalAllocated = addStr + addDex + addInt + addLuk + addVit;
+
+  let newStatPoints = character.unallocatedStatPoints;
+  if (typeof body.statPoints === "number") {
+    newStatPoints = Math.max(0, Math.round(body.statPoints));
+  } else {
+    newStatPoints = Math.max(0, character.unallocatedStatPoints - totalAllocated);
+  }
+
+  const baseCls = CHARACTER_CLASSES.find((c) => c.id === character.classId) || CHARACTER_CLASSES[0];
+  const newStr = (character.str || (baseCls as any).baseStr || 8) + addStr;
+  const newDex = (character.dex || (baseCls as any).baseDex || 5) + addDex;
+  const newInt = (character.intel || (baseCls as any).baseInt || 5) + addInt;
+  const newLuk = (character.luk || (baseCls as any).baseLuk || 5) + addLuk;
+  const newVit = (character.vit || (baseCls as any).baseVit || 5) + addVit;
+
+  await db.update(charactersTable)
+    .set({
+      str: newStr,
+      dex: newDex,
+      intel: newInt,
+      luk: newLuk,
+      vit: newVit,
+      unallocatedStatPoints: newStatPoints,
+    })
+    .where(eq(charactersTable.id, characterId));
+
+  const updatedChar = await recalculateCharacterStats(characterId);
+  return res.status(200).json({
+    success: true,
+    message: `✨ Đã lưu chỉ số! Lực chiến tăng lên: ${updatedChar.combatPower}`,
+    combatPower: updatedChar.combatPower,
+    character: {
+      ...updatedChar,
+      experienceToNextLevel: getExpForLevel(updatedChar.level),
+    },
+  });
+};
+
+router.put("/characters/:characterId/stats", requireAuth, handleAllocateStats);
+router.post("/characters/:characterId/stats", requireAuth, handleAllocateStats);
+router.post("/characters/:characterId/allocate-stats", requireAuth, handleAllocateStats);
 
 router.get("/characters/:characterId/battle-log", requireAuth, async (req, res) => {
   const characterId = parseInt(req.params.characterId);
