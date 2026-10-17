@@ -315,33 +315,6 @@ export default function AuthScreen() {
                 )}
               </div>
 
-              {/* Wipe old accounts & reset database button */}
-              <div className="text-center pt-3">
-                <button
-                  type="button"
-                  onClick={async () => {
-                    if (window.confirm("Bạn có chắc chắn muốn xóa toàn bộ tài khoản cũ và đưa máy chủ về ban đầu?")) {
-                      try {
-                        await fetch("/api/auth/reset-all-accounts", { method: "POST" });
-                        localStorage.clear();
-                        sessionStorage.clear();
-                        toast({
-                          title: "♻️ Đã xóa sạch dữ liệu!",
-                          description: "Toàn bộ tài khoản cũ và bộ nhớ đệm đã được xóa sạch. Hãy tạo tài khoản mới!",
-                        });
-                        setMode("register");
-                        setTimeout(() => window.location.reload(), 1000);
-                      } catch {
-                        localStorage.clear();
-                        window.location.reload();
-                      }
-                    }
-                  }}
-                  className="text-[11px] text-rose-400/80 hover:text-rose-300 transition flex items-center justify-center gap-1 mx-auto cursor-pointer font-bold"
-                >
-                  <span>🗑️ Xóa hết tài khoản cũ & Làm mới dữ liệu</span>
-                </button>
-              </div>
             </motion.div>
           </AnimatePresence>
         </div>
