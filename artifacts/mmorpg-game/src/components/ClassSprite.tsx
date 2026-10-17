@@ -5,6 +5,9 @@ export interface ClassSpriteProps {
   gender?: 'male' | 'female';
   className?: string;
   state?: 'idle' | 'attack' | 'hit';
+  auraColor?: string;
+  filterStyle?: React.CSSProperties;
+  style?: React.CSSProperties;
 }
 
 const CHARACTER_ASSETS: Record<string, { male: string; female: string }> = {
@@ -26,7 +29,7 @@ const CHARACTER_ASSETS: Record<string, { male: string; female: string }> = {
   },
 };
 
-export function ClassSprite({ classId, gender = 'male', className = '', state = 'idle' }: ClassSpriteProps) {
+export function ClassSprite({ classId, gender = 'male', className = '', state = 'idle', auraColor, filterStyle, style }: ClassSpriteProps) {
   const normClass = classId?.toLowerCase() || 'fighter';
   const normGender = gender === 'female' ? 'female' : 'male';
   const [loadError, setLoadError] = useState(false);
@@ -34,14 +37,24 @@ export function ClassSprite({ classId, gender = 'male', className = '', state = 
   const asset = CHARACTER_ASSETS[normClass]?.[normGender] || CHARACTER_ASSETS.fighter.male;
 
   return (
-    <div className={`relative flex items-center justify-center overflow-hidden rounded-2xl ${className}`}>
+    <div className={`relative flex items-center justify-center overflow-hidden rounded-2xl ${className}`} style={style}>
+      {/* Dynamic aura back-glow if enabled */}
+      {auraColor && (
+        <div
+          className="absolute inset-2 rounded-full blur-xl opacity-50 animate-pulse pointer-events-none"
+          style={{ backgroundColor: auraColor }}
+        />
+      )}
       {!loadError ? (
         <img
           key={`${normClass}_${normGender}`}
           src={asset}
           alt={`${normClass} ${normGender}`}
           onError={() => setLoadError(true)}
-          style={{ imageRendering: 'pixelated' }}
+          style={{
+            imageRendering: 'pixelated',
+            ...filterStyle,
+          }}
           className="w-full h-full object-contain object-center filter drop-shadow-[0_10px_20px_rgba(0,0,0,0.65)] transform transition-transform duration-300 hover:scale-110 select-none pointer-events-none"
           loading="eager"
         />
