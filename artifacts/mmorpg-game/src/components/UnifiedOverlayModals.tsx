@@ -1,4 +1,4 @@
-import { memo } from "react";
+import { memo, useState } from "react";
 import { InventoryEquipmentPanel } from "./InventoryEquipmentPanel";
 import { CharacterInventoryModal } from "@/ui/modals/CharacterInventoryModal";
 import { GameSettingsPanel } from "./GameSettingsPanel";
@@ -37,6 +37,8 @@ import {
   ShoppingBag, 
   Trophy, 
   Settings,
+  Maximize2,
+  Minimize2,
 } from "lucide-react";
 
 interface UnifiedOverlayModalsProps {
@@ -46,6 +48,7 @@ interface UnifiedOverlayModalsProps {
 export const UnifiedOverlayModals = memo(function UnifiedOverlayModals({
   character,
 }: UnifiedOverlayModalsProps) {
+  const [isSidePanel, setIsSidePanel] = useState(false);
   const worldModal = useGameWorldStore((s) => s.activeModal);
   const legacyModal = useGameStore((s) => s.game.activeModal);
   const activeModal = worldModal || legacyModal;
@@ -224,39 +227,56 @@ export const UnifiedOverlayModals = memo(function UnifiedOverlayModals({
       {/* 7. Shared Modals (Leaderboard, Settings) */}
       {(activeModal === "leaderboard" || activeModal === "settings") && (
         <div
-          className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-6 bg-black/60 backdrop-blur-md animate-in fade-in duration-200"
+          className={`fixed inset-0 z-50 flex transition-all duration-200 ${
+            isSidePanel
+              ? "items-center justify-end p-2 sm:p-4 pointer-events-none"
+              : "items-center justify-center p-3 sm:p-6 bg-black/60 backdrop-blur-md pointer-events-auto"
+          }`}
           onClick={(e) => {
-            if (e.target === e.currentTarget) closeActiveModal();
+            if (!isSidePanel && e.target === e.currentTarget) closeActiveModal();
           }}
         >
-      <div className="relative w-full max-w-5xl max-h-[90vh] flex flex-col bg-[#342a2b] border border-[#5d4648] rounded-[28px] shadow-[0_30px_90px_rgba(0,0,0,0.7)] overflow-hidden text-slate-100">
-        
-        {/* ── Modal Header ── */}
-        <div className="flex items-center justify-between px-6 py-4 border-b border-slate-800/80 bg-slate-900/40">
-          <div className="flex items-center gap-3">
-            {activeModal === "leaderboard" && <Trophy className="w-6 h-6 text-purple-400" />}
-            {activeModal === "settings" && <Settings className="w-6 h-6 text-cyan-400" />}
-
-            <div>
-              <h2 className="text-lg font-black tracking-wide text-white flex items-center gap-2">
-                {activeModal === "leaderboard" && "BẢNG VINH DANH LONG TỘC"}
-                {activeModal === "settings" && "CÀI ĐẶT ĐIỀU KHIỂN"}
-              </h2>
-              <p className="text-xs text-slate-400">
-                {activeModal === "leaderboard" && "Top những chiến binh mạnh nhất đại lục Long Tộc"}
-                {activeModal === "settings" && "Tinh chỉnh camera và hiệu ứng theo cách chơi của bạn"}
-              </p>
-            </div>
-          </div>
-
-          <button
-            onClick={closeActiveModal}
-            className="p-1.5 rounded-full bg-slate-800/60 hover:bg-red-500/20 hover:text-red-300 text-slate-400 border border-slate-700 transition"
-            title="Đóng (ESC)"
+          <div
+            className={`relative flex flex-col bg-[#1f191b]/95 border border-[#5d4648] rounded-[24px] shadow-[0_30px_90px_rgba(0,0,0,0.8)] overflow-hidden text-slate-100 pointer-events-auto backdrop-blur-xl transition-all duration-300 ${
+              isSidePanel ? "w-full max-w-md max-h-[92vh] border-cyan-500/40" : "w-full max-w-5xl max-h-[90vh]"
+            }`}
           >
-            <X className="w-5 h-5" />
-          </button>
-        </div>
+            {/* ── Modal Header ── */}
+            <div className="flex items-center justify-between px-5 py-3.5 border-b border-slate-800/80 bg-slate-900/60">
+              <div className="flex items-center gap-2.5">
+                {activeModal === "leaderboard" && <Trophy className="w-5 h-5 text-purple-400" />}
+                {activeModal === "settings" && <Settings className="w-5 h-5 text-cyan-400" />}
+
+                <div>
+                  <h2 className="text-base font-black tracking-wide text-white flex items-center gap-2">
+                    {activeModal === "leaderboard" && "BẢNG VINH DANH"}
+                    {activeModal === "settings" && "CÀI ĐẶT ĐIỀU KHIỂN"}
+                  </h2>
+                  <p className="text-[11px] text-slate-400">
+                    {activeModal === "leaderboard" && "Top chiến binh đại lục Long Tộc"}
+                    {activeModal === "settings" && "Tinh chỉnh camera và hiệu ứng"}
+                  </p>
+                </div>
+              </div>
+
+              <div className="flex items-center gap-1.5">
+                {/* [🗖 / 🗕] Side-Panel Mode Toggle */}
+                <button
+                  onClick={() => setIsSidePanel(!isSidePanel)}
+                  className="p-1.5 rounded-lg bg-slate-800/80 hover:bg-slate-700 text-slate-300 hover:text-white border border-slate-600/60 transition cursor-pointer"
+                  title={isSidePanel ? "Mở rộng toàn màn hình" : "Thu gọn về bên cạnh (Nhìn thấy game 3D)"}
+                >
+                  {isSidePanel ? <Maximize2 className="w-4 h-4 text-cyan-400" /> : <Minimize2 className="w-4 h-4" />}
+                </button>
+                <button
+                  onClick={closeActiveModal}
+                  className="p-1.5 rounded-lg bg-slate-800/80 hover:bg-red-500/20 hover:text-red-300 text-slate-400 border border-slate-700 transition cursor-pointer"
+                  title="Đóng (ESC)"
+                >
+                  <X className="w-4 h-4" />
+                </button>
+              </div>
+            </div>
 
         {/* ── Modal Body (Scrollable) ── */}
         <div className="flex-1 overflow-y-auto custom-scrollbar p-3 sm:p-4 space-y-4">

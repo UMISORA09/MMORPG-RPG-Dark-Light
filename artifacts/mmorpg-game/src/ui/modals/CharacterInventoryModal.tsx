@@ -35,7 +35,9 @@ import {
   Plus,
   Lock,
   Unlock,
-  Ticket
+  Ticket,
+  Maximize2,
+  Minimize2,
 } from "lucide-react";
 import { ClassSprite } from "@/components/ClassSprite";
 import { useGameWorldStore } from "@/stores/useGameWorldStore";
@@ -1242,6 +1244,8 @@ export const CharacterInventoryModal = memo(function CharacterInventoryModal({
     return 15; // Mặc định 15 ô chuẩn yêu cầu
   });
 
+  const [isSidePanel, setIsSidePanel] = useState(false);
+
   // Items State (100% empty starter inventory when new character has 0 items)
   const [items, setItems] = useState<UnifiedItem[]>(() => {
     if (propInv) {
@@ -1770,11 +1774,19 @@ export const CharacterInventoryModal = memo(function CharacterInventoryModal({
 
   return (
     <div
-      className="fixed inset-0 z-50 flex items-center justify-center p-2 sm:p-4 bg-black/85 backdrop-blur-md select-none font-sans animate-in fade-in duration-200 pointer-events-auto"
+      className={`fixed inset-0 z-50 flex transition-all duration-200 select-none font-sans ${
+        isSidePanel
+          ? "items-center justify-end p-2 sm:p-4 pointer-events-none"
+          : "items-center justify-center p-2 sm:p-4 bg-black/85 backdrop-blur-md pointer-events-auto"
+      }`}
       onPointerDown={(e) => e.stopPropagation()}
     >
       {/* ── MODAL WINDOW CONTAINER ── */}
-      <div className="relative w-full max-w-[980px] rounded-[30px] bg-[#0f131c] border border-[#232a3b] shadow-[0_30px_90px_rgba(0,0,0,0.9),0_0_40px_rgba(40,195,225,0.15)] p-4 sm:p-5 text-slate-100 flex flex-col gap-3.5 backdrop-blur-2xl">
+      <div
+        className={`relative rounded-[30px] bg-[#0f131c] border border-[#232a3b] shadow-[0_30px_90px_rgba(0,0,0,0.9),0_0_40px_rgba(40,195,225,0.15)] p-4 sm:p-5 text-slate-100 flex flex-col gap-3.5 backdrop-blur-2xl pointer-events-auto transition-all duration-300 ${
+          isSidePanel ? "w-full max-w-[560px] max-h-[94vh] overflow-y-auto" : "w-full max-w-[980px]"
+        }`}
+      >
         
         {/* Floating Toast Notification */}
         {toastMessage && (
@@ -1852,6 +1864,14 @@ export const CharacterInventoryModal = memo(function CharacterInventoryModal({
                 {effectiveGold.toLocaleString()} Vàng
               </span>
             </div>
+
+            <button
+              onClick={() => setIsSidePanel(!isSidePanel)}
+              className="w-8 h-8 rounded-full bg-[#171c28] hover:bg-slate-700 text-slate-400 hover:text-white border border-[#2b3548] flex items-center justify-center transition cursor-pointer"
+              title={isSidePanel ? "Mở rộng toàn màn hình" : "Thu gọn sang một bên (Vừa xem đồ vừa thấy 3D)"}
+            >
+              {isSidePanel ? <Maximize2 className="w-4 h-4 text-cyan-400" /> : <Minimize2 className="w-4 h-4" />}
+            </button>
 
             <button
               onClick={handleClose}

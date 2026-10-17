@@ -8,7 +8,11 @@ import { memo } from "react";
 import { useGameWorldStore } from "@/stores/useGameWorldStore";
 import { Compass, Skull, Star, Navigation } from "lucide-react";
 
-export const MinimapRadar = memo(function MinimapRadar() {
+interface MinimapRadarProps {
+  zoomMultiplier?: number;
+}
+
+export const MinimapRadar = memo(function MinimapRadar({ zoomMultiplier = 1 }: MinimapRadarProps) {
   const playerPos = useGameWorldStore((s) => s.playerPosition);
   const playerFacingLeft = useGameWorldStore((s) => s.playerFacingLeft);
   const currentZone = useGameWorldStore((s) => s.currentZone);
@@ -20,7 +24,7 @@ export const MinimapRadar = memo(function MinimapRadar() {
   const radarSize = 150; // pixels
   const center = radarSize / 2;
   const worldMaxRadius = 85.0; // meters
-  const scale = (center - 10) / worldMaxRadius; // ~0.76 pixels per meter
+  const scale = ((center - 10) / worldMaxRadius) * zoomMultiplier; // Scaled pixels per meter
 
   // Transform world (x, z) to radar (rx, ry)
   const toRadar = (x: number, z: number) => ({

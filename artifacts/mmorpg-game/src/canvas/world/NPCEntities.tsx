@@ -17,12 +17,13 @@ interface NPCConfig {
   textureKey: string;
 }
 
+// Spaced >= 4.5m away from fountain [0, 0, 0] and from each other
 const NPCS: NPCConfig[] = [
   {
     id: "npc_truong_lang",
     name: "Trưởng Làng Huyền Vũ",
     title: "Tiếp Nhận Nhiệm Vụ Chính Tuyến",
-    position: [0, 0, -4],
+    position: [-6.0, 0, -3.5], // Clear from fountain center [0,0,0], spacing 6.95m
     color: "#f59e0b",
     secondaryColor: "#fbbf24",
     weaponType: "sword",
@@ -62,16 +63,19 @@ const NPCS: NPCConfig[] = [
 
 export const NPCEntities = memo(function NPCEntities() {
   const trackedQuest = useGameWorldStore((s) => s.trackedQuest);
+  const playerPos = useGameWorldStore((s) => s.playerPosition);
   const badgeFloatRef = useRef<THREE.Group>(null);
 
+  // Floating quest badge oscillation
   useFrame((state) => {
     if (badgeFloatRef.current) {
-      badgeFloatRef.current.position.y = Math.sin(state.clock.getElapsedTime() * 3) * 0.15;
+      badgeFloatRef.current.position.y = 2.8 + Math.sin(state.clock.elapsedTime * 3) * 0.15;
     }
   });
 
   const handleNPCClick = (npc: NPCConfig) => {
     playCombatSFX("holy_bell", 0.4);
+
     if (npc.id === "npc_tho_ren") {
       useGameWorldStore.getState().setActiveModal("blacksmith");
     } else if (npc.id === "npc_thuong_nhan") {
@@ -97,6 +101,10 @@ export const NPCEntities = memo(function NPCEntities() {
       {NPCS.map((npc) => {
         const badge = getStatusBadge(npc.id);
         const isReady = badge === "❓";
+
+        // Distance check: Only show overhead 3D UI when player <= 12m
+        const distToPlayer = Math.hypot(npc.position[0] - playerPos.x, npc.position[2] - playerPos.z);
+        const isNear = distToPlayer <= 12;
 
         return (
           <group key={npc.id} position={npc.position}>
@@ -125,26 +133,32 @@ export const NPCEntities = memo(function NPCEntities() {
               onClick={() => handleNPCClick(npc)}
             />
 
-            {/* ── 3D Overhead Quest Icon ── */}
-            <group ref={badgeFloatRef} position={[0, 2.7, 0]}>
-              <Html center distanceFactor={12} style={{ pointerEvents: "none" }}>
-                <div
-                  className={`w-9 h-9 rounded-full flex items-center justify-center font-black text-lg select-none cursor-pointer transition-transform shadow-lg ${
-                    isReady
-                      ? "bg-amber-400 text-slate-950 border-2 border-yellow-200 shadow-[0_0_18px_rgba(251,191,36,0.8)] animate-bounce"
-                      : badge === "❔"
-                      ? "bg-slate-700/80 text-slate-300 border-2 border-slate-500"
-                      : "bg-amber-500/90 text-amber-100 border-2 border-amber-300 shadow-[0_0_12px_rgba(245,158,11,0.5)]"
-                  }`}
+            {/* ── 3D Overhead Quest Icon (Strictly low zIndex [10, 0], only visible within 12m) ── */}
+            {isNear && (
+              <group ref={badgeFloatRef} position={[0, 2.7, 0]}>
+                <Html
+                  center
+                  distanceFactor={15}
+                  zIndexRange={[10, 0]}
+                  style={{ pointerEvents: "none" }}
                 >
-                  {badge}
-                </div>
-              </Html>
-            </group>
+                  <div
+                    className={`w-9 h-9 rounded-full flex items-center justify-center font-black text-lg select-none cursor-pointer transition-transform shadow-lg ${
+                      isReady
+                        ? "bg-amber-400 text-slate-950 border-2 border-yellow-200 shadow-[0_0_18px_rgba(251,191,36,0.8)] animate-bounce"
+                        : badge === "❔"
+                        ? "bg-slate-700/80 text-slate-300 border-2 border-slate-500"
+                        : "bg-amber-500/90 text-amber-100 border-2 border-amber-300 shadow-[0_0_12px_rgba(245,158,11,0.5)]"
+                    }`}
+                  >
+                    {badge}
+                  </div>
+                </Html>
+              </group>
+            )}
           </group>
         );
       })}
     </group>
   );
 });
-

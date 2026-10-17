@@ -69,6 +69,29 @@ export const SymmetricalActionHUD = memo(function SymmetricalActionHUD() {
 
   const [skillPage, setSkillPage] = useState(1);
   const [isLocked, setIsLocked] = useState(false);
+  const [showSecondRow, setShowSecondRow] = useState(false);
+  const [hudScale, setHudScale] = useState<"100%" | "85%">("100%");
+  const [lastActionTime, setLastActionTime] = useState(Date.now());
+  const [isIdleInVillage, setIsIdleInVillage] = useState(false);
+  const currentZone = useGameWorldStore((s) => s.currentZone);
+
+  // Track combat actions to show combo hints and manage village idle auto-fade
+  useEffect(() => {
+    if (comboTimer > 0 || feverActive || atkBuffTimer > 0) {
+      setLastActionTime(Date.now());
+    }
+  }, [comboTimer, feverActive, atkBuffTimer]);
+
+  useEffect(() => {
+    const interval = setInterval(() => {
+      if (currentZone === "SAFE_VILLAGE" && Date.now() - lastActionTime > 5000) {
+        setIsIdleInVillage(true);
+      } else {
+        setIsIdleInVillage(false);
+      }
+    }, 1000);
+    return () => clearInterval(interval);
+  }, [currentZone, lastActionTime]);
 
   // Skill Specs from blueprint
   const blueprint = getCharacterBlueprint(playerClassId);
@@ -121,40 +144,48 @@ export const SymmetricalActionHUD = memo(function SymmetricalActionHUD() {
 
   return (
     <div
-      className="pointer-events-auto flex flex-col items-center select-none font-sans w-full max-w-4xl mx-auto"
+      className={`pointer-events-auto flex flex-col items-center select-none font-sans w-full max-w-4xl mx-auto transition-all duration-300 ${
+        isIdleInVillage ? "opacity-80 hover:opacity-100" : "opacity-100"
+      }`}
+      style={{
+        transform: hudScale === "85%" ? "scale(0.85)" : "scale(1)",
+        transformOrigin: "bottom center",
+      }}
       onPointerDown={(e) => e.stopPropagation()}
       onClick={(e) => e.stopPropagation()}
     >
       {/* ── Top Floating Notification (Combo chain / Buff status) ── */}
       <div className="flex items-center gap-3 mb-1.5">
-        {/* Combo Chain Badge */}
-        <div className="flex items-center gap-1.5 px-3 py-0.5 rounded-full bg-[#080c18]/90 border border-amber-500/40 backdrop-blur-md shadow-md text-[10px] font-mono">
-          <span className="text-amber-400 font-bold">COMBO:</span>
-          {[
-            { step: 0, label: `1. ${blueprint.comboAttacks[0]?.name.split(" ")[0] || "Đòn 1"}` },
-            { step: 1, label: `2. ${blueprint.comboAttacks[1]?.name.split(" ")[0] || "Đòn 2"}` },
-            { step: 2, label: `3. ${blueprint.comboAttacks[2]?.name.split(" ")[0] || "Đòn 3"}` },
-          ].map(({ step, label }, idx) => {
-            const isActive = comboTimer > 0 && comboIndex === step;
-            const isPassed = comboTimer > 0 && comboIndex > step;
-            return (
-              <span key={step} className="flex items-center gap-1">
-                <span
-                  className={`px-1.5 py-0.2 rounded font-bold transition-all ${
-                    isActive
-                      ? "bg-amber-400 text-black shadow-[0_0_8px_#f59e0b] scale-105"
-                      : isPassed
-                      ? "text-amber-300"
-                      : "text-slate-400"
-                  }`}
-                >
-                  {label}
+        {/* Combo Chain Badge - Auto-shows on attack, auto-fades after 3s idle */}
+        {(comboTimer > 0 || Date.now() - lastActionTime < 3000) && (
+          <div className="flex items-center gap-1.5 px-3 py-0.5 rounded-full bg-[#080c18]/90 border border-amber-500/40 backdrop-blur-md shadow-md text-[10px] font-mono animate-in fade-in duration-200">
+            <span className="text-amber-400 font-bold">COMBO:</span>
+            {[
+              { step: 0, label: `1. ${blueprint.comboAttacks[0]?.name.split(" ")[0] || "Đòn 1"}` },
+              { step: 1, label: `2. ${blueprint.comboAttacks[1]?.name.split(" ")[0] || "Đòn 2"}` },
+              { step: 2, label: `3. ${blueprint.comboAttacks[2]?.name.split(" ")[0] || "Đòn 3"}` },
+            ].map(({ step, label }, idx) => {
+              const isActive = comboTimer > 0 && comboIndex === step;
+              const isPassed = comboTimer > 0 && comboIndex > step;
+              return (
+                <span key={step} className="flex items-center gap-1">
+                  <span
+                    className={`px-1.5 py-0.2 rounded font-bold transition-all ${
+                      isActive
+                        ? "bg-amber-400 text-black shadow-[0_0_8px_#f59e0b] scale-105"
+                        : isPassed
+                        ? "text-amber-300"
+                        : "text-slate-400"
+                    }`}
+                  >
+                    {label}
+                  </span>
+                  {idx < 2 && <span className="text-slate-400">›</span>}
                 </span>
-                {idx < 2 && <span className="text-slate-400">›</span>}
-              </span>
-            );
-          })}
-        </div>
+              );
+            })}
+          </div>
+        )}
 
         {/* ATK Buff active banner */}
         {atkBuffTimer > 0 && (
@@ -353,20 +384,22 @@ export const SymmetricalActionHUD = memo(function SymmetricalActionHUD() {
         {/* 4. LEFT 10 SLOTS: KỸ NĂNG CHIẾN ĐẤU (2 Hàng x 5 Cột)                */}
         {/* ==================================================================== */}
         <div className="flex items-center gap-1.5">
-          {/* Page Selector Arrow */}
-          <div className="flex flex-col items-center justify-center pr-1 text-slate-400">
+          {/* Controls: 1/2 Hàng Toggle & Scale */}
+          <div className="flex flex-col items-center justify-center pr-1 text-slate-400 gap-1">
             <button
-              onClick={() => setSkillPage(skillPage === 1 ? 2 : 1)}
-              className="p-0.5 hover:text-cyan-400 transition cursor-pointer"
+              onClick={() => setShowSecondRow(!showSecondRow)}
+              className="px-1.5 py-1 rounded-lg bg-slate-900 hover:bg-slate-800 text-[9px] font-bold text-amber-400 border border-slate-700 hover:border-amber-400 transition cursor-pointer flex items-center gap-0.5 shadow hover:scale-105 active:scale-95"
+              title={showSecondRow ? "Thu gọn còn 1 hàng kỹ năng (Tiết kiệm 50% diện tích)" : "Mở rộng 2 hàng kỹ năng đầy đủ"}
             >
-              <ChevronUp className="w-3.5 h-3.5" />
+              {showSecondRow ? <ChevronDown className="w-3 h-3 text-cyan-400" /> : <ChevronUp className="w-3 h-3 text-amber-400" />}
+              <span className="font-mono">{showSecondRow ? "1 Hàng" : "2 Hàng"}</span>
             </button>
-            <span className="font-mono text-[10px] font-bold text-amber-400">{skillPage}</span>
             <button
-              onClick={() => setSkillPage(skillPage === 1 ? 2 : 1)}
-              className="p-0.5 hover:text-cyan-400 transition cursor-pointer"
+              onClick={() => setHudScale(hudScale === "100%" ? "85%" : "100%")}
+              className="text-[8px] font-mono font-bold text-cyan-300 hover:text-white px-1.5 py-0.5 rounded bg-slate-950/80 border border-cyan-500/30 hover:border-cyan-400 transition cursor-pointer"
+              title="Đổi kích thước HUD (100% / 85%)"
             >
-              <ChevronDown className="w-3.5 h-3.5" />
+              {hudScale}
             </button>
           </div>
 
@@ -456,28 +489,29 @@ export const SymmetricalActionHUD = memo(function SymmetricalActionHUD() {
             </button>
 
             {/* Row 2: 6, 7, 8, 9, 10 (Utility / Secondary Skills) */}
-            {[
-              { slot: "6", name: "Tật Phong", icon: "🗡️", color: "border-sky-500/60" },
-              { slot: "7", name: "Hộ Thân", icon: "🛡️", color: "border-blue-500/60" },
-              { slot: "8", name: "Lướt Né", icon: "💨", color: "border-emerald-500/60" },
-              { slot: "9", name: "Huyết Ma", icon: "🩸", color: "border-purple-500/60" },
-              { slot: "10", name: "Băng Long", icon: "❄️", color: "border-cyan-500/60" },
-            ].map(({ slot, name, icon, color }) => (
-              <button
-                key={slot}
-                onClick={triggerComboAttack}
-                className={`relative w-11 h-11 sm:w-12 sm:h-12 rounded-xl bg-[#0c101d] border-2 ${color} hover:border-white/80 flex flex-col items-center justify-center transition cursor-pointer`}
-                title={`${name} (Phím ${slot})`}
-              >
-                <span className="text-sm select-none">{icon}</span>
-                <span className="text-[7px] font-bold text-slate-400 truncate max-w-[40px] scale-90">
-                  {name}
-                </span>
-                <span className="absolute bottom-0.5 right-1 font-mono text-[8px] font-black text-slate-400">
-                  {slot}
-                </span>
-              </button>
-            ))}
+            {showSecondRow &&
+              [
+                { slot: "6", name: "Tật Phong", icon: "🗡️", color: "border-sky-500/60" },
+                { slot: "7", name: "Hộ Thân", icon: "🛡️", color: "border-blue-500/60" },
+                { slot: "8", name: "Lướt Né", icon: "💨", color: "border-emerald-500/60" },
+                { slot: "9", name: "Huyết Ma", icon: "🩸", color: "border-purple-500/60" },
+                { slot: "10", name: "Băng Long", icon: "❄️", color: "border-cyan-500/60" },
+              ].map(({ slot, name, icon, color }) => (
+                <button
+                  key={slot}
+                  onClick={triggerComboAttack}
+                  className={`relative w-11 h-11 sm:w-12 sm:h-12 rounded-xl bg-[#0c101d] border-2 ${color} hover:border-white/80 flex flex-col items-center justify-center transition cursor-pointer`}
+                  title={`${name} (Phím ${slot})`}
+                >
+                  <span className="text-sm select-none">{icon}</span>
+                  <span className="text-[7px] font-bold text-slate-400 truncate max-w-[40px] scale-90">
+                    {name}
+                  </span>
+                  <span className="absolute bottom-0.5 right-1 font-mono text-[8px] font-black text-slate-400">
+                    {slot}
+                  </span>
+                </button>
+              ))}
           </div>
         </div>
 
@@ -563,70 +597,74 @@ export const SymmetricalActionHUD = memo(function SymmetricalActionHUD() {
             </button>
 
             {/* Row 2: 9 (Thịt Nướng), 0 (Súp Hầm), - (Thuốc Tốc Độ), Locked Lv10, Locked Lv15 */}
-            {/* Slot 6: Thịt Nướng (Phím 9) */}
-            <button
-              onClick={() => useQuickFood("meat")}
-              className="relative w-11 h-11 sm:w-12 sm:h-12 rounded-xl bg-[#120e18] border-2 border-orange-500/60 hover:border-orange-400 flex flex-col items-center justify-center transition cursor-pointer"
-              title="Thịt Rồng Nướng: Hồi 20% HP (Phím 9)"
-            >
-              <span className="text-sm select-none">🍖</span>
-              <span className="absolute top-0.5 left-1 font-mono text-[8px] font-black text-orange-300">
-                9
-              </span>
-              <span className="absolute bottom-0.5 right-1 font-mono text-[8px] font-black text-white px-1 rounded bg-black/80">
-                {foodMeatCount}
-              </span>
-            </button>
+            {showSecondRow && (
+              <>
+                {/* Slot 6: Thịt Nướng (Phím 9) */}
+                <button
+                  onClick={() => useQuickFood("meat")}
+                  className="relative w-11 h-11 sm:w-12 sm:h-12 rounded-xl bg-[#120e18] border-2 border-orange-500/60 hover:border-orange-400 flex flex-col items-center justify-center transition cursor-pointer"
+                  title="Thịt Rồng Nướng: Hồi 20% HP (Phím 9)"
+                >
+                  <span className="text-sm select-none">🍖</span>
+                  <span className="absolute top-0.5 left-1 font-mono text-[8px] font-black text-orange-300">
+                    9
+                  </span>
+                  <span className="absolute bottom-0.5 right-1 font-mono text-[8px] font-black text-white px-1 rounded bg-black/80">
+                    {foodMeatCount}
+                  </span>
+                </button>
 
-            {/* Slot 7: Súp Nấm Hầm (Phím 0) */}
-            <button
-              onClick={() => useQuickFood("soup")}
-              className="relative w-11 h-11 sm:w-12 sm:h-12 rounded-xl bg-[#120e18] border-2 border-purple-500/60 hover:border-purple-400 flex flex-col items-center justify-center transition cursor-pointer"
-              title="Súp Nấm Linh Chi: Hồi 25% MP (Phím 0)"
-            >
-              <span className="text-sm select-none">🍲</span>
-              <span className="absolute top-0.5 left-1 font-mono text-[8px] font-black text-purple-300">
-                0
-              </span>
-              <span className="absolute bottom-0.5 right-1 font-mono text-[8px] font-black text-white px-1 rounded bg-black/80">
-                {foodSoupCount}
-              </span>
-            </button>
+                {/* Slot 7: Súp Nấm Hầm (Phím 0) */}
+                <button
+                  onClick={() => useQuickFood("soup")}
+                  className="relative w-11 h-11 sm:w-12 sm:h-12 rounded-xl bg-[#120e18] border-2 border-purple-500/60 hover:border-purple-400 flex flex-col items-center justify-center transition cursor-pointer"
+                  title="Súp Nấm Linh Chi: Hồi 25% MP (Phím 0)"
+                >
+                  <span className="text-sm select-none">🍲</span>
+                  <span className="absolute top-0.5 left-1 font-mono text-[8px] font-black text-purple-300">
+                    0
+                  </span>
+                  <span className="absolute bottom-0.5 right-1 font-mono text-[8px] font-black text-white px-1 rounded bg-black/80">
+                    {foodSoupCount}
+                  </span>
+                </button>
 
-            {/* Slot 8: Thuốc Tăng Tốc */}
-            <button
-              onClick={() => useQuickFood("speed")}
-              className="relative w-11 h-11 sm:w-12 sm:h-12 rounded-xl bg-[#120e18] border-2 border-teal-500/60 hover:border-teal-400 flex flex-col items-center justify-center transition cursor-pointer"
-              title="Thuốc Tăng Tốc: +30% Tốc chạy trong 10s (Bấm chuột)"
-            >
-              <span className="text-sm select-none">⚡</span>
-              <span className="absolute top-0.5 left-1 font-mono text-[8px] font-black text-teal-300">
-                SPD
-              </span>
-              <span className="absolute bottom-0.5 right-1 font-mono text-[8px] font-black text-white px-1 rounded bg-black/80">
-                {speedPotionCount}
-              </span>
-            </button>
+                {/* Slot 8: Thuốc Tăng Tốc */}
+                <button
+                  onClick={() => useQuickFood("speed")}
+                  className="relative w-11 h-11 sm:w-12 sm:h-12 rounded-xl bg-[#120e18] border-2 border-teal-500/60 hover:border-teal-400 flex flex-col items-center justify-center transition cursor-pointer"
+                  title="Thuốc Tăng Tốc: +30% Tốc chạy trong 10s (Bấm chuột)"
+                >
+                  <span className="text-sm select-none">⚡</span>
+                  <span className="absolute top-0.5 left-1 font-mono text-[8px] font-black text-teal-300">
+                    SPD
+                  </span>
+                  <span className="absolute bottom-0.5 right-1 font-mono text-[8px] font-black text-white px-1 rounded bg-black/80">
+                    {speedPotionCount}
+                  </span>
+                </button>
 
-            {/* Slot 9: Locked Slot (Lv.10) */}
-            <div
-              className="relative w-11 h-11 sm:w-12 sm:h-12 rounded-xl bg-[#090b14] border-2 border-slate-800 flex flex-col items-center justify-center opacity-70"
-              title="Ô khóa: Tự động mở khi đạt Cấp 10"
-            >
-              <Lock className="w-4 h-4 text-amber-500/80" />
-              <span className="text-[7px] font-mono text-amber-400 font-bold mt-0.5">Lv.10</span>
-              <span className="absolute top-0.5 left-1 font-mono text-[8px] font-bold text-slate-400">9</span>
-            </div>
+                {/* Slot 9: Locked Slot (Lv.10) */}
+                <div
+                  className="relative w-11 h-11 sm:w-12 sm:h-12 rounded-xl bg-[#090b14] border-2 border-slate-800 flex flex-col items-center justify-center opacity-70"
+                  title="Ô khóa: Tự động mở khi đạt Cấp 10"
+                >
+                  <Lock className="w-4 h-4 text-amber-500/80" />
+                  <span className="text-[7px] font-mono text-amber-400 font-bold mt-0.5">Lv.10</span>
+                  <span className="absolute top-0.5 left-1 font-mono text-[8px] font-bold text-slate-400">9</span>
+                </div>
 
-            {/* Slot 10: Locked Slot (Lv.15) */}
-            <div
-              className="relative w-11 h-11 sm:w-12 sm:h-12 rounded-xl bg-[#090b14] border-2 border-slate-800 flex flex-col items-center justify-center opacity-70"
-              title="Ô khóa: Tự động mở khi đạt Cấp 15"
-            >
-              <Lock className="w-4 h-4 text-amber-500/80" />
-              <span className="text-[7px] font-mono text-amber-400 font-bold mt-0.5">Lv.15</span>
-              <span className="absolute top-0.5 left-1 font-mono text-[8px] font-bold text-slate-400">0</span>
-            </div>
+                {/* Slot 10: Locked Slot (Lv.15) */}
+                <div
+                  className="relative w-11 h-11 sm:w-12 sm:h-12 rounded-xl bg-[#090b14] border-2 border-slate-800 flex flex-col items-center justify-center opacity-70"
+                  title="Ô khóa: Tự động mở khi đạt Cấp 15"
+                >
+                  <Lock className="w-4 h-4 text-amber-500/80" />
+                  <span className="text-[7px] font-mono text-amber-400 font-bold mt-0.5">Lv.15</span>
+                  <span className="absolute top-0.5 left-1 font-mono text-[8px] font-bold text-slate-400">0</span>
+                </div>
+              </>
+            )}
           </div>
         </div>
       </div>
