@@ -1007,6 +1007,8 @@ components:
           type: number
         combatPower:
           type: number
+        unlockedSlots:
+          type: number
         createdAt:
           type: string
           format: date-time

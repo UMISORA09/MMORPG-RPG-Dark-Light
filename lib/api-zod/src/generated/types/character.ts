@@ -30,5 +30,6 @@ export interface Character {
   matk?: number;
   mdef?: number;
   combatPower?: number;
+  unlockedSlots?: number;
   createdAt: Date;
 }

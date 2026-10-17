@@ -95,6 +95,9 @@ export default function CharacterSelectScreen() {
     } else if (!userLoading && user && !launchRequested) {
       setLocation("/portal");
     }
+    if (user) {
+      useCommunityPortalStore.getState().syncWithUserProfile(user);
+    }
   }, [user, userLoading, launchRequested, setLocation]);
 
   // Action: Enter game with specific character

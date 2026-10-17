@@ -435,8 +435,10 @@ export async function initDatabase() {
         ALTER TABLE users ADD COLUMN IF NOT EXISTS forum_title TEXT DEFAULT 'Tân Thủ Long Tộc' NOT NULL;
         ALTER TABLE users ADD COLUMN IF NOT EXISTS selected_region TEXT DEFAULT 'VN' NOT NULL;
         ALTER TABLE users ADD COLUMN IF NOT EXISTS selected_server_id TEXT DEFAULT 's1_long_vuong' NOT NULL;
+        ALTER TABLE users ADD COLUMN IF NOT EXISTS last_character_id INTEGER;
         ALTER TABLE characters ADD COLUMN IF NOT EXISTS gender TEXT DEFAULT 'male' NOT NULL;
         ALTER TABLE characters ADD COLUMN IF NOT EXISTS server_id TEXT DEFAULT 's1_long_vuong' NOT NULL;
+        ALTER TABLE characters ADD COLUMN IF NOT EXISTS unlocked_slots INTEGER DEFAULT 15 NOT NULL;
         ALTER TABLE characters ADD COLUMN IF NOT EXISTS title TEXT DEFAULT 'Thượng Cấp Chiến Sĩ' NOT NULL;
         ALTER TABLE characters ADD COLUMN IF NOT EXISTS zone_id TEXT DEFAULT 'SAFE_VILLAGE' NOT NULL;
         ALTER TABLE characters ADD COLUMN IF NOT EXISTS pos_x INTEGER DEFAULT 0 NOT NULL;

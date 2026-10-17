@@ -108,11 +108,45 @@ interface CommunityPortalState {
   toggleLike: (postId: string, userKey: string) => void;
   addComment: (postId: string, comment: ForumComment) => void;
   addMessage: (message: WorldMessage) => void;
+  syncWithUserProfile: (user: any) => void;
+}
+
+export function persistActiveServer(region: string, server: string, lastCharacterId?: number | null) {
+  if (typeof window === "undefined") return;
+
+  try {
+    localStorage.setItem(
+      "clb_active_server_state",
+      JSON.stringify({ region: region.toLowerCase(), serverId: server, lastCharacterId })
+    );
+    if (lastCharacterId) {
+      localStorage.setItem("selectedCharacterId", String(lastCharacterId));
+    }
+  } catch {}
+
+  const serverIdMap: Record<string, string> = {
+    s1: "s1_long_vuong",
+    s2: "s2_hac_am",
+    s3: "s3_thien_phat",
+    s4: "s4_huyet_nguyet",
+  };
+  const resolvedServerId = serverIdMap[server] || server;
+
+  fetch("/api/users/me/server", {
+    method: "PATCH",
+    headers: { "Content-Type": "application/json" },
+    credentials: "include",
+    body: JSON.stringify({
+      region: region.toUpperCase(),
+      serverId: resolvedServerId,
+      ...(lastCharacterId ? { lastCharacterId } : {}),
+    }),
+  }).catch(() => {});
 }
 
 export const useCommunityPortalStore = create<CommunityPortalState>()(
   persist(
-    (set) => ({
+    (set, get) => ({
       selectedRegion: "vn",
       selectedServer: "s1",
       featuredCharacterId: null,
@@ -120,12 +154,65 @@ export const useCommunityPortalStore = create<CommunityPortalState>()(
       launchRequested: false,
       posts: starterPosts,
       messages: starterMessages,
-      setRegion: (selectedRegion) => set({ selectedRegion }),
-      setServer: (selectedServer) => set({ selectedServer }),
-      setFeaturedCharacter: (featuredCharacterId) => set({ featuredCharacterId }),
-      assignCharacterToRealm: (characterId) => set((state) => ({
-        characterRealms: { ...state.characterRealms, [characterId]: { region: state.selectedRegion, server: state.selectedServer } },
-      })),
+      setRegion: (selectedRegion) => {
+        set({ selectedRegion });
+        const { selectedServer, featuredCharacterId } = get();
+        persistActiveServer(selectedRegion, selectedServer, featuredCharacterId);
+      },
+      setServer: (selectedServer) => {
+        set({ selectedServer });
+        const { selectedRegion, featuredCharacterId } = get();
+        persistActiveServer(selectedRegion, selectedServer, featuredCharacterId);
+      },
+      setFeaturedCharacter: (featuredCharacterId) => {
+        set({ featuredCharacterId });
+        const { selectedRegion, selectedServer } = get();
+        persistActiveServer(selectedRegion, selectedServer, featuredCharacterId);
+      },
+      assignCharacterToRealm: (characterId) => {
+        set((state) => ({
+          characterRealms: { ...state.characterRealms, [characterId]: { region: state.selectedRegion, server: state.selectedServer } },
+          featuredCharacterId: characterId,
+        }));
+        const { selectedRegion, selectedServer } = get();
+        persistActiveServer(selectedRegion, selectedServer, characterId);
+      },
+      syncWithUserProfile: (user: any) => {
+        if (!user) return;
+        const updates: Partial<CommunityPortalState> = {};
+        if (user.selectedRegion) {
+          const reg = user.selectedRegion.toLowerCase() as RegionId;
+          if (reg === "vn" || reg === "sea" || reg === "test") {
+            updates.selectedRegion = reg;
+          }
+        }
+        if (user.selectedServerId) {
+          const sMap: Record<string, PortalServerId> = {
+            s1_long_vuong: "s1",
+            s2_hac_am: "s2",
+            s3_thien_phat: "s3",
+            s4_huyet_nguyet: "s4",
+            s1: "s1",
+            s2: "s2",
+            s3: "s3",
+            s4: "s4",
+          };
+          if (sMap[user.selectedServerId]) {
+            updates.selectedServer = sMap[user.selectedServerId];
+          }
+        }
+        if (user.lastCharacterId) {
+          updates.featuredCharacterId = user.lastCharacterId;
+          try {
+            localStorage.setItem("selectedCharacterId", String(user.lastCharacterId));
+          } catch {}
+        }
+        if (Object.keys(updates).length > 0) {
+          set(updates);
+          const current = { ...get(), ...updates };
+          persistActiveServer(current.selectedRegion, current.selectedServer, current.featuredCharacterId);
+        }
+      },
       setLaunchRequested: (launchRequested) => set({ launchRequested }),
       addPost: (post) => set((state) => ({ posts: [post, ...state.posts] })),
       toggleLike: (postId, userKey) => set((state) => ({

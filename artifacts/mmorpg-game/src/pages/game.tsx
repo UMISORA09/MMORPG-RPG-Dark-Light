@@ -21,6 +21,8 @@ import Game from "@/game/Game";
 import { useGameStore } from "@/game/useGameStore";
 import { useGameWorldStore } from "@/stores/useGameWorldStore";
 import { UnifiedOverlayModals } from "@/components/UnifiedOverlayModals";
+import { useCharacterAutoSave, triggerGlobalAutoSave } from "@/hooks/useCharacterAutoSave";
+import { AutoSaveIndicator } from "@/components/AutoSaveIndicator";
 import { playCombatSFX } from "@/audio/CombatSoundSynth";
 
 export default function GamePage() {
@@ -39,7 +41,14 @@ export default function GamePage() {
 
   const charList = Array.isArray(characters) ? characters : [];
   const selectedCharId = typeof window !== "undefined" ? Number(localStorage.getItem("selectedCharacterId")) : null;
-  const character = (charList.length > 0 && selectedCharId ? charList.find((c) => c.id === selectedCharId) : null) || charList[0];
+  const preferredCharId = selectedCharId || (user as any)?.lastCharacterId || null;
+  const character = (charList.length > 0 && preferredCharId ? charList.find((c) => c.id === preferredCharId) : null) || charList[0];
+
+  useEffect(() => {
+    if (character?.id && typeof window !== "undefined") {
+      localStorage.setItem("selectedCharacterId", String(character.id));
+    }
+  }, [character?.id]);
 
   const { data: characterDetail, isLoading: characterLoading } = useGetCharacter(
     character?.id || 0,
@@ -126,6 +135,9 @@ export default function GamePage() {
                 title: "🎉 THĂNG CẤP THÀNH CÔNG!",
                 description: `Chúc mừng bạn đã đạt Cấp ${result.character.level}! Sức mạnh tấn công và phòng ngự tăng vọt.`,
               });
+              triggerGlobalAutoSave("level_up");
+            } else {
+              triggerGlobalAutoSave("loot_drop");
             }
 
             // Invalidate logs & leaderboard without triggering character re-fetch
@@ -166,6 +178,7 @@ export default function GamePage() {
   };
 
   const activeCharacter = characterDetail || charRef.current;
+  const { showIndicator, lastSavedTime } = useCharacterAutoSave(activeCharacter?.id);
 
   // Loading state: Only show full-screen spinner on first initialization. NEVER unmount once mounted!
   if (!hasInitializedRef.current && (userLoading || charactersLoading || characterLoading || !activeCharacter)) {
@@ -191,6 +204,9 @@ export default function GamePage() {
 
       {/* ── Glassmorphism Overlay Modals (Inventory, Shop, Leaderboard, Battle Logs) ── */}
       <UnifiedOverlayModals character={activeCharacter} />
+
+      {/* ── Real-Time Character & Server Auto-Save Status Indicator ── */}
+      <AutoSaveIndicator show={showIndicator} time={lastSavedTime} />
     </main>
   );
 }

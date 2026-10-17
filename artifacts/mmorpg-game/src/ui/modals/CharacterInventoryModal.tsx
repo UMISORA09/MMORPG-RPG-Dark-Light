@@ -41,6 +41,7 @@ import { ClassSprite } from "@/components/ClassSprite";
 import { useGameWorldStore } from "@/stores/useGameWorldStore";
 import { useGameStore } from "@/game/useGameStore";
 import { playCombatSFX } from "@/audio/CombatSoundSynth";
+import { triggerGlobalAutoSave } from "@/hooks/useCharacterAutoSave";
 import type { Character, InventoryItem } from "@workspace/api-client-react";
 
 export interface CharacterInventoryModalProps {
@@ -1126,6 +1127,62 @@ export function getStarterItemsForClass(classId: string = "fighter"): UnifiedIte
   ];
 }
 
+// ── Unified Bag Grid Engine: Synchronized 30 Slots across ALL 5 Tabs ────────
+export function buildSynchronizedInventoryGrid(
+  items: UnifiedItem[],
+  activeTab: TabType,
+  unlockedSlots: number,
+  totalCapacity: number = 30
+): { item: UnifiedItem | null; isLocked: boolean; slotIndex: number }[] {
+  // Only unequipped items exist in the bag grid!
+  const bagItems = items.filter((it) => !it.equipped);
+  const cells: { item: UnifiedItem | null; isLocked: boolean; slotIndex: number }[] = [];
+
+  if (activeTab === "all") {
+    // Tab "Tất Cả": Show items by slotIndex if valid, or fill in order
+    const slotMap = new Map<number, UnifiedItem>();
+    const unindexed: UnifiedItem[] = [];
+
+    for (const it of bagItems) {
+      const idx = (it as any).slotIndex;
+      if (typeof idx === "number" && idx >= 0 && idx < unlockedSlots && !slotMap.has(idx)) {
+        slotMap.set(idx, it);
+      } else {
+        unindexed.push(it);
+      }
+    }
+
+    let fillPtr = 0;
+    for (const it of unindexed) {
+      while (fillPtr < unlockedSlots && slotMap.has(fillPtr)) fillPtr++;
+      if (fillPtr < unlockedSlots) {
+        slotMap.set(fillPtr, it);
+      }
+    }
+
+    for (let i = 0; i < totalCapacity; i++) {
+      if (i >= unlockedSlots) {
+        cells.push({ item: null, isLocked: true, slotIndex: i });
+      } else {
+        cells.push({ item: slotMap.get(i) || null, isLocked: false, slotIndex: i });
+      }
+    }
+  } else {
+    // Filtered tab (Trang Bị, Tiêu Hao, Nguyên Liệu, Nhiệm Vụ)
+    const filtered = bagItems.filter((it) => it.category === activeTab);
+    for (let i = 0; i < totalCapacity; i++) {
+      if (i >= unlockedSlots) {
+        // Vùng 2: Locked slots identical across ALL 5 tabs
+        cells.push({ item: null, isLocked: true, slotIndex: i });
+      } else {
+        cells.push({ item: filtered[i] || null, isLocked: false, slotIndex: i });
+      }
+    }
+  }
+
+  return cells;
+}
+
 // ── Master Component ──────────────────────────────────────────────────────────
 export const CharacterInventoryModal = memo(function CharacterInventoryModal({
   character: propChar,
@@ -1154,8 +1211,8 @@ export const CharacterInventoryModal = memo(function CharacterInventoryModal({
 
   // Fallbacks
   const effectiveName = propChar?.name || playerName || "DạXoa_70";
-  const effectiveLevel = propChar?.level || playerLevel || 7;
-  const effectiveGold = playerGold || playerStoreGold || 1100;
+  const effectiveLevel = propChar?.level || playerLevel || 1;
+  const effectiveGold = playerGold || playerStoreGold || 0;
   const effectiveClassId = propChar?.classId || playerClassId || "sat_thu";
 
   // Dynamic class title badge
@@ -1167,8 +1224,14 @@ export const CharacterInventoryModal = memo(function CharacterInventoryModal({
     return "★ Hậu Duệ Long Thần ★";
   }, [effectiveClassId]);
 
-  // Max Unlocked Slots: starts at 15, max 30, expanded with tickets
+  // Max Unlocked Slots: starts at 15, max 30, expanded with tickets or 500 gold
   const [maxUnlockedSlots, setMaxUnlockedSlots] = useState<number>(() => {
+    const charUnlocked = (propChar as any)?.unlockedSlots;
+    if (charUnlocked && charUnlocked >= 15 && charUnlocked <= 30) {
+      return charUnlocked;
+    }
+    const worldSlots = useGameWorldStore.getState().unlockedSlots;
+    if (worldSlots && worldSlots >= 15 && worldSlots <= 30) return worldSlots;
     try {
       const saved = localStorage.getItem(slotsKey);
       if (saved) {
@@ -1179,22 +1242,36 @@ export const CharacterInventoryModal = memo(function CharacterInventoryModal({
     return 15; // Mặc định 15 ô chuẩn yêu cầu
   });
 
-  // Items State (Persistent per character, initialized with class-tailored gear + tickets)
+  // Items State (100% empty starter inventory when new character has 0 items)
   const [items, setItems] = useState<UnifiedItem[]>(() => {
+    if (propInv) {
+      return propInv.map(mapBackendItemToUnified);
+    }
     try {
       const saved = localStorage.getItem(storageKey);
       if (saved) {
         const parsed = JSON.parse(saved);
-        if (Array.isArray(parsed) && parsed.length > 0) {
+        if (Array.isArray(parsed)) {
           return parsed;
         }
       }
     } catch (e) {}
-    if (propInv && propInv.length > 0) {
-      return propInv.map(mapBackendItemToUnified);
-    }
-    return getStarterItemsForClass(effectiveClassId);
+    return [];
   });
+
+  // Sync when propInv or character changes from backend
+  useEffect(() => {
+    if (propInv) {
+      setItems(propInv.map(mapBackendItemToUnified));
+    }
+  }, [propInv]);
+
+  useEffect(() => {
+    const charUnlocked = (propChar as any)?.unlockedSlots;
+    if (charUnlocked) {
+      setMaxUnlockedSlots(charUnlocked);
+    }
+  }, [(propChar as any)?.unlockedSlots]);
 
   const [selectedItem, setSelectedItem] = useState<UnifiedItem | null>(() => items[0] || null);
   const [activeTab, setActiveTab] = useState<TabType>("all");
@@ -1236,7 +1313,7 @@ export const CharacterInventoryModal = memo(function CharacterInventoryModal({
       .reduce((sum, it) => sum + (it.quantity || 1), 0);
   }, [items]);
 
-  // 12 Slots Equipped Map
+  // 12 Slots Equipped Map (Null if nothing equipped)
   const slotEquippedMap = useMemo(() => {
     const map: Record<string, UnifiedItem | null> = {};
     EQUIPMENT_SLOTS.forEach((slot) => {
@@ -1248,7 +1325,7 @@ export const CharacterInventoryModal = memo(function CharacterInventoryModal({
     return map;
   }, [items]);
 
-  // Calculate Equipment Gear Rating (Lực chiến trang bị)
+  // Calculate Equipment Gear Rating (Lực chiến trang bị, 0 if nothing equipped)
   const equipmentRating = useMemo(() => {
     return items
       .filter((it) => it.equipped)
@@ -1286,53 +1363,109 @@ export const CharacterInventoryModal = memo(function CharacterInventoryModal({
     };
   }, [items, playerHealth]);
 
-  // Filtered Bag Items for current tab
-  const filteredItems = useMemo(() => {
-    if (activeTab === "all") return items;
-    return items.filter((it) => it.category === activeTab);
-  }, [items, activeTab]);
+  // Total Bag Items count (only unequipped items)
+  const bagItems = useMemo(() => items.filter((it) => !it.equipped), [items]);
+  const bagItemsCount = bagItems.length;
 
-  // Total 30 slots (6 columns x 5 rows)
-  const totalSlotsCount = 30;
+  // Unified Bag Grid Engine: Synchronized 30 Cells
   const gridCells = useMemo(() => {
-    const cells: { item: UnifiedItem | null; isLocked: boolean; slotIndex: number }[] = [];
-    for (let i = 0; i < totalSlotsCount; i++) {
-      const isLocked = i >= maxUnlockedSlots;
-      cells.push({
-        item: isLocked ? null : (filteredItems[i] || null),
-        isLocked,
-        slotIndex: i,
-      });
-    }
-    return cells;
-  }, [filteredItems, maxUnlockedSlots]);
+    return buildSynchronizedInventoryGrid(items, activeTab, maxUnlockedSlots, 30);
+  }, [items, activeTab, maxUnlockedSlots]);
 
   // Equip / Unequip Toggle
-  const handleToggleEquip = (target: UnifiedItem) => {
+  const handleToggleEquip = async (target: UnifiedItem) => {
     if (target.category !== "equipment") return;
     playCombatSFX("holy_bell", 0.4);
 
-    setItems((prev) => {
-      const next = prev.map((it) => {
-        if (it.id === target.id) {
-          const nextState = !it.equipped;
-          return { ...it, equipped: nextState };
-        }
-        // If equipping, unequip conflicting item in same slot type
-        if (!target.equipped && it.type === target.type && it.equipped) {
-          return { ...it, equipped: false };
-        }
-        return it;
-      });
-      try {
-        localStorage.setItem(storageKey, JSON.stringify(next));
-      } catch (e) {}
-      return next;
-    });
+    const isEquipping = !target.equipped;
 
-    const nextEquipped = !target.equipped;
-    setSelectedItem((prev) => (prev && prev.id === target.id ? { ...prev, equipped: nextEquipped } : prev));
-    showToast(nextEquipped ? `Đã trang bị ${target.name}!` : `Đã tháo ${target.name}!`);
+    if (!isEquipping) {
+      // Unequipping: Check bag capacity first
+      const currentBagItems = items.filter((it) => !it.equipped);
+      if (currentBagItems.length >= maxUnlockedSlots) {
+        playCombatSFX("laser_pew", 0.3);
+        showToast("Túi hành trang đã đầy, vui lòng dọn bớt hoặc mở khóa thêm ô!");
+        return;
+      }
+
+      // Find lowest free slotIndex in 0..maxUnlockedSlots - 1
+      const takenSlots = new Set(
+        currentBagItems
+          .map((it) => (it as any).slotIndex)
+          .filter((s) => typeof s === "number" && s >= 0 && s < maxUnlockedSlots)
+      );
+      let freeSlot = 0;
+      while (freeSlot < maxUnlockedSlots && takenSlots.has(freeSlot)) {
+        freeSlot++;
+      }
+      if (freeSlot >= maxUnlockedSlots) freeSlot = 0;
+
+      setItems((prev) => {
+        const next = prev.map((it) => {
+          if (it.id === target.id) {
+            return { ...it, equipped: false, slotIndex: freeSlot };
+          }
+          return it;
+        });
+        try {
+          localStorage.setItem(storageKey, JSON.stringify(next));
+        } catch (e) {}
+        return next;
+      });
+
+      setSelectedItem((prev) => (prev && prev.id === target.id ? { ...prev, equipped: false, slotIndex: freeSlot } : prev));
+      showToast(`Đã tháo ${target.name}!`);
+
+      // Backend sync
+      try {
+        const charId = propChar?.id || useGameWorldStore.getState().activeCharacterId;
+        if (charId) {
+          await fetch(`/api/characters/${charId}/inventory/${target.id}/unequip`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+          });
+        }
+      } catch (err) {
+        console.warn("Backend unequip sync:", err);
+      }
+      triggerGlobalAutoSave("unequip");
+    } else {
+      // Equipping
+      setItems((prev) => {
+        const next = prev.map((it) => {
+          if (it.id === target.id) {
+            return { ...it, equipped: true, slotIndex: -1 };
+          }
+          // If equipping, unequip conflicting item in same slot type into bag
+          if (it.type === target.type && it.equipped) {
+            return { ...it, equipped: false, slotIndex: (target as any).slotIndex >= 0 ? (target as any).slotIndex : 0 };
+          }
+          return it;
+        });
+        try {
+          localStorage.setItem(storageKey, JSON.stringify(next));
+        } catch (e) {}
+        return next;
+      });
+
+      setSelectedItem((prev) => (prev && prev.id === target.id ? { ...prev, equipped: true, slotIndex: -1 } : prev));
+      showToast(`Đã trang bị ${target.name}!`);
+
+      // Backend sync
+      try {
+        const charId = propChar?.id || useGameWorldStore.getState().activeCharacterId;
+        if (charId) {
+          await fetch(`/api/characters/${charId}/inventory/${target.id}/equip`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ slot: target.type }),
+          });
+        }
+      } catch (err) {
+        console.warn("Backend equip sync:", err);
+      }
+      triggerGlobalAutoSave("equip");
+    }
 
     // Propagate callback if provided
     if (propOnEquip) {
@@ -1340,12 +1473,14 @@ export const CharacterInventoryModal = memo(function CharacterInventoryModal({
     }
   };
 
-  // Expand Inventory Slots (+5 slots up to 30)
-  const handleExpandInventory = (useTicket: boolean) => {
+  // Expand Inventory Slots (+1 slot up to 30)
+  const handleExpandInventory = async (useTicket: boolean) => {
     if (maxUnlockedSlots >= 30) {
       showToast("Hành trang đã mở rộng tối đa (30 ô)!");
       return;
     }
+
+    const charId = propChar?.id || useGameWorldStore.getState().activeCharacterId;
 
     if (useTicket) {
       const ticketIdx = items.findIndex(
@@ -1372,25 +1507,40 @@ export const CharacterInventoryModal = memo(function CharacterInventoryModal({
         return next;
       });
 
-      const nextSlots = Math.min(30, maxUnlockedSlots + 5);
+      const nextSlots = Math.min(30, maxUnlockedSlots + 1);
       setMaxUnlockedSlots(nextSlots);
+      useGameWorldStore.getState().setUnlockedSlots(nextSlots);
       playCombatSFX("holy_bell", 0.5);
-      showToast(`🎉 Dùng phiếu thành công! Mở thêm +5 ô hành trang (${nextSlots}/30 ô)!`);
+      showToast(`🎉 Dùng phiếu thành công! Mở thêm +1 ô hành trang (${nextSlots}/30 ô)!`);
       setUnlockModalOpen(false);
+      triggerGlobalAutoSave("expand_ticket");
     } else {
-      const cost = 200;
+      const cost = 500;
       if (effectiveGold < cost) {
         playCombatSFX("laser_pew", 0.3);
-        showToast(`Không đủ Vàng! Cần ${cost} Vàng để mở rộng hành trang.`);
+        showToast(`Không đủ Vàng! Cần ${cost} Vàng để mở thêm 1 ô hành trang.`);
         return;
       }
 
       addGold(-cost);
-      const nextSlots = Math.min(30, maxUnlockedSlots + 5);
+      const nextSlots = Math.min(30, maxUnlockedSlots + 1);
       setMaxUnlockedSlots(nextSlots);
+      useGameWorldStore.getState().setUnlockedSlots(nextSlots);
       playCombatSFX("holy_bell", 0.5);
-      showToast(`🎉 Mở khóa thành công +5 ô bằng ${cost} Vàng (${nextSlots}/30 ô)!`);
+      showToast(`🎉 Mở khóa thành công +1 ô bằng ${cost} Vàng (${nextSlots}/30 ô)!`);
       setUnlockModalOpen(false);
+
+      if (charId) {
+        try {
+          await fetch(`/api/characters/${charId}/inventory/unlock-slot`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+          });
+        } catch (err) {
+          console.warn("Backend unlock-slot sync:", err);
+        }
+      }
+      triggerGlobalAutoSave("expand_gold");
     }
   };
 
@@ -1526,8 +1676,8 @@ export const CharacterInventoryModal = memo(function CharacterInventoryModal({
     }
   };
 
-  // Sort Inventory Items (Equipped first, then rarity weight, then enhanceLevel)
-  const handleSortInventory = () => {
+  // Sort Inventory Items (Equipped first, then rarity weight, then enhanceLevel, stack consumables)
+  const handleSortInventory = async () => {
     playCombatSFX("coin_chime", 0.3);
     const rarityWeight: Record<ItemRarity, number> = {
       mythic: 5,
@@ -1537,21 +1687,61 @@ export const CharacterInventoryModal = memo(function CharacterInventoryModal({
       common: 1,
     };
 
-    setItems((prev) => {
-      const sorted = [...prev].sort((a, b) => {
-        if (a.equipped && !b.equipped) return -1;
-        if (!a.equipped && b.equipped) return 1;
-        const diffRarity = (rarityWeight[b.rarity] || 0) - (rarityWeight[a.rarity] || 0);
-        if (diffRarity !== 0) return diffRarity;
-        return (b.enhanceLevel || 0) - (a.enhanceLevel || 0);
-      });
-      try {
-        localStorage.setItem(storageKey, JSON.stringify(sorted));
-      } catch (e) {}
-      return sorted;
+    // 1. Separate equipped and unequipped
+    const equipped = items.filter((it) => it.equipped);
+    const unequipped = items.filter((it) => !it.equipped);
+
+    // 2. Stack stackable unequipped items (consumables / materials with same name or type)
+    const stackedList: UnifiedItem[] = [];
+    for (const it of unequipped) {
+      if (it.category === "consumable" || it.category === "material") {
+        const existing = stackedList.find(
+          (s) => s.category === it.category && (s.name === it.name || s.type === it.type)
+        );
+        if (existing) {
+          existing.quantity = (existing.quantity || 1) + (it.quantity || 1);
+          continue;
+        }
+      }
+      stackedList.push({ ...it, quantity: it.quantity || 1 });
+    }
+
+    // 3. Sort: Rarity desc -> Category -> enhanceLevel desc -> Name
+    stackedList.sort((a, b) => {
+      const diffRarity = (rarityWeight[b.rarity] || 0) - (rarityWeight[a.rarity] || 0);
+      if (diffRarity !== 0) return diffRarity;
+      if (a.category !== b.category) return a.category.localeCompare(b.category);
+      const diffEnhance = (b.enhanceLevel || 0) - (a.enhanceLevel || 0);
+      if (diffEnhance !== 0) return diffEnhance;
+      return a.name.localeCompare(b.name);
     });
 
-    showToast("Đã sắp xếp hành trang ngăn nắp!");
+    // 4. Assign sequential slotIndex 0, 1, 2...
+    stackedList.forEach((it, idx) => {
+      (it as any).slotIndex = idx;
+    });
+
+    const nextAll = [...equipped, ...stackedList];
+    setItems(nextAll);
+    try {
+      localStorage.setItem(storageKey, JSON.stringify(nextAll));
+    } catch (e) {}
+
+    showToast("Đã gom cụm & sắp xếp hành trang ngăn nắp!");
+
+    // Backend sort call
+    const charId = propChar?.id || useGameWorldStore.getState().activeCharacterId;
+    if (charId) {
+      try {
+        await fetch(`/api/characters/${charId}/inventory/sort`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+        });
+      } catch (err) {
+        console.warn("Backend inventory sort sync:", err);
+      }
+    }
+    triggerGlobalAutoSave("sort");
   };
 
   // Live Power Comparison for Selected Item vs Equipped Item in Slot
@@ -1934,13 +2124,13 @@ export const CharacterInventoryModal = memo(function CharacterInventoryModal({
               <div className="flex items-center justify-between text-xs px-1 flex-wrap gap-2">
                 <div className="flex items-center gap-2">
                   <span className="font-bold text-white flex items-center gap-1.5">
-                    <Package className="w-4 h-4 text-cyan-400" /> Túi Hành Trang ({filteredItems.length}/{maxUnlockedSlots} ô)
+                    <Package className="w-4 h-4 text-cyan-400" /> Túi Hành Trang ({bagItemsCount}/{maxUnlockedSlots} ô)
                   </span>
                   {maxUnlockedSlots < 30 && (
                     <button
                       onClick={() => setUnlockModalOpen(true)}
                       className="px-2 py-0.5 rounded-full bg-gradient-to-r from-amber-500/20 to-cyan-500/20 border border-amber-400/50 hover:border-amber-300 text-amber-300 hover:text-white text-[10px] font-black transition flex items-center gap-1 cursor-pointer shadow-[0_0_10px_rgba(245,158,11,0.25)] animate-pulse"
-                      title="Mở thêm ô hành trang bằng Phiếu Tăng Hành Trang hoặc Vàng"
+                      title="Mở thêm ô hành trang bằng 500 Vàng hoặc Phiếu Tăng Hành Trang"
                     >
                       <Ticket className="w-3 h-3 text-amber-400" /> + Mở Rộng
                     </button>
@@ -1998,10 +2188,10 @@ export const CharacterInventoryModal = memo(function CharacterInventoryModal({
               </div>
             </div>
 
-            {/* 30 Item Grid (6 columns x 5 rows: Active 15 slots initially, locked slots require Ticket) */}
+            {/* 30 Item Grid (6 columns x 5 rows: Active 15 slots initially, locked slots require Ticket or Gold) */}
             <div className="grid grid-cols-6 gap-2 my-0.5 max-h-[220px] overflow-y-auto custom-scrollbar p-1">
               {gridCells.map((cell, idx) => {
-                // 1. Locked Slot (Requires Ticket or Gold to expand)
+                // 1. Locked Slot (Requires Ticket or 500 Gold to expand)
                 if (cell.isLocked) {
                   return (
                     <button
@@ -2011,10 +2201,12 @@ export const CharacterInventoryModal = memo(function CharacterInventoryModal({
                         setUnlockModalOpen(true);
                       }}
                       className="w-full aspect-square rounded-2xl bg-[#0e121b]/90 border border-dashed border-[#283244] hover:border-amber-400/80 hover:bg-[#161c28] flex flex-col items-center justify-center text-slate-500 hover:text-amber-300 transition-all cursor-pointer group shadow-inner"
-                      title="Ô bị khóa (Mở rộng bằng Phiếu Tăng Hành Trang hoặc Vàng)"
+                      title={`Ô khóa #${idx + 1} - Bấm để mở khóa với 500 Vàng`}
                     >
                       <Lock className="w-4 h-4 text-slate-600 group-hover:text-amber-400 group-hover:scale-110 transition-transform" />
-                      <span className="text-[8px] font-black mt-0.5 tracking-wider uppercase text-slate-500 group-hover:text-amber-300">Khóa</span>
+                      <span className="text-[8px] font-black mt-0.5 tracking-wider uppercase text-slate-500 group-hover:text-amber-300">
+                        #{idx + 1} 🔒
+                      </span>
                     </button>
                   );
                 }
@@ -2024,9 +2216,10 @@ export const CharacterInventoryModal = memo(function CharacterInventoryModal({
                   return (
                     <div
                       key={`empty-${idx}`}
-                      className="w-full aspect-square rounded-2xl bg-[#151a26]/70 border border-slate-800/80 flex items-center justify-center text-slate-700/60 select-none shadow-inner"
+                      className="w-full aspect-square rounded-2xl bg-[#151a26]/70 border border-slate-800/80 flex items-center justify-center text-slate-600 select-none shadow-inner"
+                      title={`Ô trống #${idx + 1}`}
                     >
-                      <span className="text-xs">✦</span>
+                      <Plus className="w-3.5 h-3.5 opacity-40 text-slate-500" />
                     </div>
                   );
                 }
@@ -2378,8 +2571,8 @@ export const CharacterInventoryModal = memo(function CharacterInventoryModal({
               
               <div className="flex items-center justify-between border-b border-[#3b2b32] pb-3">
                 <div className="flex items-center gap-2 text-amber-300 font-black text-sm">
-                  <Ticket className="w-4 h-4 text-amber-400" />
-                  <span>MỞ RỘNG TÚI HÀNH TRANG</span>
+                  <Lock className="w-4 h-4 text-amber-400" />
+                  <span>MỞ KHÓA Ô HÀNH TRANG</span>
                 </div>
                 <button
                   onClick={() => setUnlockModalOpen(false)}
@@ -2394,55 +2587,52 @@ export const CharacterInventoryModal = memo(function CharacterInventoryModal({
                   🎒
                 </div>
                 <p className="text-sm font-bold text-white">
-                  Mở thêm <span className="text-cyan-300 font-black">+5 Ô Hành Trang</span>
+                  Mở khóa thêm <span className="text-cyan-300 font-black">1 Ô Hành Trang</span> với giá <span className="text-amber-400 font-black">500 Vàng</span>?
                 </p>
                 <p className="text-xs text-slate-400">
                   Sức chứa hiện tại: <span className="font-mono font-bold text-amber-300">{maxUnlockedSlots}/30 ô</span>.
-                  Sau khi mở sẽ đạt <span className="font-mono font-bold text-emerald-300">{Math.min(30, maxUnlockedSlots + 5)}/30 ô</span>.
+                  Sau khi mở sẽ đạt <span className="font-mono font-bold text-emerald-300">{Math.min(30, maxUnlockedSlots + 1)}/30 ô</span>.
                 </p>
               </div>
 
               {/* 2 Options */}
               <div className="flex flex-col gap-2.5">
-                {/* Option 1: Use Ticket */}
-                <button
-                  onClick={() => handleExpandInventory(true)}
-                  disabled={expansionTicketCount <= 0}
-                  className={`w-full py-2.5 px-4 rounded-2xl font-black text-xs transition flex items-center justify-between shadow-lg cursor-pointer ${
-                    expansionTicketCount > 0
-                      ? "bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-400 hover:to-amber-500 text-slate-950 shadow-[0_0_15px_rgba(245,158,11,0.4)]"
-                      : "bg-[#251d22] border border-[#3f2f36] text-slate-500 cursor-not-allowed opacity-60"
-                  }`}
-                >
-                  <div className="flex items-center gap-2">
-                    <Ticket className="w-4 h-4" />
-                    <span>Dùng Phiếu Tăng Hành Trang</span>
-                  </div>
-                  <span className="font-mono text-[11px] px-2 py-0.5 rounded-full bg-black/30">
-                    Đang có: {expansionTicketCount} vé
-                  </span>
-                </button>
-
-                {/* Option 2: Buy with 200 Gold */}
+                {/* Option 1: Buy with 500 Gold */}
                 <button
                   onClick={() => handleExpandInventory(false)}
-                  className="w-full py-2.5 px-4 rounded-2xl font-black text-xs bg-[#241a22] hover:bg-[#342430] border border-amber-500/50 hover:border-amber-400 text-amber-300 hover:text-white transition flex items-center justify-between cursor-pointer shadow-md"
+                  className="w-full py-2.5 px-4 rounded-2xl font-black text-xs bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-400 hover:to-amber-500 text-slate-950 transition flex items-center justify-between cursor-pointer shadow-[0_0_15px_rgba(245,158,11,0.4)]"
                 >
                   <div className="flex items-center gap-2">
-                    <Coins className="w-4 h-4 text-amber-400" />
-                    <span>Mở Bằng Vàng (200 Vàng)</span>
+                    <Coins className="w-4 h-4" />
+                    <span>Mở Thêm 1 Ô (500 Vàng)</span>
                   </div>
-                  <span className="font-mono text-[11px] text-slate-400">
+                  <span className="font-mono text-[11px] px-2 py-0.5 rounded-full bg-black/20 text-slate-900 font-bold">
                     Ví: {effectiveGold.toLocaleString()} 🪙
                   </span>
                 </button>
+
+                {/* Option 2: Use Ticket if available */}
+                {expansionTicketCount > 0 && (
+                  <button
+                    onClick={() => handleExpandInventory(true)}
+                    className="w-full py-2.5 px-4 rounded-2xl font-black text-xs bg-[#241a22] hover:bg-[#342430] border border-amber-500/50 hover:border-amber-400 text-amber-300 hover:text-white transition flex items-center justify-between cursor-pointer shadow-md"
+                  >
+                    <div className="flex items-center gap-2">
+                      <Ticket className="w-4 h-4 text-amber-400" />
+                      <span>Dùng Phiếu Tăng Hành Trang (+1 Ô)</span>
+                    </div>
+                    <span className="font-mono text-[11px] text-slate-400">
+                      Đang có: {expansionTicketCount} vé
+                    </span>
+                  </button>
+                )}
               </div>
 
               <button
                 onClick={() => setUnlockModalOpen(false)}
                 className="w-full py-1.5 text-xs text-slate-400 hover:text-slate-200 transition font-medium cursor-pointer"
               >
-                Để sau
+                Hủy bỏ
               </button>
 
             </div>

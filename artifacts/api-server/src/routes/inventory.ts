@@ -2,6 +2,7 @@ import { Router } from "express";
 import { and, eq } from "drizzle-orm";
 import {
   db,
+  charactersTable,
   characterItemsTable,
   itemsTable,
 } from "@workspace/db";
@@ -54,7 +55,6 @@ router.get("/characters/:characterId/inventory", requireAuth, async (req, res): 
   }
 
   await ensureItemCatalog();
-  await ensureStarterInventory(character.id, character.classId);
   const rawList = await listInventory(character.id);
   const parsed = GetInventoryResponse.safeParse(rawList);
   res.status(200).json(parsed.success ? parsed.data : rawList);
@@ -83,6 +83,7 @@ router.post("/characters/:characterId/inventory/:itemId/equip", requireAuth, asy
   }
 
   await db.transaction(async (tx: any) => {
+    const slot = owned.item.equipSlot;
     const equippedInSlot = await tx
       .select({ id: characterItemsTable.id })
       .from(characterItemsTable)
@@ -91,18 +92,22 @@ router.post("/characters/:characterId/inventory/:itemId/equip", requireAuth, asy
         and(
           eq(characterItemsTable.characterId, character.id),
           eq(characterItemsTable.equipped, true),
-          eq(itemsTable.equipSlot, owned.item.equipSlot),
+          eq(itemsTable.equipSlot, slot),
         ),
       );
+
+    // If an item was previously equipped in that slot, unequip it into the bag
     for (const equippedItem of equippedInSlot) {
       await tx
         .update(characterItemsTable)
-        .set({ equipped: false })
+        .set({ equipped: false, equippedSlot: null, slotIndex: owned.slotIndex ?? 0 })
         .where(eq(characterItemsTable.id, equippedItem.id));
     }
+
+    // Newly equipped gear occupies character equipment slot, freed from bag grid
     await tx
       .update(characterItemsTable)
-      .set({ equipped: true, equippedSlot: owned.item.equipSlot })
+      .set({ equipped: true, equippedSlot: slot, slotIndex: -1 })
       .where(eq(characterItemsTable.id, owned.ownershipId));
   });
 
@@ -113,7 +118,7 @@ router.post("/characters/:characterId/inventory/:itemId/equip", requireAuth, asy
   );
 });
 
-// Tháo trang bị về túi đồ
+// Tháo trang bị về túi đồ (kiểm tra dung lượng túi đồ unlockedSlots)
 router.post("/characters/:characterId/inventory/:itemId/unequip", requireAuth, async (req, res): Promise<void> => {
   const userId = req.session.userId!;
   const params = UnequipItemParams.safeParse(req.params);
@@ -129,9 +134,37 @@ router.post("/characters/:characterId/inventory/:itemId/unequip", requireAuth, a
     return;
   }
 
+  const allOwned = await db
+    .select({
+      id: characterItemsTable.id,
+      equipped: characterItemsTable.equipped,
+      slotIndex: characterItemsTable.slotIndex,
+    })
+    .from(characterItemsTable)
+    .where(eq(characterItemsTable.characterId, character.id));
+
+  const unlockedSlots = character.unlockedSlots ?? 15;
+  const usedBagSlots = allOwned.filter((it: any) => !it.equipped).length;
+
+  if (usedBagSlots >= unlockedSlots) {
+    res.status(400).json({ error: "Túi hành trang đã đầy, vui lòng dọn bớt hoặc mở khóa thêm ô!" });
+    return;
+  }
+
+  // Find lowest free slotIndex in 0 .. unlockedSlots - 1
+  const occupiedSlots = new Set(
+    allOwned
+      .filter((it: any) => !it.equipped && it.slotIndex >= 0)
+      .map((it: any) => it.slotIndex),
+  );
+  let freeSlotIndex = 0;
+  while (freeSlotIndex < unlockedSlots && occupiedSlots.has(freeSlotIndex)) {
+    freeSlotIndex++;
+  }
+
   await db
     .update(characterItemsTable)
-    .set({ equipped: false, equippedSlot: null })
+    .set({ equipped: false, equippedSlot: null, slotIndex: freeSlotIndex })
     .where(eq(characterItemsTable.id, owned.ownershipId));
 
   res.status(200).json(
@@ -139,6 +172,148 @@ router.post("/characters/:characterId/inventory/:itemId/unequip", requireAuth, a
       withExperienceToNextLevel(await toCharacterResponse(character)),
     ),
   );
+});
+
+// Mở khóa thêm ô Hành trang (tối đa 30 ô) với giá 500 Vàng
+router.post("/characters/:characterId/inventory/unlock-slot", requireAuth, async (req, res): Promise<void> => {
+  const userId = req.session.userId!;
+  const characterId = parseInt(req.params.characterId);
+  if (isNaN(characterId)) {
+    res.status(400).json({ error: "ID không hợp lệ" });
+    return;
+  }
+
+  const character = await getCharacterForUser(characterId, userId);
+  if (!character) {
+    res.status(404).json({ error: "Không tìm thấy nhân vật" });
+    return;
+  }
+
+  const currentUnlocked = character.unlockedSlots ?? 15;
+  if (currentUnlocked >= 30) {
+    res.status(400).json({ error: "Hành trang đã đạt giới hạn tối đa (30 ô)!" });
+    return;
+  }
+
+  const UNLOCK_COST = 500;
+  if (character.gold < UNLOCK_COST) {
+    res.status(400).json({ error: `Không đủ vàng! Cần ${UNLOCK_COST} Vàng để mở khóa thêm 1 ô.` });
+    return;
+  }
+
+  const [updatedChar] = await db
+    .update(charactersTable)
+    .set({
+      gold: character.gold - UNLOCK_COST,
+      unlockedSlots: currentUnlocked + 1,
+    })
+    .where(eq(charactersTable.id, characterId))
+    .returning();
+
+  res.status(200).json({
+    success: true,
+    unlockedSlots: updatedChar.unlockedSlots,
+    gold: updatedChar.gold,
+    character: withExperienceToNextLevel(await toCharacterResponse(updatedChar)),
+  });
+});
+
+// Sắp xếp tự động Túi Đồ (Auto-Sort & Stack)
+router.post("/characters/:characterId/inventory/sort", requireAuth, async (req, res): Promise<void> => {
+  const userId = req.session.userId!;
+  const characterId = parseInt(req.params.characterId);
+  if (isNaN(characterId)) {
+    res.status(400).json({ error: "ID không hợp lệ" });
+    return;
+  }
+
+  const character = await getCharacterForUser(characterId, userId);
+  if (!character) {
+    res.status(404).json({ error: "Không tìm thấy nhân vật" });
+    return;
+  }
+
+  await db.transaction(async (tx: any) => {
+    const bagItems = await tx
+      .select({
+        ownershipId: characterItemsTable.id,
+        itemId: characterItemsTable.itemId,
+        quantity: characterItemsTable.quantity,
+        enhanceLevel: characterItemsTable.enhanceLevel,
+        slotIndex: characterItemsTable.slotIndex,
+        item: itemsTable,
+      })
+      .from(characterItemsTable)
+      .innerJoin(itemsTable, eq(characterItemsTable.itemId, itemsTable.id))
+      .where(and(eq(characterItemsTable.characterId, characterId), eq(characterItemsTable.equipped, false)));
+
+    // Group and stack duplicate consumables/materials
+    const stackMap = new Map<string, any>();
+    const nonStackable: any[] = [];
+
+    for (const entry of bagItems) {
+      const it = entry.item;
+      const isStackable = it.category !== "equipment" && Number(it.maxStack ?? 99) > 1 && entry.enhanceLevel === 0;
+      if (isStackable) {
+        if (stackMap.has(entry.itemId)) {
+          const existing = stackMap.get(entry.itemId);
+          existing.quantity += entry.quantity;
+          await tx.delete(characterItemsTable).where(eq(characterItemsTable.id, entry.ownershipId));
+        } else {
+          stackMap.set(entry.itemId, { ...entry });
+        }
+      } else {
+        nonStackable.push(entry);
+      }
+    }
+
+    const consolidated = [...stackMap.values(), ...nonStackable];
+    for (const entry of stackMap.values()) {
+      await tx
+        .update(characterItemsTable)
+        .set({ quantity: entry.quantity })
+        .where(eq(characterItemsTable.id, entry.ownershipId));
+    }
+
+    const rarityWeight: Record<string, number> = {
+      mythic: 5,
+      legendary: 4,
+      epic: 3,
+      rare: 2,
+      common: 1,
+    };
+    const categoryWeight: Record<string, number> = {
+      equipment: 4,
+      consumable: 3,
+      material: 2,
+      quest: 1,
+    };
+
+    consolidated.sort((a, b) => {
+      const rA = rarityWeight[a.item.rarity?.toLowerCase()] || 0;
+      const rB = rarityWeight[b.item.rarity?.toLowerCase()] || 0;
+      if (rB !== rA) return rB - rA;
+
+      const cA = categoryWeight[a.item.category?.toLowerCase()] || 0;
+      const cB = categoryWeight[b.item.category?.toLowerCase()] || 0;
+      if (cB !== cA) return cB - cA;
+
+      if ((b.enhanceLevel ?? 0) !== (a.enhanceLevel ?? 0)) {
+        return (b.enhanceLevel ?? 0) - (a.enhanceLevel ?? 0);
+      }
+      return (a.item.name || "").localeCompare(b.item.name || "");
+    });
+
+    for (let i = 0; i < consolidated.length; i++) {
+      await tx
+        .update(characterItemsTable)
+        .set({ slotIndex: i })
+        .where(eq(characterItemsTable.id, consolidated[i].ownershipId));
+    }
+  });
+
+  const rawList = await listInventory(characterId);
+  res.status(200).json(rawList);
 });
 
 // Bán vật phẩm trong túi đồ lấy Vàng

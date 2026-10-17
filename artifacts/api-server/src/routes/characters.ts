@@ -24,7 +24,6 @@ router.get("/characters", requireAuth, async (req, res) => {
   await ensureItemCatalog();
   const expToNext = await Promise.all(
     characters.map(async (character: any) => {
-      await ensureStarterInventory(character.id, character.classId);
       return {
         ...(await toCharacterResponse(character)),
         experienceToNextLevel: getExpForLevel(character.level),
@@ -76,16 +75,24 @@ router.post("/characters", requireAuth, async (req, res) => {
       experience: 0,
       hp: stats.hp,
       maxHp: stats.hp,
+      mp: 200,
+      maxMp: 200,
       atk: stats.atk,
       def: stats.def,
       spd: stats.spd,
       gold: 100,
       kills: 0,
       deaths: 0,
+      unlockedSlots: 15,
+      combatPower: Math.round(stats.hp * 0.5 + stats.atk * 3 + stats.def * 2 + stats.spd * 2 + 15 * 8 + 10),
     })
     .returning();
 
-  await ensureStarterInventory(character.id, character.classId);
+  // Persist as last active character on user profile
+  await db.update(usersTable)
+    .set({ lastCharacterId: character.id })
+    .where(eq(usersTable.id, req.session.userId!));
+
   return res.status(201).json({
     ...(await toCharacterResponse(character)),
     experienceToNextLevel: getExpForLevel(1),
@@ -109,12 +116,77 @@ router.get("/characters/:characterId", requireAuth, async (req, res) => {
   }
 
   await ensureItemCatalog();
-  await ensureStarterInventory(character.id, character.classId);
   return res.status(200).json({
     ...(await toCharacterResponse(character)),
     experienceToNextLevel: getExpForLevel(character.level),
   });
 });
+
+// Auto-Save character state (Heartbeat, on-event and beforeunload)
+const handleCharacterAutoSave = async (req: any, res: any) => {
+  const characterId = parseInt(req.params.characterId);
+  if (isNaN(characterId)) {
+    return res.status(400).json({ error: "ID không hợp lệ" });
+  }
+
+  const [character] = await db
+    .select()
+    .from(charactersTable)
+    .where(eq(charactersTable.id, characterId))
+    .limit(1);
+
+  if (!character || character.userId !== req.session.userId) {
+    return res.status(404).json({ error: "Không tìm thấy nhân vật" });
+  }
+
+  const body = req.body || {};
+  const updateData: any = {};
+
+  if (typeof body.hp === "number") updateData.hp = Math.max(0, Math.round(body.hp));
+  if (typeof body.maxHp === "number" && body.maxHp > 0) updateData.maxHp = Math.round(body.maxHp);
+  if (typeof body.mp === "number") updateData.mp = Math.max(0, Math.round(body.mp));
+  if (typeof body.maxMp === "number" && body.maxMp > 0) updateData.maxMp = Math.round(body.maxMp);
+  if (typeof body.level === "number" && body.level >= 1) updateData.level = Math.round(body.level);
+  if (typeof body.experience === "number") updateData.experience = Math.max(0, Math.round(body.experience));
+  if (typeof body.gold === "number") updateData.gold = Math.max(0, Math.round(body.gold));
+  if (typeof body.kills === "number") updateData.kills = Math.max(0, Math.round(body.kills));
+  if (typeof body.posX === "number") updateData.posX = Math.round(body.posX);
+  if (typeof body.posZ === "number") updateData.posZ = Math.round(body.posZ);
+  if (typeof body.zoneId === "string" && body.zoneId.trim()) updateData.zoneId = body.zoneId.trim();
+  if (typeof body.str === "number") updateData.str = Math.round(body.str);
+  if (typeof body.dex === "number") updateData.dex = Math.round(body.dex);
+  if (typeof body.intel === "number") updateData.intel = Math.round(body.intel);
+  if (typeof body.luk === "number") updateData.luk = Math.round(body.luk);
+  if (typeof body.vit === "number") updateData.vit = Math.round(body.vit);
+  if (typeof body.unlockedSlots === "number") {
+    updateData.unlockedSlots = Math.min(30, Math.max(15, Math.round(body.unlockedSlots)));
+  }
+
+  if (Object.keys(updateData).length > 0) {
+    await db.update(charactersTable)
+      .set(updateData)
+      .where(eq(charactersTable.id, characterId));
+  }
+
+  // Record as last active character
+  await db.update(usersTable)
+    .set({ lastCharacterId: characterId })
+    .where(eq(usersTable.id, req.session.userId!));
+
+  const updatedChar = await toCharacterResponse(character);
+  return res.status(200).json({
+    success: true,
+    savedAt: new Date().toISOString(),
+    character: {
+      ...updatedChar,
+      experienceToNextLevel: getExpForLevel(updatedChar.level),
+    },
+  });
+};
+
+router.put("/characters/:characterId/autosave", requireAuth, handleCharacterAutoSave);
+router.post("/characters/:characterId/autosave", requireAuth, handleCharacterAutoSave);
+router.patch("/characters/:characterId/autosave", requireAuth, handleCharacterAutoSave);
 
 router.get("/characters/:characterId/battle-log", requireAuth, async (req, res) => {
   const characterId = parseInt(req.params.characterId);

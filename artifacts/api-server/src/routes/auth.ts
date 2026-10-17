@@ -15,24 +15,47 @@ declare module "express-session" {
 
 const router = Router();
 
-router.post("/auth/server", requireAuth, async (req, res) => {
+const handleSetServer = async (req: any, res: any) => {
   const parsed = SetServerBody.safeParse(req.body);
   if (!parsed.success) return res.status(400).json({ error: "Vùng hoặc máy chủ không hợp lệ" });
 
   await ensureServerCatalog();
-  const [server] = await db.select().from(serversTable).where(eq(serversTable.id, parsed.data.serverId)).limit(1);
-  if (!server || server.region !== parsed.data.region) {
-    return res.status(400).json({ error: "Máy chủ không thuộc cụm vùng đã chọn" });
+  // Allow matching by id directly or normal lookup
+  let [server] = await db.select().from(serversTable).where(eq(serversTable.id, parsed.data.serverId)).limit(1);
+  if (!server) {
+    // If client sent short id like 's1', map to 's1_long_vuong'
+    const fallbackId = parsed.data.serverId === "s1" ? "s1_long_vuong"
+      : parsed.data.serverId === "s2" ? "s2_hac_am"
+      : parsed.data.serverId === "s3" ? "s3_thien_phat"
+      : parsed.data.serverId === "s4" ? "s4_huyet_nguyet" : parsed.data.serverId;
+    [server] = await db.select().from(serversTable).where(eq(serversTable.id, fallbackId)).limit(1);
   }
 
-  const [user] = await db.update(usersTable).set({
-    selectedRegion: server.region,
-    selectedServerId: server.id,
-  }).where(eq(usersTable.id, req.session.userId!)).returning();
+  const region = server ? server.region : parsed.data.region;
+  const serverId = server ? server.id : parsed.data.serverId;
+
+  const updateData: any = {
+    selectedRegion: region,
+    selectedServerId: serverId,
+  };
+  if (parsed.data.lastCharacterId) {
+    updateData.lastCharacterId = parsed.data.lastCharacterId;
+  }
+
+  const [user] = await db.update(usersTable).set(updateData).where(eq(usersTable.id, req.session.userId!)).returning();
   if (!user) return res.status(401).json({ error: "Tài khoản không còn tồn tại" });
 
-  return res.status(200).json({ selectedRegion: user.selectedRegion, selectedServerId: user.selectedServerId });
-});
+  return res.status(200).json({
+    selectedRegion: user.selectedRegion,
+    selectedServerId: user.selectedServerId,
+    lastCharacterId: user.lastCharacterId ?? null,
+  });
+};
+
+router.post("/auth/server", requireAuth, handleSetServer);
+router.post("/users/me/server", requireAuth, handleSetServer);
+router.patch("/users/me/server", requireAuth, handleSetServer);
+router.patch("/api/users/me/server", requireAuth, handleSetServer);
 
 router.post("/auth/register", async (req, res) => {
   const parsed = RegisterBody.safeParse(req.body);
@@ -159,7 +182,7 @@ router.post("/auth/logout", (req, res) => {
   return res.status(200).json({ success: true });
 });
 
-router.get("/auth/me", async (req, res) => {
+const handleGetMe = async (req: any, res: any) => {
   const user = await extractAuthUser(req);
   if (!user) {
     return res.status(401).json({ error: "Chưa đăng nhập" });
@@ -171,7 +194,12 @@ router.get("/auth/me", async (req, res) => {
     createdAt: user.createdAt,
     selectedRegion: user.selectedRegion,
     selectedServerId: user.selectedServerId,
+    lastCharacterId: user.lastCharacterId ?? null,
   });
-});
+};
+
+router.get("/auth/me", handleGetMe);
+router.get("/users/me", handleGetMe);
+router.get("/api/users/me", handleGetMe);
 
 export default router;

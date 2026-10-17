@@ -103,7 +103,6 @@ router.post("/characters/:characterId/battle", requireAuth, async (req, res) => 
   }
 
   await ensureItemCatalog();
-  await ensureStarterInventory(character.id, character.classId);
   const effectiveCharacter = await toCharacterResponse(character);
 
   const monsterReward = await getMonster(monsterId);

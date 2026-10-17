@@ -43,6 +43,7 @@ export const charactersTable = pgTable("characters", {
   arenaRank: text("arena_rank").notNull().default("Đồng IV"),
   activeMount: text("active_mount").notNull().default("shadow_steed"),
   activePet: text("active_pet").notNull().default("fairy_spirit"),
+  unlockedSlots: integer("unlocked_slots").notNull().default(15),
   createdAt: timestamp("created_at").defaultNow().notNull(),
 }, (table) => ({
   userIdIndex: index("characters_user_id_idx").on(table.userId),

@@ -90,6 +90,9 @@ export default function CommunityPortalScreen() {
 
   useEffect(() => {
     if (!userLoading && !user) setLocation("/login");
+    if (user) {
+      useCommunityPortalStore.getState().syncWithUserProfile(user);
+    }
   }, [user, userLoading, setLocation]);
 
   useEffect(() => {

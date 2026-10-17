@@ -121,6 +121,10 @@ export interface GameWorldState {
   playerClassName: string;
   playerGender: "male" | "female";
   playerColorHex: string;
+  activeCharacterId: number | null;
+  unlockedSlots: number;
+  setActiveCharacterId: (id: number | null) => void;
+  setUnlockedSlots: (slots: number) => void;
   isInvincible: boolean;
   invincibleTimer: number;
   characterRenderMode: "2.5d_sprite" | "3d_model";
@@ -430,6 +434,10 @@ export const useGameWorldStore = create<GameWorldState>((set, get) => ({
   playerClassName: "Chiến Binh",
   playerGender: "male",
   playerColorHex: "#f97316",
+  activeCharacterId: null,
+  unlockedSlots: 15,
+  setActiveCharacterId: (activeCharacterId: number | null) => set({ activeCharacterId }),
+  setUnlockedSlots: (unlockedSlots: number) => set({ unlockedSlots }),
   isInvincible: false,
   invincibleTimer: 0,
   characterRenderMode: "2.5d_sprite",
@@ -1576,8 +1584,17 @@ export const useGameWorldStore = create<GameWorldState>((set, get) => ({
         playerExpToNext: char.experienceToNextLevel || 100,
         playerHealth: hp > 0 ? hp : maxHp,
         playerMaxHealth: maxHp,
+        playerPp: char.mp !== undefined ? char.mp : s.playerPp,
+        playerMaxPp: char.maxMp !== undefined ? char.maxMp : s.playerMaxPp,
         playerGold: char.gold !== undefined ? char.gold : s.playerGold,
         playerKills: char.kills !== undefined ? char.kills : s.playerKills,
+        activeCharacterId: char.id || s.activeCharacterId,
+        unlockedSlots: char.unlockedSlots || s.unlockedSlots || 15,
+        playerStr: char.str !== undefined ? char.str : s.playerStr,
+        playerDex: char.dex !== undefined ? char.dex : s.playerDex,
+        playerIntel: char.intel !== undefined ? char.intel : s.playerIntel,
+        playerLuk: char.luk !== undefined ? char.luk : s.playerLuk,
+        playerVit: char.vit !== undefined ? char.vit : s.playerVit,
       };
     });
   },
