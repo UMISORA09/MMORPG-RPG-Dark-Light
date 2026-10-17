@@ -57,6 +57,16 @@ export const PlayerEntity25D = memo(function PlayerEntity25D() {
   const hasMiracleEquipped = useGameWorldStore((s) => s.hasMiracleEquipped);
   const overheadChatBubble = useGameWorldStore((s) => s.overheadChatBubble);
 
+  // Hit-Stop, Dash & Particle Pools
+  const hitStopTimer = useGameWorldStore((s) => s.hitStopTimer);
+  const isDashing = useGameWorldStore((s) => s.isDashing);
+  const dashDirection = useGameWorldStore((s) => s.dashDirection);
+  const triggerDash = useGameWorldStore((s) => s.triggerDash);
+  const addDustPuff = useGameWorldStore((s) => s.addDustPuff);
+  const addAfterimageGhost = useGameWorldStore((s) => s.addAfterimageGhost);
+  const afterimageGhosts = useGameWorldStore((s) => s.afterimageGhosts);
+  const dustPuffs = useGameWorldStore((s) => s.dustPuffs);
+
   const updatePlayerPosition = useGameWorldStore((s) => s.updatePlayerPosition);
   const triggerComboAttack = useGameWorldStore((s) => s.triggerComboAttack);
   const tickWorld = useGameWorldStore((s) => s.tickWorld);
@@ -68,6 +78,8 @@ export const PlayerEntity25D = memo(function PlayerEntity25D() {
   const attackCooldown = useRef(0);
   const animLockTimer = useRef(0);
   const facingLeftRef = useRef(playerFacingLeft);
+  const footstepDustTimer = useRef(0);
+  const ghostSpawnTimer = useRef(0);
 
   // 60FPS to 5Hz throttle synchronization refs
   const lastSyncTime = useRef(0);
@@ -97,6 +109,11 @@ export const PlayerEntity25D = memo(function PlayerEntity25D() {
 
     // 1. Advance World timers
     tickWorld(dt);
+
+    // ── Hit-Stop Micro-Freeze (Crunchy micro-pause on heavy hits) ──
+    if (hitStopTimer > 0) {
+      return;
+    }
 
     if (attackCooldown.current > 0) attackCooldown.current -= dt;
     if (animLockTimer.current > 0) animLockTimer.current -= dt;
@@ -192,7 +209,29 @@ export const PlayerEntity25D = memo(function PlayerEntity25D() {
     pos.current.x += moveX * effectiveSpeed * dt;
     pos.current.z += moveZ * effectiveSpeed * dt;
 
-    // 4. Attack Execution (Left Mouse Click or J Combo Chain)
+    // 3.5 Dash / I-Frame Roll (Spacebar while moving or Shift)
+    const wantsDash = !isStunned && Boolean(input.dash);
+    if (wantsDash) {
+      const moveMag = Math.hypot(moveX, moveZ);
+      const dashVec = moveMag > 0.05
+        ? new THREE.Vector3(moveX, 0, moveZ).normalize()
+        : new THREE.Vector3(facingLeftRef.current ? -1 : 1, 0, 0);
+      triggerDash(dashVec);
+    }
+
+    if (isDashing) {
+      const dashSpeed = 16.5;
+      pos.current.x += dashDirection.x * dashSpeed * dt;
+      pos.current.z += dashDirection.z * dashSpeed * dt;
+
+      ghostSpawnTimer.current += dt;
+      if (ghostSpawnTimer.current >= 0.055) {
+        ghostSpawnTimer.current = 0;
+        addAfterimageGhost(pos.current.clone(), "run", facingLeftRef.current, "#00f2ff");
+      }
+    }
+
+    // 4. Attack Execution (Left Mouse Click or J Combo Chain - Heavy & Deliberate Timing)
     const wantsAttack = !isStunned && (input.attack || mobileState.attack || mobileState.shoot);
 
     // Auto-dismount when attacking or taking damage
@@ -204,8 +243,9 @@ export const PlayerEntity25D = memo(function PlayerEntity25D() {
 
     if (wantsAttack) {
       if (attackCooldown.current <= 0) {
-        attackCooldown.current = 0.28;
-        animLockTimer.current = 0.32;
+        const isNovice = playerLevel <= 1;
+        attackCooldown.current = isNovice ? 0.42 : 0.28;
+        animLockTimer.current = isNovice ? 0.42 : 0.32;
         mobileState.attack = false;
         mobileState.shoot = false;
 
@@ -224,8 +264,18 @@ export const PlayerEntity25D = memo(function PlayerEntity25D() {
       }
     } else if (!isGrounded.current) {
       currentAnim = velocityY.current > 0 ? "jump" : "fall";
-    } else if (inputMag > 0.1) {
+    } else if (inputMag > 0.1 || isDashing) {
       currentAnim = "run";
+    }
+
+    // Footstep dust puffs when running on ground
+    if (currentAnim === "run" && isGrounded.current) {
+      footstepDustTimer.current += dt;
+      if (footstepDustTimer.current >= 0.18) {
+        footstepDustTimer.current = 0;
+        const dustOffset = facingLeftRef.current ? 0.35 : -0.35;
+        addDustPuff(pos.current.clone().add(new THREE.Vector3(dustOffset, 0.05, 0)), 0.45);
+      }
     }
 
     // Solid Obstacle and World Boundary Collisions Resolution
@@ -318,6 +368,40 @@ export const PlayerEntity25D = memo(function PlayerEntity25D() {
           </Text>
         </group>
       )}
+
+      {/* ── Dust Puffs (Running and Dash Foot Planting Ground Particles) ── */}
+      {dustPuffs.map((dust) => (
+        <mesh
+          key={dust.id}
+          position={[dust.position.x, dust.position.y, dust.position.z]}
+          rotation={[-Math.PI / 2, 0, 0]}
+        >
+          <ringGeometry args={[dust.size * 0.35, dust.size, 16]} />
+          <meshBasicMaterial
+            color="#fbbf24"
+            transparent
+            opacity={dust.opacity}
+            depthWrite={false}
+          />
+        </mesh>
+      ))}
+
+      {/* ── Afterimage Ghost Billboards (Dash I-Frame Ghosting Trail) ── */}
+      {afterimageGhosts.map((ghost) => (
+        <group key={ghost.id} position={ghost.position}>
+          <SpriteBillboard25D
+            position={[0, 0, 0]}
+            state={ghost.animState as any}
+            facingLeft={ghost.facingLeft}
+            textureKey={`player_${playerClassId}`}
+            color={ghost.color}
+            showOverhead={false}
+            hp={playerHealth}
+            maxHp={playerMaxHealth}
+            hitFlash={false}
+          />
+        </group>
+      ))}
 
       {characterRenderMode === "3d_model" ? (
         <group position={playerPosition}>

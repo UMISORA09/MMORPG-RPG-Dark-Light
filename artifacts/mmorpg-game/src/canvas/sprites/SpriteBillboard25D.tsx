@@ -163,7 +163,9 @@ export const SpriteBillboard25D = memo(function SpriteBillboard25D({
     texture.offset.y = vOffset;
   };
 
-  useFrame((_, delta) => {
+  useFrame((threeState, delta) => {
+    const time = threeState.clock.getElapsedTime();
+
     // 1. Immediately reset animation frame when state changes
     if (prevState.current !== state || prevFacing.current !== facingLeft) {
       prevState.current = state;
@@ -199,11 +201,55 @@ export const SpriteBillboard25D = memo(function SpriteBillboard25D({
       applyUV(currentFrame.current, rowIndex, facingLeft);
     }
 
-    // Hurt flashing emissive effect
+    // 3. Subtle Life & Movement Physics (Idle Breathing, Run Bobbing, Stun Shaking)
+    if (meshRef.current) {
+      if (state === "idle") {
+        // Subtle vertical bobbing (1-2px / ~0.035m) & Chest breathing
+        const breath = Math.sin(time * 3.5);
+        meshRef.current.position.y = breath * 0.035;
+        meshRef.current.position.x = 0;
+        meshRef.current.rotation.z = 0;
+        meshRef.current.scale.set(1.0 - breath * 0.008, 1.0 + breath * 0.018, 1.0);
+      } else if (state === "run" || state === "walk") {
+        // Weight shifting stride bobbing & slight torso tilt
+        const stride = Math.sin(time * (state === "run" ? 12 : 8));
+        meshRef.current.position.y = Math.abs(stride) * 0.055;
+        meshRef.current.position.x = 0;
+        meshRef.current.rotation.z = stride * 0.04 * (facingLeft ? -1 : 1);
+        meshRef.current.scale.set(1, 1, 1);
+      } else if (state === "hurt") {
+        // Erratic horizontal hit stagger shaking
+        meshRef.current.position.x = Math.sin(time * 45) * 0.04;
+        meshRef.current.rotation.z = 0;
+        meshRef.current.scale.set(1, 1, 1);
+      } else {
+        meshRef.current.position.set(0, 0, 0);
+        meshRef.current.rotation.z = 0;
+        meshRef.current.scale.set(1, 1, 1);
+      }
+    }
+
+    // 4. Hit-Flash (pure white/red 120ms) & Status Effect Tints (Cold Blue for Slow, Crimson for Bleed)
     if (materialRef.current) {
-      if (state === "hurt" || isInvincible || hitFlash) {
+      const isSlow = debuffBadges.includes("🐌");
+      const isBleed = debuffBadges.includes("🩸") || debuffBadges.includes("☠️");
+
+      if (hitFlash) {
+        // Pure white impact flash
+        materialRef.current.emissive.set("#ffffff");
+        materialRef.current.emissiveIntensity = 1.6;
+      } else if (state === "hurt" || isInvincible) {
+        // Red hurt / invincibility pulse
         materialRef.current.emissive.set("#ff2222");
         materialRef.current.emissiveIntensity = 0.95 + Math.sin(Date.now() * 0.03) * 0.35;
+      } else if (isBleed) {
+        // Crimson dripping bleed pulse
+        materialRef.current.emissive.set("#dc2626");
+        materialRef.current.emissiveIntensity = 0.6 + Math.sin(time * 8) * 0.4;
+      } else if (isSlow) {
+        // Cold frost blue tint
+        materialRef.current.emissive.set("#38bdf8");
+        materialRef.current.emissiveIntensity = 0.45 + Math.sin(time * 4) * 0.2;
       } else {
         materialRef.current.emissive.set("#000000");
         materialRef.current.emissiveIntensity = 0;

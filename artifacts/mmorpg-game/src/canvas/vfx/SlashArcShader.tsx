@@ -34,23 +34,26 @@ const fragmentShader = `
     float dist = length(p) * 2.0;
     float angle = atan(p.y, p.x); // -PI to PI
 
-    // Slash Arc is a crescent ring between radius 0.4 and 0.95
-    float ringMask = smoothstep(0.35, 0.55, dist) * (1.0 - smoothstep(0.85, 1.0, dist));
+    // Slash Arc is a high-speed crescent smear ring between radius 0.35 and 0.98
+    float ringMask = smoothstep(0.32, 0.52, dist) * (1.0 - smoothstep(0.88, 1.0, dist));
 
-    // Angular span: from -0.8 PI to 0.8 PI
+    // Angular span: from -0.8 PI to 0.8 PI with razor-sharp trailing edge
     float sweep = angle + PI; // 0 to 2PI
-    float arcMask = smoothstep(0.2, 1.2, sweep) * (1.0 - smoothstep(4.0, 5.5, sweep));
+    float arcMask = smoothstep(0.15, 0.9, sweep) * (1.0 - smoothstep(4.2, 5.6, sweep));
 
-    // Progress sweep animation
-    float head = uProgress * 6.0;
-    float tail = max(0.0, head - 2.8);
+    // High-speed smear sweep animation
+    float head = uProgress * 6.4;
+    float tail = max(0.0, head - 3.2);
     float progressMask = smoothstep(tail, head, sweep);
 
     float alpha = ringMask * arcMask * progressMask * (1.0 - uProgress);
 
     // Color gradient from primary to secondary along radius & angle
-    vec3 col = mix(uPrimaryColor, uSecondaryColor, clamp(dist, 0.0, 1.0));
-    col += vec3(1.0) * pow(ringMask, 3.0) * 0.7; // bright inner edge glow
+    vec3 col = mix(uPrimaryColor, uSecondaryColor, clamp(dist * 0.85, 0.0, 1.0));
+    // Razor-sharp white-hot inner core (smear frame high-energy trail)
+    float core = pow(ringMask, 3.8) * 1.4;
+    col = mix(col, vec3(1.0, 1.0, 1.0), clamp(core, 0.0, 0.9));
+    col += vec3(1.0) * core * 0.5;
 
     gl_FragColor = vec4(col, alpha);
   }

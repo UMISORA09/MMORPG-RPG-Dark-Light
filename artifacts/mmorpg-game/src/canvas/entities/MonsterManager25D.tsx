@@ -695,7 +695,12 @@ export const MonsterManager25D = memo(function MonsterManager25D() {
           callSocialAggro(m);
 
           m.staggerGauge = Math.min(m.staggerMax, m.staggerGauge + actualDamage * 0.8);
-          useGameWorldStore.getState().recordCombatHit(actualDamage, Math.random() < 0.2);
+          useGameWorldStore.getState().recordCombatHit(actualDamage, isCrit);
+
+          // Hit-Stop Micro-Freeze on Critical Strikes & Heavy Finishers
+          if (isCrit || m.aiState === "STAGGERED") {
+            useGameWorldStore.getState().triggerHitStop(0.045);
+          }
 
           addFloatingText(
             `-${actualDamage}${m.aiState === "STAGGERED" ? " (1.5x)" : ""}`,

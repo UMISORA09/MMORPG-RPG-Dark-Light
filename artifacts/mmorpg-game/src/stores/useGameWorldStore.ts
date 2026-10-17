@@ -66,6 +66,26 @@ export interface SlashEffect {
   maxLifetime: number;
 }
 
+export interface AfterimageGhost {
+  id: number;
+  position: THREE.Vector3;
+  animState: string;
+  facingLeft: boolean;
+  color: string;
+  opacity: number;
+  lifetime: number;
+  maxLifetime: number;
+}
+
+export interface DustPuff {
+  id: number;
+  position: THREE.Vector3;
+  size: number;
+  opacity: number;
+  lifetime: number;
+  maxLifetime: number;
+}
+
 export interface ActiveVFXInstance {
   id: number;
   config: SkillVFXConfig;
@@ -148,6 +168,15 @@ export interface GameWorldState {
   passiveActive: boolean;
   passiveFuryPercent: number;
   cameraShakeIntensity: number;
+
+  // --- Hit-Stop, Dash Dodge & VFX Trails ---
+  hitStopTimer: number;
+  dashCooldown: number;
+  isDashing: boolean;
+  dashTimer: number;
+  dashDirection: THREE.Vector3;
+  afterimageGhosts: AfterimageGhost[];
+  dustPuffs: DustPuff[];
 
   // --- Skills & Cooldowns ---
   skillCooldowns: Record<string, number>; // { skill1: 0, skill2: 3.5, skill3: 0 }
@@ -384,6 +413,10 @@ export interface GameWorldState {
   healPlayer: (amount: number) => void;
   triggerComboAttack: () => void;
   triggerSkill: (skillIndex: number) => void;
+  triggerHitStop: (duration?: number) => void;
+  triggerDash: (direction: THREE.Vector3) => boolean;
+  addDustPuff: (pos: THREE.Vector3, size?: number) => void;
+  addAfterimageGhost: (pos: THREE.Vector3, anim: string, facingLeft: boolean, color?: string) => void;
   spawnVFX: (config: SkillVFXConfig, position: THREE.Vector3, direction?: number) => void;
   removeVFX: (id: number) => void;
   addBullet: (bullet: BulletProjectile) => void;
@@ -468,6 +501,8 @@ let nextTextId = 1;
 let nextVFXId = 5000;
 let nextBulletId = 1000;
 let nextSlashId = 2000;
+let nextGhostId = 3000;
+let nextDustId = 4000;
 
 export const GAMEPLAY_TIPS = [
   "Mẹo: Kích hoạt combo 3 đòn liên tiếp để tối ưu hóa sát thương và phá vỡ giáp quái vật.",
@@ -532,6 +567,15 @@ export const useGameWorldStore = create<GameWorldState>((set, get) => ({
   passiveActive: false,
   passiveFuryPercent: 0,
   cameraShakeIntensity: 0,
+
+  // Hit-Stop, Dash Dodge & VFX Particle Pools
+  hitStopTimer: 0,
+  dashCooldown: 0,
+  isDashing: false,
+  dashTimer: 0,
+  dashDirection: new THREE.Vector3(0, 0, 0),
+  afterimageGhosts: [],
+  dustPuffs: [],
 
   // Fever / Fury & Quick Items State
   feverGauge: 35,
@@ -1620,9 +1664,11 @@ export const useGameWorldStore = create<GameWorldState>((set, get) => ({
     }
   },
 
-  // ── 3-Hit Combo System with Realistic Physics & Game Feel ─────────────────
+  // ── 3-Hit Combo System with Deliberate Weight & Level Scaling ─────────────
   triggerComboAttack: () => {
     const s = get();
+    if (s.isDead || s.isStunned) return;
+
     const blueprint = getCharacterBlueprint(s.playerClassId);
     const currentStep = s.comboIndex; // 0, 1, or 2
     const attackSpec: CombatSkillSpec = blueprint.comboAttacks[currentStep] || blueprint.comboAttacks[0];
@@ -1636,58 +1682,106 @@ export const useGameWorldStore = create<GameWorldState>((set, get) => ({
     const nextPassiveCounter = (s.passiveCounter + 1) % 4; // 0, 1, 2, 3 (4th hit is index 3)
     const isGunnerCrit = s.playerClassId === "gunner" && nextPassiveCounter === 0;
 
+    // ── Level Scaling (Lv.1 Untrained Novice vs Mastered Combatant) ──
+    const isNovice = s.playerLevel <= 1;
+    // Lv.1 has 0.85x base multiplier, smaller 1.4m hitbox, and slightly slower recovery
+    const levelDmgScale = isNovice ? 0.85 : Math.min(1.8, 1.0 + (s.playerLevel - 1) * 0.08);
+    const aoeRadiusScale = isNovice ? 1.4 : Math.min(2.4, 1.6 + (s.playerLevel - 1) * 0.08);
+
+    // ── Combo Chain Attributes (1. Song Trảm ➔ 2. Huyết Nguyệt ➔ 3. Trảm Long) ──
+    let comboName = "⚔️ SONG TRẢM (Combo I)";
+    let comboMultiplier = 1.0;
+    let comboColor = "#00f2ff";
+    let triggerHitStopOnHit = false;
+    let extraShake = 0.15;
+
+    if (currentStep === 0) {
+      comboName = "⚔️ SONG TRẢM (Combo I)";
+      comboMultiplier = 1.0;
+      comboColor = "#00f2ff";
+      extraShake = 0.2;
+    } else if (currentStep === 1) {
+      comboName = "🩸 HUYẾT NGUYỆT (Combo II)";
+      comboMultiplier = 1.35;
+      comboColor = "#f43f5e";
+      extraShake = 0.35;
+    } else {
+      comboName = "🐉 TRẢM LONG (Combo III - Kết Liễu)!";
+      comboMultiplier = 1.85;
+      comboColor = "#fbbf24";
+      extraShake = 0.65;
+      triggerHitStopOnHit = true;
+    }
+
     // Movement Physics
     const newPos = s.playerPosition.clone();
     if (attackSpec.movementPhysics.selfMovement === "STEP_FORWARD") {
-      newPos.addScaledVector(forwardVec, attackSpec.movementPhysics.moveDistance);
+      newPos.addScaledVector(forwardVec, attackSpec.movementPhysics.moveDistance * (currentStep === 2 ? 1.4 : 1.0));
     }
 
     // Play Synthesized Combat Audio
-    playCombatSFX(attackSpec.gameFeel.sfxSynthPreset, 0.4);
+    playCombatSFX(attackSpec.gameFeel.sfxSynthPreset, 0.4 + currentStep * 0.1);
 
     // Camera Shake
-    const shake = Math.max(s.cameraShakeIntensity, attackSpec.gameFeel.cameraShake);
+    const shake = Math.max(s.cameraShakeIntensity, extraShake);
+
+    // If combo 3 finisher, trigger 48ms hit-stop micro-freeze
+    if (triggerHitStopOnHit) {
+      s.triggerHitStop(0.048);
+    }
 
     // Projectile or Melee Visuals
     const liveAtk = s.playerAtk || blueprint.baseStats.atk || 10;
+    const finalDamage = Math.round(liveAtk * attackSpec.targetImpact.damageMultiplier * comboMultiplier * levelDmgScale * (isGunnerCrit ? 2.0 : 1.0));
+
     if (attackSpec.targetImpact.hitShape === "PROJECTILE_SINGLE" || attackSpec.targetImpact.hitShape === "LINE_PIERCE") {
       s.addBullet({
         id: nextBulletId++,
         position: newPos.clone().add(new THREE.Vector3(forwardDir * 0.8, 1.2, 0)),
-        velocity: new THREE.Vector3(forwardDir * 20, 0, 0),
-        damage: Math.round(liveAtk * attackSpec.targetImpact.damageMultiplier * (isGunnerCrit ? 2.0 : 1.0)),
+        velocity: new THREE.Vector3(forwardDir * (20 + currentStep * 4), 0, 0),
+        damage: finalDamage,
         lifetime: 1.8,
-        color: isGunnerCrit ? "#f43f5e" : attackSpec.vfx.primaryColor,
+        color: isGunnerCrit ? "#f43f5e" : comboColor,
       });
     } else {
       s.addSlashEffect({
         id: nextSlashId++,
         position: newPos.clone().add(new THREE.Vector3(forwardDir * 1.2, 1.0, 0)),
-        radius: attackSpec.targetImpact.aoeRadius,
-        color: attackSpec.vfx.primaryColor,
-        lifetime: attackSpec.vfx.duration,
-        maxLifetime: attackSpec.vfx.duration,
+        radius: aoeRadiusScale * (currentStep === 2 ? 1.3 : 1.0),
+        color: comboColor,
+        lifetime: attackSpec.vfx.duration * (isNovice ? 1.2 : 0.9),
+        maxLifetime: attackSpec.vfx.duration * (isNovice ? 1.2 : 0.9),
       });
     }
 
-    // Spawn 3D Shader VFX
+    // Spawn 3D Shader VFX with combo color
     const vfxSpawnPos = newPos.clone().add(new THREE.Vector3(forwardDir * 1.0, 0.8, 0));
-    s.spawnVFX(attackSpec.vfx, vfxSpawnPos, facingAngle);
+    const modifiedVFX = {
+      ...attackSpec.vfx,
+      primaryColor: comboColor,
+      duration: attackSpec.vfx.duration * (currentStep === 2 ? 1.3 : 1.0),
+    };
+    s.spawnVFX(modifiedVFX, vfxSpawnPos, facingAngle);
+
+    // Visual Combo Notification
+    s.addFloatingText(comboName, newPos.clone().add(new THREE.Vector3(0, 2.2 + currentStep * 0.15, 0)), comboColor);
 
     set({
       playerPosition: newPos,
-      playerAnimState: "attack",
+      playerAnimState: currentStep === 0 ? "attack1" : currentStep === 1 ? "attack2" : "attack3",
       comboIndex: nextStep,
-      comboTimer: 0.85, // 850ms window to link combo
+      comboTimer: isNovice ? 1.0 : 0.85, // Novice has slightly more lenient window
       passiveCounter: nextPassiveCounter,
       passiveActive: isGunnerCrit,
       cameraShakeIntensity: shake,
     });
   },
 
-  // ── Realistic Skill Trigger with Movement Physics & I-Frames ──────────────
+  // ── Realistic Skill Trigger with Mana Cost & Magic Circle ─────────────
   triggerSkill: (skillIndex) => {
     const s = get();
+    if (s.isDead || s.isStunned) return;
+
     const blueprint = getCharacterBlueprint(s.playerClassId);
 
     // If skillIndex is 0, trigger combo attack
@@ -1702,11 +1796,22 @@ export const useGameWorldStore = create<GameWorldState>((set, get) => ({
     const cdKey = `skill${skillIndex}`;
     if ((s.skillCooldowns[cdKey] || 0) > 0) return; // Still cooling down
 
+    // ── Mana (MP) Cost Check ──
+    const mpCosts = [0, 15, 25, 50]; // Skill 1: 15 MP, Skill 2: 25 MP, Skill 3: 50 MP
+    const requiredMp = mpCosts[skillIndex] || 15;
+
+    if (s.playerPp < requiredMp) {
+      s.addFloatingText("⚠️ KHÔNG ĐỦ NĂNG LƯỢNG (MP)!", s.playerPosition.clone().add(new THREE.Vector3(0, 2.3, 0)), "#38bdf8");
+      playCombatSFX("holy_bell", 0.35);
+      return;
+    }
+
     const forwardDir = s.playerFacingLeft ? -1 : 1;
     const forwardVec = new THREE.Vector3(forwardDir, 0, 0);
     const facingAngle = s.playerFacingLeft ? Math.PI : 0;
 
-    // 1. Set Cooldown
+    // 1. Deduct MP & Set Cooldown
+    const newPp = Math.max(0, s.playerPp - requiredMp);
     const updatedCds = { ...s.skillCooldowns, [cdKey]: skill.cooldown };
 
     // 2. Movement Physics
@@ -1731,15 +1836,26 @@ export const useGameWorldStore = create<GameWorldState>((set, get) => ({
       invinTimer = skill.movementPhysics.grantInvulnerabilityMs / 1000;
     }
 
-    // 4. Play Synthesizer Audio & Camera Shake
-    playCombatSFX(skill.gameFeel.sfxSynthPreset, 0.5);
+    // 4. Ground Magic Circle Visual
+    s.addSlashEffect({
+      id: nextSlashId++,
+      position: s.playerPosition.clone(),
+      radius: 2.2,
+      color: skill.vfx.primaryColor,
+      lifetime: 0.65,
+      maxLifetime: 0.65,
+    });
+    s.addFloatingText(`-${requiredMp} MP (${skill.name})`, newPos.clone().add(new THREE.Vector3(0, 2.1, 0)), "#60a5fa");
+
+    // 5. Play Synthesizer Audio & Camera Shake
+    playCombatSFX(skill.gameFeel.sfxSynthPreset, 0.55);
     const shake = Math.max(s.cameraShakeIntensity, skill.gameFeel.cameraShake);
 
-    // 5. Spawn Custom Shader VFX
+    // 6. Spawn Custom Shader VFX
     const vfxSpawnPos = newPos.clone().add(new THREE.Vector3(forwardDir * 1.0, 0.8, 0));
     s.spawnVFX(skill.vfx, vfxSpawnPos, facingAngle);
 
-    // 6. Projectile or Slash for skills
+    // 7. Projectile or Slash for skills
     const liveSkillAtk = s.playerAtk || blueprint.baseStats.atk || 10;
     if (skill.targetImpact.hitShape === "PROJECTILE_SINGLE" || skill.targetImpact.hitShape === "LINE_PIERCE") {
       s.addBullet({
@@ -1761,7 +1877,7 @@ export const useGameWorldStore = create<GameWorldState>((set, get) => ({
       });
     }
 
-    // 7. Class-Specific Skill Mechanics & Combat Effects
+    // 8. Class-Specific Skill Mechanics & Combat Effects
     let extraShield = s.shieldAmount;
     let extraShieldTimer = s.shieldTimer;
     let extraHp = s.playerHealth;
@@ -1774,7 +1890,6 @@ export const useGameWorldStore = create<GameWorldState>((set, get) => ({
       extraHp = Math.min(s.playerMaxHealth, s.playerHealth + healVal);
       s.addFloatingText(`🛡️ KHIÊN THÁNH BẤT HOẠI (+${shieldVal} Shield, +${healVal} HP)!`, newPos.clone().add(new THREE.Vector3(0, 2.4, 0)), "#ffd700");
     } else if (skill.id === "gunner_tactical_backflip") {
-      // Drop EMP shockwave mine at previous spot
       s.addSlashEffect({
         id: nextSlashId++,
         position: s.playerPosition.clone(),
@@ -1794,6 +1909,7 @@ export const useGameWorldStore = create<GameWorldState>((set, get) => ({
     set({
       playerPosition: newPos,
       playerAnimState: "attack",
+      playerPp: newPp,
       skillCooldowns: updatedCds,
       isInvincible: invin,
       invincibleTimer: invinTimer,
@@ -1801,6 +1917,95 @@ export const useGameWorldStore = create<GameWorldState>((set, get) => ({
       shieldAmount: extraShield,
       shieldTimer: extraShieldTimer,
       playerHealth: extraHp,
+    });
+  },
+
+  // ── Hit-Stop Micro-Freeze for Visceral Impact ──────────────────────────────
+  triggerHitStop: (duration = 0.045) => {
+    set({ hitStopTimer: duration });
+  },
+
+  // ── Dash / I-Frame Roll with High-Speed Afterimages & Dust Trail ──────────
+  triggerDash: (direction) => {
+    const s = get();
+    if (s.isDead || s.isStunned || s.dashCooldown > 0) return false;
+
+    let dashVec = direction.clone();
+    dashVec.y = 0;
+    if (dashVec.length() < 0.1) {
+      dashVec.set(s.playerFacingLeft ? -1 : 1, 0, 0);
+    } else {
+      dashVec.normalize();
+    }
+
+    playCombatSFX("blade_slash", 0.4);
+
+    // Initial afterimage ghost
+    const ghosts: AfterimageGhost[] = [
+      {
+        id: nextGhostId++,
+        position: s.playerPosition.clone(),
+        animState: s.playerAnimState,
+        facingLeft: s.playerFacingLeft,
+        color: "#00f2ff",
+        opacity: 0.75,
+        lifetime: 0.35,
+        maxLifetime: 0.35,
+      },
+    ];
+
+    // Dust puff at dash origin
+    s.addDustPuff(s.playerPosition.clone().add(new THREE.Vector3(0, 0.05, 0)), 0.6);
+
+    set({
+      isDashing: true,
+      dashTimer: 0.28,
+      dashCooldown: 0.85,
+      dashDirection: dashVec,
+      isInvincible: true,
+      invincibleTimer: 0.35,
+      afterimageGhosts: [...s.afterimageGhosts, ...ghosts],
+    });
+    return true;
+  },
+
+  addDustPuff: (pos, size = 0.45) => {
+    set((s) => {
+      const trimmed = s.dustPuffs.length >= 16 ? s.dustPuffs.slice(s.dustPuffs.length - 15) : s.dustPuffs;
+      return {
+        dustPuffs: [
+          ...trimmed,
+          {
+            id: nextDustId++,
+            position: pos.clone(),
+            size,
+            opacity: 0.5,
+            lifetime: 0.45,
+            maxLifetime: 0.45,
+          },
+        ],
+      };
+    });
+  },
+
+  addAfterimageGhost: (pos, anim, facingLeft, color = "#00f2ff") => {
+    set((s) => {
+      const trimmed = s.afterimageGhosts.length >= 8 ? s.afterimageGhosts.slice(s.afterimageGhosts.length - 7) : s.afterimageGhosts;
+      return {
+        afterimageGhosts: [
+          ...trimmed,
+          {
+            id: nextGhostId++,
+            position: pos.clone(),
+            animState: anim,
+            facingLeft,
+            color,
+            opacity: 0.75,
+            lifetime: 0.3,
+            maxLifetime: 0.3,
+          },
+        ],
+      };
     });
   },
 
@@ -2316,10 +2521,47 @@ export const useGameWorldStore = create<GameWorldState>((set, get) => ({
       }
     }
 
+    // 11. Hit-Stop, Dash & Particle Pools Decay
+    const nextHitStop = Math.max(0, s.hitStopTimer - dt);
+    const nextDashCd = Math.max(0, s.dashCooldown - dt);
+    let isDashing = s.isDashing;
+    let dashTimer = s.dashTimer;
+    if (isDashing) {
+      dashTimer -= dt;
+      if (dashTimer <= 0) {
+        isDashing = false;
+        dashTimer = 0;
+      }
+    }
+
+    const updatedGhosts = s.afterimageGhosts
+      .map((g) => {
+        g.lifetime -= dt;
+        g.opacity = Math.max(0, (g.lifetime / g.maxLifetime) * 0.75);
+        return g;
+      })
+      .filter((g) => g.lifetime > 0);
+
+    const updatedDust = s.dustPuffs
+      .map((d) => {
+        d.lifetime -= dt;
+        d.size += dt * 0.35;
+        d.opacity = Math.max(0, (d.lifetime / d.maxLifetime) * 0.5);
+        d.position.y += dt * 0.15;
+        return d;
+      })
+      .filter((d) => d.lifetime > 0);
+
     set({
       isInvincible: newInvincible,
       invincibleTimer: newInvTimer,
       hitFlashTimer: newHitFlash,
+      hitStopTimer: nextHitStop,
+      dashCooldown: nextDashCd,
+      isDashing,
+      dashTimer,
+      afterimageGhosts: updatedGhosts,
+      dustPuffs: updatedDust,
       playerDebuffs: remainingDebuffs,
       isStunned,
       slowSpeedMultiplier,

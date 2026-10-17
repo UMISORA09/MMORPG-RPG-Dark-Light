@@ -15,6 +15,7 @@ export interface InputState {
   left: boolean;
   right: boolean;
   jump: boolean;
+  dash: boolean;
   attack: boolean;
   interact: boolean;
   isRightMouseDown: boolean;
@@ -367,7 +368,13 @@ export function getInputState(): InputState {
     activeKeyCodes.has("KeyA") || activeKeyCodes.has("ArrowLeft");
   const isRight =
     activeKeyCodes.has("KeyD") || activeKeyCodes.has("ArrowRight");
-  const isJump = activeKeyCodes.has("Space") || mobileState.jump;
+  const isMoving = isForward || isBack || isLeft || isRight;
+  const isShift = activeKeyCodes.has("ShiftLeft") || activeKeyCodes.has("ShiftRight");
+  const isSpace = activeKeyCodes.has("Space");
+
+  // Dash when Shift is pressed, or Space is pressed while moving
+  const isDash = isShift || (isSpace && isMoving);
+  const isJump = (isSpace && !isMoving) || mobileState.jump;
   const isInteract = activeKeyCodes.has("KeyF");
 
   const attack = wantsAttackEdge || mobileState.attack || mobileState.shoot;
@@ -380,6 +387,7 @@ export function getInputState(): InputState {
     left: isLeft,
     right: isRight,
     jump: isJump,
+    dash: isDash,
     attack,
     interact: isInteract,
     isRightMouseDown,
