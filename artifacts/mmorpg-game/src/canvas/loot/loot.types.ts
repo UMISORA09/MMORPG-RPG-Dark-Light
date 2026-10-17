@@ -20,6 +20,9 @@ export interface DroppedItem {
   icon: string;
   color: string;
   statText?: string; // e.g. "ATK +45" or "HP +120"
+  requiredLevel?: number;
+  classId?: string;
+  runesJson?: any[] | string;
   bounceCount: number;
   isGrounded: boolean;
   lifetime: number;

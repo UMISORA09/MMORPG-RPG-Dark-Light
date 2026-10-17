@@ -1,5 +1,12 @@
 import { memo } from "react";
-import { Sparkles, Shield, Swords, Heart, Zap, Gem, Flame } from "lucide-react";
+import { Sparkles, Shield, Swords, Heart, Zap, Gem, Flame, AlertTriangle, CheckCircle2, Lock } from "lucide-react";
+import { useGameWorldStore } from "@/stores/useGameWorldStore";
+import {
+  calculateItemCombatPower,
+  isItemClassMatched,
+  getClassName,
+  type ItemRune,
+} from "@/skills/EquipmentRuneEngine";
 
 export interface ItemTooltipData {
   name: string;
@@ -10,6 +17,9 @@ export interface ItemTooltipData {
   category?: string;
   equipSlot?: string;
   classId?: string;
+  requiredClass?: string;
+  playerClassId?: string;
+  playerLevel?: number;
   requiredLevel?: number;
   hpBoost?: number;
   atkBoost?: number;
@@ -22,6 +32,10 @@ export interface ItemTooltipData {
   price?: number;
   socketsJson?: any[] | string;
   reforgeStatsJson?: any[] | string;
+  runesJson?: any[] | string;
+  runes?: ItemRune[];
+  combatPower?: number;
+  comparisonDiff?: { diff: number; equippedItemName: string; isSameItem: boolean };
   miraclePassive?: string;
 }
 
@@ -35,6 +49,9 @@ export const ItemTooltipCard = memo(function ItemTooltipCard({
   item,
   className = "",
 }: ItemTooltipCardProps) {
+  const playerLevel = useGameWorldStore((s) => s.playerLevel) || 1;
+  const playerClassId = useGameWorldStore((s) => s.playerClassId) || "assassin";
+
   const rarity = (item.rarity?.toLowerCase() || "common") as
     | "common"
     | "uncommon"
@@ -103,6 +120,43 @@ export const ItemTooltipCard = memo(function ItemTooltipCard({
 
   const style = rarityStyles[rarity] || rarityStyles.common;
 
+  // Level & Class validation
+  const requiredLevel = Number(item.requiredLevel || 1);
+  const isUnderleveled = requiredLevel > playerLevel;
+  const isClassMatch = isItemClassMatched(item.classId, playerClassId);
+  const classDisplayName = getClassName(item.classId);
+
+  // Parse Runes (3-4 Dòng Phù Văn)
+  const runes: ItemRune[] = Array.isArray(item.runesJson)
+    ? item.runesJson
+    : typeof item.runesJson === "string"
+    ? (() => {
+        try {
+          return JSON.parse(item.runesJson);
+        } catch {
+          return [];
+        }
+      })()
+    : [];
+
+  // Item Combat Power Calculation
+  const combatPower =
+    item.combatPower ||
+    calculateItemCombatPower(
+      {
+        atkBoost: item.atkBoost,
+        defBoost: item.defBoost,
+        hpBoost: item.hpBoost,
+        spdBoost: item.spdBoost,
+        critBoost: item.critRate,
+        enhanceLevel: item.enhanceLevel,
+        rarity: item.rarity,
+        runesJson: runes,
+        classId: item.classId,
+      },
+      isClassMatch
+    );
+
   // Parse sockets & reforge stats safely
   const sockets: any[] = Array.isArray(item.socketsJson)
     ? item.socketsJson
@@ -128,21 +182,38 @@ export const ItemTooltipCard = memo(function ItemTooltipCard({
       })()
     : [];
 
-  const classNameMap: Record<string, string> = {
-    assassin: "Sát Thủ (Ảnh Vũ)",
-    warrior: "Chiến Binh (Cuồng Long)",
-    tanker: "Đỡ Đòn (Kim Cương)",
-    gunner: "Xạ Thủ (Pháo Thủ)",
-  };
-
-  const classLabel = item.classId
-    ? classNameMap[item.classId] || item.classId
-    : "Tất cả Hệ Phái";
-
   return (
     <div
-      className={`w-72 sm:w-80 p-3.5 rounded-2xl border-2 ${style.border} ${style.bg} ${style.glow} backdrop-blur-xl text-white shadow-2xl pointer-events-none select-none z-50 animate-in fade-in zoom-in-95 duration-150 ${className}`}
+      className={`w-72 sm:w-84 p-4 rounded-2xl border-2 ${style.border} ${style.bg} ${style.glow} backdrop-blur-xl text-white shadow-2xl pointer-events-none select-none z-50 animate-in fade-in zoom-in-95 duration-150 ${className}`}
     >
+      {/* ── 0. LỰC CHIẾN TRANG BỊ & SO SÁNH THÔNG MINH ── */}
+      <div className="pb-2.5 mb-2.5 border-b border-slate-800/80 flex items-center justify-between">
+        <div className="flex items-center gap-1.5">
+          <span className="text-sm">⚡</span>
+          <span className="text-xs font-black tracking-wider text-amber-300 font-mono drop-shadow-[0_0_8px_rgba(245,158,11,0.6)]">
+            LỰC CHIẾN TRANG BỊ: +{combatPower.toLocaleString()}
+          </span>
+        </div>
+
+        {item.comparisonDiff && !item.comparisonDiff.isSameItem && (
+          <div className="shrink-0 text-right">
+            {item.comparisonDiff.diff > 0 ? (
+              <span className="text-[10px] font-black font-mono text-emerald-300 bg-emerald-950/80 border border-emerald-500/60 px-2 py-0.5 rounded-lg flex items-center gap-0.5 shadow-[0_0_10px_rgba(16,185,129,0.3)]">
+                ▲ +{item.comparisonDiff.diff} Lực Chiến
+              </span>
+            ) : item.comparisonDiff.diff < 0 ? (
+              <span className="text-[10px] font-black font-mono text-rose-300 bg-rose-950/80 border border-rose-500/60 px-2 py-0.5 rounded-lg flex items-center gap-0.5">
+                ▼ {item.comparisonDiff.diff} Lực Chiến
+              </span>
+            ) : (
+              <span className="text-[10px] font-mono text-slate-300 bg-slate-800/80 px-2 py-0.5 rounded-lg border border-slate-700">
+                ― Ngang bằng
+              </span>
+            )}
+          </div>
+        )}
+      </div>
+
       {/* Header: Icon, Name + Enhance Level, Rarity Badge */}
       <div className="flex items-start gap-3 pb-2.5 border-b border-slate-800/80">
         <div
@@ -175,20 +246,51 @@ export const ItemTooltipCard = memo(function ItemTooltipCard({
         </div>
       </div>
 
-      {/* Class & Level Requirements */}
-      <div className="py-2 flex items-center justify-between text-[11px] text-slate-400 border-b border-slate-800/60 font-medium">
-        <span>Yêu cầu: <strong className="text-slate-200">Cấp {item.requiredLevel || 1}</strong></span>
-        <span>Phái: <strong className="text-cyan-300">{classLabel}</strong></span>
+      {/* ── 1. RÀNG BUỘC CẤP ĐỘ CẢNH BÁO ĐỎ NẾU CHƯA ĐỦ CẤP ── */}
+      {isUnderleveled ? (
+        <div className="my-2 p-2 rounded-xl bg-rose-950/80 border border-rose-500 text-rose-300 text-xs font-bold flex items-center gap-2 animate-pulse shadow-[0_0_15px_rgba(244,63,94,0.4)]">
+          <Lock className="w-4 h-4 text-rose-400 shrink-0" />
+          <span>
+            🚫 Yêu cầu đạt Cấp {requiredLevel} (Hiện tại: Cấp {playerLevel})
+          </span>
+        </div>
+      ) : (
+        <div className="py-1.5 flex items-center justify-between text-[11px] text-slate-400 border-b border-slate-800/60 font-medium">
+          <span>
+            Yêu cầu cấp độ: <strong className="text-emerald-400 font-bold">Cấp {requiredLevel}</strong> (Đủ điều kiện)
+          </span>
+        </div>
+      )}
+
+      {/* ── 2. RÀNG BUỘC HỆ PHÁI / CHỨC NGHIỆP ── */}
+      <div className="my-2 p-2 rounded-xl text-[11px] font-medium border flex items-center gap-1.5">
+        {isClassMatch ? (
+          <div className="text-emerald-300 bg-emerald-950/40 border-emerald-500/40 w-full flex items-center gap-1.5">
+            <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400 shrink-0" />
+            <span>
+              ✅ Phù hợp hệ phái: <strong>{classDisplayName}</strong> (100% Sức mạnh)
+            </span>
+          </div>
+        ) : (
+          <div className="text-rose-300 bg-rose-950/60 border-rose-500/60 w-full flex items-center gap-1.5 leading-snug">
+            <AlertTriangle className="w-4 h-4 text-rose-400 shrink-0" />
+            <span>
+              ⚠️ Trái chức nghiệp (Yêu cầu: <strong>{classDisplayName}</strong>) — Bị giảm 50% chỉ số & Vô hiệu hóa Phù Văn!
+            </span>
+          </div>
+        )}
       </div>
 
-      {/* Main Base Stats list */}
+      {/* ── 3. CHỈ SỐ CƠ BẢN (KÈM HÌNH PHẠT 50% NẾU KHÁC PHÁI) ── */}
       <div className="py-2.5 space-y-1.5 text-xs font-mono border-b border-slate-800/60">
         {(item.atkBoost || 0) > 0 && (
           <div className="flex items-center justify-between">
             <span className="text-slate-400 flex items-center gap-1.5 font-sans">
               <Swords className="w-3.5 h-3.5 text-rose-400" /> Sát Thương Vật Lý
             </span>
-            <span className="text-rose-400 font-bold font-mono">+{item.atkBoost}</span>
+            <span className={`font-bold font-mono ${isClassMatch ? "text-rose-400" : "text-slate-400 line-through"}`}>
+              {isClassMatch ? `+${item.atkBoost}` : `+${Math.floor((item.atkBoost || 0) * 0.5)} (-50%)`}
+            </span>
           </div>
         )}
 
@@ -197,7 +299,9 @@ export const ItemTooltipCard = memo(function ItemTooltipCard({
             <span className="text-slate-400 flex items-center gap-1.5 font-sans">
               <Heart className="w-3.5 h-3.5 text-emerald-400" /> Sinh Lực Tối Đa
             </span>
-            <span className="text-emerald-400 font-bold font-mono">+{item.hpBoost}</span>
+            <span className={`font-bold font-mono ${isClassMatch ? "text-emerald-400" : "text-slate-400 line-through"}`}>
+              {isClassMatch ? `+${item.hpBoost}` : `+${Math.floor((item.hpBoost || 0) * 0.5)} (-50%)`}
+            </span>
           </div>
         )}
 
@@ -206,7 +310,9 @@ export const ItemTooltipCard = memo(function ItemTooltipCard({
             <span className="text-slate-400 flex items-center gap-1.5 font-sans">
               <Shield className="w-3.5 h-3.5 text-blue-400" /> Giáp Hộ Thể
             </span>
-            <span className="text-blue-400 font-bold font-mono">+{item.defBoost}</span>
+            <span className={`font-bold font-mono ${isClassMatch ? "text-blue-400" : "text-slate-400 line-through"}`}>
+              {isClassMatch ? `+${item.defBoost}` : `+${Math.floor((item.defBoost || 0) * 0.5)} (-50%)`}
+            </span>
           </div>
         )}
 
@@ -215,7 +321,9 @@ export const ItemTooltipCard = memo(function ItemTooltipCard({
             <span className="text-slate-400 flex items-center gap-1.5 font-sans">
               <Zap className="w-3.5 h-3.5 text-amber-400" /> Tốc Độ Di Chuyển
             </span>
-            <span className="text-amber-400 font-bold font-mono">+{item.spdBoost}%</span>
+            <span className={`font-bold font-mono ${isClassMatch ? "text-amber-400" : "text-slate-400 line-through"}`}>
+              {isClassMatch ? `+${item.spdBoost}%` : `+${Math.floor((item.spdBoost || 0) * 0.5)}% (-50%)`}
+            </span>
           </div>
         )}
 
@@ -224,10 +332,55 @@ export const ItemTooltipCard = memo(function ItemTooltipCard({
             <span className="text-slate-400 flex items-center gap-1.5 font-sans">
               <Sparkles className="w-3.5 h-3.5 text-yellow-400" /> Tỉ Lệ Bạo Kích
             </span>
-            <span className="text-yellow-400 font-bold font-mono">+{item.critRate}%</span>
+            <span className={`font-bold font-mono ${isClassMatch ? "text-yellow-400" : "text-slate-400 line-through"}`}>
+              {isClassMatch ? `+${item.critRate}%` : `+${Math.floor((item.critRate || 0) * 0.5)}% (-50%)`}
+            </span>
           </div>
         )}
       </div>
+
+      {/* ── 4. HỆ THỐNG 3 ĐẾN 4 DÒNG PHÙ VĂN TRANG BỊ (RUNES) ── */}
+      {runes.length > 0 && (
+        <div className="py-2.5 border-b border-slate-800/60">
+          <div className="text-[10px] font-bold text-amber-400 uppercase tracking-wider mb-1.5 flex items-center justify-between">
+            <span className="flex items-center gap-1">
+              <span>🔮</span> Dòng Phù Văn Cổ Ngữ ({runes.length} Dòng)
+            </span>
+            {!isClassMatch && (
+              <span className="text-[9px] text-rose-400 font-mono font-bold">
+                [Đã vô hiệu hóa do khác hệ phái]
+              </span>
+            )}
+          </div>
+          <div className="space-y-1.5">
+            {runes.map((rune, idx) => (
+              <div
+                key={idx}
+                className={`p-1.5 rounded-xl border text-[11px] transition ${
+                  isClassMatch
+                    ? "bg-[#18151f] border-purple-500/40 text-purple-200 shadow-[0_0_8px_rgba(168,85,247,0.2)]"
+                    : "bg-slate-900/60 border-slate-800 text-slate-500 line-through"
+                }`}
+              >
+                <div className="flex items-center justify-between">
+                  <span className="flex items-center gap-1.5 font-bold">
+                    <span>{rune.icon}</span>
+                    <span className={isClassMatch ? "text-amber-300" : "text-slate-500"}>
+                      {rune.name}
+                    </span>
+                  </span>
+                  <span className="text-[9px] font-mono px-1.5 py-0.2 rounded font-black bg-purple-950 border border-purple-500/50 text-purple-300">
+                    Bậc {rune.rank}
+                  </span>
+                </div>
+                <p className="text-[10px] text-slate-300 mt-0.5 leading-snug not-italic">
+                  {rune.description}
+                </p>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
 
       {/* Gem Sockets (if any) */}
       {sockets.length > 0 && (

@@ -15,6 +15,7 @@ export const characterItemsTable = pgTable("character_items", {
     bonusCombatPower: integer("bonus_combat_power").notNull().default(0),
     socketsJson: text("sockets_json").notNull().default("[]"),
     reforgeStatsJson: text("reforge_stats_json").notNull().default("[]"),
+    runesJson: text("runes_json").notNull().default("[]"),
     miraclePassive1: text("miracle_passive_1"),
     miraclePassive2: text("miracle_passive_2"),
     acquiredAt: timestamp("acquired_at").defaultNow().notNull(),

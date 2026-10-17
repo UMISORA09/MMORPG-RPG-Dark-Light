@@ -11,6 +11,7 @@ import {
   rollChestTier,
   generateChestLootBurst,
 } from "@/canvas/world/TreasureChestSpawnerEngine";
+import { getActiveRuneEffects } from "@/skills/EquipmentRuneEngine";
 
 export interface BattleReportData {
   victory: boolean;
@@ -45,6 +46,10 @@ export interface CharacterInventoryItem {
   spdBoost: number;
   icon: string;
   color: string;
+  requiredLevel?: number;
+  classId?: string;
+  requiredClass?: string;
+  runesJson?: string;
 }
 
 export interface FloatingTextItem {
@@ -513,6 +518,8 @@ export interface GameWorldState {
   transitionTip: string;
   triggerZoneTransition: (targetZoneName: string, onExecute: () => void) => void;
   claimRewardBonus: (exp: number, gold: number, notification?: string) => void;
+
+  runeRegenTimer?: number;
 
   tickWorld: (dt: number) => void;
 }
@@ -1250,6 +1257,10 @@ export const useGameWorldStore = create<GameWorldState>((set, get) => ({
             value: item.value,
             dropPosition: item.position,
             playerPosition: [p.x, p.y, p.z],
+            runesJson: (item as any).runesJson || "[]",
+            requiredLevel: (item as any).requiredLevel || 1,
+            classId: (item as any).classId || (item as any).requiredClass || "all",
+            requiredClass: (item as any).requiredClass || (item as any).classId || "all",
           }),
         });
 
@@ -1324,6 +1335,10 @@ export const useGameWorldStore = create<GameWorldState>((set, get) => ({
             spdBoost: inv.spdBoost || 0,
             icon: inv.icon || "◇",
             color: inv.rarity === "miracle" ? "#ff2d75" : inv.rarity === "legendary" ? "#fbbf24" : inv.rarity === "epic" ? "#c084fc" : "#00f2ff",
+            requiredLevel: inv.requiredLevel || 1,
+            classId: inv.classId || inv.requiredClass || "all",
+            requiredClass: inv.requiredClass || inv.classId || "all",
+            runesJson: inv.runesJson || "[]",
           }));
           const hasMiracle = mapped.some((x) => x.equipped && x.rarity?.toLowerCase() === "miracle");
           set({ inventoryItems: mapped, hasMiracleEquipped: hasMiracle });
@@ -1365,11 +1380,48 @@ export const useGameWorldStore = create<GameWorldState>((set, get) => ({
         spdBoost: item.type === "accessory" ? 0.4 : 0,
         icon: item.icon,
         color: item.color,
+        requiredLevel: (item as any).requiredLevel || 1,
+        classId: (item as any).classId || (item as any).requiredClass || "all",
+        requiredClass: (item as any).requiredClass || (item as any).classId || "all",
+        runesJson: (item as any).runesJson || "[]",
       };
 
       set((state) => ({
         inventoryItems: [newInvItem, ...state.inventoryItems],
       }));
+
+      // Synchronize with active character localStorage for immediate modal access
+      const activeCharId = s.activeCharacterId || "hero_default";
+      try {
+        const storageKey = `clb_inventory_${activeCharId}`;
+        const saved = localStorage.getItem(storageKey);
+        const existing: any[] = saved ? JSON.parse(saved) : [];
+        const isEquip = newInvItem.type === "weapon" || newInvItem.type === "armor" || newInvItem.type === "accessory";
+        existing.unshift({
+          id: newInvItem.id,
+          name: newInvItem.name,
+          category: isEquip ? "equipment" : "consumable",
+          type: newInvItem.type,
+          rarity: newInvItem.rarity,
+          equipped: false,
+          icon: newInvItem.icon,
+          quantity: 1,
+          enhanceLevel: 0,
+          requiredLevel: newInvItem.requiredLevel || 1,
+          requiredClass: newInvItem.requiredClass || "all",
+          classId: newInvItem.classId || "all",
+          runesJson: newInvItem.runesJson || "[]",
+          atkBoost: newInvItem.atkBoost,
+          defBoost: newInvItem.defBoost,
+          hpBoost: newInvItem.hpBoost,
+          spdBoost: newInvItem.spdBoost,
+          critBoost: (newInvItem as any).critBoost || 0,
+          price: 100,
+        });
+        localStorage.setItem(storageKey, JSON.stringify(existing));
+      } catch (err) {
+        console.warn("Could not sync loot to localStorage:", err);
+      }
 
       if (item.rarity === "miracle") {
         playCombatSFX("holy_bell", 0.9);
@@ -2583,6 +2635,39 @@ export const useGameWorldStore = create<GameWorldState>((set, get) => ({
       }
     }
 
+    // 9.2 Equipment Rune: Regeneration Rune (Hồi Máu mỗi 2 giây)
+    let runeRegenTimer = (s.runeRegenTimer || 0) + dt;
+    if (runeRegenTimer >= 2.0) {
+      runeRegenTimer = 0;
+      let equippedItems: any[] = s.inventoryItems.filter((it) => it.equipped);
+      if (equippedItems.length === 0) {
+        try {
+          const charId = s.activeCharacterId || "hero_default";
+          const saved = localStorage.getItem(`clb_inventory_${charId}`);
+          if (saved) {
+            const parsed = JSON.parse(saved);
+            if (Array.isArray(parsed)) {
+              equippedItems = parsed.filter((it: any) => it.equipped);
+            }
+          }
+        } catch {}
+      }
+
+      const activeEffects = getActiveRuneEffects(equippedItems, s.playerClassId || "sat_thu");
+      if ((activeEffects.totalHpRegenFlat > 0 || activeEffects.totalHpRegenPercent > 0) && currentHp > 0 && currentHp < s.playerMaxHealth) {
+        const percentHp = Math.round((s.playerMaxHealth * activeEffects.totalHpRegenPercent) / 100);
+        const totalHeal = activeEffects.totalHpRegenFlat + percentHp;
+        if (totalHeal > 0) {
+          currentHp = Math.min(s.playerMaxHealth, currentHp + totalHeal);
+          s.addFloatingText(
+            `💚 +${totalHeal} HP (Phù Văn)`,
+            s.playerPosition.clone().add(new THREE.Vector3(0, 2.4, 0)),
+            "#4ade80"
+          );
+        }
+      }
+    }
+
     // 9.5 Weather Auto-Cycle (every 75s when in open biomes)
     let weatherTimer = (s.weatherTimer || 0) + dt;
     let weather = s.weather;
@@ -2718,6 +2803,7 @@ export const useGameWorldStore = create<GameWorldState>((set, get) => ({
       mpRegenAcc: mpAcc,
       weatherTimer,
       weather,
+      runeRegenTimer,
     });
   },
 }));

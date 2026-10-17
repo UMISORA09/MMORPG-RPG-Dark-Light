@@ -18,6 +18,7 @@ export interface LootItemPayload {
   value?: number;
   dropPosition?: { x: number; y: number; z: number } | [number, number, number];
   playerPosition?: { x: number; y: number; z: number } | [number, number, number];
+  runesJson?: any[] | string;
 }
 
 export class LootService {
@@ -42,6 +43,7 @@ export class LootService {
       value = 0,
       dropPosition,
       playerPosition,
+      runesJson,
     } = payload;
 
     return await db.transaction(async (tx: any) => {
@@ -180,6 +182,7 @@ export class LootService {
             enhanceLevel: 0,
             bonusCombatPower: 0,
             rarity: itemDef.rarity || "common",
+            runesJson: typeof runesJson === "string" ? runesJson : JSON.stringify(runesJson || []),
             equipped: false,
           })
           .returning();

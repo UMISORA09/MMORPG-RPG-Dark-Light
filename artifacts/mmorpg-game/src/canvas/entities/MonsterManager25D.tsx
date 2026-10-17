@@ -21,6 +21,7 @@ import {
 import type { DroppedItem } from "../loot/loot.types";
 import { rollMonsterLootDrops } from "../loot/lootRollService";
 import { resolveWorldCollisions } from "../world/worldColliders";
+import { getActiveRuneEffects } from "@/skills/EquipmentRuneEngine";
 
 interface MonsterInstance {
   id: number;
@@ -542,6 +543,78 @@ export const MonsterManager25D = memo(function MonsterManager25D() {
       }
     };
 
+    // Helper: Combat Rune Procs (Hút máu, Hắc văn, Độc tố, Sét dây chuyền)
+    const triggerCombatRuneProcs = (m: MonsterInstance, damageDealt: number) => {
+      try {
+        const s = useGameWorldStore.getState();
+        const activeCharId = s.activeCharacterId;
+        let equippedItems = s.inventoryItems.filter((i) => i.equipped);
+        if (typeof window !== "undefined" && activeCharId) {
+          const saved = localStorage.getItem(`clb_inventory_${activeCharId}`);
+          if (saved) {
+            const parsed = JSON.parse(saved);
+            if (Array.isArray(parsed)) {
+              equippedItems = parsed.filter((it: any) => it.equipped);
+            }
+          }
+        }
+        const runeEffects = getActiveRuneEffects(equippedItems, s.playerClassId);
+
+        // 1. Vampiric Rune (Hút Máu 3% - 8%)
+        if (runeEffects.totalLifestealPercent > 0) {
+          const healAmt = Math.max(1, Math.round(damageDealt * (runeEffects.totalLifestealPercent / 100)));
+          s.healPlayer(healAmt);
+          addFloatingText(
+            `🩸 +${healAmt} HP`,
+            playerPos.clone().add(new THREE.Vector3(0, 2.3, 0)),
+            "#10b981"
+          );
+        }
+
+        // 2. Dark Curse Rune (20% nổ Hắc Văn Chú gây 150% Dark Damage)
+        if (runeEffects.totalDarkCurseChance > 0 && Math.random() * 100 < runeEffects.totalDarkCurseChance) {
+          const extraDarkDmg = Math.round(damageDealt * 1.5);
+          m.hp = Math.max(0, m.hp - extraDarkDmg);
+          addFloatingText(
+            `🌑 HẮC VĂN NỔ -${extraDarkDmg}!`,
+            m.currentPos.clone().add(new THREE.Vector3(0, 3.0, 0)),
+            "#c084fc"
+          );
+          playCombatSFX("heavy_slam", 0.45);
+        }
+
+        // 3. Venomous Rune (Độc Tố mất HP/giây)
+        if (runeEffects.totalPoisonDmgPerSec > 0) {
+          const poisonDmg = Math.max(1, Math.round(runeEffects.totalPoisonDmgPerSec * 0.5));
+          m.hp = Math.max(0, m.hp - poisonDmg);
+          addFloatingText(
+            `☠️ ĐỘC -${poisonDmg}`,
+            m.currentPos.clone().add(new THREE.Vector3((Math.random() - 0.5) * 0.5, 2.6, (Math.random() - 0.5) * 0.5)),
+            "#22c55e"
+          );
+        }
+
+        // 4. Thunderstrike Rune (18% sét dây chuyền 3 mục tiêu xung quanh)
+        if (runeEffects.totalThunderstrikeChance > 0 && Math.random() * 100 < runeEffects.totalThunderstrikeChance) {
+          const chainDmg = Math.max(1, Math.round(damageDealt * 0.65));
+          const otherMobs = monstersRef.current
+            .filter((other) => other.isAlive && other.id !== m.id && other.currentPos.distanceTo(m.currentPos) <= 8.5)
+            .slice(0, 3);
+          for (const other of otherMobs) {
+            other.hp = Math.max(0, other.hp - chainDmg);
+            addFloatingText(
+              `⚡ SÉT DÂY CHUYỀN -${chainDmg}`,
+              other.currentPos.clone().add(new THREE.Vector3(0, 2.4, 0)),
+              "#facc15"
+            );
+          }
+          if (otherMobs.length > 0) {
+            playCombatSFX("laser_pew", 0.35);
+          }
+        }
+      } catch (err) {}
+    };
+
     // ── 1. Bullets update and hit detection ──────────────────────────────────
     let bulletsCleaned = false;
     for (let i = bullets.length - 1; i >= 0; i--) {
@@ -627,6 +700,9 @@ export const MonsterManager25D = memo(function MonsterManager25D() {
             m.currentPos.clone().add(new THREE.Vector3(0, 2.2, 0)),
             m.aiState === "STAGGERED" ? "#facc15" : "#38bdf8"
           );
+
+          // ── Trigger Combat Rune Procs (Hút máu, Hắc văn, Độc tố, Sét dây chuyền) ──
+          triggerCombatRuneProcs(m, actualDamage);
 
           handleStaggerAndBossCheck(m);
 
@@ -724,6 +800,9 @@ export const MonsterManager25D = memo(function MonsterManager25D() {
             m.currentPos.clone().add(new THREE.Vector3(0, 2.2, 0)),
             m.aiState === "STAGGERED" ? "#facc15" : sl.color
           );
+
+          // ── Trigger Combat Rune Procs (Hút máu, Hắc văn, Độc tố, Sét dây chuyền) ──
+          triggerCombatRuneProcs(m, actualDamage);
 
           handleStaggerAndBossCheck(m);
 

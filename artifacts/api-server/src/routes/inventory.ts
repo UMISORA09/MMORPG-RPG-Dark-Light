@@ -373,12 +373,16 @@ router.post("/characters/:characterId/inventory/:itemId/sell", requireAuth, asyn
   }
 
   const sellPrice = Math.max(10, Number(owned.item?.price || 50));
-  await db.delete(characterItemsTable).where(eq(characterItemsTable.id, owned.ownershipId));
-  const [updatedCharacter] = await db
-    .update(charactersTable)
-    .set({ gold: character.gold + sellPrice })
-    .where(eq(charactersTable.id, characterId))
-    .returning();
+  let updatedCharacter: any = character;
+  await db.transaction(async (tx: any) => {
+    await tx.delete(characterItemsTable).where(eq(characterItemsTable.id, owned.ownershipId));
+    const [upd] = await tx
+      .update(charactersTable)
+      .set({ gold: character.gold + sellPrice })
+      .where(eq(charactersTable.id, characterId))
+      .returning();
+    if (upd) updatedCharacter = upd;
+  });
 
   res.status(200).json({
     success: true,
@@ -464,6 +468,7 @@ router.post("/characters/:characterId/loot", requireAuth, async (req, res): Prom
     value,
     dropPosition,
     playerPosition,
+    runesJson,
   } = req.body;
 
   if (!itemId && dropType !== "gold") {
@@ -482,6 +487,7 @@ router.post("/characters/:characterId/loot", requireAuth, async (req, res): Prom
       value,
       dropPosition,
       playerPosition,
+      runesJson,
     });
     res.status(200).json(result);
   } catch (error: any) {
@@ -513,6 +519,7 @@ router.post("/characters/:characterId/loot/:dropId", requireAuth, async (req, re
     value,
     dropPosition,
     playerPosition,
+    runesJson,
   } = req.body;
 
   try {
@@ -526,6 +533,7 @@ router.post("/characters/:characterId/loot/:dropId", requireAuth, async (req, re
       value,
       dropPosition,
       playerPosition,
+      runesJson,
     });
     res.status(200).json(result);
   } catch (error: any) {

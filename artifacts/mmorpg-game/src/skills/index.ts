@@ -16,6 +16,7 @@ export * from "./classes/tank.skills";
 export * from "./monsters/monster-ai.types";
 export * from "./monsters/boss-patterns";
 export * from "./monsters/monster-registry";
+export * from "./EquipmentRuneEngine";
 
 export const CHARACTER_BLUEPRINTS: Record<string, CharacterClassBlueprint> = {
   gunner: GUNNER_BLUEPRINT,

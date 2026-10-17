@@ -45,6 +45,15 @@ import { useGameStore } from "@/game/useGameStore";
 import { playCombatSFX, playButtonClick } from "@/audio/CombatSoundSynth";
 import { ItemTooltipCard, type ItemTooltipData } from "../tooltips/ItemTooltipCard";
 import { triggerGlobalAutoSave } from "@/hooks/useCharacterAutoSave";
+import { DetailedStatsInspectorPanel } from "./DetailedStatsInspectorPanel";
+import {
+  calculateItemCombatPower,
+  isItemClassMatched,
+  getClassName,
+  getDominantRuneTheme,
+  getActiveRuneEffects,
+  type ItemRune,
+} from "@/skills/EquipmentRuneEngine";
 import type { Character, InventoryItem } from "@workspace/api-client-react";
 
 export interface CharacterInventoryModalProps {
@@ -68,11 +77,17 @@ export interface UnifiedItem {
   quantity?: number;
   enhanceLevel?: number;
   requiredLevel: number;
+  requiredClass?: string;
+  classId?: string;
+  runesJson?: string;
+  runes?: ItemRune[];
   atkBoost: number;
   defBoost: number;
   hpBoost: number;
   spdBoost: number;
   critBoost?: number;
+  matkBoost?: number;
+  mdefBoost?: number;
   description: string;
   lore?: string;
   price: number;
@@ -820,6 +835,17 @@ function getEquipmentSlotName(slotType: string): string {
 }
 
 function mapBackendItemToUnified(it: any): UnifiedItem {
+  let parsedRunes: ItemRune[] = [];
+  if (Array.isArray(it.runes)) {
+    parsedRunes = it.runes;
+  } else if (typeof it.runesJson === "string") {
+    try {
+      parsedRunes = JSON.parse(it.runesJson || "[]");
+    } catch {
+      parsedRunes = [];
+    }
+  }
+
   return {
     id: String(it.ownershipId || it.id),
     name: it.name || "Vật phẩm",
@@ -831,11 +857,17 @@ function mapBackendItemToUnified(it: any): UnifiedItem {
     quantity: it.quantity || 1,
     enhanceLevel: it.enhanceLevel || 0,
     requiredLevel: it.requiredLevel || 1,
+    requiredClass: it.requiredClass || it.classId || "all",
+    classId: it.classId || it.requiredClass || "all",
+    runesJson: typeof it.runesJson === "string" ? it.runesJson : JSON.stringify(parsedRunes),
+    runes: parsedRunes,
     atkBoost: it.atkBoost || 0,
     defBoost: it.defBoost || 0,
     hpBoost: it.hpBoost || 0,
     spdBoost: it.spdBoost || 0,
-    critBoost: it.critRateBoost || 0,
+    critBoost: it.critRateBoost ?? it.critBoost ?? 0,
+    matkBoost: it.matkBoost || 0,
+    mdefBoost: it.mdefBoost || 0,
     description: it.description || "",
     lore: it.lore || it.description || "",
     price: it.price || 50,
@@ -1268,8 +1300,14 @@ export const CharacterInventoryModal = memo(function CharacterInventoryModal({
       icon: it.icon,
       enhanceLevel: it.enhanceLevel,
       category: it.category,
-      equipSlot: (it as any).equipSlot || (it as any).slot || it.category,
+      equipSlot: (it as any).equipSlot || (it as any).slot || it.type || it.category,
       requiredLevel: it.requiredLevel || 1,
+      requiredClass: it.requiredClass || it.classId || "all",
+      playerClassId: effectiveClassId,
+      playerLevel: effectiveLevel,
+      runesJson: it.runesJson || JSON.stringify(it.runes || []),
+      runes: it.runes,
+      combatPower: (it as any).combatPower,
       hpBoost: it.hpBoost,
       atkBoost: it.atkBoost,
       defBoost: it.defBoost,
@@ -1281,7 +1319,7 @@ export const CharacterInventoryModal = memo(function CharacterInventoryModal({
       reforgeStatsJson: (it as any).reforgeStats,
       miraclePassive: (it as any).miraclePassive,
     });
-  }, []);
+  }, [effectiveClassId, effectiveLevel]);
 
   const handleItemUnhover = useCallback(() => {
     setHoveredTooltipItem(null);
@@ -1324,6 +1362,7 @@ export const CharacterInventoryModal = memo(function CharacterInventoryModal({
   const [toastMessage, setToastMessage] = useState<string | null>(null);
   const [enhanceSparkle, setEnhanceSparkle] = useState<boolean>(false);
   const [unlockModalOpen, setUnlockModalOpen] = useState<boolean>(false);
+  const [isInspectorOpen, setIsInspectorOpen] = useState<boolean>(false);
 
   // Sync items to localStorage whenever they change
   useEffect(() => {
@@ -1370,43 +1409,66 @@ export const CharacterInventoryModal = memo(function CharacterInventoryModal({
     return map;
   }, [items]);
 
-  // Calculate Equipment Gear Rating (Lực chiến trang bị, 0 if nothing equipped)
-  const equipmentRating = useMemo(() => {
-    return items
-      .filter((it) => it.equipped)
-      .reduce((acc, it) => {
-        const enhanceMul = 1 + (it.enhanceLevel || 0) * 0.1;
-        const atkVal = (it.atkBoost || 0) * enhanceMul * 2.2;
-        const defVal = (it.defBoost || 0) * enhanceMul * 1.8;
-        const hpVal = (it.hpBoost || 0) * enhanceMul * 0.4;
-        const spdVal = (it.spdBoost || 0) * 1.5;
-        const critVal = (it.critBoost || 0) * 2.5;
-        return acc + atkVal + defVal + hpVal + spdVal + critVal;
-      }, 0);
-  }, [items]);
+  const equippedGearList = useMemo(() => items.filter((it) => it.equipped), [items]);
+
+  // Calculate Equipment Gear Stats with 50% penalty if mismatched class
+  const gearStats = useMemo(() => {
+    let atk = 0, matk = 0, def = 0, mdef = 0, hp = 0, mp = 0, spd = 0, critRate = 0, critDmg = 0, accuracy = 0, evasion = 0;
+    equippedGearList.forEach((it) => {
+      const isMatch = isItemClassMatched(it.requiredClass || (it as any).classId, effectiveClassId);
+      const mul = (isMatch ? 1.0 : 0.5) * (1 + (it.enhanceLevel || 0) * 0.1);
+      atk += Math.round((it.atkBoost || 0) * mul);
+      def += Math.round((it.defBoost || 0) * mul);
+      hp += Math.round((it.hpBoost || 0) * mul);
+      spd += Math.round((it.spdBoost || 0) * mul * 5);
+      critRate += Math.round((it.critBoost || 0) * mul * 10) / 10;
+      matk += Math.round(((it as any).matkBoost || 0) * mul);
+      mdef += Math.round(((it as any).mdefBoost || 0) * mul);
+    });
+    return { atk, matk, def, mdef, hp, mp, spd, critRate, critDmg, accuracy, evasion };
+  }, [equippedGearList, effectiveClassId]);
+
+  const baseStats = useMemo(() => {
+    return {
+      atk: 50 + effectiveLevel * 5,
+      matk: 35 + effectiveLevel * 4,
+      def: 20 + effectiveLevel * 2,
+      mdef: 15 + effectiveLevel * 2,
+      hp: 450 + effectiveLevel * 50,
+      mp: 120 + effectiveLevel * 10,
+      spd: 1200 + effectiveLevel * 5,
+      critRate: 5.0,
+      critDmg: 150,
+      accuracy: 95.0,
+      evasion: 5.0,
+    };
+  }, [effectiveLevel]);
+
+  // Total Equipment Combat Power (CP) accounting for class match and runes
+  const equipmentCombatPower = useMemo(() => {
+    return equippedGearList.reduce((sum, it) => {
+      const isMatch = isItemClassMatched(it.requiredClass || (it as any).classId, effectiveClassId);
+      return sum + calculateItemCombatPower(it, isMatch);
+    }, 0);
+  }, [equippedGearList, effectiveClassId]);
+
+  const totalCombatPower = useMemo(() => {
+    const baseCP = baseStats.atk * 3 + baseStats.def * 2 + baseStats.hp * 0.5 + baseStats.spd * 0.2 + effectiveLevel * 100;
+    return Math.round(baseCP + equipmentCombatPower);
+  }, [baseStats, equipmentCombatPower, effectiveLevel]);
+
+  // Calculate Equipment Gear Rating (Lực chiến trang bị)
+  const equipmentRating = equipmentCombatPower;
 
   // Calculate Aggregated Core Stats
   const aggregatedStats = useMemo(() => {
-    let atk = 72;
-    let def = 14;
-    let hp = playerHealth > 0 ? playerHealth : 2330;
-    let spd = 1480;
-
-    items.filter((it) => it.equipped).forEach((it) => {
-      const enhanceMul = 1 + (it.enhanceLevel || 0) * 0.1;
-      atk += Math.round((it.atkBoost || 0) * enhanceMul);
-      def += Math.round((it.defBoost || 0) * enhanceMul);
-      hp += Math.round((it.hpBoost || 0) * enhanceMul);
-      spd += Math.round((it.spdBoost || 0) * 10);
-    });
-
     return {
-      atk,
-      def,
-      hp,
-      spd,
+      atk: baseStats.atk + gearStats.atk,
+      def: baseStats.def + gearStats.def,
+      hp: baseStats.hp + gearStats.hp,
+      spd: baseStats.spd + gearStats.spd,
     };
-  }, [items, playerHealth]);
+  }, [baseStats, gearStats]);
 
   // Total Bag Items count (only unequipped items)
   const bagItems = useMemo(() => items.filter((it) => !it.equipped), [items]);
@@ -1417,12 +1479,22 @@ export const CharacterInventoryModal = memo(function CharacterInventoryModal({
     return buildSynchronizedInventoryGrid(items, activeTab, maxUnlockedSlots, 30);
   }, [items, activeTab, maxUnlockedSlots]);
 
-  // Equip / Unequip Toggle
+  // Equip / Unequip Toggle with STRICT LEVEL CHECK
   const handleToggleEquip = async (target: UnifiedItem) => {
     if (target.category !== "equipment") return;
     playCombatSFX("holy_bell", 0.4);
 
     const isEquipping = !target.equipped;
+
+    if (isEquipping) {
+      // ── STRICT LEVEL CHECK: Block if requiredLevel > character level ──
+      const reqLvl = target.requiredLevel || 1;
+      if (reqLvl > effectiveLevel) {
+        playCombatSFX("laser_pew", 0.4);
+        showToast(`⚠️ Cấp độ của bạn chưa đủ để sử dụng trang bị này! Yêu cầu Cấp ${reqLvl} (Hiện tại: Cấp ${effectiveLevel})`);
+        return;
+      }
+    }
 
     if (!isEquipping) {
       // Unequipping: Check bag capacity first
@@ -1941,33 +2013,48 @@ export const CharacterInventoryModal = memo(function CharacterInventoryModal({
              ───────────────────────────────────────────────────────────────── */}
           <div className="lg:col-span-5 bg-[#141824] rounded-[24px] border border-[#1e2536] p-3.5 flex flex-col justify-between relative overflow-hidden">
             
-            {/* Top Row: Lực chiến trang bị + Switcher Button */}
-            <div className="flex items-center justify-between pb-2 border-b border-[#1d2434] px-1">
-              <div>
-                <span className="text-xs font-semibold text-slate-300">
-                  Lực chiến trang bị:{" "}
-                  <span className="text-cyan-400 font-black text-sm drop-shadow-[0_0_8px_rgba(40,195,225,0.7)] font-mono">
-                    {Math.round(equipmentRating) || 85}
+            {/* Top Row: Lực chiến trang bị + Inspector Drawer Button */}
+            <div className="flex items-center justify-between pb-2 border-b border-[#1d2434] px-1 gap-1 flex-wrap">
+              <div className="flex items-center gap-1.5">
+                <span className="text-[11px] font-semibold text-slate-300">
+                  ⚡ Lực chiến đồ:{" "}
+                  <span className="text-cyan-400 font-black text-xs drop-shadow-[0_0_8px_rgba(40,195,225,0.7)] font-mono">
+                    +{equipmentCombatPower.toLocaleString()}
                   </span>
                 </span>
               </div>
 
-              {/* View Switcher Button */}
-              <button
-                onClick={() => setLeftViewMode((prev) => (prev === "character" ? "stats" : "character"))}
-                className="px-2.5 py-1 rounded-full bg-[#1b2230] hover:bg-[#222c3e] border border-cyan-500/40 text-cyan-300 hover:text-cyan-200 text-[10px] font-black transition flex items-center gap-1 cursor-pointer shadow-[0_0_10px_rgba(40,195,225,0.2)]"
-                title="Bật/Tắt xem bảng chỉ số chi tiết"
-              >
-                {leftViewMode === "character" ? (
-                  <>
-                    <BarChart3 className="w-3 h-3 text-cyan-400" /> Xem Bảng Chỉ Số
-                  </>
-                ) : (
-                  <>
-                    <User className="w-3 h-3 text-cyan-400" /> Xem Nhân Vật 2.5D
-                  </>
-                )}
-              </button>
+              <div className="flex items-center gap-1.5">
+                {/* 1. Inspector Drawer Open Button */}
+                <button
+                  onClick={() => {
+                    playCombatSFX("holy_bell", 0.4);
+                    setIsInspectorOpen(true);
+                  }}
+                  className="px-2.5 py-1 rounded-xl bg-gradient-to-r from-[#162738] to-[#123145] hover:from-[#1d334a] hover:to-[#17405c] border border-cyan-400/60 text-cyan-300 hover:text-white text-[10px] font-black transition flex items-center gap-1 cursor-pointer shadow-[0_0_12px_rgba(40,195,225,0.3)] hover:scale-105 active:scale-95"
+                  title="Mở Bảng Phân Tích Thông Số Chi Tiết (Gốc + Đồ, Hiệu Ứng Phù Văn & Hệ Phái)"
+                >
+                  <BarChart3 className="w-3.5 h-3.5 text-cyan-400 animate-pulse" />
+                  <span>[📊 Chi Tiết]</span>
+                </button>
+
+                {/* 2. View Switcher Button */}
+                <button
+                  onClick={() => setLeftViewMode((prev) => (prev === "character" ? "stats" : "character"))}
+                  className="px-2 py-1 rounded-xl bg-[#1b2230] hover:bg-[#222c3e] border border-slate-700 text-slate-300 hover:text-cyan-200 text-[10px] font-bold transition flex items-center gap-1 cursor-pointer"
+                  title="Bật/Tắt xem bảng chỉ số cơ bản"
+                >
+                  {leftViewMode === "character" ? (
+                    <>
+                      <User className="w-3 h-3 text-slate-400" /> Bảng Gốc
+                    </>
+                  ) : (
+                    <>
+                      <User className="w-3 h-3 text-cyan-400" /> Nhân Vật
+                    </>
+                  )}
+                </button>
+              </div>
             </div>
 
             {/* Left Center Stage: Either Character with 12 Slots OR Detailed Stats Table */}
@@ -2048,6 +2135,18 @@ export const CharacterInventoryModal = memo(function CharacterInventoryModal({
                     <span className="text-[9px] text-amber-300 font-bold tracking-widest mt-0.5">
                       {classTitle}
                     </span>
+                  </div>
+
+                  {/* Under Pedestal Combat Power Banner (Hạng Mục 5) */}
+                  <div className="z-10 mt-1.5 px-3 py-1 rounded-xl bg-[#0b0e14]/90 border border-[#253046] text-center shadow-[0_4px_16px_rgba(0,0,0,0.7)] flex flex-col items-center gap-0.5 w-full max-w-[200px]">
+                    <div className="flex items-center justify-between w-full text-[11px] font-black text-amber-300 font-mono">
+                      <span className="flex items-center gap-1 text-slate-300 font-bold text-[10px]">⚔️ Tổng LC:</span>
+                      <span className="text-amber-400 drop-shadow-[0_0_8px_rgba(251,191,36,0.5)]">{totalCombatPower.toLocaleString()}</span>
+                    </div>
+                    <div className="flex items-center justify-between w-full text-[9.5px] font-mono text-cyan-300">
+                      <span className="flex items-center gap-1 text-slate-400 text-[9px]">🛡️ Từ Trang Bị:</span>
+                      <span className="text-cyan-400 font-black">+{equipmentCombatPower.toLocaleString()} ({equippedGearList.length}/12)</span>
+                    </div>
                   </div>
                 </div>
 
@@ -2303,6 +2402,20 @@ export const CharacterInventoryModal = memo(function CharacterInventoryModal({
                 const isSelected = selectedItem?.id === item.id;
                 const isEquipped = item.equipped;
                 const rarityInfo = getRarityColor(item.rarity);
+                const isUnderleveled = item.category === "equipment" && (item.requiredLevel || 1) > effectiveLevel;
+                const isClassMatch = isItemClassMatched(item.requiredClass || (item as any).classId, effectiveClassId);
+                const itemCP = calculateItemCombatPower(item, isClassMatch);
+                const dominantRune = getDominantRuneTheme(
+                  item.runes || (item.runesJson ? (() => { try { return JSON.parse(item.runesJson); } catch { return []; } })() : [])
+                );
+
+                // Comparison: delta arrow if higher than equipped item in same slot
+                const equippedSame = items.find((it) => it.equipped && it.type === item.type);
+                const isBetterThanEquipped =
+                  item.category === "equipment" &&
+                  !item.equipped &&
+                  equippedSame &&
+                  itemCP > calculateItemCombatPower(equippedSame, isItemClassMatched(equippedSame.requiredClass || (equippedSame as any).classId, effectiveClassId));
 
                 return (
                   <button
@@ -2318,12 +2431,34 @@ export const CharacterInventoryModal = memo(function CharacterInventoryModal({
                       isSelected
                         ? "bg-[#1f283b] border-2 border-cyan-400 shadow-[0_0_18px_rgba(40,195,225,0.6)] scale-105 z-10"
                         : `${rarityInfo.border} ${rarityInfo.bg} ${rarityInfo.glow} hover:brightness-110`
-                    }`}
+                    } ${dominantRune.shimmerClass}`}
                     title={`${item.name} (${item.rarity.toUpperCase()})`}
                   >
                     <span className="text-white text-xl font-bold select-none drop-shadow">
                       {item.icon}
                     </span>
+
+                    {/* Dominant Rune Glyph Icon */}
+                    {dominantRune.glyphIcon ? (
+                      <div className="absolute -top-1.5 -left-1.5 w-4 h-4 rounded-full bg-[#120f18] border border-cyan-400/50 flex items-center justify-center text-[8px] z-10 shadow-[0_0_8px_rgba(0,0,0,0.8)]">
+                        {dominantRune.glyphIcon}
+                      </div>
+                    ) : null}
+
+                    {/* Up Arrow if Stronger than equipped */}
+                    {isBetterThanEquipped && (
+                      <div className="absolute -top-1 -right-1 px-1 rounded bg-emerald-950 border border-emerald-500 text-emerald-300 font-mono text-[8px] font-black shadow-[0_0_8px_rgba(16,185,129,0.5)] z-10 animate-bounce">
+                        ▲
+                      </div>
+                    )}
+
+                    {/* Strict Level Requirement Lock Badge */}
+                    {isUnderleveled && (
+                      <div className="absolute bottom-1 left-1 px-1 rounded bg-rose-950/95 font-mono text-[8px] font-black text-rose-300 border border-rose-600/70 shadow-[0_0_8px_rgba(244,63,94,0.6)] animate-pulse z-10 flex items-center gap-0.5">
+                        <span>Lv.{item.requiredLevel}</span>
+                        <span className="text-[7px]">🔒</span>
+                      </div>
+                    )}
 
                     {/* Cyan Equipped Checkmark */}
                     {isEquipped && (
@@ -2353,7 +2488,7 @@ export const CharacterInventoryModal = memo(function CharacterInventoryModal({
             {/* Standard Dark Fantasy Selected Item Inspector Card */}
             {selectedItem ? (
               <div
-                className={`p-3 rounded-2xl bg-[#18151b] border border-[#48373f] flex flex-col gap-2.5 relative transition-all shadow-[0_8px_30px_rgba(0,0,0,0.7)] ${
+                className={`p-3 rounded-2xl bg-[#18151b] border border-[#48373f] flex flex-col gap-2 relative transition-all shadow-[0_8px_30px_rgba(0,0,0,0.7)] ${
                   enhanceSparkle ? "ring-2 ring-amber-400 shadow-[0_0_25px_rgba(245,158,11,0.6)]" : ""
                 }`}
               >
@@ -2382,7 +2517,11 @@ export const CharacterInventoryModal = memo(function CharacterInventoryModal({
                           {getRarityLabel(selectedItem.rarity)}
                         </span>
                         {selectedItem.requiredLevel ? (
-                          <span className="text-[9px] font-mono text-slate-400 bg-slate-900/60 px-1.5 py-0.5 rounded border border-slate-800">
+                          <span className={`text-[9px] font-mono px-1.5 py-0.5 rounded border font-bold ${
+                            selectedItem.requiredLevel > effectiveLevel
+                              ? "text-rose-300 bg-rose-950/80 border-rose-600/70 animate-pulse"
+                              : "text-slate-300 bg-slate-900/60 border-slate-700"
+                          }`}>
                             Cấp {selectedItem.requiredLevel}
                           </span>
                         ) : null}
@@ -2422,6 +2561,86 @@ export const CharacterInventoryModal = memo(function CharacterInventoryModal({
                     </div>
                   )}
                 </div>
+
+                {/* ── Combat Power & Class Affinity Banner (Hạng Mục 1, 2 & 4) ── */}
+                {selectedItem.category === "equipment" && (() => {
+                  const isSelMatch = isItemClassMatched(selectedItem.requiredClass || (selectedItem as any).classId, effectiveClassId);
+                  const selCP = calculateItemCombatPower(selectedItem, isSelMatch);
+                  const selRunes: ItemRune[] = Array.isArray(selectedItem.runes)
+                    ? selectedItem.runes
+                    : typeof selectedItem.runesJson === "string"
+                    ? (() => { try { return JSON.parse(selectedItem.runesJson); } catch { return []; } })()
+                    : [];
+
+                  return (
+                    <div className="flex flex-col gap-1.5">
+                      {/* Combat Power & Level Check Banner */}
+                      <div className="flex items-center justify-between px-2.5 py-1 rounded-xl bg-gradient-to-r from-[#20181b] to-[#141824] border border-amber-500/40 shadow-sm">
+                        <span className="text-[11px] font-black font-mono text-amber-300 flex items-center gap-1">
+                          ⚡ Lực Chiến Trang Bị: <span className="text-amber-400 text-xs drop-shadow-[0_0_8px_rgba(251,191,36,0.6)]">+{selCP.toLocaleString()}</span>
+                        </span>
+                        {(selectedItem.requiredLevel || 1) > effectiveLevel ? (
+                          <span className="text-[9.5px] font-mono font-black text-rose-300 bg-rose-950/90 border border-rose-600/70 px-2 py-0.5 rounded-lg animate-pulse flex items-center gap-1">
+                            🚫 Cần Cấp {selectedItem.requiredLevel} (Hiện tại: Cấp {effectiveLevel})
+                          </span>
+                        ) : (
+                          <span className="text-[9.5px] font-mono text-emerald-400 font-bold">
+                            ✓ Đủ điều kiện cấp
+                          </span>
+                        )}
+                      </div>
+
+                      {/* Class Affinity Badge */}
+                      <div className={`px-2.5 py-1 rounded-xl text-[10px] font-bold border flex items-center justify-between ${
+                        isSelMatch
+                          ? "bg-emerald-950/40 border-emerald-500/40 text-emerald-300"
+                          : "bg-rose-950/50 border-rose-500/50 text-rose-300 shadow-[0_0_10px_rgba(244,63,94,0.2)]"
+                      }`}>
+                        <span>
+                          {isSelMatch
+                            ? `✅ Phù hợp hệ phái: ${getClassName(selectedItem.requiredClass)} (100% Sức mạnh)`
+                            : `⚠️ Trái chức nghiệp (Yêu cầu: ${getClassName(selectedItem.requiredClass)}) — Giảm 50% chỉ số & Vô hiệu hóa Phù Văn!`}
+                        </span>
+                      </div>
+
+                      {/* 3-4 Equipment Runes Display */}
+                      {selRunes.length > 0 && (
+                        <div className="flex flex-col gap-1 bg-[#100d14] p-2 rounded-xl border border-[#3b2b35]">
+                          <div className="flex items-center justify-between text-[10px] font-black">
+                            <span className="text-cyan-300 flex items-center gap-1">
+                              🔮 Cổ Ngữ Phù Văn ({selRunes.length} dòng):
+                            </span>
+                            <span className={isSelMatch ? "text-emerald-400" : "text-rose-400"}>
+                              {isSelMatch ? "Đang kích hoạt 100%" : "[Đã vô hiệu hóa do khác hệ phái]"}
+                            </span>
+                          </div>
+                          <div className="grid grid-cols-1 sm:grid-cols-2 gap-1 mt-0.5">
+                            {selRunes.map((r, rIdx) => (
+                              <div
+                                key={`rune-${rIdx}`}
+                                className={`p-1.5 rounded-lg text-[9.5px] border flex items-center gap-1.5 transition ${
+                                  isSelMatch
+                                    ? "bg-[#181320] border-purple-500/40 text-purple-200 shadow-sm"
+                                    : "bg-[#121014] border-slate-800 text-slate-500 line-through opacity-60"
+                                }`}
+                              >
+                                <span className="text-xs">{r.icon}</span>
+                                <div className="min-w-0 flex-1">
+                                  <p className="font-bold truncate text-[10px] leading-tight">
+                                    {r.name}
+                                  </p>
+                                  <p className="text-[9px] text-slate-400 truncate not-italic">
+                                    {r.description}
+                                  </p>
+                                </div>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  );
+                })()}
 
                 {/* Stat boost pills */}
                 <div className="flex items-center gap-1.5 text-[10px] font-mono flex-wrap bg-[#120f13] p-1.5 rounded-xl border border-[#35272b]">
@@ -2473,13 +2692,13 @@ export const CharacterInventoryModal = memo(function CharacterInventoryModal({
                   </div>
 
                   <div className="flex items-center gap-2">
-                    {/* 1. Quick Sell */}
+                    {/* 1. Quick Sell (+X Gold) */}
                     <button
                       onClick={() => handleQuickSell(selectedItem)}
                       className="px-3 py-1.5 rounded-xl bg-[#28151c] hover:bg-[#3d1825] border border-rose-800/80 text-rose-300 text-[10px] font-black transition cursor-pointer flex items-center gap-1 shadow-[0_0_10px_rgba(244,63,94,0.15)]"
                       title="Bán ngay món đồ này lấy Vàng"
                     >
-                      <Trash2 className="w-3 h-3 text-rose-400" /> Bán Nhanh
+                      <Trash2 className="w-3 h-3 text-rose-400" /> Bán (+{selectedItem.price || 50} 🪙)
                     </button>
 
                     {/* 2. Enhance (+10% Stats) */}
@@ -2496,16 +2715,32 @@ export const CharacterInventoryModal = memo(function CharacterInventoryModal({
 
                     {/* 3. Equip / Unequip / Use / Expand */}
                     {selectedItem.category === "equipment" ? (
-                      <button
-                        onClick={() => handleToggleEquip(selectedItem)}
-                        className={`px-4 py-1.5 rounded-xl text-[10px] font-black transition cursor-pointer flex items-center gap-1 ${
-                          selectedItem.equipped
-                            ? "bg-[#18202e] hover:bg-rose-950/80 border border-[#2c374d] text-slate-300 hover:text-rose-300"
-                            : "bg-cyan-500 hover:bg-cyan-400 text-slate-950 shadow-[0_0_15px_rgba(40,195,225,0.5)]"
-                        }`}
-                      >
-                        {selectedItem.equipped ? "Tháo Ra" : "Trang Bị"}
-                      </button>
+                      selectedItem.equipped ? (
+                        <button
+                          onClick={() => handleToggleEquip(selectedItem)}
+                          className="px-4 py-1.5 rounded-xl text-[10px] font-black transition cursor-pointer flex items-center gap-1 bg-[#18202e] hover:bg-rose-950/80 border border-[#2c374d] text-slate-300 hover:text-rose-300 shadow-sm"
+                        >
+                          Tháo Ra
+                        </button>
+                      ) : (selectedItem.requiredLevel || 1) > effectiveLevel ? (
+                        <button
+                          onClick={() => {
+                            playCombatSFX("laser_pew", 0.4);
+                            showToast(`⚠️ Cấp độ của bạn chưa đủ để sử dụng trang bị này! Yêu cầu Cấp ${selectedItem.requiredLevel} (Hiện tại: Cấp ${effectiveLevel})`);
+                          }}
+                          className="px-4 py-1.5 rounded-xl text-[10px] font-black bg-rose-950/80 hover:bg-rose-900 border border-rose-600/60 text-rose-300 transition cursor-pointer flex items-center gap-1 shadow-[0_0_12px_rgba(244,63,94,0.4)] animate-pulse"
+                          title={`Cần đạt Cấp ${selectedItem.requiredLevel} để mặc món đồ này`}
+                        >
+                          🔒 Chưa Đủ Cấp
+                        </button>
+                      ) : (
+                        <button
+                          onClick={() => handleToggleEquip(selectedItem)}
+                          className="px-4 py-1.5 rounded-xl text-[10px] font-black bg-cyan-500 hover:bg-cyan-400 text-slate-950 shadow-[0_0_15px_rgba(40,195,225,0.5)] transition cursor-pointer flex items-center gap-1"
+                        >
+                          {items.some((it) => it.equipped && it.type === selectedItem.type) ? "🔄 Thay Thế" : "⚔️ Mặc Vào"}
+                        </button>
+                      )
                     ) : selectedItem.type === "inventory_ticket" || selectedItem.id.includes("ticket") || selectedItem.name.includes("Phiếu Tăng Hành Trang") ? (
                       <button
                         onClick={() => handleUseItem(selectedItem)}
@@ -2715,6 +2950,20 @@ export const CharacterInventoryModal = memo(function CharacterInventoryModal({
             </div>
           </div>
         )}
+
+        {/* ── DETAILED STATS & RUNE INSPECTOR PANEL DRAWER (Hạng Mục 5) ── */}
+        <DetailedStatsInspectorPanel
+          isOpen={isInspectorOpen}
+          onClose={() => setIsInspectorOpen(false)}
+          characterName={effectiveName}
+          characterClassId={effectiveClassId}
+          characterLevel={effectiveLevel}
+          equippedItems={equippedGearList}
+          baseStats={baseStats}
+          gearStats={gearStats}
+          totalCombatPower={totalCombatPower}
+          equipmentCombatPower={equipmentCombatPower}
+        />
 
         {/* Floating Smart Tooltip Card */}
         {hoveredTooltipItem && (

@@ -33,6 +33,7 @@ export async function recalculateCharacterStats(characterId: number, executor: a
     rarity: characterItemsTable.rarity,
     socketsJson: characterItemsTable.socketsJson,
     reforgeStatsJson: characterItemsTable.reforgeStatsJson,
+    runesJson: characterItemsTable.runesJson,
   }).from(characterItemsTable)
     .innerJoin(itemsTable, eq(characterItemsTable.itemId, itemsTable.id))
     .where(and(
@@ -53,15 +54,41 @@ export async function recalculateCharacterStats(characterId: number, executor: a
     const isMiracle = (item.rarity || row.rarity || "").toLowerCase() === "miracle";
     if (isMiracle) hasMiracleEquipped = true;
 
+    // Check Class Affinity (Ràng Buộc Đúng Chức Nghiệp / Hệ Phái)
+    // Nếu mặc TRÁI Chức Nghiệp: bị phạt giảm 50% chỉ số & vô hiệu hóa Phù Văn
+    const isClassMatch =
+      !item.classId ||
+      item.classId === "all" ||
+      item.classId.toLowerCase() === (character.classId || "").toLowerCase() ||
+      (item.classId.includes("assassin") && (character.classId || "").includes("sat_thu")) ||
+      (item.classId.includes("sat_thu") && (character.classId || "").includes("assassin")) ||
+      (item.classId.includes("fighter") && (character.classId || "").includes("chien_binh")) ||
+      (item.classId.includes("tank") && (character.classId || "").includes("ho_ve")) ||
+      (item.classId.includes("gunner") && (character.classId || "").includes("xa_thu"));
+
+    const classMultiplier = isClassMatch ? 1.0 : 0.5;
+
     // Phẩm chất Kì Tích: Chỉ số vượt trội +250% so với thông thường
     const miracleMult = isMiracle ? 3.5 : 1.0;
-    const multiplier = (1 + Number(row.enhanceLevel ?? 0) * ENHANCEMENT_MULTIPLIER) * miracleMult;
+    const multiplier = (1 + Number(row.enhanceLevel ?? 0) * ENHANCEMENT_MULTIPLIER) * miracleMult * classMultiplier;
 
     for (const stat of Object.keys(bonuses)) {
       if (stat === "bonusCombatPower") {
-        bonuses[stat] += Number(row.bonusCombatPower ?? 0) + (isMiracle ? 2500 : 0);
+        bonuses[stat] += Math.floor((Number(row.bonusCombatPower ?? 0) + (isMiracle ? 2500 : 0)) * classMultiplier);
       } else if (stat in item || (item as any)[stat]) {
         bonuses[stat] += Math.floor(numericItemStat(item, stat) * multiplier);
+      }
+    }
+
+    // ── Phù Văn Trang Bị (Equipment Runes: 3-4 Dòng) ──
+    // Kích hoạt 100% và cộng Lực Chiến nếu ĐÚNG chức nghiệp; Vô hiệu hóa nếu TRÁI chức nghiệp
+    if (isClassMatch) {
+      const runes = typeof (row as any).runesJson === "string" ? (() => { try { return JSON.parse((row as any).runesJson); } catch { return []; } })() : ((row as any).runesJson || []);
+      if (Array.isArray(runes)) {
+        for (const r of runes) {
+          if (!r) continue;
+          if (r.combatPower) bonuses.bonusCombatPower += Number(r.combatPower);
+        }
       }
     }
 

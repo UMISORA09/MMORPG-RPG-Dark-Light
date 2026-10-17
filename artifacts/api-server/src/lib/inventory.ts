@@ -54,6 +54,7 @@ export async function listInventory(characterId: number, executor: any = db) {
       miraclePassive2: characterItemsTable.miraclePassive2,
       socketsJson: characterItemsTable.socketsJson,
       reforgeStatsJson: characterItemsTable.reforgeStatsJson,
+      runesJson: characterItemsTable.runesJson,
       acquiredAt: characterItemsTable.acquiredAt,
     })
     .from(characterItemsTable)
@@ -120,6 +121,7 @@ export async function listInventory(characterId: number, executor: any = db) {
         miraclePassive2: row.miraclePassive2 ?? null,
         socketsJson: safeParse(row.socketsJson),
         reforgeStatsJson: safeParse(row.reforgeStatsJson),
+        runesJson: safeParse(row.runesJson),
         acquiredAt: typeof acquiredAt === "string" ? acquiredAt : acquiredAt.toISOString(),
       };
     })
@@ -202,11 +204,11 @@ export async function getCharacterForUser(characterId: number, userId: number): 
 }
 
 export function canUseItem(item: Item, character: Character): string | null {
-  if (item.classId !== null && item.classId !== character.classId) {
-    return "Vật phẩm không dành cho chức nghiệp này";
-  }
   if (item.requiredLevel > character.level) {
-    return `Cần đạt cấp ${item.requiredLevel} để sử dụng`;
+    return `Yêu cầu đạt Cấp ${item.requiredLevel} (Hiện tại: Cấp ${character.level})`;
+  }
+  if (item.category !== "equipment" && item.classId && item.classId !== "all" && item.classId !== character.classId) {
+    return `Vật phẩm chỉ dành cho chức nghiệp ${item.classId}`;
   }
   if (item.category === "equipment" && item.equipSlot === "none") {
     return "Trang bị chưa được gán ô mặc hợp lệ";

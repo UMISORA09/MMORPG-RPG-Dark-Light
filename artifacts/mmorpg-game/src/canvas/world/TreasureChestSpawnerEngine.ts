@@ -4,6 +4,7 @@
 // ==============================================================================
 
 import type { DroppedItem, LootRarity, LootType } from "../loot/loot.types";
+import { generateRunesForItem, calculateItemCombatPower } from "@/skills/EquipmentRuneEngine";
 import * as THREE from "three";
 
 export type ChestTier = "WOODEN" | "SILVER" | "GOLDEN" | "MIRACLE_CHEST";
@@ -233,7 +234,7 @@ const BASE_ACCESSORIES = [
 export function generateChestLootBurst(
   chest: ActiveTreasureChest,
   playerLevel: number,
-  _playerClass: string = "fighter"
+  playerClass: string = "fighter"
 ): DroppedItem[] {
   const drops: DroppedItem[] = [];
   const totalItems = chest.itemCount; // 5 to 10 items
@@ -361,7 +362,28 @@ export function generateChestLootBurst(
     // scaledStat = round(baseStat * (1 + (itemLevel - 1) * 0.15) * rarityMultiplier)
     const scaledStat = Math.round(template.baseStat * (1 + (itemLevel - 1) * 0.15) * rarityMul);
     const itemName = `[Lv.${itemLevel}] ${template.name}`;
-    const statText = `${template.statKey} +${scaledStat}`;
+
+    // Sinh 3 đến 4 dòng Phù Văn theo phẩm chất & cấp độ
+    const runes = generateRunesForItem(template.type, rarity, itemLevel);
+    const gearClassId =
+      rarity === "miracle" || Math.random() < 0.65
+        ? (playerClass || "assassin")
+        : ["assassin", "fighter", "tank", "gunner"][Math.floor(Math.random() * 4)];
+
+    const itemCP = calculateItemCombatPower(
+      {
+        atkBoost: template.type === "weapon" ? scaledStat : 0,
+        defBoost: template.type === "armor" ? scaledStat : 0,
+        hpBoost: template.type === "accessory" ? scaledStat * 4 : 0,
+        rarity,
+        runesJson: runes,
+        classId: gearClassId,
+      },
+      gearClassId === playerClass
+    );
+
+    const runeIcons = runes.map((r) => r.icon).join("");
+    const statText = `${template.statKey} +${scaledStat} | ⚡ +${itemCP}${runeIcons ? " " + runeIcons : ""}`;
 
     drops.push({
       id: `chest-loot-gear-${now}-${itemIdx}`,
@@ -376,6 +398,9 @@ export function generateChestLootBurst(
       icon: template.icon,
       color: getRarityColor(rarity),
       statText,
+      requiredLevel: itemLevel,
+      classId: gearClassId,
+      runesJson: runes,
       bounceCount: 0,
       isGrounded: false,
       lifetime: 180,
