@@ -140,6 +140,12 @@ export interface GameWorldState {
   playerClassId: string;
   playerClassName: string;
   playerGender: "male" | "female";
+  playerHairStyle: string;
+  playerHairColor: string;
+  playerOutfitId: string;
+  playerTalentIds: string[];
+  playerAuraIds: string[];
+  playerDestinyRolled: boolean;
   playerColorHex: string;
   activeCharacterId: number | null;
   unlockedSlots: number;
@@ -540,6 +546,12 @@ export const useGameWorldStore = create<GameWorldState>((set, get) => ({
   playerClassId: "fighter",
   playerClassName: "Chiến Binh",
   playerGender: "male",
+  playerHairStyle: "phong_van",
+  playerHairColor: "#1e1e1e",
+  playerOutfitId: "basic",
+  playerTalentIds: [],
+  playerAuraIds: [],
+  playerDestinyRolled: false,
   playerColorHex: "#f97316",
   activeCharacterId: null,
   unlockedSlots: 15,
@@ -2219,6 +2231,12 @@ export const useGameWorldStore = create<GameWorldState>((set, get) => ({
         playerClassId: char.classId || s.playerClassId,
         playerClassName: char.className || blueprint.className || s.playerClassName,
         playerGender: char.gender || (typeof window !== "undefined" ? localStorage.getItem(`character_gender_${char.id}`) : null) || s.playerGender || "male",
+        playerHairStyle: char.hairStyle || (typeof window !== "undefined" ? (() => { try { return JSON.parse(localStorage.getItem(`character_customization_${char.id}`) || "{}")?.hairStyle; } catch { return null; } })() : null) || s.playerHairStyle || "phong_van",
+        playerHairColor: char.hairColor || (typeof window !== "undefined" ? (() => { try { return JSON.parse(localStorage.getItem(`character_customization_${char.id}`) || "{}")?.hairColor; } catch { return null; } })() : null) || s.playerHairColor || "#1e1e1e",
+        playerOutfitId: char.outfitId || (typeof window !== "undefined" ? (() => { try { return JSON.parse(localStorage.getItem(`character_customization_${char.id}`) || "{}")?.outfit; } catch { return null; } })() : null) || s.playerOutfitId || "basic",
+        playerTalentIds: char.talentIds ? (typeof char.talentIds === "string" ? JSON.parse(char.talentIds) : char.talentIds) : (typeof window !== "undefined" ? (() => { try { return JSON.parse(localStorage.getItem(`character_customization_${char.id}`) || "{}")?.talentIds; } catch { return null; } })() : null) || s.playerTalentIds || [],
+        playerAuraIds: char.auraIds ? (typeof char.auraIds === "string" ? JSON.parse(char.auraIds) : char.auraIds) : (typeof window !== "undefined" ? (() => { try { return JSON.parse(localStorage.getItem(`character_customization_${char.id}`) || "{}")?.auraIds; } catch { return null; } })() : null) || s.playerAuraIds || [],
+        playerDestinyRolled: char.destinyRolled !== undefined ? Boolean(char.destinyRolled) : (typeof window !== "undefined" ? (() => { try { return Boolean(JSON.parse(localStorage.getItem(`character_customization_${char.id}`) || "{}")?.destinyRolled); } catch { return false; } })() : false) || s.playerDestinyRolled || false,
         playerColorHex: blueprint.color || s.playerColorHex,
         playerLevel: char.level || s.playerLevel,
         playerExp: char.experience || s.playerExp,

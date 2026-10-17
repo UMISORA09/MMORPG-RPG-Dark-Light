@@ -58,6 +58,10 @@ export const RemotePlayerEntity25D = memo(function RemotePlayerEntity25D({ playe
         facingLeft={Boolean(player.facingLeft)}
         textureKey={`player_${player.classId}`}
         color={classColor}
+        hairStyle={(player as any).hairStyle}
+        hairColor={(player as any).hairColor}
+        outfitId={(player as any).outfitId}
+        auraIds={(player as any).auraIds}
         weaponType={
           player.classId === "gunner"
             ? "gun"

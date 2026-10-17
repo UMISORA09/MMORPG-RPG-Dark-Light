@@ -5,6 +5,7 @@ import { useQueryClient } from "@tanstack/react-query";
 import { useToast } from "@/hooks/use-toast";
 import { ClassSprite } from "@/components/ClassSprite";
 import { getCharacterBlueprint } from "@/skills";
+import { DestinyRandomizer, DestinySlotItem } from "@/components/DestinyRandomizer";
 import {
   Shield,
   Swords,
@@ -18,7 +19,6 @@ import {
   Crosshair,
   Scissors,
   Shirt,
-  Wand2,
 } from "lucide-react";
 
 interface CharacterCreationModalProps {
@@ -126,10 +126,10 @@ const CLASS_RADAR_DATA: Record<string, number[]> = {
 
 // Character Customization: Hairstyles
 const HAIR_STYLES = [
-  { id: "wind", name: "Phong Vân", desc: "Bay bổng lãng tử" },
-  { id: "short", name: "Đoản Phát", desc: "Sắc bén dũng cảm" },
-  { id: "tail", name: "Đuôi Ngựa", desc: "Chiến tướng oai nghiêm" },
-  { id: "wild", name: "Cuồng Lôi", desc: "Hùng bá cuồng phóng" },
+  { id: "phong_van", name: "Phong Vân", desc: "Bay bổng lãng tử" },
+  { id: "doan_phat", name: "Đoản Phát", desc: "Sắc bén dũng cảm" },
+  { id: "duoi_ngua", name: "Đuôi Ngựa", desc: "Chiến tướng oai nghiêm" },
+  { id: "cuong_loi", name: "Cuồng Lôi", desc: "Hùng bá cuồng phóng" },
 ];
 
 // Hair Colors
@@ -150,90 +150,21 @@ const OUTFITS = [
   { id: "frost", name: "Băng Tinh", desc: "Thánh y hàn băng", filter: "hue-rotate(160deg) saturate(1.2) brightness(1.05)" },
 ];
 
-// Character Customization: Starter Talents (Thiên Phú Khởi Đầu)
-const STARTER_TALENTS = [
-  {
-    id: "fury",
-    name: "Cuồng Nộ Chiến Ý",
-    icon: Swords,
-    buff: "+12% Sát Thương Kỹ Năng",
-    desc: "Đòn đánh liên hoàn thứ 3 tạo nổ chấn động diện rộng.",
-    color: "#ff3366",
-  },
-  {
-    id: "iron",
-    name: "Kim Cang Bất Hoại",
-    icon: Shield,
-    buff: "+15% HP & Giảm 10% Sát Thương",
-    desc: "Kháng lại đòn chí mạng từ quái vật tinh anh.",
-    color: "#ffd700",
-  },
-  {
-    id: "gale",
-    name: "Tật Phong Lưu Ảnh",
-    icon: Zap,
-    buff: "+15% Tốc Chạy & +8% Né Tránh",
-    desc: "Thân thủ lướt gió tạo ảo ảnh phân thân.",
-    color: "#00f2ff",
-  },
-  {
-    id: "vamp",
-    name: "Huyết Ma Nghịch Chuyển",
-    icon: Heart,
-    buff: "Hồi 5% HP Khi Hạ Quái",
-    desc: "Chuyển hóa sinh lực đối phương thành nguyên khí trị thương.",
-    color: "#a855f7",
-  },
-];
-
-// Character Customization: Starter Relics & Aura (Pháp Bảo / Khí Linh Hộ Thể)
-const STARTER_RELICS = [
-  {
-    id: "dragon",
-    name: "Long Hồn Châu",
-    auraColor: "rgba(255, 215, 0, 0.45)",
-    buff: "+120 HP & +60 MP",
-    desc: "Hào quang rồng thiêng hộ mệnh sinh tồn.",
-    glowHex: "#ffd700",
-  },
-  {
-    id: "thunder",
-    name: "Lôi Điểu Phù",
-    auraColor: "rgba(168, 85, 247, 0.45)",
-    buff: "+6% Tỉ Lệ Bạo Kích",
-    desc: "Tia sét tím bao bọc đòn tấn công bộc phá.",
-    glowHex: "#a855f7",
-  },
-  {
-    id: "tiger",
-    name: "Bạch Hổ Ấn",
-    auraColor: "rgba(239, 68, 68, 0.45)",
-    buff: "+15 Sát Thương Cơ Bản",
-    desc: "Uy lực mãnh hổ gia tăng sát thương vũ khí.",
-    glowHex: "#ef4444",
-  },
-  {
-    id: "tortoise",
-    name: "Huyền Vũ Thuẫn",
-    auraColor: "rgba(34, 197, 94, 0.45)",
-    buff: "+18 Phòng Thủ Cơ Bản",
-    desc: "Lá chắn ngọc bích chặn đứng mọi đòn đánh lén.",
-    glowHex: "#22c55e",
-  },
-];
-
 export function CharacterCreationModal({ isOpen, onClose, onCharacterCreated }: CharacterCreationModalProps) {
   const [selectedClassId, setSelectedClassId] = useState<string>("fighter");
   const [gender, setGender] = useState<"male" | "female">("male");
   const [characterName, setCharacterName] = useState("");
   const [nameError, setNameError] = useState("");
 
-  // Appearance & Upgrade states
-  const [hairStyle, setHairStyle] = useState<string>("wind");
+  // Appearance states
+  const [hairStyle, setHairStyle] = useState<string>("phong_van");
   const [hairColor, setHairColor] = useState<string>("#1e1e1e");
   const [outfit, setOutfit] = useState<string>("basic");
-  const [starterTalent, setStarterTalent] = useState<string>("fury");
-  const [starterRelic, setStarterRelic] = useState<string>("dragon");
+
+  // Gacha Destiny states
+  const [rolledTalents, setRolledTalents] = useState<DestinySlotItem[]>([]);
+  const [rolledAuras, setRolledAuras] = useState<DestinySlotItem[]>([]);
+  const [isDestinyRolled, setIsDestinyRolled] = useState(false);
 
   const { toast } = useToast();
   const queryClient = useQueryClient();
@@ -249,14 +180,51 @@ export function CharacterCreationModal({ isOpen, onClose, onCharacterCreated }: 
     return getCharacterBlueprint(selectedClassId);
   }, [selectedClassId]);
 
-  // Active outfit filter & relic aura
+  // Active outfit filter
   const currentOutfitObj = useMemo(() => {
     return OUTFITS.find((o) => o.id === outfit) || OUTFITS[0];
   }, [outfit]);
 
-  const currentRelicObj = useMemo(() => {
-    return STARTER_RELICS.find((r) => r.id === starterRelic) || STARTER_RELICS[0];
-  }, [starterRelic]);
+  // Best rolled aura for live preview glow
+  const currentAuraColor = useMemo(() => {
+    if (rolledAuras.length > 0) {
+      const miracle = rolledAuras.find((a) => a.tier === "Miracle");
+      if (miracle) return miracle.auraColor || "rgba(244, 63, 94, 0.85)";
+      const legend = rolledAuras.find((a) => a.tier === "S");
+      if (legend) return legend.auraColor || "rgba(245, 158, 11, 0.75)";
+      const epic = rolledAuras.find((a) => a.tier === "A");
+      if (epic) return epic.auraColor || "rgba(56, 189, 248, 0.55)";
+      return rolledAuras[0]?.auraColor || "rgba(249, 115, 22, 0.4)";
+    }
+    return "rgba(255, 215, 0, 0.4)";
+  }, [rolledAuras]);
+
+  // Handle Destiny Rolled callback from DestinyRandomizer
+  const handleDestinyRolled = (talents: DestinySlotItem[], auras: DestinySlotItem[]) => {
+    setRolledTalents(talents);
+    setRolledAuras(auras);
+    setIsDestinyRolled(true);
+
+    const hasMiracle = [...talents, ...auras].some((i) => i.tier === "Miracle");
+    const hasLegend = [...talents, ...auras].some((i) => i.tier === "S");
+
+    if (hasMiracle) {
+      toast({
+        title: "🌟 KÌ TÍCH XUẤT THẾ! (Tỉ lệ 0.1%)",
+        description: "Bạn đã gacha thành công phẩm chất Kì Tích cực hiếm! Hào quang Thần Ma bao bọc!",
+      });
+    } else if (hasLegend) {
+      toast({
+        title: "🔥 HUYỀN THOẠI THỨC TỈNH!",
+        description: "Thiên mệnh bùng nổ phẩm chất Huyền Thoại (S) uy trấn thiên hạ!",
+      });
+    } else {
+      toast({
+        title: "🎲 Thiên Mệnh Đã Định!",
+        description: "Bộ 4 Thiên Phú và 4 Khí Linh đã được kết nối với linh hồn anh hùng!",
+      });
+    }
+  };
 
   // Randomize character name
   const handleRandomName = () => {
@@ -285,7 +253,19 @@ export function CharacterCreationModal({ isOpen, onClose, onCharacterCreated }: 
     }
 
     createCharacter.mutate(
-      { data: { name: trimmed, classId: selectedClassId, gender } as any },
+      {
+        data: {
+          name: trimmed,
+          classId: selectedClassId,
+          gender,
+          hairStyle,
+          hairColor,
+          outfitId: outfit,
+          destinyRolled: isDestinyRolled,
+          talentIds: rolledTalents.map((t) => t.id),
+          auraIds: rolledAuras.map((a) => a.id),
+        } as any,
+      },
       {
         onSuccess: async (created: any) => {
           if (typeof window !== "undefined") {
@@ -293,23 +273,30 @@ export function CharacterCreationModal({ isOpen, onClose, onCharacterCreated }: 
             if (charId) {
               localStorage.setItem("selectedCharacterId", String(charId));
               localStorage.setItem(`character_gender_${charId}`, gender);
-              localStorage.setItem("clb_selected_character", JSON.stringify(created));
 
-              // Persist detailed character customization & upgrades
+              // 100% Seamless Appearance & Gacha Bridge to 3D Game World
               const customizationData = {
                 hairStyle,
                 hairColor,
                 outfit,
-                starterTalent,
-                starterRelic,
+                destinyRolled: isDestinyRolled,
+                talentIds: rolledTalents.map((t) => t.id),
+                auraIds: rolledAuras.map((a) => a.id),
+                talents: rolledTalents,
+                auras: rolledAuras,
               };
+
               localStorage.setItem(`character_customization_${charId}`, JSON.stringify(customizationData));
               localStorage.setItem("clb_selected_character_customization", JSON.stringify(customizationData));
+              localStorage.setItem("clb_selected_character", JSON.stringify({ ...created, ...customizationData }));
 
               try {
                 const existingStr = localStorage.getItem("clb_client_characters");
                 const existing = existingStr ? JSON.parse(existingStr) : [];
-                const updated = [...existing.filter((c: any) => c.id !== charId), { ...created, gender, customization: customizationData }];
+                const updated = [
+                  ...existing.filter((c: any) => c.id !== charId),
+                  { ...created, gender, ...customizationData },
+                ];
                 localStorage.setItem("clb_client_characters", JSON.stringify(updated));
               } catch {}
             }
@@ -452,10 +439,10 @@ export function CharacterCreationModal({ isOpen, onClose, onCharacterCreated }: 
 
                 {/* 2. Sân Khấu Avatar 2.5D Preview */}
                 <div className="relative flex-1 flex flex-col items-center justify-center p-2 rounded-xl bg-[#271f20] border border-[#5d4648]/60 my-1 min-h-[160px]">
-                  {/* Aura & Ambient Glow */}
+                  {/* Dynamic Relic Aura Glow */}
                   <div
-                    className="absolute inset-4 rounded-full blur-2xl opacity-40 animate-pulse pointer-events-none"
-                    style={{ backgroundColor: currentRelicObj.glowHex || currentClass.color }}
+                    className="absolute inset-4 rounded-full blur-2xl opacity-45 animate-pulse pointer-events-none"
+                    style={{ backgroundColor: currentAuraColor }}
                   />
 
                   {/* Character Sprite with Custom Outfit Filter & Relic Aura */}
@@ -463,7 +450,7 @@ export function CharacterCreationModal({ isOpen, onClose, onCharacterCreated }: 
                     <ClassSprite
                       classId={selectedClassId}
                       gender={gender}
-                      auraColor={currentRelicObj.auraColor}
+                      auraColor={currentAuraColor}
                       filterStyle={{ filter: currentOutfitObj.filter }}
                       className="w-full h-full drop-shadow-[0_12px_24px_rgba(0,0,0,0.85)]"
                     />
@@ -477,9 +464,11 @@ export function CharacterCreationModal({ isOpen, onClose, onCharacterCreated }: 
                     <span className="text-[10px] px-2 py-0.5 rounded-full bg-[#342a2b] border border-[#5d4648] text-[#8e7a7c]">
                       Y phục: <span className="text-white font-medium">{currentOutfitObj.name}</span>
                     </span>
-                    <span className="text-[10px] px-2 py-0.5 rounded-full bg-[#342a2b] border border-[#5d4648]" style={{ color: currentRelicObj.glowHex }}>
-                      {currentRelicObj.name}
-                    </span>
+                    {isDestinyRolled && (
+                      <span className="text-[10px] px-2 py-0.5 rounded-full bg-rose-950/80 border border-rose-500 text-rose-300 font-bold animate-pulse">
+                        ✨ Khí Linh Đã Thức Tỉnh
+                      </span>
+                    )}
                   </div>
                 </div>
 
@@ -707,7 +696,7 @@ export function CharacterCreationModal({ isOpen, onClose, onCharacterCreated }: 
                 </div>
               </div>
 
-              {/* ═══════════ CỘT 3: TÙY BIẾN TÓC, QUẦN ÁO & NÂNG CẤP MỚI (Col 4) ═══════════ */}
+              {/* ═══════════ CỘT 3: TÙY BIẾN TÓC, QUẦN ÁO & GACHA RANDOM (Col 4) ═══════════ */}
               <div className="lg:col-span-4 flex flex-col justify-between p-3 rounded-2xl bg-[#342a2b] border border-[#5d4648]">
                 {/* 1. KIỂU TÓC & MÀU TÓC */}
                 <div>
@@ -737,7 +726,7 @@ export function CharacterCreationModal({ isOpen, onClose, onCharacterCreated }: 
                     ))}
                   </div>
                   {/* Hair Colors Swatches */}
-                  <div className="flex items-center justify-between gap-1 bg-[#271f20] p-1.5 rounded-xl border border-[#5d4648]/60 mb-2.5">
+                  <div className="flex items-center justify-between gap-1 bg-[#271f20] p-1.5 rounded-xl border border-[#5d4648]/60 mb-2">
                     {HAIR_COLORS.map((c) => (
                       <button
                         key={c.id}
@@ -761,7 +750,7 @@ export function CharacterCreationModal({ isOpen, onClose, onCharacterCreated }: 
                     </span>
                     <span className="text-white text-[10px] font-bold">{currentOutfitObj.name}</span>
                   </div>
-                  <div className="grid grid-cols-2 gap-1.5 mb-2.5">
+                  <div className="grid grid-cols-2 gap-1.5 mb-2">
                     {OUTFITS.map((o) => {
                       const isSelected = outfit === o.id;
                       return (
@@ -783,69 +772,12 @@ export function CharacterCreationModal({ isOpen, onClose, onCharacterCreated }: 
                   </div>
                 </div>
 
-                {/* 3. THIÊN PHÚ KHỞI ĐẦU (NÂNG CẤP MỚI) */}
-                <div>
-                  <div className="text-[11px] uppercase tracking-wider font-bold text-[#8e7a7c] mb-1 flex items-center justify-between">
-                    <span className="flex items-center gap-1">
-                      <Wand2 className="w-3.5 h-3.5 text-[#28c3e1]" /> Thiên Phú Khởi Nguyên (Nâng Cấp)
-                    </span>
-                  </div>
-                  <div className="grid grid-cols-2 gap-1.5 mb-2.5">
-                    {STARTER_TALENTS.map((t) => {
-                      const Icon = t.icon;
-                      const isSelected = starterTalent === t.id;
-                      return (
-                        <button
-                          key={t.id}
-                          type="button"
-                          onClick={() => setStarterTalent(t.id)}
-                          className={`p-1.5 rounded-xl border text-left transition-all flex items-start gap-1.5 ${
-                            isSelected
-                              ? "bg-[#584245] border-[#28c3e1] text-white shadow-[0_0_12px_rgba(40,195,225,0.25)]"
-                              : "bg-[#271f20] border-[#5d4648]/60 text-[#8e7a7c] hover:text-white"
-                          }`}
-                        >
-                          <Icon className="w-3.5 h-3.5 mt-0.5 shrink-0" style={{ color: t.color }} />
-                          <div className="min-w-0">
-                            <div className="font-bold text-[10px] text-white truncate">{t.name}</div>
-                            <div className="text-[9px] font-mono" style={{ color: t.color }}>{t.buff}</div>
-                          </div>
-                        </button>
-                      );
-                    })}
-                  </div>
-                </div>
-
-                {/* 4. PHÁP BẢO / KHÍ LINH HỘ THỂ (AURA & RELIC) */}
-                <div>
-                  <div className="text-[11px] uppercase tracking-wider font-bold text-[#8e7a7c] mb-1 flex items-center justify-between">
-                    <span className="flex items-center gap-1">
-                      <Sparkles className="w-3.5 h-3.5 text-[#ffd700]" /> Khí Linh Hộ Thể (Hào Quang)
-                    </span>
-                  </div>
-                  <div className="grid grid-cols-2 gap-1.5">
-                    {STARTER_RELICS.map((r) => {
-                      const isSelected = starterRelic === r.id;
-                      return (
-                        <button
-                          key={r.id}
-                          type="button"
-                          onClick={() => setStarterRelic(r.id)}
-                          className={`p-1.5 rounded-xl border text-left transition-all ${
-                            isSelected
-                              ? "bg-[#584245] border-[#ffd700] text-white shadow-[0_0_12px_rgba(255,215,0,0.3)]"
-                              : "bg-[#271f20] border-[#5d4648]/60 text-[#8e7a7c] hover:text-white"
-                          }`}
-                        >
-                          <div className="flex items-center justify-between">
-                            <span className="font-bold text-[10px] text-white truncate">{r.name}</span>
-                            <span className="w-2 h-2 rounded-full" style={{ backgroundColor: r.glowHex }} />
-                          </div>
-                          <div className="text-[9px] font-mono text-[#ffd700] truncate">{r.buff}</div>
-                        </button>
-                      );
-                    })}
-                  </div>
+                {/* 3. DESTINY RANDOMIZER: GACHA THIÊN PHÚ & KHÍ LINH 1 LẦN DUY NHẤT */}
+                <div className="flex-1 min-h-0">
+                  <DestinyRandomizer
+                    onDestinyRolled={handleDestinyRolled}
+                    isLockedInitially={isDestinyRolled}
+                  />
                 </div>
               </div>
             </div>

@@ -60470,6 +60470,12 @@ var charactersTable = pgTable("characters", {
   serverId: text("server_id").notNull().default("s1_long_vuong"),
   name: text("name").notNull(),
   gender: text("gender").notNull().default("male"),
+  hairStyle: text("hair_style").notNull().default("phong_van"),
+  hairColor: text("hair_color").notNull().default("#1e1e1e"),
+  outfitId: text("outfit_id").notNull().default("basic"),
+  destinyRolled: boolean4("destiny_rolled").notNull().default(false),
+  talentIds: text("talent_ids").notNull().default("[]"),
+  auraIds: text("aura_ids").notNull().default("[]"),
   classId: text("class_id").notNull(),
   className: text("class_name").notNull(),
   title: text("title").notNull().default("Th\u01B0\u1EE3ng C\u1EA5p Chi\u1EBFn S\u0129"),
@@ -63630,6 +63636,431 @@ var CharacterPersistenceService = class {
   }
 };
 
+// src/services/destinyGenerator.ts
+var TALENT_POOL = {
+  Miracle: [
+    {
+      id: "talent_miracle_god",
+      name: "Th\u1EA7n Ma B\u1EA5t Di\u1EC7t Th\u1EC3",
+      type: "talent",
+      tier: "Miracle",
+      tierName: "K\xEC T\xEDch (1/1000)",
+      buff: "+100% S\xE1t Th\u01B0\u01A1ng, Mi\u1EC5n Kh\u1ED1ng Ch\u1EBF",
+      desc: "Th\u1EA7n th\u1EC3 th\u01B0\u1EE3ng c\u1ED5 t\u1ED1i th\u01B0\u1EE3ng, \u0111\xF2n \u0111\xE1nh ch\xED m\u1EA1ng h\u1ED3i 100% HP v\xE0 mi\u1EC5n nhi\u1EC5m m\u1ECDi hi\u1EC7u \u1EE9ng x\u1EA5u.",
+      color: "#ec4899",
+      glowHex: "#f43f5e"
+    },
+    {
+      id: "talent_miracle_void",
+      name: "H\u01B0 Kh\xF4ng Th\xF4n Ph\u1EC7 Quy\u1EBFt",
+      type: "talent",
+      tier: "Miracle",
+      tierName: "K\xEC T\xEDch (1/1000)",
+      buff: "H\u1ED1 \u0110en H\xFAt Qu\xE1i & +50% T\u1ED1c Ch\u1EA1y",
+      desc: "M\u1ECDi \u0111\xF2n \u0111\xE1nh th\u1EE9 3 m\u1EDF ra h\u1ED1 \u0111en nu\u1ED1t ch\u1EEDng qu\xE1i v\u1EADt v\xE0 gia t\u0103ng 50% t\u1ED1c \u0111\u1ED9 di chuy\u1EC3n v\u0129nh vi\u1EC5n.",
+      color: "#ec4899",
+      glowHex: "#e11d48"
+    }
+  ],
+  S: [
+    {
+      id: "talent_legend_thunder",
+      name: "C\u1EEDu Thi\xEAn Cu\u1ED3ng L\xF4i Quy\u1EBFt",
+      type: "talent",
+      tier: "S",
+      tierName: "Huy\u1EC1n Tho\u1EA1i (2.9%)",
+      buff: "+40% S\xE1t Th\u01B0\u01A1ng L\xF4i & G\u1ECDi S\u1EA5m",
+      desc: "25% x\xE1c su\u1EA5t k\xEDch ho\u1EA1t tia s\xE9t C\u1EEDu Thi\xEAn tr\u1EEBng ph\u1EA1t \u0111\xE1nh tan t\xE1c qu\xE1i v\u1EADt xung quanh.",
+      color: "#f97316",
+      glowHex: "#f59e0b"
+    },
+    {
+      id: "talent_legend_titan",
+      name: "Th\xE1i C\u1ED5 Kim Cang Th\xE2n",
+      type: "talent",
+      tier: "S",
+      tierName: "Huy\u1EC1n Tho\u1EA1i (2.9%)",
+      buff: "+40% HP & Gi\u1EA3m 30% S\xE1t Th\u01B0\u01A1ng",
+      desc: "Kim th\xE2n v\u1EEFng nh\u01B0 b\xE0n th\u1EA1ch, h\u1EA5p th\u1EE5 v\xE0 ph\u1EA3n tr\u1EA3 30% s\xE1t th\u01B0\u01A1ng t\u1EEB m\u1ECDi k\u1EBB \u0111\u1ECBch.",
+      color: "#f97316",
+      glowHex: "#d97706"
+    },
+    {
+      id: "talent_legend_shadow",
+      name: "V\xF4 \u1EA2nh Huy\u1EC5n Linh B\u1ED9",
+      type: "talent",
+      tier: "S",
+      tierName: "Huy\u1EC1n Tho\u1EA1i (2.9%)",
+      buff: "+35% T\u1ED1c Ch\u1EA1y & 30% Ph\xE2n Th\xE2n",
+      desc: "L\u01B0\u1EDBt gi\xF3 \u0111\u1EC3 l\u1EA1i ph\xE2n th\xE2n \u1EA3o \u1EA3nh t\u1EF1 \u0111\u1ED9ng t\u1EA5n c\xF4ng k\u1EBB th\xF9 v\u1EDBi 50% s\u1EE9c m\u1EA1nh.",
+      color: "#f97316",
+      glowHex: "#ea580c"
+    }
+  ],
+  A: [
+    {
+      id: "talent_epic_fury",
+      name: "Cu\u1ED3ng N\u1ED9 Chi\u1EBFn \xDD",
+      type: "talent",
+      tier: "A",
+      tierName: "Cao C\u1EA5p (9%)",
+      buff: "+20% S\xE1t Th\u01B0\u01A1ng K\u1EF9 N\u0103ng",
+      desc: "\u0110\xF2n \u0111\xE1nh th\u1EE9 3 ph\xE1t n\u1ED5 di\u1EC7n r\u1ED9ng g\xE2y ch\u1EA5n \u0111\u1ED9ng.",
+      color: "#38bdf8",
+      glowHex: "#0284c7"
+    },
+    {
+      id: "talent_epic_iron",
+      name: "Kim Cang H\u1ED9 Th\u1EC3",
+      type: "talent",
+      tier: "A",
+      tierName: "Cao C\u1EA5p (9%)",
+      buff: "+20% HP & -15% S\xE1t Th\u01B0\u01A1ng",
+      desc: "T\u0103ng c\u01B0\u1EDDng gi\xE1p c\u1ED1t v\u1EEFng v\xE0ng tr\u01B0\u1EDBc \u0111\xF2n \u0111\xE1nh l\xE9n.",
+      color: "#38bdf8",
+      glowHex: "#0ea5e9"
+    },
+    {
+      id: "talent_epic_wind",
+      name: "T\u1EADt Phong L\u01B0u \u1EA2nh",
+      type: "talent",
+      tier: "A",
+      tierName: "Cao C\u1EA5p (9%)",
+      buff: "+18% T\u1ED1c Ch\u1EA1y & +10% N\xE9",
+      desc: "Th\xE2n ph\xE1p bi\u1EBFn h\xF3a n\xE9 tr\xE1nh c\xE1c \u0111\xF2n ch\xED t\u1EED.",
+      color: "#38bdf8",
+      glowHex: "#06b6d4"
+    },
+    {
+      id: "talent_epic_vamp",
+      name: "Huy\u1EBFt Ma Ngh\u1ECBch Chuy\u1EC3n",
+      type: "talent",
+      tier: "A",
+      tierName: "Cao C\u1EA5p (9%)",
+      buff: "H\u1ED3i 8% HP Khi Di\u1EC7t Qu\xE1i",
+      desc: "H\u1EA5p th\u1EE5 linh h\u1ED3n \u0111\u1ED1i th\u1EE7 \u0111\u1EC3 h\u1ED3i ph\u1EE5c sinh l\u1EF1c.",
+      color: "#38bdf8",
+      glowHex: "#6366f1"
+    }
+  ],
+  C: [
+    {
+      id: "talent_rare_blade",
+      name: "C\u01B0\u01A1ng \u0110ao Quy\u1EBFt",
+      type: "talent",
+      tier: "C",
+      tierName: "Trung C\u1EA5p (23%)",
+      buff: "+10% S\xE1t Th\u01B0\u01A1ng C\u01A1 B\u1EA3n",
+      desc: "Luy\u1EC7n h\xF3a \u0111\u01B0\u1EDDng ki\u1EBFm uy l\u1EF1c v\xE0 s\u1EAFc b\xE9n h\u01A1n.",
+      color: "#22c55e",
+      glowHex: "#16a34a"
+    },
+    {
+      id: "talent_rare_vitality",
+      name: "Sinh Kh\xED D\u1ED3i D\xE0o",
+      type: "talent",
+      tier: "C",
+      tierName: "Trung C\u1EA5p (23%)",
+      buff: "+12% Sinh L\u1EF1c T\u1ED1i \u0110a",
+      desc: "Th\u1EC3 ch\u1EA5t c\u01B0\u1EDDng ki\u1EC7n, t\u0103ng kh\u1EA3 n\u0103ng s\u1ED1ng s\xF3t.",
+      color: "#22c55e",
+      glowHex: "#15803d"
+    },
+    {
+      id: "talent_rare_swift",
+      name: "Khinh Th\xE2n Quy\u1EBFt",
+      type: "talent",
+      tier: "C",
+      tierName: "Trung C\u1EA5p (23%)",
+      buff: "+10% T\u1ED1c \u0110\u1ED9 Di Chuy\u1EC3n",
+      desc: "B\u01B0\u1EDBc ch\xE2n nh\u1EB9 nh\xE0ng l\u01B0\u1EDBt tr\xEAn m\u1EB7t \u0111\u1EA5t.",
+      color: "#22c55e",
+      glowHex: "#10b981"
+    },
+    {
+      id: "talent_rare_focus",
+      name: "T\u1EADp Trung Chi Nh\xE3n",
+      type: "talent",
+      tier: "C",
+      tierName: "Trung C\u1EA5p (23%)",
+      buff: "+5% T\u1EC9 L\u1EC7 B\u1EA1o K\xEDch",
+      desc: "Ng\u1EAFm chu\u1EA9n \u0111i\u1EC3m y\u1EBFu c\u1EE7a m\u1EE5c ti\xEAu.",
+      color: "#22c55e",
+      glowHex: "#059669"
+    }
+  ],
+  F: [
+    {
+      id: "talent_common_strike",
+      name: "Thao Thi\u1EBFt Quy\u1EC1n",
+      type: "talent",
+      tier: "F",
+      tierName: "Th\u01B0\u1EDDng (65%)",
+      buff: "+5 S\xE1t Th\u01B0\u01A1ng",
+      desc: "K\u1EF9 n\u0103ng quy\u1EC1n ph\xE1p c\u01A1 b\u1EA3n c\u1EE7a t\xE2n th\u1EE7.",
+      color: "#94a3b8",
+      glowHex: "#64748b"
+    },
+    {
+      id: "talent_common_tough",
+      name: "C\u01B0\u1EDDng B\xEC Thu\u1EADt",
+      type: "talent",
+      tier: "F",
+      tierName: "Th\u01B0\u1EDDng (65%)",
+      buff: "+5 Gi\xE1p C\u01A1 B\u1EA3n",
+      desc: "R\xE8n luy\u1EC7n da th\u1ECBt ch\u1ED1ng \u0111\u1EE1 va ch\u1EA1m.",
+      color: "#94a3b8",
+      glowHex: "#64748b"
+    },
+    {
+      id: "talent_common_walk",
+      name: "B\u1ED9 Ph\xE1p S\u01A1 C\u1EA5p",
+      type: "talent",
+      tier: "F",
+      tierName: "Th\u01B0\u1EDDng (65%)",
+      buff: "+3% T\u1ED1c Ch\u1EA1y",
+      desc: "C\xE1ch b\u01B0\u1EDBc ch\xE2n nhanh nh\u1EB9n c\u0103n b\u1EA3n.",
+      color: "#94a3b8",
+      glowHex: "#64748b"
+    },
+    {
+      id: "talent_common_heal",
+      name: "D\u01B0\u1EE1ng Kh\xED Thu\u1EADt",
+      type: "talent",
+      tier: "F",
+      tierName: "Th\u01B0\u1EDDng (65%)",
+      buff: "H\u1ED3i 1 HP / 3s",
+      desc: "\u0110i\u1EC1u h\xF2a h\u01A1i th\u1EDF ph\u1EE5c h\u1ED3i sinh m\u1EC7nh.",
+      color: "#94a3b8",
+      glowHex: "#64748b"
+    }
+  ]
+};
+var AURA_POOL = {
+  Miracle: [
+    {
+      id: "aura_miracle_celestial",
+      name: "Th\u1EA7n Long C\u1ED5 \u1EA4n",
+      type: "aura",
+      tier: "Miracle",
+      tierName: "K\xEC T\xEDch (1/1000)",
+      buff: "+500 HP, +200 MP, B\u1ED1c Ch\xE1y Qu\xE1i",
+      desc: "H\xE0o quang Th\u1EA7n Long H\u1ED3ng Hoang r\u1EF1c l\u1EEDa xoay quanh nh\xE2n v\u1EADt, thi\xEAu \u0111\u1ED1t k\u1EBB \u0111\u1ECBch l\u1EA1i g\u1EA7n.",
+      color: "#ec4899",
+      glowHex: "#f43f5e",
+      auraColor: "rgba(244, 63, 94, 0.8)"
+    },
+    {
+      id: "aura_miracle_phoenix",
+      name: "Ph\u01B0\u1EE3ng Ho\xE0ng Ni\u1EBFt B\xE0n",
+      type: "aura",
+      tier: "Miracle",
+      tierName: "K\xEC T\xEDch (1/1000)",
+      buff: "T\u1EF1 \u0110\u1ED9ng H\u1ED3i Sinh Khi T\u1EED Tr\u1EADn",
+      desc: "L\u1EEDa Ph\u01B0\u1EE3ng Ho\xE0ng bao b\u1ECDc, khi HP v\u1EC1 0 l\u1EADp t\u1EE9c h\u1ED3i sinh v\u1EDBi 50% HP (cooldown 120s).",
+      color: "#ec4899",
+      glowHex: "#fb7185",
+      auraColor: "rgba(251, 113, 133, 0.85)"
+    }
+  ],
+  S: [
+    {
+      id: "aura_legend_dragon",
+      name: "Ho\xE0ng Long Th\u1EA7n Ch\xE2u",
+      type: "aura",
+      tier: "S",
+      tierName: "Huy\u1EC1n Tho\u1EA1i (2.9%)",
+      buff: "+250 HP, +100 MP, H\xE0o Quang R\u1ED3ng",
+      desc: "Qu\u1EA3 c\u1EA7u r\u1ED3ng v\xE0ng bay l\u01B0\u1EE3n h\u1ED9 m\u1EC7nh quanh nh\xE2n v\u1EADt, ph\xE1t t\xE1n \xE1nh ho\xE0ng kim.",
+      color: "#f97316",
+      glowHex: "#f59e0b",
+      auraColor: "rgba(245, 158, 11, 0.7)"
+    },
+    {
+      id: "aura_legend_thunderbird",
+      name: "T\u1EED L\xF4i \u0110i\u1EC3u Ph\xF9",
+      type: "aura",
+      tier: "S",
+      tierName: "Huy\u1EC1n Tho\u1EA1i (2.9%)",
+      buff: "+12% B\u1EA1o K\xEDch & S\u1EA5m S\xE9t T\xEDm",
+      desc: "Linh \u0111i\u1EC3u s\u1EA5m s\xE9t t\xEDm b\u1EA3o h\u1ED9, thi tho\u1EA3ng ph\xF3ng \u0111i\u1EC7n gi\u1EADt \u0111\u1ED1i th\u1EE7 g\u1EA7n nh\u1EA5t.",
+      color: "#f97316",
+      glowHex: "#a855f7",
+      auraColor: "rgba(168, 85, 247, 0.7)"
+    },
+    {
+      id: "aura_legend_whitetiger",
+      name: "B\u1EA1ch H\u1ED5 Th\u1EA7n Ph\xF9",
+      type: "aura",
+      tier: "S",
+      tierName: "Huy\u1EC1n Tho\u1EA1i (2.9%)",
+      buff: "+30 S\xE1t Th\u01B0\u01A1ng C\u01A1 B\u1EA3n",
+      desc: "H\xE0o quang d\u0169ng m\xE3nh c\u1EE7a th\u1EA7n th\xFA B\u1EA1ch H\u1ED5 gia t\u0103ng uy l\u1EF1c tuy\u1EC7t \u0111\u1EC9nh.",
+      color: "#f97316",
+      glowHex: "#ef4444",
+      auraColor: "rgba(239, 68, 68, 0.7)"
+    }
+  ],
+  A: [
+    {
+      id: "aura_epic_dragon",
+      name: "Long H\u1ED3n Ch\xE2u",
+      type: "aura",
+      tier: "A",
+      tierName: "Cao C\u1EA5p (9%)",
+      buff: "+120 HP & +60 MP",
+      desc: "H\xE0o quang r\u1ED3ng xanh lam bao b\u1ECDc sinh m\u1EC7nh.",
+      color: "#38bdf8",
+      glowHex: "#0284c7",
+      auraColor: "rgba(56, 189, 248, 0.5)"
+    },
+    {
+      id: "aura_epic_thunder",
+      name: "L\xF4i \u0110i\u1EC3u Ph\xF9",
+      type: "aura",
+      tier: "A",
+      tierName: "Cao C\u1EA5p (9%)",
+      buff: "+6% T\u1EC9 L\u1EC7 B\u1EA1o K\xEDch",
+      desc: "Tia s\xE9t t\xEDm qu\u1EA5n quanh v\u0169 kh\xED nh\xE2n v\u1EADt.",
+      color: "#38bdf8",
+      glowHex: "#8b5cf6",
+      auraColor: "rgba(139, 92, 246, 0.5)"
+    },
+    {
+      id: "aura_epic_tiger",
+      name: "B\u1EA1ch H\u1ED5 \u1EA4n",
+      type: "aura",
+      tier: "A",
+      tierName: "Cao C\u1EA5p (9%)",
+      buff: "+15 S\xE1t Th\u01B0\u01A1ng C\u01A1 B\u1EA3n",
+      desc: "H\xE0o quang m\xE3nh h\u1ED5 gia t\u0103ng l\u1EF1c ch\xE9m.",
+      color: "#38bdf8",
+      glowHex: "#f43f5e",
+      auraColor: "rgba(244, 63, 94, 0.5)"
+    },
+    {
+      id: "aura_epic_tortoise",
+      name: "Huy\u1EC1n V\u0169 Thu\u1EABn",
+      type: "aura",
+      tier: "A",
+      tierName: "Cao C\u1EA5p (9%)",
+      buff: "+18 Ph\xF2ng Th\u1EE7 C\u01A1 B\u1EA3n",
+      desc: "Mai r\xF9a b\xEDch l\u1EE5c ch\u1EAFn \u0111\xF2n \u0111\xE1nh l\xE9n.",
+      color: "#38bdf8",
+      glowHex: "#10b981",
+      auraColor: "rgba(16, 185, 129, 0.5)"
+    }
+  ],
+  C: [
+    {
+      id: "aura_rare_orb",
+      name: "B\xEDch Ng\u1ECDc Linh Ch\xE2u",
+      type: "aura",
+      tier: "C",
+      tierName: "Trung C\u1EA5p (23%)",
+      buff: "+60 HP Kh\u1EDFi \u0110i\u1EC3m",
+      desc: "H\xE0o quang ng\u1ECDc b\xEDch t\u1ECFa s\xE1ng d\u1ECBu m\xE1t quanh th\xE2n.",
+      color: "#22c55e",
+      glowHex: "#16a34a",
+      auraColor: "rgba(34, 197, 94, 0.35)"
+    },
+    {
+      id: "aura_rare_spark",
+      name: "Tia S\xE9t L\u1EA1c H\xE0",
+      type: "aura",
+      tier: "C",
+      tierName: "Trung C\u1EA5p (23%)",
+      buff: "+3% T\u1EC9 L\u1EC7 B\u1EA1o K\xEDch",
+      desc: "Tia \u0111i\u1EC7n quang nh\u1ECF nh\u1EA5p nh\xE1y t\u1EA1o s\u1EF1 uy hi\u1EBFp.",
+      color: "#22c55e",
+      glowHex: "#0ea5e9",
+      auraColor: "rgba(14, 165, 233, 0.35)"
+    },
+    {
+      id: "aura_rare_stone",
+      name: "H\u1ED9 M\u1EC7nh Th\u1EA1ch",
+      type: "aura",
+      tier: "C",
+      tierName: "Trung C\u1EA5p (23%)",
+      buff: "+8 Ph\xF2ng Th\u1EE7 C\u01A1 B\u1EA3n",
+      desc: "H\xE0o quang \u0111\xE1 h\u1ED9 th\u1EC3 gi\u1EA3m ch\u1EA5n \u0111\u1ED9ng.",
+      color: "#22c55e",
+      glowHex: "#ca8a04",
+      auraColor: "rgba(202, 138, 4, 0.35)"
+    }
+  ],
+  F: [
+    {
+      id: "aura_common_firefly",
+      name: "\u0110om \u0110\xF3m Ph\xE1t Quang",
+      type: "aura",
+      tier: "F",
+      tierName: "Th\u01B0\u1EDDng (65%)",
+      buff: "+20 HP",
+      desc: "V\xE0i \u0111\u1ED1m s\xE1ng nh\u1ECF l\u1EADp l\xF2e bay theo sau.",
+      color: "#94a3b8",
+      glowHex: "#64748b",
+      auraColor: "rgba(148, 163, 184, 0.25)"
+    },
+    {
+      id: "aura_common_wind",
+      name: "L\xE0n Gi\xF3 Tho\u1EA3ng",
+      type: "aura",
+      tier: "F",
+      tierName: "Th\u01B0\u1EDDng (65%)",
+      buff: "+2 Th\xE2n Ph\xE1p",
+      desc: "V\u1EC7t kh\xED tr\u1EAFng m\u1EDD nh\u1EA1t th\u1ED5i nh\u1EB9 d\u01B0\u1EDBi ch\xE2n.",
+      color: "#94a3b8",
+      glowHex: "#64748b",
+      auraColor: "rgba(148, 163, 184, 0.25)"
+    },
+    {
+      id: "aura_common_dust",
+      name: "T\xE0n Tro C\u1ED5 \u0110i\u1EC3n",
+      type: "aura",
+      tier: "F",
+      tierName: "Th\u01B0\u1EDDng (65%)",
+      buff: "+2 S\xE1t Th\u01B0\u01A1ng",
+      desc: "H\u1EA1t b\u1EE5i x\xE1m m\u1EDD nh\u1EA1t bao b\u1ECDc v\u0169 kh\xED.",
+      color: "#94a3b8",
+      glowHex: "#64748b",
+      auraColor: "rgba(148, 163, 184, 0.25)"
+    }
+  ]
+};
+function rollTier() {
+  const roll = Math.floor(Math.random() * 1e3);
+  if (roll < 650) return "F";
+  if (roll < 880) return "C";
+  if (roll < 970) return "A";
+  if (roll < 999) return "S";
+  return "Miracle";
+}
+function rollItemFromPool(type) {
+  const tier = rollTier();
+  const pool2 = type === "talent" ? TALENT_POOL[tier] : AURA_POOL[tier];
+  const item = pool2[Math.floor(Math.random() * pool2.length)];
+  return { ...item };
+}
+function rollFullDestiny() {
+  const talents = [];
+  const auras = [];
+  for (let i = 0; i < 4; i++) {
+    talents.push(rollItemFromPool("talent"));
+    auras.push(rollItemFromPool("aura"));
+  }
+  const hasMiracle = [...talents, ...auras].some((i) => i.tier === "Miracle");
+  const hasLegendary = [...talents, ...auras].some((i) => i.tier === "S");
+  return {
+    talents,
+    auras,
+    talentIds: talents.map((t) => t.id),
+    auraIds: auras.map((a) => a.id),
+    hasMiracle,
+    hasLegendary
+  };
+}
+
 // src/routes/characters.ts
 var router4 = (0, import_express4.Router)();
 router4.post("/characters/sync", requireAuth, async (req, res) => {
@@ -63647,6 +64078,12 @@ router4.post("/characters/sync", requireAuth, async (req, res) => {
         classId: c.classId,
         className: c.className || c.classId,
         gender: c.gender || "male",
+        hairStyle: c.hairStyle || "phong_van",
+        hairColor: c.hairColor || "#1e1e1e",
+        outfitId: c.outfitId || "basic",
+        destinyRolled: Boolean(c.destinyRolled),
+        talentIds: Array.isArray(c.talentIds) ? JSON.stringify(c.talentIds) : typeof c.talentIds === "string" ? c.talentIds : "[]",
+        auraIds: Array.isArray(c.auraIds) ? JSON.stringify(c.auraIds) : typeof c.auraIds === "string" ? c.auraIds : "[]",
         level: c.level || 1,
         experience: c.experience || 0,
         hp: c.hp || 100,
@@ -63753,6 +64190,12 @@ router4.post("/characters", requireAuth, async (req, res) => {
   const combatPower = Math.floor(
     stats.hp * 0.2 + stats.mp * 0.1 + stats.atk * 8 + 10 * 6 + stats.def * 10 + stats.spd * 15 + stats.critRate * 12
   );
+  const hairStyle = typeof req.body.hairStyle === "string" ? req.body.hairStyle : "phong_van";
+  const hairColor = typeof req.body.hairColor === "string" ? req.body.hairColor : "#1e1e1e";
+  const outfitId = typeof req.body.outfitId === "string" ? req.body.outfitId : "basic";
+  const destinyRolled = Boolean(req.body.destinyRolled);
+  const talentIds = Array.isArray(req.body.talentIds) ? JSON.stringify(req.body.talentIds) : typeof req.body.talentIds === "string" ? req.body.talentIds : "[]";
+  const auraIds = Array.isArray(req.body.auraIds) ? JSON.stringify(req.body.auraIds) : typeof req.body.auraIds === "string" ? req.body.auraIds : "[]";
   const [character] = await db.insert(charactersTable).values({
     userId: req.session.userId,
     serverId: server.id,
@@ -63760,6 +64203,12 @@ router4.post("/characters", requireAuth, async (req, res) => {
     classId,
     className: cls.name,
     gender,
+    hairStyle,
+    hairColor,
+    outfitId,
+    destinyRolled,
+    talentIds,
+    auraIds,
     level: 1,
     experience: 0,
     hp: stats.hp,
@@ -63788,6 +64237,65 @@ router4.post("/characters", requireAuth, async (req, res) => {
   return res.status(201).json({
     ...await toCharacterResponse(character),
     experienceToNextLevel: getExpForLevel2(1)
+  });
+});
+router4.post("/characters/roll-destiny", requireAuth, async (req, res) => {
+  const characterId = Number(req.body.characterId);
+  if (!characterId) {
+    const result = rollFullDestiny();
+    return res.status(200).json({ success: true, ...result });
+  }
+  const [char2] = await db.select().from(charactersTable).where(eq(charactersTable.id, characterId)).limit(1);
+  if (!char2) {
+    return res.status(404).json({ error: "Kh\xF4ng t\xECm th\u1EA5y nh\xE2n v\u1EADt" });
+  }
+  if (char2.userId !== req.session.userId) {
+    return res.status(403).json({ error: "B\u1EA1n kh\xF4ng s\u1EDF h\u1EEFu nh\xE2n v\u1EADt n\xE0y" });
+  }
+  if (char2.destinyRolled) {
+    return res.status(400).json({ error: "B\u1EA1n ch\u1EC9 \u0111\u01B0\u1EE3c x\xFAc x\u1EAFc Thi\xEAn M\u1EC7nh m\u1ED9t l\u1EA7n duy nh\u1EA5t!" });
+  }
+  const rollResult = rollFullDestiny();
+  await db.transaction(async (tx) => {
+    await tx.update(charactersTable).set({
+      destinyRolled: true,
+      talentIds: JSON.stringify(rollResult.talentIds),
+      auraIds: JSON.stringify(rollResult.auraIds)
+    }).where(eq(charactersTable.id, characterId));
+  });
+  return res.status(200).json({
+    success: true,
+    ...rollResult,
+    message: "Thi\xEAn M\u1EC7nh v\xE0 Kh\xED Linh \u0111\xE3 \u0111\u01B0\u1EE3c \u0111\u1ECBnh \u0111o\u1EA1t v\xE0 kh\xF3a v\u0129nh vi\u1EC5n!"
+  });
+});
+router4.post("/characters/:id/roll-destiny", requireAuth, async (req, res) => {
+  const characterId = Number(req.params.id);
+  if (!characterId) {
+    return res.status(400).json({ error: "ID nh\xE2n v\u1EADt kh\xF4ng h\u1EE3p l\u1EC7" });
+  }
+  const [char2] = await db.select().from(charactersTable).where(eq(charactersTable.id, characterId)).limit(1);
+  if (!char2) {
+    return res.status(404).json({ error: "Kh\xF4ng t\xECm th\u1EA5y nh\xE2n v\u1EADt" });
+  }
+  if (char2.userId !== req.session.userId) {
+    return res.status(403).json({ error: "B\u1EA1n kh\xF4ng s\u1EDF h\u1EEFu nh\xE2n v\u1EADt n\xE0y" });
+  }
+  if (char2.destinyRolled) {
+    return res.status(400).json({ error: "B\u1EA1n ch\u1EC9 \u0111\u01B0\u1EE3c x\xFAc x\u1EAFc Thi\xEAn M\u1EC7nh m\u1ED9t l\u1EA7n duy nh\u1EA5t!" });
+  }
+  const rollResult = rollFullDestiny();
+  await db.transaction(async (tx) => {
+    await tx.update(charactersTable).set({
+      destinyRolled: true,
+      talentIds: JSON.stringify(rollResult.talentIds),
+      auraIds: JSON.stringify(rollResult.auraIds)
+    }).where(eq(charactersTable.id, characterId));
+  });
+  return res.status(200).json({
+    success: true,
+    ...rollResult,
+    message: "Thi\xEAn M\u1EC7nh v\xE0 Kh\xED Linh \u0111\xE3 \u0111\u01B0\u1EE3c \u0111\u1ECBnh \u0111o\u1EA1t v\xE0 kh\xF3a v\u0129nh vi\u1EC5n!"
   });
 });
 router4.get("/characters/:characterId", requireAuth, async (req, res) => {

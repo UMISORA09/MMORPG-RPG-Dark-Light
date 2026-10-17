@@ -42,10 +42,88 @@ export interface SpriteBillboard25DProps {
   debuffBadges?: string[];
   showOverhead?: boolean;
   onClick?: () => void;
+  hairStyle?: string;
+  hairColor?: string;
+  outfitId?: string;
+  auraIds?: string[];
 }
 
 const TOTAL_COLS = 8;
 const TOTAL_ROWS = 9;
+
+const RELIC_AURA_MAP: Record<string, { color: string; emissive: string; intensity: number; size: number }> = {
+  aura_miracle_celestial: { color: "#ec4899", emissive: "#f43f5e", intensity: 2.2, size: 0.16 },
+  aura_miracle_phoenix: { color: "#f43f5e", emissive: "#fb7185", intensity: 2.2, size: 0.16 },
+  aura_legend_dragon: { color: "#f59e0b", emissive: "#fbbf24", intensity: 1.8, size: 0.13 },
+  aura_legend_thunderbird: { color: "#a855f7", emissive: "#c084fc", intensity: 1.8, size: 0.13 },
+  aura_legend_whitetiger: { color: "#ef4444", emissive: "#f87171", intensity: 1.8, size: 0.13 },
+  aura_epic_dragon: { color: "#0284c7", emissive: "#38bdf8", intensity: 1.4, size: 0.11 },
+  aura_epic_thunder: { color: "#8b5cf6", emissive: "#a78bfa", intensity: 1.4, size: 0.11 },
+  aura_epic_tiger: { color: "#f43f5e", emissive: "#fb7185", intensity: 1.4, size: 0.11 },
+  aura_epic_tortoise: { color: "#10b981", emissive: "#34d399", intensity: 1.4, size: 0.11 },
+  dragon: { color: "#f59e0b", emissive: "#fbbf24", intensity: 1.5, size: 0.12 },
+  thunder: { color: "#a855f7", emissive: "#c084fc", intensity: 1.5, size: 0.12 },
+  tiger: { color: "#ef4444", emissive: "#f87171", intensity: 1.5, size: 0.12 },
+  tortoise: { color: "#10b981", emissive: "#34d399", intensity: 1.5, size: 0.12 },
+};
+
+function OrbitingRelicAura({ auraIds }: { auraIds?: string[] }) {
+  const orbRef = useRef<THREE.Group>(null);
+  const ringRef = useRef<THREE.Mesh>(null);
+
+  const activeKey = useMemo(() => {
+    if (!auraIds || auraIds.length === 0) return null;
+    const miracle = auraIds.find((id) => id.includes("miracle"));
+    if (miracle) return miracle;
+    const legend = auraIds.find((id) => id.includes("legend"));
+    if (legend) return legend;
+    const epic = auraIds.find((id) => id.includes("epic"));
+    if (epic) return epic;
+    return auraIds[0];
+  }, [auraIds]);
+
+  const cfg = activeKey ? RELIC_AURA_MAP[activeKey] || RELIC_AURA_MAP.dragon : null;
+
+  useFrame((state, delta) => {
+    if (!orbRef.current) return;
+    const t = state.clock.getElapsedTime();
+    const radius = 0.82;
+    orbRef.current.position.x = Math.cos(t * 2.4) * radius;
+    orbRef.current.position.z = Math.sin(t * 2.4) * radius;
+    orbRef.current.position.y = 0.85 + Math.sin(t * 3.6) * 0.12;
+
+    if (ringRef.current) {
+      ringRef.current.rotation.z += delta * 1.5;
+    }
+  });
+
+  if (!cfg) return null;
+
+  return (
+    <group>
+      {/* Orbiting Celestial Sphere */}
+      <group ref={orbRef}>
+        <mesh>
+          <sphereGeometry args={[cfg.size, 16, 16]} />
+          <meshStandardMaterial
+            color={cfg.color}
+            emissive={cfg.emissive}
+            emissiveIntensity={cfg.intensity}
+            roughness={0.2}
+            metalness={0.8}
+          />
+        </mesh>
+        <pointLight color={cfg.emissive} intensity={cfg.intensity * 1.2} distance={2.5} />
+      </group>
+
+      {/* Gentle Foot Halo Ring in Relic Color */}
+      <mesh ref={ringRef} rotation={[-Math.PI / 2, 0, 0]} position={[0, 0.04, 0]}>
+        <ringGeometry args={[0.55, 0.62, 32]} />
+        <meshBasicMaterial color={cfg.emissive} transparent opacity={0.45} depthWrite={false} side={THREE.DoubleSide} />
+      </mesh>
+    </group>
+  );
+}
 
 export const SpriteBillboard25D = memo(function SpriteBillboard25D({
   position,
@@ -58,6 +136,10 @@ export const SpriteBillboard25D = memo(function SpriteBillboard25D({
   color = "#38bdf8",
   secondaryColor = "#ffffff",
   weaponType = "sword",
+  hairStyle,
+  hairColor,
+  outfitId,
+  auraIds,
   name,
   level,
   hp,
@@ -345,6 +427,9 @@ export const SpriteBillboard25D = memo(function SpriteBillboard25D({
         />
       </mesh>
 
+      {/* Orbiting Celestial Spirit / Relic Aura if equipped */}
+      <OrbitingRelicAura auraIds={auraIds} />
+
       {/* 2.5D Billboard Mesh that always faces the camera */}
       <Billboard
         follow={true}
@@ -357,6 +442,7 @@ export const SpriteBillboard25D = memo(function SpriteBillboard25D({
           <meshStandardMaterial
             ref={materialRef}
             map={texture}
+            color={outfitId === "shadow" ? "#94a3b8" : outfitId === "crimson" ? "#fca5a5" : outfitId === "frost" ? "#bae6fd" : "#ffffff"}
             transparent={true}
             alphaTest={0.45}
             side={THREE.DoubleSide}

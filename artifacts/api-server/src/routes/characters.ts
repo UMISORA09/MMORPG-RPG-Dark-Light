@@ -6,6 +6,7 @@ import { CHARACTER_CLASSES, getStatsForLevel } from "../data/classes";
 import { requireAuth } from "../middlewares/requireAuth";
 import { recalculateCharacterStats } from "../services/CharacterInventoryService";
 import { CharacterPersistenceService } from "../services/CharacterPersistenceService";
+import { rollFullDestiny } from "../services/destinyGenerator";
 import {
   ensureItemCatalog,
   ensureServerCatalog,
@@ -32,6 +33,12 @@ router.post("/characters/sync", requireAuth, async (req, res) => {
         classId: c.classId,
         className: c.className || c.classId,
         gender: c.gender || "male",
+        hairStyle: c.hairStyle || "phong_van",
+        hairColor: c.hairColor || "#1e1e1e",
+        outfitId: c.outfitId || "basic",
+        destinyRolled: Boolean(c.destinyRolled),
+        talentIds: Array.isArray(c.talentIds) ? JSON.stringify(c.talentIds) : (typeof c.talentIds === "string" ? c.talentIds : "[]"),
+        auraIds: Array.isArray(c.auraIds) ? JSON.stringify(c.auraIds) : (typeof c.auraIds === "string" ? c.auraIds : "[]"),
         level: c.level || 1,
         experience: c.experience || 0,
         hp: c.hp || 100,
@@ -154,6 +161,13 @@ router.post("/characters", requireAuth, async (req, res) => {
     stats.hp * 0.2 + stats.mp * 0.1 + stats.atk * 8 + 10 * 6 + stats.def * 10 + stats.spd * 15 + stats.critRate * 12
   );
 
+  const hairStyle = typeof req.body.hairStyle === "string" ? req.body.hairStyle : "phong_van";
+  const hairColor = typeof req.body.hairColor === "string" ? req.body.hairColor : "#1e1e1e";
+  const outfitId = typeof req.body.outfitId === "string" ? req.body.outfitId : "basic";
+  const destinyRolled = Boolean(req.body.destinyRolled);
+  const talentIds = Array.isArray(req.body.talentIds) ? JSON.stringify(req.body.talentIds) : (typeof req.body.talentIds === "string" ? req.body.talentIds : "[]");
+  const auraIds = Array.isArray(req.body.auraIds) ? JSON.stringify(req.body.auraIds) : (typeof req.body.auraIds === "string" ? req.body.auraIds : "[]");
+
   const [character] = await db
     .insert(charactersTable)
     .values({
@@ -163,6 +177,12 @@ router.post("/characters", requireAuth, async (req, res) => {
       classId,
       className: cls.name,
       gender,
+      hairStyle,
+      hairColor,
+      outfitId,
+      destinyRolled,
+      talentIds,
+      auraIds,
       level: 1,
       experience: 0,
       hp: stats.hp,
@@ -197,6 +217,74 @@ router.post("/characters", requireAuth, async (req, res) => {
   return res.status(201).json({
     ...(await toCharacterResponse(character)),
     experienceToNextLevel: getExpForLevel(1),
+  });
+});
+
+// Endpoint gacha Thiên Mệnh 1 lần duy nhất cho nhân vật
+router.post("/characters/roll-destiny", requireAuth, async (req, res) => {
+  const characterId = Number(req.body.characterId);
+  if (!characterId) {
+    // Roll ngẫu nhiên khi đang ở màn hình tạo nhân vật
+    const result = rollFullDestiny();
+    return res.status(200).json({ success: true, ...result });
+  }
+
+  const [char] = await db.select().from(charactersTable).where(eq(charactersTable.id, characterId)).limit(1);
+  if (!char) {
+    return res.status(404).json({ error: "Không tìm thấy nhân vật" });
+  }
+  if (char.userId !== req.session.userId) {
+    return res.status(403).json({ error: "Bạn không sở hữu nhân vật này" });
+  }
+  if (char.destinyRolled) {
+    return res.status(400).json({ error: "Bạn chỉ được xúc xắc Thiên Mệnh một lần duy nhất!" });
+  }
+
+  const rollResult = rollFullDestiny();
+  await db.transaction(async (tx: any) => {
+    await tx.update(charactersTable).set({
+      destinyRolled: true,
+      talentIds: JSON.stringify(rollResult.talentIds),
+      auraIds: JSON.stringify(rollResult.auraIds),
+    }).where(eq(charactersTable.id, characterId));
+  });
+
+  return res.status(200).json({
+    success: true,
+    ...rollResult,
+    message: "Thiên Mệnh và Khí Linh đã được định đoạt và khóa vĩnh viễn!",
+  });
+});
+
+router.post("/characters/:id/roll-destiny", requireAuth, async (req, res) => {
+  const characterId = Number(req.params.id);
+  if (!characterId) {
+    return res.status(400).json({ error: "ID nhân vật không hợp lệ" });
+  }
+  const [char] = await db.select().from(charactersTable).where(eq(charactersTable.id, characterId)).limit(1);
+  if (!char) {
+    return res.status(404).json({ error: "Không tìm thấy nhân vật" });
+  }
+  if (char.userId !== req.session.userId) {
+    return res.status(403).json({ error: "Bạn không sở hữu nhân vật này" });
+  }
+  if (char.destinyRolled) {
+    return res.status(400).json({ error: "Bạn chỉ được xúc xắc Thiên Mệnh một lần duy nhất!" });
+  }
+
+  const rollResult = rollFullDestiny();
+  await db.transaction(async (tx: any) => {
+    await tx.update(charactersTable).set({
+      destinyRolled: true,
+      talentIds: JSON.stringify(rollResult.talentIds),
+      auraIds: JSON.stringify(rollResult.auraIds),
+    }).where(eq(charactersTable.id, characterId));
+  });
+
+  return res.status(200).json({
+    success: true,
+    ...rollResult,
+    message: "Thiên Mệnh và Khí Linh đã được định đoạt và khóa vĩnh viễn!",
   });
 });
 

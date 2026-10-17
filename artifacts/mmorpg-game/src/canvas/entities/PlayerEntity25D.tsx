@@ -119,6 +119,10 @@ export const PlayerEntity25D = memo(function PlayerEntity25D() {
   const playerName = useGameWorldStore((s) => s.playerName);
   const playerClassId = useGameWorldStore((s) => s.playerClassId);
   const playerGender = useGameWorldStore((s) => s.playerGender);
+  const playerHairStyle = useGameWorldStore((s) => s.playerHairStyle);
+  const playerHairColor = useGameWorldStore((s) => s.playerHairColor);
+  const playerOutfitId = useGameWorldStore((s) => s.playerOutfitId);
+  const playerAuraIds = useGameWorldStore((s) => s.playerAuraIds);
   const playerColorHex = useGameWorldStore((s) => s.playerColorHex);
   const isInvincible = useGameWorldStore((s) => s.isInvincible);
   const characterRenderMode = useGameWorldStore((s) => s.characterRenderMode);
@@ -529,6 +533,10 @@ export const PlayerEntity25D = memo(function PlayerEntity25D() {
             facingLeft={visualFacingLeft}
             textureKey={`player_${playerClassId}`}
             color={playerColorHex}
+            hairStyle={playerHairStyle}
+            hairColor={playerHairColor}
+            outfitId={playerOutfitId}
+            auraIds={playerAuraIds}
             weaponType={
               playerClassId === "gunner"
                 ? "gun"
