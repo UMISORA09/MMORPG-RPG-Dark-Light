@@ -91,6 +91,57 @@ export function restoreMemoryStore() {
 
 export { memoryStore };
 
+export async function wipeAllAccountsAndUserData() {
+  memoryStore.users = [];
+  memoryStore.characters = [];
+  memoryStore.character_items = [];
+  memoryStore.character_quests = [];
+  memoryStore.battle_logs = [];
+  memoryStore.encounters = [];
+  memoryStore.reward_grants = [];
+  memoryStore.forum_posts = [];
+  memoryStore.forum_comments = [];
+  memoryStore.world_chats = [];
+  memoryStore.market_listings = [];
+  autoIncrement.users = 1;
+  autoIncrement.characters = 1;
+  autoIncrement.character_items = 1;
+  autoIncrement.battle_logs = 1;
+  autoIncrement.forum_posts = 1;
+  autoIncrement.world_chats = 1;
+  autoIncrement.market_listings = 100;
+
+  try {
+    if (fs.existsSync(STORE_FILE)) {
+      fs.unlinkSync(STORE_FILE);
+    }
+  } catch {}
+
+  persistMemoryStore();
+
+  if (isPostgres && pool) {
+    try {
+      await pool.query(`
+        TRUNCATE TABLE 
+          users, 
+          characters, 
+          character_items, 
+          character_quests, 
+          battle_logs, 
+          encounters, 
+          reward_grants, 
+          forum_posts, 
+          forum_comments, 
+          world_chats, 
+          market_listings 
+        CASCADE;
+      `);
+    } catch (e) {
+      console.warn("[DB] Failed to truncate postgres tables:", e);
+    }
+  }
+}
+
 restoreMemoryStore();
 
 function createMemoryDb() {

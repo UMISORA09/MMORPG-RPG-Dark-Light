@@ -431,6 +431,44 @@ export const GMAdminPanel = memo(function GMAdminPanel() {
                 <ChevronRight className="w-4 h-4 text-amber-400 group-hover:translate-x-1 transition-transform" />
               </button>
 
+              {/* 8. Reset Toàn Bộ Dữ Liệu Tài Khoản */}
+              <button
+                onClick={async () => {
+                  if (window.confirm("CẢNH BÁO GM: Bạn có chắc chắn muốn xóa toàn bộ tài khoản cũ và đưa Server về ban đầu?")) {
+                    setLoadingAction("reset_all");
+                    try {
+                      await fetch("/api/admin/reset-database", { method: "POST" });
+                      localStorage.clear();
+                      sessionStorage.clear();
+                      showFeedback("♻️ Đã xóa sạch toàn bộ tài khoản cũ!");
+                      setTimeout(() => { window.location.href = "/"; }, 1200);
+                    } catch {
+                      localStorage.clear();
+                      window.location.href = "/";
+                    } finally {
+                      setLoadingAction(null);
+                    }
+                  }
+                }}
+                disabled={loadingAction === "reset_all"}
+                className="sm:col-span-2 p-3 rounded-2xl bg-rose-950/40 hover:bg-rose-950/60 border border-rose-500/50 hover:border-rose-400 transition flex items-center justify-between group cursor-pointer text-left"
+              >
+                <div className="flex items-center gap-3">
+                  <div className="w-8 h-8 rounded-xl bg-rose-500/20 border border-rose-400/50 flex items-center justify-center text-rose-400">
+                    <AlertTriangle className="w-4 h-4" />
+                  </div>
+                  <div>
+                    <h4 className="text-xs font-black text-rose-300">
+                      🚨 Xóa Hết Tài Khoản Cũ & Đặt Lại Server (Wipe All Accounts)
+                    </h4>
+                    <p className="text-[10px] text-slate-400">
+                      Xóa sạch bảng users, characters, items trong database và dọn sạch bộ nhớ đệm
+                    </p>
+                  </div>
+                </div>
+                <ChevronRight className="w-4 h-4 text-rose-400 group-hover:translate-x-1 transition-transform" />
+              </button>
+
             </div>
           </div>
 

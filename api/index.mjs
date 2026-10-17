@@ -61538,6 +61538,54 @@ function restoreMemoryStore() {
   } catch {
   }
 }
+async function wipeAllAccountsAndUserData() {
+  memoryStore.users = [];
+  memoryStore.characters = [];
+  memoryStore.character_items = [];
+  memoryStore.character_quests = [];
+  memoryStore.battle_logs = [];
+  memoryStore.encounters = [];
+  memoryStore.reward_grants = [];
+  memoryStore.forum_posts = [];
+  memoryStore.forum_comments = [];
+  memoryStore.world_chats = [];
+  memoryStore.market_listings = [];
+  autoIncrement.users = 1;
+  autoIncrement.characters = 1;
+  autoIncrement.character_items = 1;
+  autoIncrement.battle_logs = 1;
+  autoIncrement.forum_posts = 1;
+  autoIncrement.world_chats = 1;
+  autoIncrement.market_listings = 100;
+  try {
+    if (fs.existsSync(STORE_FILE)) {
+      fs.unlinkSync(STORE_FILE);
+    }
+  } catch {
+  }
+  persistMemoryStore();
+  if (isPostgres && pool) {
+    try {
+      await pool.query(`
+        TRUNCATE TABLE 
+          users, 
+          characters, 
+          character_items, 
+          character_quests, 
+          battle_logs, 
+          encounters, 
+          reward_grants, 
+          forum_posts, 
+          forum_comments, 
+          world_chats, 
+          market_listings 
+        CASCADE;
+      `);
+    } catch (e) {
+      console.warn("[DB] Failed to truncate postgres tables:", e);
+    }
+  }
+}
 restoreMemoryStore();
 function createMemoryDb() {
   const getTableData = (table) => {
@@ -63303,6 +63351,24 @@ var handleGetMe = async (req, res) => {
 router2.get("/auth/me", handleGetMe);
 router2.get("/users/me", handleGetMe);
 router2.get("/api/users/me", handleGetMe);
+var handleResetAllAccounts = async (_req, res) => {
+  try {
+    await wipeAllAccountsAndUserData();
+    return res.status(200).json({
+      success: true,
+      message: "\u0110\xE3 x\xF3a to\xE0n b\u1ED9 t\xE0i kho\u1EA3n c\u0169 v\xE0 \u0111\u01B0a d\u1EEF li\u1EC7u m\xE1y ch\u1EE7 v\u1EC1 tr\u1EA1ng th\xE1i ban \u0111\u1EA7u s\u1EA1ch s\u1EBD."
+    });
+  } catch (err) {
+    return res.status(500).json({
+      success: false,
+      error: err?.message || "L\u1ED7i khi x\xF3a t\xE0i kho\u1EA3n"
+    });
+  }
+};
+router2.post("/auth/reset-all-accounts", handleResetAllAccounts);
+router2.post("/admin/reset-database", handleResetAllAccounts);
+router2.post("/api/auth/reset-all-accounts", handleResetAllAccounts);
+router2.post("/api/admin/reset-database", handleResetAllAccounts);
 var auth_default = router2;
 
 // src/routes/classes.ts

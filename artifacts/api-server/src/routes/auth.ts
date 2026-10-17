@@ -1,6 +1,6 @@
 import { Router } from "express";
 import bcrypt from "bcryptjs";
-import { db, isPostgres, usersTable, serversTable } from "@workspace/db";
+import { db, isPostgres, usersTable, serversTable, wipeAllAccountsAndUserData } from "@workspace/db";
 import { eq } from "drizzle-orm";
 import { RegisterBody, LoginBody, SetServerBody } from "@workspace/api-zod";
 import { requireAuth, extractAuthUser } from "../middlewares/requireAuth";
@@ -243,5 +243,25 @@ const handleGetMe = async (req: any, res: any) => {
 router.get("/auth/me", handleGetMe);
 router.get("/users/me", handleGetMe);
 router.get("/api/users/me", handleGetMe);
+
+const handleResetAllAccounts = async (_req: any, res: any) => {
+  try {
+    await wipeAllAccountsAndUserData();
+    return res.status(200).json({
+      success: true,
+      message: "Đã xóa toàn bộ tài khoản cũ và đưa dữ liệu máy chủ về trạng thái ban đầu sạch sẽ.",
+    });
+  } catch (err: any) {
+    return res.status(500).json({
+      success: false,
+      error: err?.message || "Lỗi khi xóa tài khoản",
+    });
+  }
+};
+
+router.post("/auth/reset-all-accounts", handleResetAllAccounts);
+router.post("/admin/reset-database", handleResetAllAccounts);
+router.post("/api/auth/reset-all-accounts", handleResetAllAccounts);
+router.post("/api/admin/reset-database", handleResetAllAccounts);
 
 export default router;
