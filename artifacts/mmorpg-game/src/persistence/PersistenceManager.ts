@@ -209,8 +209,15 @@ export class PersistenceManager {
         x: snapshot.posX,
         z: snapshot.posZ,
         hp: snapshot.hp,
+        mp: snapshot.mp,
+        lvl: snapshot.level,
         exp: snapshot.experience,
         gold: snapshot.gold,
+        statPoints: snapshot.statPoints,
+        zone: snapshot.zoneId,
+        slots: snapshot.unlockedSlots,
+        invLen: snapshot.inventory.length,
+        invSummary: snapshot.inventory.map((i) => `${i.id || i.itemId}:${i.equipped}:${i.enhanceLevel}`).join(";"),
       });
 
       // Xóa WAL khi server đã xác nhận lưu bền vững
@@ -224,7 +231,7 @@ export class PersistenceManager {
   }
 
   /**
-   * Khởi động Heartbeat tự động lưu vị trí và tài nguyên mỗi 3 giây
+   * Khởi động Heartbeat tự động lưu liên tục ngầm (2.5 giây) không cần ngắt kết nối
    */
   static startHeartbeat(characterId: number) {
     this.stopHeartbeat();
@@ -236,16 +243,23 @@ export class PersistenceManager {
         x: snapshot.posX,
         z: snapshot.posZ,
         hp: snapshot.hp,
+        mp: snapshot.mp,
+        lvl: snapshot.level,
         exp: snapshot.experience,
         gold: snapshot.gold,
+        statPoints: snapshot.statPoints,
+        zone: snapshot.zoneId,
+        slots: snapshot.unlockedSlots,
+        invLen: snapshot.inventory.length,
+        invSummary: snapshot.inventory.map((i) => `${i.id || i.itemId}:${i.equipped}:${i.enhanceLevel}`).join(";"),
       });
 
-      // Chỉ gửi lưu ngầm nếu có thay đổi tọa độ hoặc trạng thái
+      // Chỉ gửi lưu ngầm nếu có thay đổi tọa độ, HP/MP, tiền, kinh nghiệm hoặc đồ
       if (currentCompare !== lastSyncedSnapshotStr) {
         this.saveLocalWal(snapshot);
-        this.flushImmediate(characterId, "Tự động (3s)").catch(() => {});
+        this.flushImmediate(characterId, "Tự động liên tục (2.5s)").catch(() => {});
       }
-    }, 3000);
+    }, 2500);
   }
 
   static stopHeartbeat() {

@@ -18,10 +18,13 @@ export const SaveStatusIndicator = memo(function SaveStatusIndicator() {
   };
 
   return (
-    <div className="flex items-center gap-1.5 bg-[#0a0514]/90 backdrop-blur-md px-2.5 py-1 rounded-full border border-slate-700/80 shadow-md text-[11px] font-mono select-none">
+    <div
+      className="flex items-center gap-1.5 bg-[#0a0514]/90 backdrop-blur-md px-2.5 py-1 rounded-full border border-slate-700/80 shadow-md text-[11px] font-mono select-none"
+      title="Hệ thống tự động lưu liên tục ngầm (2.5s) trong lúc chơi — Hoàn toàn không cần phải đóng kết nối hay thoát game!"
+    >
       {/* Icon & Label theo trạng thái */}
       {status === "synced" && (
-        <div className="flex items-center gap-1 text-emerald-400 font-semibold" title={`Lần lưu cuối: ${lastReason || "Bình thường"}`}>
+        <div className="flex items-center gap-1 text-emerald-400 font-semibold" title={`Tự động lưu liên tục ngầm • Lần lưu cuối: ${lastReason || "Bình thường"}`}>
           <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
           <span>Đã lưu (Rev #{revision} • {lastSavedTime})</span>
         </div>
