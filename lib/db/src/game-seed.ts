@@ -35,6 +35,7 @@ const rarities = [
   { id: "rare", level: 5, price: 350, minStat: 12, maxStat: 22, minHp: 80, maxHp: 150, crit: 3, spd: 1 },
   { id: "epic", level: 8, price: 1200, minStat: 30, maxStat: 50, minHp: 250, maxHp: 250, crit: 6, spd: 5 },
   { id: "legendary", level: 12, price: 4000, minStat: 75, maxStat: 120, minHp: 500, maxHp: 500, crit: 12, spd: 8 },
+  { id: "miracle", level: 15, price: 20000, minStat: 260, maxStat: 420, minHp: 1800, maxHp: 2500, crit: 25, spd: 18 },
 ] as const;
 
 const professionWeapons: Record<keyof typeof classNames, string> = {
@@ -101,6 +102,8 @@ const utilitySeeds = [
   { id: "quest_gold_chest", name: "Rương Báu Hoàng Kim", category: "quest", type: "chest", equipSlot: "none", rarity: "legendary", price: 0, maxStack: 10, icon: "🧰", description: "Rương chứa phần thưởng nhiệm vụ.", lore: "Chỉ mở được bởi người mang ấn Long Vương." },
   { id: "quest_dragon_seal", name: "Ấn Chương Long Vương", category: "quest", type: "chest", equipSlot: "none", rarity: "epic", price: 0, maxStack: 20, icon: "🐉", description: "Ấn chương nhiệm vụ Long Vương.", lore: "Biểu tượng của giao ước cổ." },
   { id: "quest_spy_letter", name: "Thư Mật Thám", category: "quest", type: "scroll", equipSlot: "none", rarity: "common", price: 0, maxStack: 20, icon: "✉", description: "Thư mật thu thập từ Hắc Ám Thâm Uyên.", lore: "Niêm phong bằng sáp đỏ." },
+  { id: "charm_protection", name: "Bùa Bảo Hộ Cường Hóa", category: "consumable", type: "scroll", equipSlot: "none", rarity: "epic", price: 500, maxStack: 99, icon: "🧿", description: "Bảo hộ trang bị không bị rớt cấp khi cường hóa thất bại từ +10 trở lên.", lore: "Bùa chú cổ xưa khắc ấn linh văn hộ mệnh của Thần Rèn." },
+  { id: "material_miracle_core", name: "Lõi Tinh Thể Kì Tích", category: "material", type: "stone", equipSlot: "none", rarity: "miracle", price: 10000, maxStack: 99, icon: "💖", description: "Lõi tinh thể tối cao tỏa hào quang hồng tím ánh kim rực rỡ, tích tụ tinh hoa đất trời.", lore: "Truyền thuyết kể rằng chỉ có Boss Long Vương hoặc quái vật mang thiên mệnh mới kết tinh được." },
 ].map((item) => ({
   hpBoost: 0, mpBoost: 0, atkBoost: 0, matkBoost: 0, defBoost: 0, mdefBoost: 0, spdBoost: 0,
   strBoost: 0, dexBoost: 0, intBoost: 0, lukBoost: 0, vitBoost: 0, critRateBoost: 0,
@@ -144,6 +147,7 @@ export const SEED_WORLD_MONSTERS = monsterDefinitions.map((m, index) => {
     { itemId: "material_steel_ore", chancePercent: 25 },
     { itemId: "gear_tank_helm_common", chancePercent: 7 },
     { itemId: "material_enhance_stone", chancePercent: 3 },
+    { itemId: "material_miracle_core", chancePercent: 0.001 },
   ];
 
   if (isBoss) {
@@ -154,6 +158,12 @@ export const SEED_WORLD_MONSTERS = monsterDefinitions.map((m, index) => {
       { itemId: "gear_fighter_main_weapon_legendary", chancePercent: 2.5 },
       { itemId: "gear_assassin_main_weapon_legendary", chancePercent: 2.5 },
       { itemId: "gear_gunner_main_weapon_legendary", chancePercent: 2.5 },
+      { itemId: "gear_tank_main_weapon_miracle", chancePercent: 0.05 },
+      { itemId: "gear_fighter_main_weapon_miracle", chancePercent: 0.05 },
+      { itemId: "gear_assassin_main_weapon_miracle", chancePercent: 0.05 },
+      { itemId: "gear_gunner_main_weapon_miracle", chancePercent: 0.05 },
+      { itemId: "material_miracle_core", chancePercent: 0.05 },
+      { itemId: "charm_protection", chancePercent: 15 },
       { itemId: "quest_gold_chest", chancePercent: 50 },
     ];
   } else if (isElite) {
@@ -163,6 +173,8 @@ export const SEED_WORLD_MONSTERS = monsterDefinitions.map((m, index) => {
       { itemId: "gear_fighter_main_weapon_rare", chancePercent: 8 },
       { itemId: "potion_hp_greater", chancePercent: 40 },
       { itemId: "material_dark_shard", chancePercent: 35 },
+      { itemId: "material_miracle_core", chancePercent: 0.001 },
+      { itemId: "charm_protection", chancePercent: 1.5 },
     ];
   }
 

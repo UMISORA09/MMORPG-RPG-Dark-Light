@@ -44,6 +44,12 @@ export async function listInventory(characterId: number) {
       item: itemsTable,
       ownershipId: characterItemsTable.id,
       equipped: characterItemsTable.equipped,
+      equippedSlot: characterItemsTable.equippedSlot,
+      slotIndex: characterItemsTable.slotIndex,
+      quantity: characterItemsTable.quantity,
+      enhanceLevel: characterItemsTable.enhanceLevel,
+      bonusCombatPower: characterItemsTable.bonusCombatPower,
+      rarity: characterItemsTable.rarity,
       acquiredAt: characterItemsTable.acquiredAt,
     })
     .from(characterItemsTable)
@@ -107,7 +113,12 @@ export async function getOwnedItem(characterId: number, itemId: string) {
     .select({
       ownershipId: characterItemsTable.id,
       equipped: characterItemsTable.equipped,
+      equippedSlot: characterItemsTable.equippedSlot,
       slotIndex: characterItemsTable.slotIndex,
+      quantity: characterItemsTable.quantity,
+      enhanceLevel: characterItemsTable.enhanceLevel,
+      bonusCombatPower: characterItemsTable.bonusCombatPower,
+      rarity: characterItemsTable.rarity,
       characterId: characterItemsTable.characterId,
       item: itemsTable,
     })
@@ -126,7 +137,12 @@ export async function getOwnedItem(characterId: number, itemId: string) {
   return {
     ownershipId: owned.ownershipId ?? (owned as any).id,
     equipped: Boolean(owned.equipped),
+    equippedSlot: owned.equippedSlot,
     slotIndex: owned.slotIndex ?? 0,
+    quantity: owned.quantity ?? 1,
+    enhanceLevel: owned.enhanceLevel ?? 0,
+    bonusCombatPower: owned.bonusCombatPower ?? 0,
+    rarity: owned.rarity ?? item.rarity ?? "common",
     characterId: owned.characterId ?? characterId,
     item,
   };

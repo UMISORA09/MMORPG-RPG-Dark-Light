@@ -530,6 +530,7 @@ export async function initDatabase() {
         ALTER TABLE character_items ADD COLUMN IF NOT EXISTS quantity INTEGER DEFAULT 1 NOT NULL;
         ALTER TABLE character_items ADD COLUMN IF NOT EXISTS enhance_level INTEGER DEFAULT 0 NOT NULL;
         ALTER TABLE character_items ADD COLUMN IF NOT EXISTS bonus_combat_power INTEGER DEFAULT 0 NOT NULL;
+        ALTER TABLE character_items ADD COLUMN IF NOT EXISTS rarity TEXT DEFAULT 'common' NOT NULL;
         DROP INDEX IF EXISTS character_item_unique;
 
         CREATE TABLE IF NOT EXISTS battle_logs (

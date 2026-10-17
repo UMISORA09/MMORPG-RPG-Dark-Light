@@ -13,6 +13,7 @@ import { MountVisual25D } from "./MountVisual25D";
 import { BattlePetCompanion } from "./BattlePetCompanion";
 import { OverheadChatBubble } from "./OverheadChatBubble";
 import { WeaponEnhanceAura } from "./WeaponEnhanceAura";
+import { MiracleRadiantAura } from "./MiracleRadiantAura";
 
 // Ensure global InputRouter listeners are mounted
 if (typeof window !== "undefined") {
@@ -53,6 +54,7 @@ export const PlayerEntity25D = memo(function PlayerEntity25D() {
   const mountSpeedMultiplier = useGameWorldStore((s) => s.mountSpeedMultiplier);
   const dismount = useGameWorldStore((s) => s.dismount);
   const highestEnhanceLevel = useGameWorldStore((s) => s.highestEnhanceLevel);
+  const hasMiracleEquipped = useGameWorldStore((s) => s.hasMiracleEquipped);
   const overheadChatBubble = useGameWorldStore((s) => s.overheadChatBubble);
 
   const updatePlayerPosition = useGameWorldStore((s) => s.updatePlayerPosition);
@@ -278,6 +280,11 @@ export const PlayerEntity25D = memo(function PlayerEntity25D() {
           enhanceLevel={highestEnhanceLevel}
           position={playerPosition}
         />
+      )}
+
+      {/* ── Miracle Tier Radiant Rose-Purple Aura (Hào Quang Kì Tích Tối Thượng) ── */}
+      {hasMiracleEquipped && (
+        <MiracleRadiantAura position={playerPosition} />
       )}
 
       {/* Overhead Chat Speech Bubble */}

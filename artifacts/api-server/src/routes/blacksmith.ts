@@ -10,6 +10,7 @@ import {
 } from "@workspace/db";
 import { requireAuth } from "../middlewares/requireAuth";
 import { recalculateCharacterStats } from "../services/CharacterInventoryService";
+import { listInventory } from "../lib/inventory";
 
 const router = Router();
 
@@ -129,6 +130,40 @@ router.post("/characters/:characterId/blacksmith/enhance", requireAuth, async (r
       .where(eq(characterItemsTable.id, stoneItem.id));
   }
 
+  // Kiểm tra Bùa Bảo Hộ nếu cấp >= 10 và có yêu cầu bảo hộ
+  let protectionUsed = false;
+  let protectionCharmItem: any = null;
+
+  if (curLevel >= 10 && useProtection) {
+    const [charm] = await db
+      .select()
+      .from(characterItemsTable)
+      .where(
+        and(
+          eq(characterItemsTable.characterId, characterId),
+          eq(characterItemsTable.itemId, "charm_protection"),
+          eq(characterItemsTable.equipped, false),
+        ),
+      )
+      .limit(1);
+
+    if (charm && charm.quantity > 0) {
+      protectionCharmItem = charm;
+      protectionUsed = true;
+      if (charm.quantity <= 1) {
+        await db.delete(characterItemsTable).where(eq(characterItemsTable.id, charm.id));
+      } else {
+        await db
+          .update(characterItemsTable)
+          .set({ quantity: charm.quantity - 1 })
+          .where(eq(characterItemsTable.id, charm.id));
+      }
+    } else {
+      res.status(400).json({ error: "Bạn không có Bùa Bảo Hộ Cường Hóa trong túi đồ!" });
+      return;
+    }
+  }
+
   // Quay tỉ lệ
   const successRate = getEnhanceSuccessRate(curLevel);
   const roll = Math.random();
@@ -136,11 +171,12 @@ router.post("/characters/:characterId/blacksmith/enhance", requireAuth, async (r
 
   let newEnhanceLevel = curLevel;
   let bonusCombatPower = Number(owned.bonusCombatPower || 0);
+  let failureReason = "";
 
   if (isSuccess) {
     newEnhanceLevel = nextLevel;
-    // Mỗi cấp cường hóa tăng thêm 15% chỉ số cơ bản trang bị
-    bonusCombatPower += nextLevel * 120;
+    // Mỗi cấp cường hóa tăng thêm 10% chỉ số cơ bản trang bị (bonus CP tương ứng)
+    bonusCombatPower += nextLevel * 100;
 
     await db
       .update(characterItemsTable)
@@ -169,6 +205,26 @@ router.post("/characters/:characterId/blacksmith/enhance", requireAuth, async (r
         .set({ progress: 1, status: "READY_TO_CLAIM", updatedAt: new Date() })
         .where(eq(characterQuestsTable.id, q4.id));
     }
+  } else {
+    // THẤT BẠI: Từ cấp 10 trở lên nếu không có Bùa Bảo Hộ sẽ bị rớt cấp
+    if (curLevel >= 10) {
+      if (protectionUsed) {
+        failureReason = `🛡️ Bùa Bảo Hộ đã kích hoạt bảo vệ! Trang bị được giữ nguyên cấp +${curLevel}.`;
+      } else {
+        newEnhanceLevel = Math.max(0, curLevel - 1);
+        bonusCombatPower = Math.max(0, bonusCombatPower - curLevel * 100);
+        await db
+          .update(characterItemsTable)
+          .set({
+            enhanceLevel: newEnhanceLevel,
+            bonusCombatPower,
+          })
+          .where(eq(characterItemsTable.id, owned.id));
+        failureReason = `⚠️ Cường hóa thất bại ở tỉ lệ ${Math.round(successRate * 100)}%! Do không dùng Bùa Bảo Hộ, trang bị đã bị rớt xuống cấp +${newEnhanceLevel}!`;
+      }
+    } else {
+      failureReason = `⚠️ Cường hóa thất bại ở tỉ lệ ${Math.round(successRate * 100)}%! Trang bị được giữ nguyên cấp +${curLevel}.`;
+    }
   }
 
   const updatedChar = await recalculateCharacterStats(characterId);
@@ -181,14 +237,16 @@ router.post("/characters/:characterId/blacksmith/enhance", requireAuth, async (r
     stoneCost,
     successRate: Math.round(successRate * 100),
     bonusCombatPower,
+    protectionUsed,
     character: {
       id: updatedChar.id,
       gold: updatedChar.gold,
       combatPower: updatedChar.combatPower,
     },
+    inventory: await listInventory(characterId),
     message: isSuccess
       ? `🎉 Chúc mừng! Cường hóa thành công lên +${newEnhanceLevel}!`
-      : `⚠️ Cường hóa thất bại ở tỉ lệ ${Math.round(successRate * 100)}%! Trang bị được giữ nguyên cấp +${curLevel}.`,
+      : failureReason,
   });
 });
 

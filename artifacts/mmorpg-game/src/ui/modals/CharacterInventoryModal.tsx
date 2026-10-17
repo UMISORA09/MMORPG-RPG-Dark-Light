@@ -54,7 +54,7 @@ export interface CharacterInventoryModalProps {
 }
 
 export type ItemCategory = "equipment" | "consumable" | "material" | "quest";
-export type ItemRarity = "common" | "rare" | "epic" | "legendary" | "mythic";
+export type ItemRarity = "common" | "rare" | "epic" | "legendary" | "mythic" | "miracle";
 
 export interface UnifiedItem {
   id: string;
@@ -730,6 +730,14 @@ const INITIAL_MOCK_ITEMS: UnifiedItem[] = [
 // ── Rarity Color Scheme ───────────────────────────────────────────────────────
 function getRarityColor(rarity: ItemRarity) {
   switch (rarity) {
+    case "miracle":
+      return {
+        border: "border-pink-500 ring-2 ring-pink-400/60",
+        bg: "bg-gradient-to-br from-[#3b0720] via-[#260f1e] to-[#1a0814]",
+        glow: "shadow-[0_0_20px_rgba(255,0,127,0.7)]",
+        text: "text-pink-400 font-black",
+        badge: "bg-gradient-to-r from-pink-600/30 to-rose-600/30 text-pink-300 border-pink-400/70 font-black shadow-[0_0_10px_rgba(255,45,117,0.5)]",
+      };
     case "mythic":
       return {
         border: "border-rose-500",
@@ -775,6 +783,8 @@ function getRarityColor(rarity: ItemRarity) {
 
 function getRarityLabel(rarity: ItemRarity): string {
   switch (rarity) {
+    case "miracle":
+      return "Kì Tích (Miracle)";
     case "mythic":
       return "Thần Khí";
     case "legendary":
@@ -1684,6 +1694,7 @@ export const CharacterInventoryModal = memo(function CharacterInventoryModal({
   const handleSortInventory = async () => {
     playCombatSFX("coin_chime", 0.3);
     const rarityWeight: Record<ItemRarity, number> = {
+      miracle: 6,
       mythic: 5,
       legendary: 4,
       epic: 3,

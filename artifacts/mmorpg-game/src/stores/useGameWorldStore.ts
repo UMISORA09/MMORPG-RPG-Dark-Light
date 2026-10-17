@@ -15,7 +15,7 @@ export interface BattleReportData {
   expGained: number;
   goldGained: number;
   drops: DroppedItem[];
-  highestRarity?: "common" | "uncommon" | "rare" | "epic" | "legendary" | null;
+  highestRarity?: "common" | "uncommon" | "rare" | "epic" | "legendary" | "miracle" | null;
   timestamp?: number;
 }
 
@@ -184,6 +184,8 @@ export interface GameWorldState {
   activeVFXList: ActiveVFXInstance[];
   droppedLoot: DroppedItem[];
   inventoryItems: CharacterInventoryItem[];
+  hasMiracleEquipped: boolean;
+  setHasMiracleEquipped: (active: boolean) => void;
   monsterMarkers: { id: number; x: number; z: number; isBoss: boolean; name: string }[];
   nearbyTargetEnemies: { id: number; name: string; hp: number; maxHp: number; dist: number; color: string }[];
 
@@ -558,6 +560,8 @@ export const useGameWorldStore = create<GameWorldState>((set, get) => ({
       color: "#94a3b8",
     },
   ],
+  hasMiracleEquipped: false,
+  setHasMiracleEquipped: (hasMiracleEquipped: boolean) => set({ hasMiracleEquipped }),
 
   monsterMarkers: [],
   updateMonsterMarkers: (markers) => set({ monsterMarkers: markers }),
@@ -924,29 +928,146 @@ export const useGameWorldStore = create<GameWorldState>((set, get) => ({
     }));
   },
 
-  pickUpLoot: (item) => {
+  pickUpLoot: async (item) => {
     const s = get();
-    // 1. Remove from ground
+    const charId = s.activeCharacterId;
+    const p = s.playerPosition;
+
+    // 1. Kiểm tra an toàn phía Client trước (dung lượng túi) nếu offline/chưa load
+    const unlocked = s.unlockedSlots || 15;
+    const currentBagCount = s.inventoryItems.filter((i) => !i.equipped).length;
+
+    // Nếu không phải tiền vàng và túi đã đầy ô chứa
+    if (item.type !== "gold" && currentBagCount >= unlocked) {
+      s.addFloatingText(
+        "⚠️ TÚI ĐỒ ĐÃ ĐẦY! Vui lòng dọn bớt hoặc mở rộng ô.",
+        s.playerPosition.clone().add(new THREE.Vector3(0, 2.6, 0)),
+        "#ef4444"
+      );
+      set({
+        zoneNotification: "⚠️ TÚI ĐỒ ĐÃ ĐẦY! Vui lòng dọn bớt hoặc mở rộng ô chứa.",
+        zoneNotificationTimer: 4.0,
+      });
+      playCombatSFX("heavy_slam", 0.6);
+      return; // Giữ nguyên vật phẩm trên mặt đất!
+    }
+
+    // 2. Gửi yêu cầu nhặt đồ lên Backend API (Server-side Validation & Persistence)
+    if (charId) {
+      try {
+        const res = await fetch(`/api/characters/${charId}/loot/${item.id}`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            dropId: item.id,
+            itemId: item.itemId,
+            quantity: item.quantity || 1,
+            dropType: item.type,
+            value: item.value,
+            dropPosition: item.position,
+            playerPosition: [p.x, p.y, p.z],
+          }),
+        });
+
+        const data = await res.json().catch(() => null);
+
+        if (!res.ok) {
+          // Lỗi từ server hoặc túi đầy: giữ nguyên vật phẩm trên đất
+          const isFull = data?.inventoryFull || data?.error?.includes("TÚI ĐỒ ĐÃ ĐẦY");
+          s.addFloatingText(
+            isFull ? "⚠️ TÚI ĐỒ ĐÃ ĐẦY! Vui lòng dọn bớt hoặc mở rộng ô." : (data?.error || "Không thể nhặt đồ!"),
+            s.playerPosition.clone().add(new THREE.Vector3(0, 2.6, 0)),
+            "#ef4444"
+          );
+          set({
+            zoneNotification: isFull ? "⚠️ TÚI ĐỒ ĐÃ ĐẦY! Vui lòng dọn bớt hoặc mở rộng ô chứa." : data?.error,
+            zoneNotificationTimer: 4.0,
+          });
+          playCombatSFX("heavy_slam", 0.6);
+          return; // DỪNG LẠI, KHÔNG XÓA ĐỒ KHỎI MẶT ĐẤT!
+        }
+
+        // Server xác thực thành công -> Xóa đồ khỏi mặt đất
+        set((state) => ({
+          droppedLoot: state.droppedLoot.filter((x) => x.id !== item.id),
+        }));
+
+        if (data.type === "gold") {
+          set((state) => ({ playerGold: data.newGold ?? (state.playerGold + item.value) }));
+          playCombatSFX("coin_chime", 0.55);
+          s.addFloatingText(`+${item.value} Vàng`, s.playerPosition.clone().add(new THREE.Vector3(0, 2.2, 0)), "#fbbf24");
+          return;
+        }
+
+        // Xử lý thông báo và hiệu ứng theo phẩm chất
+        const isMiracle = data.isMiracle || item.rarity === "miracle";
+        if (isMiracle) {
+          playCombatSFX("rarity_chime", 1.0);
+          playCombatSFX("holy_bell", 1.0);
+          playCombatSFX("level_up_fanfare", 1.0);
+          set({
+            zoneNotification: data.broadcastMessage || `🌟 [KÌ TÍCH XUẤT THẾ] Bạn vừa nhận được Thần Binh Kì Tích: ${item.name}! Tỏa hào quang hồng tím chấn động toàn cõi!`,
+            zoneNotificationTimer: 10.0,
+            hasMiracleEquipped: true,
+          });
+          s.addFloatingText(`💖 [KÌ TÍCH] ${item.name}!`, s.playerPosition.clone().add(new THREE.Vector3(0, 2.8, 0)), "#ff2d75");
+        } else if (item.rarity === "legendary" || item.rarity === "epic") {
+          playCombatSFX("rarity_chime", 0.8);
+          playCombatSFX("holy_bell", 0.7);
+          playCombatSFX("level_up_fanfare", 0.65);
+          set({
+            zoneNotification: `✨ [RƠI ĐỒ QUÝ HIẾM] Bạn vừa nhận được ${item.rarity === "legendary" ? "Huyền Thoại (LEGENDARY)" : "Sử Thi (EPIC)"}: ${item.name}!`,
+            zoneNotificationTimer: 6.0,
+          });
+          s.addFloatingText(`✨ [${item.rarity.toUpperCase()}] ${item.name}`, s.playerPosition.clone().add(new THREE.Vector3(0, 2.6, 0)), item.color);
+        } else {
+          playCombatSFX("loot_drop", 0.5);
+          s.addFloatingText(`✨ [${item.rarity.toUpperCase()}] ${item.name}`, s.playerPosition.clone().add(new THREE.Vector3(0, 2.6, 0)), item.color);
+        }
+
+        // Cập nhật danh sách túi đồ từ Server nếu có
+        if (Array.isArray(data.inventory)) {
+          const mapped: CharacterInventoryItem[] = data.inventory.map((inv: any) => ({
+            id: String(inv.ownershipId || inv.id),
+            itemId: inv.id,
+            name: inv.name,
+            type: inv.type,
+            rarity: inv.rarity,
+            equipped: Boolean(inv.equipped),
+            hpBoost: inv.hpBoost || 0,
+            atkBoost: inv.atkBoost || 0,
+            defBoost: inv.defBoost || 0,
+            spdBoost: inv.spdBoost || 0,
+            icon: inv.icon || "◇",
+            color: inv.rarity === "miracle" ? "#ff2d75" : inv.rarity === "legendary" ? "#fbbf24" : inv.rarity === "epic" ? "#c084fc" : "#00f2ff",
+          }));
+          const hasMiracle = mapped.some((x) => x.equipped && x.rarity?.toLowerCase() === "miracle");
+          set({ inventoryItems: mapped, hasMiracleEquipped: hasMiracle });
+        }
+
+        s.progressQuest("COLLECT_ITEM", item.itemId, 1);
+        if (s.onItemAcquiredCallback) s.onItemAcquiredCallback(item.itemId);
+        return;
+      } catch (err) {
+        console.warn("Backend loot error, fallback local:", err);
+      }
+    }
+
+    // Fallback Offline/Local
     set((state) => ({
       droppedLoot: state.droppedLoot.filter((x) => x.id !== item.id),
     }));
 
-    // 2. Handle Pickup by Type
     if (item.type === "gold") {
-      set((state) => ({
-        playerGold: state.playerGold + item.value,
-      }));
+      set((state) => ({ playerGold: state.playerGold + item.value }));
       playCombatSFX("coin_chime", 0.55);
       s.addFloatingText(`+${item.value} Vàng`, s.playerPosition.clone().add(new THREE.Vector3(0, 2.2, 0)), "#fbbf24");
     } else if (item.type === "potion") {
       const healAmt = item.value || 120;
-      set((state) => ({
-        playerHealth: Math.min(state.playerMaxHealth, state.playerHealth + healAmt),
-      }));
+      set((state) => ({ playerHealth: Math.min(state.playerMaxHealth, state.playerHealth + healAmt) }));
       playCombatSFX("loot_drop", 0.45);
       s.addFloatingText(`+${healAmt} HP`, s.playerPosition.clone().add(new THREE.Vector3(0, 2.2, 0)), "#22c55e");
     } else {
-      // Equipment item (Weapon, Armor, Accessory)
       const newInvItem: CharacterInventoryItem = {
         id: `inv-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`,
         itemId: item.itemId,
@@ -966,32 +1087,33 @@ export const useGameWorldStore = create<GameWorldState>((set, get) => ({
         inventoryItems: [newInvItem, ...state.inventoryItems],
       }));
 
-      const isRareOrAbove = item.rarity === "epic" || item.rarity === "legendary";
-      if (isRareOrAbove) {
+      if (item.rarity === "miracle") {
+        playCombatSFX("holy_bell", 0.9);
+        playCombatSFX("level_up_fanfare", 0.9);
+        set({
+          zoneNotification: `🌟 [KÌ TÍCH] Bạn vừa nhận được Thần Binh Kì Tích: ${item.name}!`,
+          zoneNotificationTimer: 8.0,
+          hasMiracleEquipped: true,
+        });
+        s.addFloatingText(`💖 [KÌ TÍCH] ${item.name}!`, s.playerPosition.clone().add(new THREE.Vector3(0, 2.8, 0)), "#ff2d75");
+      } else if (item.rarity === "epic" || item.rarity === "legendary") {
         playCombatSFX("rarity_chime", 0.8);
-        playCombatSFX("holy_bell", 0.7);
         playCombatSFX("level_up_fanfare", 0.65);
         set({
           zoneNotification: `✨ [RƠI ĐỒ QUÝ HIẾM] Bạn vừa nhận được ${item.rarity === "legendary" ? "Huyền Thoại (LEGENDARY)" : "Sử Thi (EPIC)"}: ${item.name}!`,
           zoneNotificationTimer: 6.0,
         });
+        s.addFloatingText(`✨ [${item.rarity.toUpperCase()}] ${item.name}`, s.playerPosition.clone().add(new THREE.Vector3(0, 2.6, 0)), item.color);
       } else {
         playCombatSFX("loot_drop", 0.5);
+        s.addFloatingText(`✨ [${item.rarity.toUpperCase()}] ${item.name}`, s.playerPosition.clone().add(new THREE.Vector3(0, 2.6, 0)), item.color);
       }
 
-      s.addFloatingText(`✨ [${item.rarity.toUpperCase()}] ${item.name}`, s.playerPosition.clone().add(new THREE.Vector3(0, 2.6, 0)), item.color);
-
-      // Quest Progress: Item Collection
       s.progressQuest("COLLECT_ITEM", item.itemId, 1);
-
-      // Trigger backend database sync if callback registered
-      if (s.onItemAcquiredCallback) {
-        s.onItemAcquiredCallback(item.itemId);
-      }
     }
   },
 
-  pickUpNearbyLoot: (radius = 3.8) => {
+  pickUpNearbyLoot: (radius = 3.5) => {
     const s = get();
     const p = s.playerPosition;
     const nearby = s.droppedLoot.find((item) => {
@@ -1033,9 +1155,11 @@ export const useGameWorldStore = create<GameWorldState>((set, get) => ({
 
       const baseHp = 500;
       const newMaxHp = baseHp + bonusHp;
+      const hasMiracle = updated.some((x) => x.equipped && x.rarity?.toLowerCase() === "miracle");
 
       return {
         inventoryItems: updated,
+        hasMiracleEquipped: hasMiracle,
         playerMaxHealth: newMaxHp,
         playerHealth: Math.min(newMaxHp, state.playerHealth),
       };

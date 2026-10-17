@@ -11,6 +11,7 @@ export const characterItemsTable = pgTable("character_items", {
     slotIndex: integer("slot_index").notNull().default(0),
     quantity: integer("quantity").notNull().default(1),
     enhanceLevel: integer("enhance_level").notNull().default(0),
+    rarity: text("rarity").notNull().default("common"),
     bonusCombatPower: integer("bonus_combat_power").notNull().default(0),
     acquiredAt: timestamp("acquired_at").defaultNow().notNull(),
   }, (table) => ({

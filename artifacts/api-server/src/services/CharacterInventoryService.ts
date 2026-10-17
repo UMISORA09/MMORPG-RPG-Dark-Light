@@ -10,7 +10,7 @@ import { getStatsForLevel, CHARACTER_CLASSES } from "../data/classes";
 const ENHANCEMENT_LIMIT = 15;
 const ENHANCEMENT_COST = 100;
 const ENHANCEMENT_POWER = 100;
-const ENHANCEMENT_MULTIPLIER = 0.12;
+const ENHANCEMENT_MULTIPLIER = 0.10; // Chuẩn +10% mỗi cấp cường hóa
 
 export class InventoryRuleError extends Error {
   constructor(message: string, public readonly statusCode = 400) {
@@ -30,6 +30,7 @@ export async function recalculateCharacterStats(characterId: number, executor: a
     item: itemsTable,
     enhanceLevel: characterItemsTable.enhanceLevel,
     bonusCombatPower: characterItemsTable.bonusCombatPower,
+    rarity: characterItemsTable.rarity,
   }).from(characterItemsTable)
     .innerJoin(itemsTable, eq(characterItemsTable.itemId, itemsTable.id))
     .where(and(
@@ -43,12 +44,20 @@ export async function recalculateCharacterStats(characterId: number, executor: a
     critRateBoost: 0, bonusCombatPower: 0,
   };
 
+  let hasMiracleEquipped = false;
+
   for (const row of equippedRows) {
     const item = row.item ?? row;
-    const multiplier = 1 + Number(row.enhanceLevel ?? 0) * ENHANCEMENT_MULTIPLIER;
+    const isMiracle = (item.rarity || row.rarity || "").toLowerCase() === "miracle";
+    if (isMiracle) hasMiracleEquipped = true;
+
+    // Phẩm chất Kì Tích: Chỉ số vượt trội +250% so với thông thường
+    const miracleMult = isMiracle ? 3.5 : 1.0;
+    const multiplier = (1 + Number(row.enhanceLevel ?? 0) * ENHANCEMENT_MULTIPLIER) * miracleMult;
+
     for (const stat of Object.keys(bonuses)) {
       if (stat === "bonusCombatPower") {
-        bonuses[stat] += Number(row.bonusCombatPower ?? 0);
+        bonuses[stat] += Number(row.bonusCombatPower ?? 0) + (isMiracle ? 2500 : 0);
       } else {
         bonuses[stat] += Math.floor(numericItemStat(item, stat) * multiplier);
       }
@@ -181,16 +190,29 @@ export class CharacterInventoryService {
       if (item.category !== "consumable") throw new InventoryRuleError("Vật phẩm này không thể sử dụng");
 
       if (item.type === "inventory_ticket" || item.id === "ticket_inventory_expand") {
+        const curSlots = Number(character.unlockedSlots || 15);
+        if (curSlots >= 30) {
+          throw new InventoryRuleError("Hành trang đã đạt giới hạn tối đa (30 ô)!");
+        }
+        const newSlots = Math.min(30, curSlots + 5);
+
         const quantityRemaining = Number(owned.quantity) - 1;
         if (quantityRemaining === 0) {
           await tx.delete(characterItemsTable).where(eq(characterItemsTable.id, ownershipId));
         } else {
           await tx.update(characterItemsTable).set({ quantity: quantityRemaining }).where(eq(characterItemsTable.id, ownershipId));
         }
+
+        const [updatedChar] = await tx
+          .update(charactersTable)
+          .set({ unlockedSlots: newSlots })
+          .where(eq(charactersTable.id, characterId))
+          .returning();
+
         return {
-          character,
+          character: updatedChar ?? character,
           consumed: { ownershipId, itemId: item.id, quantityRemaining },
-          effect: { inventoryExpanded: 5 },
+          effect: { inventoryExpanded: 5, unlockedSlots: newSlots },
         };
       }
 

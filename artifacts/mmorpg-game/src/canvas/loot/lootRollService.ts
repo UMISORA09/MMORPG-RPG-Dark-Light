@@ -50,10 +50,19 @@ const LEGENDARY_GEARS = [
   { itemId: "gear_legendary_dragon_relic", name: "Thánh Vật Long Vương", type: "accessory" as LootType, icon: "👑", color: "#fbbf24", statText: "Toàn Chỉ Số +35, Crit +12%" },
 ];
 
+const MIRACLE_GEARS = [
+  { itemId: "gear_fighter_main_weapon_miracle", name: "Kì Tích: Long Thần Bất Diệt Quyền", type: "weapon" as LootType, icon: "💖", color: "#ff2d75", statText: "ATK +260, Crit +25%, Hút Máu 5%, Hồi Sinh Thần Kỳ" },
+  { itemId: "gear_tank_main_weapon_miracle", name: "Kì Tích: Thánh Quang Hộ Thế Búa", type: "weapon" as LootType, icon: "🛡️", color: "#ff2d75", statText: "DEF +220, HP +1800, Giảm ST 35%, Hồi Sinh Thần Kỳ" },
+  { itemId: "gear_assassin_main_weapon_miracle", name: "Kì Tích: U Hồn Huyết Nguyệt Đao", type: "weapon" as LootType, icon: "🗡️", color: "#ff2d75", statText: "ATK +280, Crit +30%, Hút Máu 5%, Tốc Độ +18" },
+  { itemId: "gear_gunner_main_weapon_miracle", name: "Kì Tích: Thần Phạt Tinh Vân Pháo", type: "weapon" as LootType, icon: "⚡", color: "#ff2d75", statText: "ATK +290, MATK +150, Hút Máu 5%, Crit +25%" },
+  { itemId: "material_miracle_core", name: "Lõi Tinh Thể Kì Tích", type: "accessory" as LootType, icon: "✨", color: "#ff2d75", statText: "Bảo vật Kì Tích hào quang hồng tím tối thượng" },
+];
+
 const POTIONS = [
   { itemId: "potion_hp_medium", name: "Bình Huyết Dược", type: "potion" as LootType, icon: "🧪", color: "#22c55e", statText: "Hồi 35% HP" },
   { itemId: "potion_mp_medium", name: "Bình Lam Tinh Thể", type: "potion" as LootType, icon: "💧", color: "#38bdf8", statText: "Hồi 40% MP" },
   { itemId: "material_enhance_stone", name: "Đá Cường Hóa Tinh Khiết", type: "accessory" as LootType, icon: "💎", color: "#00f2ff", statText: "Dùng để nâng cấp đồ" },
+  { itemId: "charm_protection", name: "Bùa Bảo Hộ Cường Hóa", type: "accessory" as LootType, icon: "🧿", color: "#c084fc", statText: "Bảo hộ chống rớt cấp +10" },
 ];
 
 function createDropVelocity(): [number, number, number] {
@@ -68,9 +77,9 @@ function createDropVelocity(): [number, number, number] {
 
 /**
  * Tính toán rơi đồ chính xác theo độ khắc nghiệt MMORPG:
- * - Swarm: Vàng lẻ 65%, Potion/Mat 20%, Common 7%, Rare 1.2%, Epic 0.18%, Legendary 0.02%
- * - Lone Elite: Vàng 100%, Potion/Mat 40%, Common 18%, Rare 6.0%, Epic 0.9%, Legendary 0.15%
- * - World Boss: Vàng 100%, Rare 35%, Epic 8.0%, Legendary 1.5%, Rare Mats 75%
+ * - Swarm: Vàng lẻ 65%, Potion/Mat 20%, Common 7%, Rare 1.2%, Epic 0.18%, Legendary 0.02%, Miracle 0.001%
+ * - Lone Elite: Vàng 100%, Potion/Mat 40%, Common 18%, Rare 6.0%, Epic 0.9%, Legendary 0.15%, Miracle 0.001%
+ * - World Boss: Vàng 100%, Rare 35%, Epic 8.0%, Legendary 1.5%, Miracle 0.05%, Rare Mats 75%
  */
 export function rollMonsterLootDrops(ctx: MonsterDropContext): RollLootResult {
   const drops: DroppedItem[] = [];
@@ -81,11 +90,15 @@ export function rollMonsterLootDrops(ctx: MonsterDropContext): RollLootResult {
   let rareItemName: string | null = null;
 
   const markRarity = (rarity: LootRarity, name: string) => {
-    if (rarity === "legendary") {
+    if (rarity === "miracle") {
+      hasRareDrop = true;
+      highestRarity = "miracle";
+      rareItemName = name;
+    } else if (rarity === "legendary" && highestRarity !== "miracle") {
       hasRareDrop = true;
       highestRarity = "legendary";
       rareItemName = name;
-    } else if (rarity === "epic" && highestRarity !== "legendary") {
+    } else if (rarity === "epic" && highestRarity !== "legendary" && highestRarity !== "miracle") {
       hasRareDrop = true;
       highestRarity = "epic";
       rareItemName = name;
@@ -136,6 +149,28 @@ export function rollMonsterLootDrops(ctx: MonsterDropContext): RollLootResult {
         lifetime: 120,
       });
       markRarity("epic", "Tinh Thể Rồng Cổ Đại");
+    }
+
+    // Miracle Tier Gear (Boss: 0.05% = 0.0005)
+    if (Math.random() <= 0.0005) {
+      const mir = MIRACLE_GEARS[Math.floor(Math.random() * MIRACLE_GEARS.length)];
+      drops.push({
+        id: `drop-${now}-miracle-boss`,
+        itemId: mir.itemId,
+        name: mir.name,
+        type: mir.type,
+        rarity: "miracle",
+        position: [basePos.x, 0.75, basePos.z],
+        velocity: createDropVelocity(),
+        value: 260,
+        icon: mir.icon,
+        color: mir.color,
+        statText: mir.statText,
+        bounceCount: 0,
+        isGrounded: false,
+        lifetime: 300,
+      });
+      markRarity("miracle", mir.name);
     }
 
     // Legendary Gear: 1.5%
@@ -265,7 +300,27 @@ export function rollMonsterLootDrops(ctx: MonsterDropContext): RollLootResult {
 
     // Roll Equipment (Chỉ 1 món đồ nếu trúng)
     const roll = Math.random();
-    if (roll < 0.0015) {
+    if (roll < 0.00001) {
+      // Miracle: 0.001% (Cực hiếm từ Tinh Anh)
+      const mir = MIRACLE_GEARS[Math.floor(Math.random() * MIRACLE_GEARS.length)];
+      drops.push({
+        id: `drop-${now}-miracle-elite`,
+        itemId: mir.itemId,
+        name: mir.name,
+        type: mir.type,
+        rarity: "miracle",
+        position: [basePos.x, 0.7, basePos.z],
+        velocity: createDropVelocity(),
+        value: 260,
+        icon: mir.icon,
+        color: mir.color,
+        statText: mir.statText,
+        bounceCount: 0,
+        isGrounded: false,
+        lifetime: 300,
+      });
+      markRarity("miracle", mir.name);
+    } else if (roll < 0.00001 + 0.0015) {
       // Legendary: 0.15%
       const leg = LEGENDARY_GEARS[Math.floor(Math.random() * LEGENDARY_GEARS.length)];
       drops.push({
@@ -285,7 +340,7 @@ export function rollMonsterLootDrops(ctx: MonsterDropContext): RollLootResult {
         lifetime: 150,
       });
       markRarity("legendary", leg.name);
-    } else if (roll < 0.0015 + 0.009) {
+    } else if (roll < 0.00001 + 0.0015 + 0.009) {
       // Epic: 0.9%
       const ep = EPIC_GEARS[Math.floor(Math.random() * EPIC_GEARS.length)];
       drops.push({
@@ -305,7 +360,7 @@ export function rollMonsterLootDrops(ctx: MonsterDropContext): RollLootResult {
         lifetime: 90,
       });
       markRarity("epic", ep.name);
-    } else if (roll < 0.0015 + 0.009 + 0.06) {
+    } else if (roll < 0.00001 + 0.0015 + 0.009 + 0.06) {
       // Rare: 6.0%
       const rg = RARE_GEARS[Math.floor(Math.random() * RARE_GEARS.length)];
       drops.push({
@@ -324,7 +379,7 @@ export function rollMonsterLootDrops(ctx: MonsterDropContext): RollLootResult {
         isGrounded: false,
         lifetime: 75,
       });
-    } else if (roll < 0.0015 + 0.009 + 0.06 + 0.18) {
+    } else if (roll < 0.00001 + 0.0015 + 0.009 + 0.06 + 0.18) {
       // Common: 18%
       const cg = COMMON_GEARS[Math.floor(Math.random() * COMMON_GEARS.length)];
       drops.push({
@@ -388,7 +443,27 @@ export function rollMonsterLootDrops(ctx: MonsterDropContext): RollLootResult {
 
     // Siết chặt rơi trang bị quái thường:
     const roll = Math.random();
-    if (roll < 0.0002) {
+    if (roll < 0.00001) {
+      // Miracle: 0.001% (Cực kỳ hiếm từ quái thường)
+      const mir = MIRACLE_GEARS[Math.floor(Math.random() * MIRACLE_GEARS.length)];
+      drops.push({
+        id: `drop-${now}-miracle-swarm`,
+        itemId: mir.itemId,
+        name: mir.name,
+        type: mir.type,
+        rarity: "miracle",
+        position: [basePos.x, 0.65, basePos.z],
+        velocity: createDropVelocity(),
+        value: 260,
+        icon: mir.icon,
+        color: mir.color,
+        statText: mir.statText,
+        bounceCount: 0,
+        isGrounded: false,
+        lifetime: 300,
+      });
+      markRarity("miracle", mir.name);
+    } else if (roll < 0.00001 + 0.0002) {
       // Legendary: 0.02% (Cực kỳ thấp)
       const leg = LEGENDARY_GEARS[Math.floor(Math.random() * LEGENDARY_GEARS.length)];
       drops.push({

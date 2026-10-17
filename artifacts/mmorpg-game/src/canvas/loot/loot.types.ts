@@ -3,7 +3,7 @@
 // Parabolic Physics, Proximity Magnet, Rarity Beams & Database Sync
 // ==============================================================================
 
-export type LootRarity = "common" | "rare" | "epic" | "legendary";
+export type LootRarity = "common" | "rare" | "epic" | "legendary" | "miracle";
 
 export type LootType = "weapon" | "armor" | "accessory" | "gold" | "potion";
 
@@ -45,5 +45,10 @@ export const RARITY_COLORS: Record<LootRarity, { beam: string; glow: string; tex
     beam: "#fbbf24",
     glow: "#ea580c",
     text: "Huyền Thoại",
+  },
+  miracle: {
+    beam: "#ff2d75",
+    glow: "#ff007f",
+    text: "Kì Tích",
   },
 };

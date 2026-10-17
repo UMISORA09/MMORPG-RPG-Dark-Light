@@ -29,6 +29,7 @@ import {
 import { getExpForLevel } from "../data/classes";
 import { requireAuth } from "../middlewares/requireAuth";
 import { CharacterInventoryService, InventoryRuleError } from "../services/CharacterInventoryService";
+import { LootService } from "../services/LootService";
 
 const router = Router();
 
@@ -276,6 +277,7 @@ router.post("/characters/:characterId/inventory/sort", requireAuth, async (req, 
     }
 
     const rarityWeight: Record<string, number> = {
+      miracle: 6,
       mythic: 5,
       legendary: 4,
       epic: 3,
@@ -444,6 +446,174 @@ router.post("/characters/:characterId/inventory/:ownershipId/use", requireAuth, 
     }
     throw error;
   }
+});
+// ── NHẶT ĐỒ CHÍNH XÁC (Looting API) ───────────────────────────────────────────
+router.post("/characters/:characterId/loot", requireAuth, async (req, res): Promise<void> => {
+  const userId = req.session.userId!;
+  const characterId = parseInt(req.params.characterId);
+  if (isNaN(characterId)) {
+    res.status(400).json({ error: "ID nhân vật không hợp lệ" });
+    return;
+  }
+
+  const {
+    dropId,
+    itemId,
+    quantity = 1,
+    dropType,
+    value,
+    dropPosition,
+    playerPosition,
+  } = req.body;
+
+  if (!itemId && dropType !== "gold") {
+    res.status(400).json({ error: "Thiếu thông tin itemId của vật phẩm rơi" });
+    return;
+  }
+
+  try {
+    const result = await LootService.lootItem({
+      userId,
+      characterId,
+      dropId,
+      itemId: itemId || "gold",
+      quantity,
+      dropType,
+      value,
+      dropPosition,
+      playerPosition,
+    });
+    res.status(200).json(result);
+  } catch (error: any) {
+    if (error instanceof InventoryRuleError) {
+      res.status(error.statusCode).json({
+        error: error.message,
+        inventoryFull: error.message.includes("TÚI ĐỒ ĐÃ ĐẦY"),
+      });
+      return;
+    }
+    console.error("Loot error:", error);
+    res.status(500).json({ error: error.message || "Lỗi nhặt vật phẩm" });
+  }
+});
+
+router.post("/characters/:characterId/loot/:dropId", requireAuth, async (req, res): Promise<void> => {
+  const userId = req.session.userId!;
+  const characterId = parseInt(req.params.characterId);
+  const dropId = req.params.dropId;
+  if (isNaN(characterId) || !dropId) {
+    res.status(400).json({ error: "Tham số không hợp lệ" });
+    return;
+  }
+
+  const {
+    itemId,
+    quantity = 1,
+    dropType,
+    value,
+    dropPosition,
+    playerPosition,
+  } = req.body;
+
+  try {
+    const result = await LootService.lootItem({
+      userId,
+      characterId,
+      dropId,
+      itemId: itemId || dropId,
+      quantity,
+      dropType,
+      value,
+      dropPosition,
+      playerPosition,
+    });
+    res.status(200).json(result);
+  } catch (error: any) {
+    if (error instanceof InventoryRuleError) {
+      res.status(error.statusCode).json({
+        error: error.message,
+        inventoryFull: error.message.includes("TÚI ĐỒ ĐÃ ĐẦY"),
+      });
+      return;
+    }
+    console.error("Loot dropId error:", error);
+    res.status(500).json({ error: error.message || "Lỗi nhặt vật phẩm" });
+  }
+});
+
+// ── ĐỔI VỊ TRÍ Ô ĐỒ / DRAG-AND-DROP (Swap Slots) ──────────────────────────────
+router.post("/characters/:characterId/inventory/swap-slots", requireAuth, async (req, res): Promise<void> => {
+  const userId = req.session.userId!;
+  const characterId = parseInt(req.params.characterId);
+  const { fromSlot, toSlot } = req.body;
+
+  if (isNaN(characterId) || typeof fromSlot !== "number" || typeof toSlot !== "number") {
+    res.status(400).json({ error: "Vị trí ô đồ không hợp lệ" });
+    return;
+  }
+
+  const character = await getCharacterForUser(characterId, userId);
+  if (!character) {
+    res.status(404).json({ error: "Không tìm thấy nhân vật" });
+    return;
+  }
+
+  const unlockedSlots = character.unlockedSlots ?? 15;
+  if (fromSlot < 0 || fromSlot >= unlockedSlots || toSlot < 0 || toSlot >= unlockedSlots) {
+    res.status(400).json({ error: "Vị trí ô nằm ngoài giới hạn ô mở khóa (🔒)" });
+    return;
+  }
+
+  await db.transaction(async (tx: any) => {
+    const [itemA] = await tx
+      .select()
+      .from(characterItemsTable)
+      .where(
+        and(
+          eq(characterItemsTable.characterId, characterId),
+          eq(characterItemsTable.equipped, false),
+          eq(characterItemsTable.slotIndex, fromSlot),
+        ),
+      )
+      .limit(1);
+
+    const [itemB] = await tx
+      .select()
+      .from(characterItemsTable)
+      .where(
+        and(
+          eq(characterItemsTable.characterId, characterId),
+          eq(characterItemsTable.equipped, false),
+          eq(characterItemsTable.slotIndex, toSlot),
+        ),
+      )
+      .limit(1);
+
+    if (itemA && itemB) {
+      await tx
+        .update(characterItemsTable)
+        .set({ slotIndex: -99 })
+        .where(eq(characterItemsTable.id, itemA.id));
+
+      await tx
+        .update(characterItemsTable)
+        .set({ slotIndex: fromSlot })
+        .where(eq(characterItemsTable.id, itemB.id));
+
+      await tx
+        .update(characterItemsTable)
+        .set({ slotIndex: toSlot })
+        .where(eq(characterItemsTable.id, itemA.id));
+    } else if (itemA && !itemB) {
+      await tx
+        .update(characterItemsTable)
+        .set({ slotIndex: toSlot })
+        .where(eq(characterItemsTable.id, itemA.id));
+    }
+  });
+
+  const rawList = await listInventory(characterId);
+  res.status(200).json({ success: true, inventory: rawList });
 });
 
 export default router;
