@@ -124,7 +124,7 @@ export class PersistenceManager {
       hp: s.playerHealth,
       mp: s.playerPp,
       statPoints: s.unallocatedStatPoints,
-      skillPoints: 0,
+      skillPoints: s.playerSkillPoints || 0,
       str: s.playerStr,
       dex: s.playerDex,
       intel: s.playerIntel,

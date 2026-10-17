@@ -1,6 +1,7 @@
 import { memo, useState } from "react";
 import { useGameWorldStore } from "@/stores/useGameWorldStore";
 import { playCombatSFX } from "@/audio/CombatSoundSynth";
+import { WORLD_100_MAPS, getMapById } from "@/world/WorldMapRegistry";
 import * as THREE from "three";
 import {
   X,
@@ -16,6 +17,8 @@ import {
   AlertTriangle,
   ChevronRight,
   Terminal,
+  MapPin,
+  Rocket,
 } from "lucide-react";
 
 export const GMAdminPanel = memo(function GMAdminPanel() {
@@ -42,6 +45,7 @@ export const GMAdminPanel = memo(function GMAdminPanel() {
 
   const [loadingAction, setLoadingAction] = useState<string | null>(null);
   const [statusFeedback, setStatusFeedback] = useState<string | null>(null);
+  const [selectedMapId, setSelectedMapId] = useState<string>("MAP_036");
 
   if (!isOpen) return null;
 
@@ -53,6 +57,56 @@ export const GMAdminPanel = memo(function GMAdminPanel() {
   const showFeedback = (text: string) => {
     setStatusFeedback(text);
     setTimeout(() => setStatusFeedback(null), 3000);
+  };
+
+  // Set direct Level 500 or 999
+  const handleSetTargetLevel = async (targetLevel: number) => {
+    setLoadingAction(`set_level_${targetLevel}`);
+    try {
+      const currentLv = useGameWorldStore.getState().playerLevel;
+      const lvDiff = Math.max(0, targetLevel - currentLv);
+      const bonusStats = lvDiff * 5;
+      const bonusSkill = lvDiff * 1;
+
+      useGameWorldStore.setState({
+        playerLevel: targetLevel,
+        playerExp: 0,
+        playerExpToNext: 99999999,
+        playerSkillPoints: (useGameWorldStore.getState().playerSkillPoints || 0) + bonusSkill,
+        unallocatedStatPoints: unallocatedStatPoints + bonusStats,
+      });
+
+      healPlayer(99999);
+      playCombatSFX("level_up_fanfare", 0.85);
+      addFloatingText(
+        `⭐ THĂNG CẤP THẦN THOẠI LV.${targetLevel}! (+${bonusStats} Điểm Tiềm Năng)`,
+        playerPosition.clone().add(new THREE.Vector3(0, 3.0, 0)),
+        "#eab308"
+      );
+      showFeedback(`Nhân vật đã thăng cấp trực tiếp lên Lv.${targetLevel} (+${bonusStats} Điểm Tiềm Năng)!`);
+
+      await fetch("/api/characters/1/gm/action", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ action: "set_level", level: targetLevel }),
+      }).catch(() => {});
+    } finally {
+      setLoadingAction(null);
+    }
+  };
+
+  const handleWarpTo100Map = (mapId: string) => {
+    const targetMap = getMapById(mapId);
+    useGameWorldStore.getState().triggerZoneTransition(`DỊCH CHUYỂN: ${targetMap.name}`, () => {
+      useGameWorldStore.setState({
+        currentZone: mapId as any,
+        playerPosition: new THREE.Vector3(0, 0, 0),
+        zoneNotification: `🗺️ [GM WARP] Đã đến: ${targetMap.name} (${targetMap.biomeName})`,
+        zoneNotificationTimer: 4.5,
+      });
+    });
+    playCombatSFX("teleport", 0.6);
+    showFeedback(`Đã dịch chuyển tức thời đến: ${targetMap.name}!`);
   };
 
   // 1. Thêm 10 cấp độ & 50 điểm tiềm năng
@@ -296,6 +350,46 @@ export const GMAdminPanel = memo(function GMAdminPanel() {
                 <ChevronRight className="w-4 h-4 text-slate-500 group-hover:text-cyan-400 transition" />
               </button>
 
+              {/* 1.1 Lên Thẳng Lv.500 (Giai Đoạn Đại Dương & Atlantis) */}
+              <button
+                onClick={() => handleSetTargetLevel(500)}
+                disabled={loadingAction === "set_level_500"}
+                className="p-3.5 rounded-2xl bg-[#091e2b] hover:bg-[#0c2a3d] border border-cyan-500/40 hover:border-cyan-400 transition flex items-center justify-between group cursor-pointer text-left"
+              >
+                <div className="flex items-center gap-3">
+                  <div className="w-9 h-9 rounded-xl bg-cyan-500/20 border border-cyan-400/50 flex items-center justify-center text-cyan-300 group-hover:scale-110 transition-transform">
+                    <Rocket className="w-4 h-4" />
+                  </div>
+                  <div>
+                    <h4 className="text-xs font-black text-cyan-200 group-hover:text-cyan-100 transition-colors">
+                      🚀 Lên Cấp Lv.500 (Đại Dương - Atlantis)
+                    </h4>
+                    <p className="text-[11px] text-cyan-400/70">+2500 Điểm Tiềm Năng & Hồi Đầy HP</p>
+                  </div>
+                </div>
+                <ChevronRight className="w-4 h-4 text-cyan-400 group-hover:translate-x-1 transition-transform" />
+              </button>
+
+              {/* 1.2 Lên Thẳng Lv.999 (MAX Tối Thượng Thần Thoại) */}
+              <button
+                onClick={() => handleSetTargetLevel(999)}
+                disabled={loadingAction === "set_level_999"}
+                className="p-3.5 rounded-2xl bg-[#2a1306] hover:bg-[#381a08] border border-amber-500/50 hover:border-amber-400 transition flex items-center justify-between group cursor-pointer text-left shadow-[0_0_20px_rgba(245,158,11,0.2)]"
+              >
+                <div className="flex items-center gap-3">
+                  <div className="w-9 h-9 rounded-xl bg-amber-500/20 border border-amber-400/60 flex items-center justify-center text-amber-300 group-hover:scale-110 transition-transform">
+                    <Crown className="w-4 h-4" />
+                  </div>
+                  <div>
+                    <h4 className="text-xs font-black text-amber-300 group-hover:text-amber-100 transition-colors">
+                      👑 Lên Cấp Lv.999 (MAX TỐI THƯỢNG)
+                    </h4>
+                    <p className="text-[11px] text-amber-400/80">+4990 Điểm Tiềm Năng & Hồi Phục Thần Cấp</p>
+                  </div>
+                </div>
+                <ChevronRight className="w-4 h-4 text-amber-400 group-hover:translate-x-1 transition-transform" />
+              </button>
+
               {/* 2. Nhận 50,000 Vàng & 10 Đá Cường Hóa */}
               <button
                 onClick={handleAddGoldAndStones}
@@ -504,6 +598,41 @@ export const GMAdminPanel = memo(function GMAdminPanel() {
                 className="py-2.5 px-3 rounded-xl bg-rose-950/60 hover:bg-rose-900/80 border border-rose-500/40 text-xs font-bold text-rose-300 hover:text-white transition flex items-center justify-center gap-1.5 cursor-pointer"
               >
                 ⚔️ Đấu Trường 1v1
+              </button>
+            </div>
+          </div>
+
+          {/* Section 3: 100-Map Procedural Registry Teleport */}
+          <div className="p-4 rounded-2xl bg-cyan-950/20 border border-cyan-500/30 space-y-3">
+            <div className="flex items-center justify-between">
+              <h3 className="text-xs font-bold text-cyan-300 uppercase tracking-wider flex items-center gap-1.5">
+                <MapPin className="w-4 h-4 text-cyan-400" /> 🗺️ Dịch Chuyển Tức Thời 100 Bản Đồ & Hầm Ngục (Lv.1 - Lv.999)
+              </h3>
+              <span className="text-[10px] font-mono text-cyan-400/80">Active Zone Culling 60 FPS</span>
+            </div>
+
+            <div className="flex flex-col sm:flex-row gap-2.5">
+              <select
+                value={selectedMapId}
+                onChange={(e) => setSelectedMapId(e.target.value)}
+                className="flex-1 bg-black/80 border border-cyan-500/50 rounded-xl px-3 py-2 text-xs font-medium text-cyan-100 focus:outline-none focus:border-cyan-400 cursor-pointer"
+              >
+                {WORLD_100_MAPS.map((map) => (
+                  <option key={map.id} value={map.id} className="bg-slate-900 text-slate-100">
+                    #{map.num.toString().padStart(3, "0")} • {map.name} [Lv.{map.recommendedLevel[0]}-{map.recommendedLevel[1]} | {map.biomeName}] {map.isDungeon ? "🏰 [DUNGEON]" : ""}
+                  </option>
+                ))}
+              </select>
+
+              <button
+                onClick={() => {
+                  handleWarpTo100Map(selectedMapId);
+                  handleClose();
+                }}
+                className="px-4 py-2 rounded-xl bg-gradient-to-r from-cyan-600 to-blue-600 hover:from-cyan-500 hover:to-blue-500 text-white font-bold text-xs shadow-[0_0_15px_rgba(6,182,212,0.4)] flex items-center justify-center gap-2 cursor-pointer shrink-0 transition"
+              >
+                <Rocket className="w-3.5 h-3.5" />
+                Dịch Chuyển Ngay
               </button>
             </div>
           </div>

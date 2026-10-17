@@ -100,6 +100,13 @@ export const GAME_KEYBINDS: Record<string, KeybindDef> = {
     category: "CHORDED_SYSTEM",
     description: "Lưu Nhanh Toàn Diện Trạng Thái (Manual Full-Sync Save)",
   },
+  WORLD_ATLAS_CHORD: {
+    key: "KeyW",
+    modifiers: { alt: true },
+    label: "Alt + W",
+    category: "CHORDED_SYSTEM",
+    description: "Mở Bản Đồ Thế Giới 100 Khu Vực (World Atlas)",
+  },
 };
 
 /**
@@ -194,6 +201,17 @@ export function handleChordedKeydown(e: KeyboardEvent): boolean {
       e.preventDefault();
       if (typeof window !== "undefined") {
         window.dispatchEvent(new CustomEvent("game:manual-save"));
+      }
+      return true;
+    }
+
+    if (code === "KeyW") {
+      // Alt + W: Mở Bản Đồ Thế Giới 100 Khu Vực (World Atlas)
+      e.preventDefault();
+      if (worldStore.activeModal === "worldAtlas") {
+        worldStore.closeActiveModal();
+      } else {
+        worldStore.setActiveModal("worldAtlas");
       }
       return true;
     }

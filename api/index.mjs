@@ -62639,8 +62639,25 @@ var CHARACTER_CLASSES = [
     emoji: "\u{1F52B}"
   }
 ];
+var MAX_LEVEL = 999;
 function getExpForLevel(level) {
-  return Math.floor(100 * Math.pow(1.5, level - 1));
+  if (level < 1) return 100;
+  if (level >= MAX_LEVEL) return Number.MAX_SAFE_INTEGER;
+  if (level === 1) return 100;
+  if (level === 2) return 150;
+  if (level === 3) return 225;
+  if (level <= 50) {
+    const offset2 = level - 3;
+    return Math.floor(225 + offset2 * 120 + Math.pow(offset2, 1.8) * 45);
+  }
+  const base50 = Math.floor(225 + 47 * 120 + Math.pow(47, 1.8) * 45);
+  if (level <= 300) {
+    const offset2 = level - 50;
+    return Math.floor(base50 + offset2 * 1500 + Math.pow(offset2, 1.95) * 450);
+  }
+  const base300 = Math.floor(base50 + 250 * 1500 + Math.pow(250, 1.95) * 450);
+  const offset = level - 300;
+  return Math.floor(base300 + offset * 12e3 + Math.pow(offset, 2.15) * 1800);
 }
 function getStatsForLevel(classId, level) {
   const base = CHARACTER_CLASSES.find((c) => c.id === classId) || CHARACTER_CLASSES[0];
@@ -64588,26 +64605,58 @@ function calculateDamage(attackerAtk, defenderDef, options) {
     isStaggerBonus: isStaggered
   };
 }
+var MAX_LEVEL2 = 999;
 function getExpForLevel3(level) {
   if (level < 1) return 100;
-  return Math.floor(100 * Math.pow(1.5, level - 1));
+  if (level >= MAX_LEVEL2) return Number.MAX_SAFE_INTEGER;
+  if (level === 1) return 100;
+  if (level === 2) return 150;
+  if (level === 3) return 225;
+  if (level <= 50) {
+    const offset2 = level - 3;
+    return Math.floor(225 + offset2 * 120 + Math.pow(offset2, 1.8) * 45);
+  }
+  const base50 = Math.floor(225 + 47 * 120 + Math.pow(47, 1.8) * 45);
+  if (level <= 300) {
+    const offset2 = level - 50;
+    return Math.floor(base50 + offset2 * 1500 + Math.pow(offset2, 1.95) * 450);
+  }
+  const base300 = Math.floor(base50 + 250 * 1500 + Math.pow(250, 1.95) * 450);
+  const offset = level - 300;
+  return Math.floor(base300 + offset * 12e3 + Math.pow(offset, 2.15) * 1800);
 }
 function calculateLevelProgression(currentExp, currentLevel, expGained) {
   let newExp = Math.max(0, currentExp + expGained);
-  let newLevel = Math.max(1, currentLevel);
+  let newLevel = Math.min(MAX_LEVEL2, Math.max(1, currentLevel));
   let leveledUp = false;
+  let statPointsGained = 0;
+  let skillPointsGained = 0;
+  if (newLevel >= MAX_LEVEL2) {
+    return {
+      newLevel: MAX_LEVEL2,
+      newExp: 0,
+      leveledUp: false,
+      expToNextLevel: Number.MAX_SAFE_INTEGER,
+      statPointsGained: 0,
+      skillPointsGained: 0
+    };
+  }
   let expToNext = getExpForLevel3(newLevel);
-  while (newExp >= expToNext) {
+  while (newLevel < MAX_LEVEL2 && newExp >= expToNext) {
     newExp -= expToNext;
     newLevel++;
     leveledUp = true;
+    statPointsGained += 5;
+    skillPointsGained += 1;
     expToNext = getExpForLevel3(newLevel);
   }
   return {
     newLevel,
-    newExp,
+    newExp: newLevel >= MAX_LEVEL2 ? 0 : newExp,
     leveledUp,
-    expToNextLevel: expToNext
+    expToNextLevel: expToNext,
+    statPointsGained,
+    skillPointsGained
   };
 }
 function getStatsForLevel3(classId, level) {
@@ -67513,12 +67562,35 @@ router14.post("/characters/:characterId/gm/action", requireAuth, async (req, res
     res.status(404).json({ error: "Kh\xF4ng t\xECm th\u1EA5y nh\xE2n v\u1EADt" });
     return;
   }
+  if (action === "set_level") {
+    const targetLevel = Math.min(999, Math.max(1, Number(req.body.level) || 1));
+    const lvDiff = Math.max(0, targetLevel - character.level);
+    const bonusStats = lvDiff * 5;
+    const bonusSkill = lvDiff * 1;
+    const newPoints = Number(character.unallocatedStatPoints || 0) + bonusStats;
+    const newSkillPoints = Number(character.skillPoints || 0) + bonusSkill;
+    await db.update(charactersTable).set({
+      level: targetLevel,
+      unallocatedStatPoints: newPoints,
+      skillPoints: newSkillPoints
+    }).where(eq(charactersTable.id, characterId));
+    const updated = await recalculateCharacterStats(characterId);
+    res.status(200).json({
+      success: true,
+      action,
+      message: `\u2B50 [GM ADMIN] \u0110\xE3 th\u0103ng c\u1EA5p tr\u1EF1c ti\u1EBFp l\xEAn Lv.${targetLevel} (+${bonusStats} \u0110i\u1EC3m Ti\u1EC1m N\u0103ng)!`,
+      character: updated
+    });
+    return;
+  }
   if (action === "add_levels") {
-    const newLevel = Math.min(50, character.level + 10);
+    const newLevel = Math.min(999, character.level + 10);
     const newPoints = Number(character.unallocatedStatPoints || 0) + 50;
+    const newSkillPoints = Number(character.skillPoints || 0) + 10;
     await db.update(charactersTable).set({
       level: newLevel,
-      unallocatedStatPoints: newPoints
+      unallocatedStatPoints: newPoints,
+      skillPoints: newSkillPoints
     }).where(eq(charactersTable.id, characterId));
     const updated = await recalculateCharacterStats(characterId);
     res.status(200).json({

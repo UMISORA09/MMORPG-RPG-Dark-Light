@@ -14,6 +14,7 @@ import { DungeonSelectModal } from "@/ui/modals/DungeonSelectModal";
 import { BattleReportModal } from "@/ui/modals/BattleReportModal";
 import { AchievementsModal } from "@/ui/modals/AchievementsModal";
 import { DailyLoginModal } from "@/ui/modals/DailyLoginModal";
+import { WorldAtlasModal } from "@/ui/modals/WorldAtlasModal";
 import { LoadingTransitionScreen } from "@/ui/transition/LoadingTransitionScreen";
 import { PlayerDeathRespawnModal } from "./PlayerDeathRespawnModal";
 import {
@@ -204,6 +205,9 @@ export const UnifiedOverlayModals = memo(function UnifiedOverlayModals({
 
       {/* 3.3 Bestiary & Item Codex (Alt+L) */}
       {activeModal === "codex" && <CodexModal />}
+
+      {/* 3.4 100-Map World Atlas (Alt+W) */}
+      {activeModal === "worldAtlas" && <WorldAtlasModal />}
 
       {/* 4. Ranked 1v1 PvP Arena Matchmaking */}
       {activeModal === "pvpArena" && <PvPArenaModal />}

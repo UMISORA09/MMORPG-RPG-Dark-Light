@@ -225,7 +225,7 @@ export interface GameWorldState {
   nearbyTargetEnemies: { id: number; name: string; hp: number; maxHp: number; dist: number; color: string }[];
 
   // --- Overlay Modals ---
-  activeModal: "inventory" | "shop" | "leaderboard" | "battleLog" | "settings" | "quests" | "blacksmith" | "party" | "rewards" | "attributes" | "pvpArena" | "gmAdmin" | "achievements" | "dailyRewards" | "auctionHouse" | "talents" | "codex" | null;
+  activeModal: "inventory" | "shop" | "leaderboard" | "battleLog" | "settings" | "quests" | "blacksmith" | "party" | "rewards" | "attributes" | "pvpArena" | "gmAdmin" | "achievements" | "dailyRewards" | "auctionHouse" | "talents" | "codex" | "worldAtlas" | null;
   blacksmithTab: "enhance" | "dismantle" | "craft" | "socket" | "reforge";
   setBlacksmithTab: (tab: "enhance" | "dismantle" | "craft" | "socket" | "reforge") => void;
 
@@ -276,6 +276,8 @@ export interface GameWorldState {
   playerCritRate: number;
   playerEvasion: number;
   combatPower: number;
+  playerSkillPoints: number;
+  setPlayerSkillPoints: (val: number) => void;
   setUnallocatedStatPoints: (val: number) => void;
   updateBaseStats: (stats: {
     str?: number;
@@ -448,7 +450,7 @@ export interface GameWorldState {
   enterDungeon: (difficulty: "normal" | "hard" | "nightmare") => void;
   leaveDungeon: () => void;
   toggleCharacterRenderMode: () => void;
-  setActiveModal: (modal: "inventory" | "shop" | "leaderboard" | "battleLog" | "settings" | "quests" | "blacksmith" | "party" | "rewards" | "attributes" | "pvpArena" | "gmAdmin" | "achievements" | "dailyRewards" | "auctionHouse" | "talents" | "codex" | null) => void;
+  setActiveModal: (modal: "inventory" | "shop" | "leaderboard" | "battleLog" | "settings" | "quests" | "blacksmith" | "party" | "rewards" | "attributes" | "pvpArena" | "gmAdmin" | "achievements" | "dailyRewards" | "auctionHouse" | "talents" | "codex" | "worldAtlas" | null) => void;
   closeActiveModal: () => void;
   updateMonsterMarkers: (markers: { id: number; x: number; z: number; isBoss: boolean; name: string }[]) => void;
   syncFromBackendCharacter: (char: any) => void;
@@ -870,6 +872,7 @@ export const useGameWorldStore = create<GameWorldState>((set, get) => ({
 
   // Stat Points Allocation System & Derived Stats
   unallocatedStatPoints: 5,
+  playerSkillPoints: 1,
   playerStr: 10,
   playerDex: 7,
   playerIntel: 5,
@@ -883,6 +886,7 @@ export const useGameWorldStore = create<GameWorldState>((set, get) => ({
   playerEvasion: 6,
   combatPower: 250,
   setUnallocatedStatPoints: (val) => set({ unallocatedStatPoints: val }),
+  setPlayerSkillPoints: (val) => set({ playerSkillPoints: val }),
   updateBaseStats: (stats) => {
     set((s) => {
       const str = stats.str !== undefined ? stats.str : s.playerStr;

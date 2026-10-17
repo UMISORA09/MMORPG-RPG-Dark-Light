@@ -11,6 +11,7 @@ export interface MonsterDropContext {
   name: string;
   level: number;
   isBoss: boolean;
+  isElite?: boolean;
   aiArchetype?: "SWARM_PACK" | "LONE_PREDATOR" | "WORLD_BOSS";
   position: { x: number; y: number; z: number };
 }
@@ -258,27 +259,52 @@ export function rollMonsterLootDrops(ctx: MonsterDropContext): RollLootResult {
         lifetime: 60,
       });
     }
-  } else if (isLoneElite) {
-    // ── 2. LONE PREDATOR / ELITE (Kỵ Sĩ Hắc Ám, Pháp Sư Hư Không) ───────────
-    // Vàng 100% (30 - 80 Vàng)
+  } else if (isLoneElite || ctx.isElite) {
+    // ── 2. LONE PREDATOR / RADIANT ELITE (Quái Tinh Anh Phát Sáng) ───────────
+    // Vàng 100% (120 - 350 Vàng lớn cho Tinh Anh)
+    const goldValue = ctx.isElite
+      ? 150 + Math.floor(Math.random() * 200)
+      : 30 + Math.floor(Math.random() * 50);
+
     drops.push({
       id: `drop-${now}-gold-elite`,
       itemId: "gold_bag",
-      name: "Túi Vàng Tinh Anh",
+      name: ctx.isElite ? "Túi Đại Vàng Tinh Anh" : "Túi Vàng Tinh Anh",
       type: "gold",
-      rarity: "common",
+      rarity: ctx.isElite ? "rare" : "common",
       position: [basePos.x, 0.5, basePos.z],
       velocity: createDropVelocity(),
-      value: 30 + Math.floor(Math.random() * 50),
+      value: goldValue,
       icon: "🪙",
       color: "#fbbf24",
       bounceCount: 0,
       isGrounded: false,
-      lifetime: 60,
+      lifetime: 90,
     });
 
-    // Potion / Mat: 40%
-    if (Math.random() <= 0.40) {
+    // Guaranteed Enhancement Stone for Radiant Elite (100%)
+    if (ctx.isElite) {
+      drops.push({
+        id: `drop-${now}-stone-elite`,
+        itemId: "material_enhance_stone",
+        name: "Đá Cường Hóa Tinh Anh",
+        type: "accessory",
+        rarity: "rare",
+        position: [basePos.x + 0.5, 0.5, basePos.z],
+        velocity: createDropVelocity(),
+        value: 100,
+        icon: "💎",
+        color: "#00f2ff",
+        statText: "Đá quý rơi từ Quái Tinh Anh",
+        bounceCount: 0,
+        isGrounded: false,
+        lifetime: 90,
+      });
+      markRarity("rare", "Đá Cường Hóa Tinh Anh");
+    }
+
+    // Potion / Mat: 70% for Elite, 40% for Lone Predator
+    if (Math.random() <= (ctx.isElite ? 0.70 : 0.40)) {
       const pot = POTIONS[Math.floor(Math.random() * POTIONS.length)];
       drops.push({
         id: `drop-${now}-pot-elite`,
@@ -300,8 +326,10 @@ export function rollMonsterLootDrops(ctx: MonsterDropContext): RollLootResult {
 
     // Roll Equipment (Chỉ 1 món đồ nếu trúng)
     const roll = Math.random();
-    if (roll < 0.00001) {
-      // Miracle: 0.001% (Cực hiếm từ Tinh Anh)
+    // Radiant Elite has 10x higher drop rates than regular monsters
+    const miracleThresh = ctx.isElite ? 0.01 : 0.00001; // 1% for Elite
+    if (roll < miracleThresh) {
+      // Miracle: 1% from Radiant Elite
       const mir = MIRACLE_GEARS[Math.floor(Math.random() * MIRACLE_GEARS.length)];
       drops.push({
         id: `drop-${now}-miracle-elite`,

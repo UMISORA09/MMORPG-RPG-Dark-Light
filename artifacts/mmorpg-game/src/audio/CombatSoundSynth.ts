@@ -88,6 +88,12 @@ class CombatSoundSynthesizer {
           case "button_click":
             this.synthesizeButtonClick(ctx, now, volume);
             break;
+          case "teleport":
+            this.synthesizeHolyBell(ctx, now, volume * 1.2);
+            break;
+          case "buff":
+            this.synthesizeRarityChime(ctx, now, volume);
+            break;
         }
       } catch {
         // Audio autoplay policy fallback

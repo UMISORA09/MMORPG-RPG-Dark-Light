@@ -33,6 +33,8 @@ interface MonsterInstance {
   color: string;
   weaponType: "claws" | "sword" | "dragon";
   isBoss: boolean;
+  isElite?: boolean;
+  eliteAuraColor?: string;
   archetype: "SWARM_PACK" | "LONE_PREDATOR" | "WORLD_BOSS";
   packId?: string;
   packIndex?: number;
@@ -323,8 +325,23 @@ export const MonsterManager25D = memo(function MonsterManager25D() {
   const monstersRef = useRef<MonsterInstance[]>(
     INITIAL_MONSTERS_DATA.map((m) => {
       const bp = getMonsterBlueprint(m.monsterId, m.level);
+      const isElite = !m.isBoss && (m.id % 5 === 0 || m.id === 4);
+      const scale = isElite ? (m.scale || 1.0) * 1.45 : m.scale || 1.0;
+      const hp = isElite ? Math.round(m.hp * 3.5) : m.hp;
+      const maxHp = isElite ? Math.round(m.maxHp * 3.5) : m.maxHp;
+      const atk = isElite ? Math.round(m.atk * 1.8) : m.atk;
+      const name = isElite ? `👑 [TINH ANH] ${m.name}` : m.name;
+      const eliteAuraColor = m.id % 2 === 0 ? "#f59e0b" : "#c084fc";
+
       return {
         ...m,
+        name,
+        scale,
+        hp,
+        maxHp,
+        atk,
+        isElite,
+        eliteAuraColor,
         blueprint: bp,
         currentPos: m.spawnPos.clone(),
         state: "idle",
@@ -337,7 +354,7 @@ export const MonsterManager25D = memo(function MonsterManager25D() {
         patrolTimer: 2.0,
         patrolDir: 0,
         staggerGauge: 0,
-        staggerMax: bp.staggerThreshold,
+        staggerMax: Math.round(bp.staggerThreshold * (isElite ? 2.5 : 1.0)),
         staggerTimer: 0,
         phase: 1,
         currentPattern: null,
@@ -1154,6 +1171,7 @@ export const MonsterManager25D = memo(function MonsterManager25D() {
       name: m.name,
       level: m.level,
       isBoss: m.isBoss,
+      isElite: m.isElite,
       aiArchetype: m.archetype,
       position: { x: m.currentPos.x, y: 0.5, z: m.currentPos.z },
     });
@@ -1170,14 +1188,22 @@ export const MonsterManager25D = memo(function MonsterManager25D() {
       playCombatSFX("level_up_fanfare", 0.75);
       useGameWorldStore.setState({
         zoneNotification: `📢 [TOÀN SERVER] Người chơi vừa hạ gục ${m.name} và nhặt được bảo vật ${
-          lootResult.highestRarity === "legendary" ? "🔥 HUYỀN THOẠI (LEGENDARY)" : "💜 SỬ THI (EPIC)"
+          lootResult.highestRarity === "miracle"
+            ? "💖 KÌ TÍCH (MIRACLE) TỐI CAO"
+            : lootResult.highestRarity === "legendary"
+            ? "🔥 HUYỀN THOẠI (LEGENDARY)"
+            : "💜 SỬ THI (EPIC)"
         }: ${lootResult.rareItemName}!`,
         zoneNotificationTimer: 6.5,
       });
       addFloatingText(
         `✨ ${lootResult.rareItemName} (${lootResult.highestRarity?.toUpperCase()})!`,
         m.currentPos.clone().add(new THREE.Vector3(0, 3.2, 0)),
-        lootResult.highestRarity === "legendary" ? "#fbbf24" : "#c084fc"
+        lootResult.highestRarity === "miracle"
+          ? "#ff2d75"
+          : lootResult.highestRarity === "legendary"
+          ? "#fbbf24"
+          : "#c084fc"
       );
     }
 
@@ -1192,8 +1218,14 @@ export const MonsterManager25D = memo(function MonsterManager25D() {
     const dmgDealt = Math.max(m.maxHp, worldStore.currentFightDamageDealt);
     const crits = Math.max(1, worldStore.currentFightCritHits);
     const duration = Math.max(2, Math.round((Date.now() - worldStore.currentFightStartTime) / 1000));
-    const expGain = m.isBoss ? 450 : m.level * 35;
-    const goldGain = m.isBoss ? 280 : m.level * 18;
+    const expGain = m.isBoss ? 450 : m.isElite ? Math.round(m.level * 35 * 4.0) : m.level * 35;
+    const goldGain = m.isBoss ? 280 : m.isElite ? Math.round(m.level * 18 * 5.0) : m.level * 18;
+
+    worldStore.claimRewardBonus(
+      expGain,
+      goldGain,
+      m.isElite ? `👑 TIÊU DIỆT QUÁI TINH ANH: +${expGain} EXP (x4), +${goldGain} Vàng (x5)!` : undefined
+    );
 
     const reportData = {
       victory: true,
@@ -1250,12 +1282,57 @@ export const MonsterManager25D = memo(function MonsterManager25D() {
 
         return aliveMobs.map((monster) => {
           const overheadY = monster.currentPos.y + (monster.isBoss ? 4.9 : (monster.scale || 1.0) * 2.3);
-          const showOverhead = monster.isBoss || visibleOverheadSet.has(monster.id);
+          const showOverhead = monster.isBoss || monster.isElite || visibleOverheadSet.has(monster.id);
 
           return (
             <group key={`mob-grp-${monster.id}`}>
+              {/* Radiant Elite Monster Pulsing Foot Aura Ring & Light */}
+              {monster.isElite && (
+                <group position={[monster.currentPos.x, 0.03, monster.currentPos.z]}>
+                  <mesh rotation={[-Math.PI / 2, 0, 0]}>
+                    <ringGeometry args={[1.15, 1.8, 32]} />
+                    <meshBasicMaterial
+                      color={monster.eliteAuraColor || "#f59e0b"}
+                      transparent
+                      opacity={0.8}
+                      side={THREE.DoubleSide}
+                      depthWrite={false}
+                    />
+                  </mesh>
+                  <mesh rotation={[-Math.PI / 2, 0, 0]}>
+                    <ringGeometry args={[0.7, 1.1, 24]} />
+                    <meshBasicMaterial
+                      color="#ffffff"
+                      transparent
+                      opacity={0.5}
+                      side={THREE.DoubleSide}
+                      depthWrite={false}
+                    />
+                  </mesh>
+                  <pointLight
+                    color={monster.eliteAuraColor || "#f59e0b"}
+                    intensity={2.2}
+                    distance={6}
+                    position={[0, 1.2, 0]}
+                  />
+                </group>
+              )}
+
+              {/* Radiant Elite Overhead Crown Label */}
+              {monster.isElite && (
+                <Text
+                  position={[monster.currentPos.x, overheadY + 0.45, monster.currentPos.z]}
+                  fontSize={0.36}
+                  color="#fbbf24"
+                  outlineWidth={0.05}
+                  outlineColor="#000000"
+                >
+                  👑 [TINH ANH]
+                </Text>
+              )}
+
               {/* Lone Predator Ground Purple Aura Decal */}
-              {monster.archetype === "LONE_PREDATOR" && (
+              {monster.archetype === "LONE_PREDATOR" && !monster.isElite && (
                 <mesh position={[monster.currentPos.x, 0.025, monster.currentPos.z]} rotation={[-Math.PI / 2, 0, 0]}>
                   <ringGeometry args={[1.0, 1.8, 32]} />
                   <meshBasicMaterial color="#a855f7" transparent opacity={0.55} side={THREE.DoubleSide} depthWrite={false} />

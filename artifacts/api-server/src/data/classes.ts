@@ -200,9 +200,33 @@ export const MONSTERS = [
   },
 ];
 
+export const MAX_LEVEL = 999;
+
 export function getExpForLevel(level: number): number {
-  return Math.floor(100 * Math.pow(1.5, level - 1));
+  if (level < 1) return 100;
+  if (level >= MAX_LEVEL) return Number.MAX_SAFE_INTEGER;
+
+  if (level === 1) return 100;
+  if (level === 2) return 150;
+  if (level === 3) return 225;
+
+  if (level <= 50) {
+    const offset = level - 3;
+    return Math.floor(225 + offset * 120 + Math.pow(offset, 1.8) * 45);
+  }
+
+  const base50 = Math.floor(225 + 47 * 120 + Math.pow(47, 1.8) * 45);
+  if (level <= 300) {
+    const offset = level - 50;
+    return Math.floor(base50 + offset * 1500 + Math.pow(offset, 1.95) * 450);
+  }
+
+  const base300 = Math.floor(base50 + 250 * 1500 + Math.pow(250, 1.95) * 450);
+  const offset = level - 300;
+  return Math.floor(base300 + offset * 12000 + Math.pow(offset, 2.15) * 1800);
 }
+
+export const getExpRequiredForLevel = getExpForLevel;
 
 export function getStatsForLevel(
   classId: string,

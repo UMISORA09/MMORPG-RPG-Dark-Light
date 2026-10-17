@@ -21,10 +21,16 @@ import { MultiplayerSyncManager } from "./MultiplayerSyncManager";
 import { PvPCombatArena } from "./PvPCombatArena";
 import { useGameStore } from "@/game/useGameStore";
 import { useGameWorldStore } from "@/stores/useGameWorldStore";
+import { getMapById } from "@/world/WorldMapRegistry";
+import { ProceduralBiomeMonuments } from "./ProceduralBiomeMonuments";
+import { InteractiveRelics } from "./InteractiveRelics";
+import { DimensionalPortals3D } from "./DimensionalPortals3D";
 
 export const SeamlessWorldMap = memo(function SeamlessWorldMap() {
   const bossRingRef = useRef<THREE.Mesh>(null);
   const portalRuneRef = useRef<THREE.Mesh>(null);
+  const currentZone = useGameWorldStore((s) => s.currentZone);
+  const currentMap = getMapById(currentZone);
 
   const openModal = (modal: "shop" | "leaderboard") => {
     useGameWorldStore.getState().setActiveModal(modal);
@@ -51,6 +57,18 @@ export const SeamlessWorldMap = memo(function SeamlessWorldMap() {
 
       {/* ── 2.5 DYNAMIC WEATHER SYSTEM (SUNNY STARDUST, HEAVY RAIN & BLOOD MOON) ── */}
       <DynamicWeatherSystem />
+
+      {/* ── 2.7 PROCEDURAL BIOME MONUMENTS & ARCHITECTURE (Active Zone Culling) ── */}
+      <ProceduralBiomeMonuments
+        biome={currentMap.biome}
+        isSafeVillage={currentZone === "SAFE_VILLAGE"}
+      />
+
+      {/* ── 2.8 INTERACTIVE MYSTERIOUS CONTINENTAL RELICS (3-5 Per Zone) ── */}
+      <InteractiveRelics currentZone={currentZone} biome={currentMap.biome} />
+
+      {/* ── 2.9 3D DIMENSIONAL PORTALS (Village Plaza & End of Maps) ── */}
+      <DimensionalPortals3D currentZone={currentZone} />
 
       {/* ── 3. PIXEL ART ENVIRONMENTAL PROPS (ANCIENT TREES, FALLING LEAVES, GROUNDED ROCKS, GRASS TUFTS) ── */}
       <PixelWorldEnvironmentProps />

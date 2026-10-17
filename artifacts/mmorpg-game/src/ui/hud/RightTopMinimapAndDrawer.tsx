@@ -33,6 +33,8 @@ import {
   Hammer,
   BookOpen,
   Store,
+  Compass,
+  MapPin,
 } from "lucide-react";
 import { playCombatSFX, playButtonClick } from "@/audio/CombatSoundSynth";
 
@@ -79,6 +81,18 @@ export const RightTopMinimapAndDrawer = memo(function RightTopMinimapAndDrawer({
         {/* Quick Toolbar on top of Minimap: [Zoom +/-] & [▲/▼ Collapse] */}
         <div className="flex items-center gap-1 mb-1 bg-[#0a0514]/85 backdrop-blur-md px-2 py-0.5 rounded-full border border-slate-800 shadow">
           <button
+            onClick={() => {
+              playButtonClick();
+              openModal("worldAtlas");
+            }}
+            className="text-[9px] font-mono font-bold text-cyan-300 hover:text-white flex items-center gap-1 cursor-pointer px-1.5 py-0.5 hover:bg-cyan-950/60 rounded border border-cyan-500/30 transition shadow-[0_0_8px_rgba(6,182,212,0.25)]"
+            title="Mở Bản Đồ Thế Giới 100 Khu Vực & Hầm Ngục (Phím tắt Alt + W)"
+          >
+            <Compass className="w-3 h-3 text-cyan-400 animate-spin-slow" />
+            <span>Đại Lục (Alt+W)</span>
+          </button>
+          <span className="text-slate-600">|</span>
+          <button
             onClick={handleZoomToggle}
             className="text-[9px] font-mono text-cyan-400 hover:text-white flex items-center gap-0.5 cursor-pointer px-1 py-0.5 hover:bg-slate-800 rounded transition"
             title={`Thu/Phóng bản đồ (Hiện tại: ${zoomLevel}x)`}
@@ -99,12 +113,25 @@ export const RightTopMinimapAndDrawer = memo(function RightTopMinimapAndDrawer({
 
         {/* Minimap Radar View */}
         {!isMinimapCollapsed ? (
-          <div className="animate-in fade-in duration-200">
+          <div
+            className="animate-in fade-in duration-200 cursor-pointer"
+            onClick={() => {
+              playButtonClick();
+              openModal("worldAtlas");
+            }}
+            title="Nhấp vào để mở Bản Đồ Thế Giới 100 Bản Đồ & Hầm Ngục (Alt + W)"
+          >
             <MinimapRadar zoomMultiplier={zoomLevel} />
           </div>
         ) : (
-          <div className="px-3 py-1 rounded-xl bg-[#0a0514]/90 border border-amber-500/50 text-[10px] font-mono font-bold text-amber-300 shadow">
-            🗺️ Bản Đồ (Đã thu gọn)
+          <div
+            className="px-3 py-1 rounded-xl bg-[#0a0514]/90 border border-amber-500/50 text-[10px] font-mono font-bold text-amber-300 shadow cursor-pointer hover:bg-amber-950/40 transition"
+            onClick={() => {
+              playButtonClick();
+              openModal("worldAtlas");
+            }}
+          >
+            🗺️ Đại Lục 100 Map (Mở Atlas)
           </div>
         )}
       </div>
@@ -115,6 +142,14 @@ export const RightTopMinimapAndDrawer = memo(function RightTopMinimapAndDrawer({
         {isTrayExpanded ? (
           <div className="flex items-center gap-1.5 p-1.5 rounded-2xl bg-[#0b0e14]/95 backdrop-blur-xl border border-slate-800/80 shadow-[0_8px_32px_rgba(0,0,0,0.85),0_0_20px_rgba(0,242,255,0.15)] animate-in fade-in duration-200">
             {[
+              {
+                id: "worldAtlas",
+                icon: <Compass className="w-4 h-4 text-cyan-300" />,
+                title: "Bản Đồ Thế Giới 100 Khu Vực & Hầm Ngục",
+                keybind: "Alt+W",
+                normalClass: "bg-cyan-950/40 hover:bg-cyan-900/60 border-cyan-500/50 hover:border-cyan-400 text-cyan-300 shadow-[0_0_12px_rgba(6,182,212,0.3)]",
+                onClick: () => openModal("worldAtlas"),
+              },
               {
                 id: "render_mode",
                 icon: <Box className="w-4 h-4" />,

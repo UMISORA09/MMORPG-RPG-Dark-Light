@@ -183,16 +183,46 @@ router.post("/characters/:characterId/gm/action", requireAuth, async (req, res):
     return;
   }
 
+  // 0. Set Level trực tiếp (Lv.500 / Lv.999)
+  if (action === "set_level") {
+    const targetLevel = Math.min(999, Math.max(1, Number(req.body.level) || 1));
+    const lvDiff = Math.max(0, targetLevel - character.level);
+    const bonusStats = lvDiff * 5;
+    const bonusSkill = lvDiff * 1;
+    const newPoints = Number(character.unallocatedStatPoints || 0) + bonusStats;
+    const newSkillPoints = Number(character.skillPoints || 0) + bonusSkill;
+
+    await db
+      .update(charactersTable)
+      .set({
+        level: targetLevel,
+        unallocatedStatPoints: newPoints,
+        skillPoints: newSkillPoints,
+      })
+      .where(eq(charactersTable.id, characterId));
+
+    const updated = await recalculateCharacterStats(characterId);
+    res.status(200).json({
+      success: true,
+      action,
+      message: `⭐ [GM ADMIN] Đã thăng cấp trực tiếp lên Lv.${targetLevel} (+${bonusStats} Điểm Tiềm Năng)!`,
+      character: updated,
+    });
+    return;
+  }
+
   // 1. Thêm 10 cấp độ ngay & 50 Điểm Tiềm Năng
   if (action === "add_levels") {
-    const newLevel = Math.min(50, character.level + 10);
+    const newLevel = Math.min(999, character.level + 10);
     const newPoints = Number(character.unallocatedStatPoints || 0) + 50;
+    const newSkillPoints = Number(character.skillPoints || 0) + 10;
 
     await db
       .update(charactersTable)
       .set({
         level: newLevel,
         unallocatedStatPoints: newPoints,
+        skillPoints: newSkillPoints,
       })
       .where(eq(charactersTable.id, characterId));
 
