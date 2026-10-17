@@ -20700,27 +20700,27 @@ var require_router = __commonJS({
     var slice = Array.prototype.slice;
     var flatten = Array.prototype.flat;
     var methods = METHODS.map((method) => method.toLowerCase());
-    module.exports = Router16;
+    module.exports = Router19;
     module.exports.Route = Route;
-    function Router16(options) {
-      if (!(this instanceof Router16)) {
-        return new Router16(options);
+    function Router19(options) {
+      if (!(this instanceof Router19)) {
+        return new Router19(options);
       }
       const opts = options || {};
-      function router16(req, res, next) {
-        router16.handle(req, res, next);
+      function router19(req, res, next) {
+        router19.handle(req, res, next);
       }
-      Object.setPrototypeOf(router16, this);
-      router16.caseSensitive = opts.caseSensitive;
-      router16.mergeParams = opts.mergeParams;
-      router16.params = {};
-      router16.strict = opts.strict;
-      router16.stack = [];
-      return router16;
+      Object.setPrototypeOf(router19, this);
+      router19.caseSensitive = opts.caseSensitive;
+      router19.mergeParams = opts.mergeParams;
+      router19.params = {};
+      router19.strict = opts.strict;
+      router19.stack = [];
+      return router19;
     }
-    Router16.prototype = function() {
+    Router19.prototype = function() {
     };
-    Router16.prototype.param = function param(name, fn) {
+    Router19.prototype.param = function param(name, fn) {
       if (!name) {
         throw new TypeError("argument name is required");
       }
@@ -20740,7 +20740,7 @@ var require_router = __commonJS({
       params.push(fn);
       return this;
     };
-    Router16.prototype.handle = function handle(req, res, callback) {
+    Router19.prototype.handle = function handle(req, res, callback) {
       if (!callback) {
         throw new TypeError("argument callback is required");
       }
@@ -20867,7 +20867,7 @@ var require_router = __commonJS({
         }
       }
     };
-    Router16.prototype.use = function use(handler2) {
+    Router19.prototype.use = function use(handler2) {
       let offset = 0;
       let path3 = "/";
       if (typeof handler2 !== "function") {
@@ -20900,7 +20900,7 @@ var require_router = __commonJS({
       }
       return this;
     };
-    Router16.prototype.route = function route(path3) {
+    Router19.prototype.route = function route(path3) {
       const route2 = new Route(path3);
       const layer = new Layer(path3, {
         sensitive: this.caseSensitive,
@@ -20915,7 +20915,7 @@ var require_router = __commonJS({
       return route2;
     };
     methods.concat("all").forEach(function(method) {
-      Router16.prototype[method] = function(path3) {
+      Router19.prototype[method] = function(path3) {
         const route = this.route(path3);
         route[method].apply(route, slice.call(arguments, 1));
         return this;
@@ -21098,13 +21098,13 @@ var require_application = __commonJS({
     var compileTrust = require_utils3().compileTrust;
     var resolve = __require("node:path").resolve;
     var once = require_once();
-    var Router16 = require_router();
+    var Router19 = require_router();
     var slice = Array.prototype.slice;
     var flatten = Array.prototype.flat;
     var app2 = exports = module.exports = {};
     var trustProxyDefaultSymbol = "@@symbol:trust_proxy_default";
     app2.init = function init() {
-      var router16 = null;
+      var router19 = null;
       this.cache = /* @__PURE__ */ Object.create(null);
       this.engines = /* @__PURE__ */ Object.create(null);
       this.settings = /* @__PURE__ */ Object.create(null);
@@ -21113,13 +21113,13 @@ var require_application = __commonJS({
         configurable: true,
         enumerable: true,
         get: function getrouter() {
-          if (router16 === null) {
-            router16 = new Router16({
+          if (router19 === null) {
+            router19 = new Router19({
               caseSensitive: this.enabled("case sensitive routing"),
               strict: this.enabled("strict routing")
             });
           }
-          return router16;
+          return router19;
         }
       });
     };
@@ -21190,15 +21190,15 @@ var require_application = __commonJS({
       if (fns.length === 0) {
         throw new TypeError("app.use() requires a middleware function");
       }
-      var router16 = this.router;
+      var router19 = this.router;
       fns.forEach(function(fn2) {
         if (!fn2 || !fn2.handle || !fn2.set) {
-          return router16.use(path3, fn2);
+          return router19.use(path3, fn2);
         }
         debug(".use app under %s", path3);
         fn2.mountpath = path3;
         fn2.parent = this;
-        router16.use(path3, function mounted_app(req, res, next) {
+        router19.use(path3, function mounted_app(req, res, next) {
           var orig = req.app;
           fn2.handle(req, res, function(err) {
             Object.setPrototypeOf(req, orig.request);
@@ -23783,7 +23783,7 @@ var require_express = __commonJS({
     var EventEmitter = __require("node:events").EventEmitter;
     var mixin = require_merge_descriptors();
     var proto = require_application();
-    var Router16 = require_router();
+    var Router19 = require_router();
     var req = require_request();
     var res = require_response();
     exports = module.exports = createApplication;
@@ -23805,8 +23805,8 @@ var require_express = __commonJS({
     exports.application = proto;
     exports.request = req;
     exports.response = res;
-    exports.Route = Router16.Route;
-    exports.Router = Router16;
+    exports.Route = Router19.Route;
+    exports.Router = Router19;
     exports.json = bodyParser.json;
     exports.raw = bodyParser.raw;
     exports.static = require_serve_static();
@@ -35657,7 +35657,7 @@ var require_connect_pg_simple = __commonJS({
 });
 
 // src/app.ts
-var import_express16 = __toESM(require_express2(), 1);
+var import_express19 = __toESM(require_express2(), 1);
 var import_cors = __toESM(require_lib3(), 1);
 var import_pino_http = __toESM(require_logger(), 1);
 var import_express_session = __toESM(require_express_session(), 1);
@@ -35667,7 +35667,7 @@ import path2 from "node:path";
 import fs2 from "node:fs";
 
 // src/routes/index.ts
-var import_express15 = __toESM(require_express2(), 1);
+var import_express18 = __toESM(require_express2(), 1);
 
 // src/routes/health.ts
 var import_express = __toESM(require_express2(), 1);
@@ -60185,9 +60185,11 @@ __export(schema_exports, {
   insertCharacterSchema: () => insertCharacterSchema,
   insertEncounterSchema: () => insertEncounterSchema,
   insertItemSchema: () => insertItemSchema,
+  insertMarketListingSchema: () => insertMarketListingSchema,
   insertRewardGrantSchema: () => insertRewardGrantSchema,
   insertUserSchema: () => insertUserSchema,
   itemsTable: () => itemsTable,
+  marketListingsTable: () => marketListingsTable,
   monstersTable: () => monstersTable,
   questsTable: () => questsTable,
   rewardGrantsTable: () => rewardGrantsTable,
@@ -60521,6 +60523,11 @@ var charactersTable = pgTable("characters", {
   hotbarConfigJson: text("hotbar_config_json").notNull().default(""),
   activeBuffsJson: text("active_buffs_json").notNull().default("[]"),
   uiPreferencesJson: text("ui_preferences_json").notNull().default(""),
+  // --- Advanced MMORPG Systems (Awakening, Talents, Codex, Auto-Bot) ---
+  awakeningTier: integer2("awakening_tier").notNull().default(0),
+  talentsJson: text("talents_json").notNull().default("{}"),
+  codexUnlockedJson: text("codex_unlocked_json").notNull().default("[]"),
+  autoCombatSettingsJson: text("auto_combat_settings_json").notNull().default('{"hpThreshold":45,"mpThreshold":30,"lootFilterMinRarity":"rare"}'),
   createdAt: timestamp("created_at").defaultNow().notNull()
 }, (table) => ({
   userIdIndex: index("characters_user_id_idx").on(table.userId),
@@ -60599,6 +60606,8 @@ var characterItemsTable = pgTable("character_items", {
   enhanceLevel: integer2("enhance_level").notNull().default(0),
   rarity: text("rarity").notNull().default("common"),
   bonusCombatPower: integer2("bonus_combat_power").notNull().default(0),
+  socketsJson: text("sockets_json").notNull().default("[]"),
+  reforgeStatsJson: text("reforge_stats_json").notNull().default("[]"),
   miraclePassive1: text("miracle_passive_1"),
   miraclePassive2: text("miracle_passive_2"),
   acquiredAt: timestamp("acquired_at").defaultNow().notNull()
@@ -60788,6 +60797,41 @@ var characterQuestsTable = pgTable("character_quests", {
   questIdIdx: index("char_quests_quest_id_idx").on(table.questId),
   statusIdx: index("char_quests_status_idx").on(table.status)
 }));
+
+// ../../lib/db/src/schema/market.ts
+var marketListingsTable = pgTable("market_listings", {
+  id: serial("id").primaryKey(),
+  sellerCharacterId: integer2("seller_character_id").notNull(),
+  sellerName: text("seller_name").notNull(),
+  sellerServerId: text("seller_server_id").notNull().default("s1_long_vuong"),
+  itemId: text("item_id").notNull(),
+  itemName: text("item_name").notNull(),
+  itemRarity: text("item_rarity").notNull().default("common"),
+  itemCategory: text("item_category").notNull().default("equipment"),
+  itemClassId: text("item_class_id"),
+  equipSlot: text("equip_slot"),
+  enhanceLevel: integer2("enhance_level").notNull().default(0),
+  socketsJson: text("sockets_json").notNull().default("[]"),
+  reforgeStatsJson: text("reforge_stats_json").notNull().default("[]"),
+  quantity: integer2("quantity").notNull().default(1),
+  priceGold: integer2("price_gold").notNull(),
+  status: text("status").notNull().default("active"),
+  // "active" | "sold" | "cancelled"
+  buyerCharacterId: integer2("buyer_character_id"),
+  listedAt: timestamp("listed_at").defaultNow().notNull(),
+  soldAt: timestamp("sold_at")
+}, (table) => ({
+  statusIdx: index("market_listings_status_idx").on(table.status),
+  sellerCharIdx: index("market_listings_seller_char_idx").on(table.sellerCharacterId),
+  itemIdIdx: index("market_listings_item_id_idx").on(table.itemId),
+  categoryIdx: index("market_listings_category_idx").on(table.itemCategory),
+  rarityIdx: index("market_listings_rarity_idx").on(table.itemRarity),
+  serverIdx: index("market_listings_server_idx").on(table.sellerServerId)
+}));
+var insertMarketListingSchema = createInsertSchema(marketListingsTable).omit({
+  id: true,
+  listedAt: true
+});
 
 // ../../lib/db/src/seed-data.ts
 var SEED_ITEMS = [
@@ -61070,7 +61114,32 @@ var utilitySeeds = [
   { id: "quest_dragon_seal", name: "\u1EA4n Ch\u01B0\u01A1ng Long V\u01B0\u01A1ng", category: "quest", type: "chest", equipSlot: "none", rarity: "epic", price: 0, maxStack: 20, icon: "\u{1F409}", description: "\u1EA4n ch\u01B0\u01A1ng nhi\u1EC7m v\u1EE5 Long V\u01B0\u01A1ng.", lore: "Bi\u1EC3u t\u01B0\u1EE3ng c\u1EE7a giao \u01B0\u1EDBc c\u1ED5." },
   { id: "quest_spy_letter", name: "Th\u01B0 M\u1EADt Th\xE1m", category: "quest", type: "scroll", equipSlot: "none", rarity: "common", price: 0, maxStack: 20, icon: "\u2709", description: "Th\u01B0 m\u1EADt thu th\u1EADp t\u1EEB H\u1EAFc \xC1m Th\xE2m Uy\xEAn.", lore: "Ni\xEAm phong b\u1EB1ng s\xE1p \u0111\u1ECF." },
   { id: "charm_protection", name: "B\xF9a B\u1EA3o H\u1ED9 C\u01B0\u1EDDng H\xF3a", category: "consumable", type: "scroll", equipSlot: "none", rarity: "epic", price: 500, maxStack: 99, icon: "\u{1F9FF}", description: "B\u1EA3o h\u1ED9 trang b\u1ECB kh\xF4ng b\u1ECB r\u1EDBt c\u1EA5p khi c\u01B0\u1EDDng h\xF3a th\u1EA5t b\u1EA1i t\u1EEB +10 tr\u1EDF l\xEAn.", lore: "B\xF9a ch\xFA c\u1ED5 x\u01B0a kh\u1EAFc \u1EA5n linh v\u0103n h\u1ED9 m\u1EC7nh c\u1EE7a Th\u1EA7n R\xE8n." },
-  { id: "material_miracle_core", name: "L\xF5i Tinh Th\u1EC3 K\xEC T\xEDch", category: "material", type: "stone", equipSlot: "none", rarity: "miracle", price: 1e4, maxStack: 99, icon: "\u{1F496}", description: "L\xF5i tinh th\u1EC3 t\u1ED1i cao t\u1ECFa h\xE0o quang h\u1ED3ng t\xEDm \xE1nh kim r\u1EF1c r\u1EE1, t\xEDch t\u1EE5 tinh hoa \u0111\u1EA5t tr\u1EDDi.", lore: "Truy\u1EC1n thuy\u1EBFt k\u1EC3 r\u1EB1ng ch\u1EC9 c\xF3 Boss Long V\u01B0\u01A1ng ho\u1EB7c qu\xE1i v\u1EADt mang thi\xEAn m\u1EC7nh m\u1EDBi k\u1EBFt tinh \u0111\u01B0\u1EE3c." }
+  { id: "material_miracle_core", name: "L\xF5i Tinh Th\u1EC3 K\xEC T\xEDch", category: "material", type: "stone", equipSlot: "none", rarity: "miracle", price: 1e4, maxStack: 99, icon: "\u{1F496}", description: "L\xF5i tinh th\u1EC3 t\u1ED1i cao t\u1ECFa h\xE0o quang h\u1ED3ng t\xEDm \xE1nh kim r\u1EF1c r\u1EE1, t\xEDch t\u1EE5 tinh hoa \u0111\u1EA5t tr\u1EDDi.", lore: "Truy\u1EC1n thuy\u1EBFt k\u1EC3 r\u1EB1ng ch\u1EC9 c\xF3 Boss Long V\u01B0\u01A1ng ho\u1EB7c qu\xE1i v\u1EADt mang thi\xEAn m\u1EC7nh m\u1EDBi k\u1EBFt tinh \u0111\u01B0\u1EE3c." },
+  { id: "material_reforge_stone", name: "\u0110\xE1 T\u1EA9y Luy\u1EC7n Th\u1EA7n B\xED", category: "material", type: "stone", equipSlot: "none", rarity: "rare", price: 200, maxStack: 99, icon: "\u{1F52E}", description: "\u0110\xE1 ma thu\u1EADt d\xF9ng \u0111\u1EC3 t\u1EA9y luy\u1EC7n c\xE1c d\xF2ng thu\u1ED9c t\xEDnh \u1EA9n (C -> SS) cho trang b\u1ECB.", lore: "T\u1ECFa ra lu\u1ED3ng s\xE1ng bi\u1EBFn \u1EA3o xoay v\u1EA7n v\u1EADn m\u1EC7nh trang b\u1ECB." },
+  // 🔴 Hồng Ngọc Hủy Diệt (Ruby 1-5)
+  { id: "gem_ruby_1", name: "H\u1ED3ng Ng\u1ECDc C\u1EA5p 1", category: "material", type: "stone", equipSlot: "none", rarity: "common", price: 100, maxStack: 99, icon: "\u{1F534}", description: "Kh\u1EA3m v\xE0o trang b\u1ECB: +15 ATK, +2% S\xE1t th\u01B0\u01A1ng.", lore: "B\u1EA3o th\u1EA1ch s\u1EAFc \u0111\u1ECF r\u1EF1c l\u1EEDa ch\u1EE9a s\u1EE9c m\u1EA1nh h\u1EE7y di\u1EC7t." },
+  { id: "gem_ruby_2", name: "H\u1ED3ng Ng\u1ECDc C\u1EA5p 2", category: "material", type: "stone", equipSlot: "none", rarity: "rare", price: 300, maxStack: 99, icon: "\u{1F534}", description: "Kh\u1EA3m v\xE0o trang b\u1ECB: +35 ATK, +4% S\xE1t th\u01B0\u01A1ng.", lore: "B\u1EA3o th\u1EA1ch c\u1EA5p 2 t\u1ECFa h\xE0o quang r\u1EF1c r\u1EE1." },
+  { id: "gem_ruby_3", name: "H\u1ED3ng Ng\u1ECDc C\u1EA5p 3", category: "material", type: "stone", equipSlot: "none", rarity: "epic", price: 900, maxStack: 99, icon: "\u{1F534}", description: "Kh\u1EA3m v\xE0o trang b\u1ECB: +70 ATK, +7% S\xE1t th\u01B0\u01A1ng.", lore: "B\u1EA3o th\u1EA1ch r\xE8n t\u1EEB dung nham Vi\u1EC5n C\u1ED5." },
+  { id: "gem_ruby_4", name: "H\u1ED3ng Ng\u1ECDc C\u1EA5p 4", category: "material", type: "stone", equipSlot: "none", rarity: "legendary", price: 2700, maxStack: 99, icon: "\u{1F534}", description: "Kh\u1EA3m v\xE0o trang b\u1ECB: +120 ATK, +11% S\xE1t th\u01B0\u01A1ng.", lore: "Huy\u1EBFt m\u1EA1ch Long V\u01B0\u01A1ng ng\u01B0ng t\u1EE5." },
+  { id: "gem_ruby_5", name: "H\u1ED3ng Ng\u1ECDc C\u1EA5p 5 (Th\u1EA7n C\u1EA5p)", category: "material", type: "stone", equipSlot: "none", rarity: "miracle", price: 8100, maxStack: 99, icon: "\u{1F534}", description: "Kh\u1EA3m v\xE0o trang b\u1ECB: +200 ATK, +18% S\xE1t th\u01B0\u01A1ng.", lore: "Tuy\u1EC7t ph\u1EA9m b\u1EA3o th\u1EA1ch mang s\u1EE9c m\u1EA1nh h\u1EE7y thi\xEAn di\u1EC7t \u0111\u1ECBa." },
+  // 🔵 Lam Ngọc Bất Hoại (Sapphire 1-5)
+  { id: "gem_sapphire_1", name: "Lam Ng\u1ECDc C\u1EA5p 1", category: "material", type: "stone", equipSlot: "none", rarity: "common", price: 100, maxStack: 99, icon: "\u{1F535}", description: "Kh\u1EA3m v\xE0o trang b\u1ECB: +12 DEF, +10 MDEF, +80 HP.", lore: "B\u1EA3o th\u1EA1ch xanh th\u1EB3m nh\u01B0 \u0111\u1EA1i d\u01B0\u01A1ng bao la." },
+  { id: "gem_sapphire_2", name: "Lam Ng\u1ECDc C\u1EA5p 2", category: "material", type: "stone", equipSlot: "none", rarity: "rare", price: 300, maxStack: 99, icon: "\u{1F535}", description: "Kh\u1EA3m v\xE0o trang b\u1ECB: +28 DEF, +22 MDEF, +200 HP.", lore: "B\u1EA3o th\u1EA1ch ph\xF2ng ng\u1EF1 ki\xEAn c\u1ED1 c\u1EA5p 2." },
+  { id: "gem_sapphire_3", name: "Lam Ng\u1ECDc C\u1EA5p 3", category: "material", type: "stone", equipSlot: "none", rarity: "epic", price: 900, maxStack: 99, icon: "\u{1F535}", description: "Kh\u1EA3m v\xE0o trang b\u1ECB: +55 DEF, +45 MDEF, +450 HP.", lore: "H\xE0o quang b\u1EA5t ho\u1EA1i ng\u0103n ch\u1EB7n m\u1ECDi \u0111\xF2n th\u1EBF." },
+  { id: "gem_sapphire_4", name: "Lam Ng\u1ECDc C\u1EA5p 4", category: "material", type: "stone", equipSlot: "none", rarity: "legendary", price: 2700, maxStack: 99, icon: "\u{1F535}", description: "Kh\u1EA3m v\xE0o trang b\u1ECB: +95 DEF, +80 MDEF, +900 HP.", lore: "K\u1EBFt tinh t\u1EEB b\u0103ng h\xE0 v\u1EA1n n\u0103m b\u1EA5t di\u1EC7t." },
+  { id: "gem_sapphire_5", name: "Lam Ng\u1ECDc C\u1EA5p 5 (Th\u1EA7n C\u1EA5p)", category: "material", type: "stone", equipSlot: "none", rarity: "miracle", price: 8100, maxStack: 99, icon: "\u{1F535}", description: "Kh\u1EA3m v\xE0o trang b\u1ECB: +160 DEF, +135 MDEF, +1800 HP.", lore: "Th\xE1nh khi\xEAn b\u1EA3o h\u1ED9 b\u1EA5t ho\u1EA1i c\u1EE7a c\xE1c v\u1ECB Th\u1EA7n." },
+  // 🟡 Hoàng Ngọc Chí Mạng (Topaz 1-5)
+  { id: "gem_topaz_1", name: "Ho\xE0ng Ng\u1ECDc C\u1EA5p 1", category: "material", type: "stone", equipSlot: "none", rarity: "common", price: 100, maxStack: 99, icon: "\u{1F7E1}", description: "Kh\u1EA3m v\xE0o trang b\u1ECB: +2% T\u1EC9 l\u1EC7 B\u1EA1o, +5% S\xE1t th\u01B0\u01A1ng B\u1EA1o.", lore: "B\u1EA3o th\u1EA1ch \xE1nh v\xE0ng ch\xF3i l\u1ECDi." },
+  { id: "gem_topaz_2", name: "Ho\xE0ng Ng\u1ECDc C\u1EA5p 2", category: "material", type: "stone", equipSlot: "none", rarity: "rare", price: 300, maxStack: 99, icon: "\u{1F7E1}", description: "Kh\u1EA3m v\xE0o trang b\u1ECB: +4% T\u1EC9 l\u1EC7 B\u1EA1o, +10% S\xE1t th\u01B0\u01A1ng B\u1EA1o.", lore: "T\u1EADp trung tinh l\u1EF1c tung c\xFA \u0111\xE1nh ch\xED m\u1EA1ng." },
+  { id: "gem_topaz_3", name: "Ho\xE0ng Ng\u1ECDc C\u1EA5p 3", category: "material", type: "stone", equipSlot: "none", rarity: "epic", price: 900, maxStack: 99, icon: "\u{1F7E1}", description: "Kh\u1EA3m v\xE0o trang b\u1ECB: +7% T\u1EC9 l\u1EC7 B\u1EA1o, +18% S\xE1t th\u01B0\u01A1ng B\u1EA1o.", lore: "Tia s\xE9t v\xE0ng x\xE9 to\u1EA1c kh\xF4ng gian." },
+  { id: "gem_topaz_4", name: "Ho\xE0ng Ng\u1ECDc C\u1EA5p 4", category: "material", type: "stone", equipSlot: "none", rarity: "legendary", price: 2700, maxStack: 99, icon: "\u{1F7E1}", description: "Kh\u1EA3m v\xE0o trang b\u1ECB: +11% T\u1EC9 l\u1EC7 B\u1EA1o, +28% S\xE1t th\u01B0\u01A1ng B\u1EA1o.", lore: "M\u1ED7i \u0111\xF2n \u0111\xE1nh \u0111\u1EC1u mang theo uy l\u1EF1c ch\xED m\u1EA1ng." },
+  { id: "gem_topaz_5", name: "Ho\xE0ng Ng\u1ECDc C\u1EA5p 5 (Th\u1EA7n C\u1EA5p)", category: "material", type: "stone", equipSlot: "none", rarity: "miracle", price: 8100, maxStack: 99, icon: "\u{1F7E1}", description: "Kh\u1EA3m v\xE0o trang b\u1ECB: +16% T\u1EC9 l\u1EC7 B\u1EA1o, +45% S\xE1t th\u01B0\u01A1ng B\u1EA1o.", lore: "Tuy\u1EC7t \u0111\u1EC9nh ch\xED m\u1EA1ng khai s\u01A1n ph\xE1 th\u1EA1ch." },
+  // 🟢 Lục Ngọc Thần Tốc (Emerald 1-5)
+  { id: "gem_emerald_1", name: "L\u1EE5c Ng\u1ECDc C\u1EA5p 1", category: "material", type: "stone", equipSlot: "none", rarity: "common", price: 100, maxStack: 99, icon: "\u{1F7E2}", description: "Kh\u1EA3m v\xE0o trang b\u1ECB: +1 T\u1ED1c \u0111\xE1nh, +1 T\u1ED1c ch\u1EA1y, +2% N\xE9 tr\xE1nh.", lore: "B\u1EA3o th\u1EA1ch xanh l\u1EE5c uy\u1EC3n chuy\u1EC3n nh\u01B0 l\xE0n gi\xF3." },
+  { id: "gem_emerald_2", name: "L\u1EE5c Ng\u1ECDc C\u1EA5p 2", category: "material", type: "stone", equipSlot: "none", rarity: "rare", price: 300, maxStack: 99, icon: "\u{1F7E2}", description: "Kh\u1EA3m v\xE0o trang b\u1ECB: +2 T\u1ED1c \u0111\xE1nh, +2 T\u1ED1c ch\u1EA1y, +4% N\xE9 tr\xE1nh.", lore: "Th\xE2n ph\xE1p bi\u1EBFn \u1EA3o nh\u1EB9 nh\xE0ng." },
+  { id: "gem_emerald_3", name: "L\u1EE5c Ng\u1ECDc C\u1EA5p 3", category: "material", type: "stone", equipSlot: "none", rarity: "epic", price: 900, maxStack: 99, icon: "\u{1F7E2}", description: "Kh\u1EA3m v\xE0o trang b\u1ECB: +3 T\u1ED1c \u0111\xE1nh, +3 T\u1ED1c ch\u1EA1y, +7% N\xE9 tr\xE1nh.", lore: "T\u1ED1c \u0111\u1ED9 xu\u1EA5t chi\xEAu nh\u01B0 \u1EA3o \u1EA3nh l\u01B0\u1EDBt gi\xF3." },
+  { id: "gem_emerald_4", name: "L\u1EE5c Ng\u1ECDc C\u1EA5p 4", category: "material", type: "stone", equipSlot: "none", rarity: "legendary", price: 2700, maxStack: 99, icon: "\u{1F7E2}", description: "Kh\u1EA3m v\xE0o trang b\u1ECB: +5 T\u1ED1c \u0111\xE1nh, +4 T\u1ED1c ch\u1EA1y, +11% N\xE9 tr\xE1nh.", lore: "Nh\u01B0 c\u01A1n l\u1ED1c cu\u1ED1n ph\u0103ng m\u1ECDi ch\u01B0\u1EDBng ng\u1EA1i." },
+  { id: "gem_emerald_5", name: "L\u1EE5c Ng\u1ECDc C\u1EA5p 5 (Th\u1EA7n C\u1EA5p)", category: "material", type: "stone", equipSlot: "none", rarity: "miracle", price: 8100, maxStack: 99, icon: "\u{1F7E2}", description: "Kh\u1EA3m v\xE0o trang b\u1ECB: +8 T\u1ED1c \u0111\xE1nh, +6 T\u1ED1c ch\u1EA1y, +18% N\xE9 tr\xE1nh.", lore: "Th\u1EA7n t\u1ED1c tuy\u1EC7t lu\xE2n, xu\u1EA5t qu\u1EF7 nh\u1EADp th\u1EA7n." }
 ].map((item) => ({
   hpBoost: 0,
   mpBoost: 0,
@@ -61428,7 +61497,8 @@ var memoryStore = {
   forum_comments: [],
   world_chats: [],
   quests: [],
-  character_quests: []
+  character_quests: [],
+  market_listings: []
 };
 var autoIncrement = {
   users: 1,
@@ -61436,7 +61506,8 @@ var autoIncrement = {
   character_items: 1,
   battle_logs: 1,
   forum_posts: 1,
-  world_chats: 1
+  world_chats: 1,
+  market_listings: 100
 };
 var STORE_FILE = path.join(
   process.env.VERCEL ? "/tmp" : process.env.APPDATA || process.cwd(),
@@ -61495,6 +61566,7 @@ function createMemoryDb() {
     if (name.includes("server")) return memoryStore.servers;
     if (name.includes("encounter")) return memoryStore.encounters;
     if (name.includes("character_item")) return memoryStore.character_items;
+    if (name.includes("market_listing")) return memoryStore.market_listings;
     if (name.includes("character")) return memoryStore.characters;
     if (name.includes("user")) return memoryStore.users;
     if (name.includes("item")) return memoryStore.items;
@@ -61510,6 +61582,7 @@ function createMemoryDb() {
     if (data === memoryStore.forum_posts) return "forum_posts";
     if (data === memoryStore.forum_comments) return "forum_comments";
     if (data === memoryStore.world_chats) return "world_chats";
+    if (data === memoryStore.market_listings) return "market_listings";
     return null;
   };
   const matchesPredicate = (row, predicate) => {
@@ -61823,6 +61896,10 @@ async function initDatabase() {
         ALTER TABLE characters ADD COLUMN IF NOT EXISTS hotbar_config_json TEXT DEFAULT '' NOT NULL;
         ALTER TABLE characters ADD COLUMN IF NOT EXISTS active_buffs_json TEXT DEFAULT '[]' NOT NULL;
         ALTER TABLE characters ADD COLUMN IF NOT EXISTS ui_preferences_json TEXT DEFAULT '' NOT NULL;
+        ALTER TABLE characters ADD COLUMN IF NOT EXISTS awakening_tier INTEGER DEFAULT 0 NOT NULL;
+        ALTER TABLE characters ADD COLUMN IF NOT EXISTS talents_json TEXT DEFAULT '{}' NOT NULL;
+        ALTER TABLE characters ADD COLUMN IF NOT EXISTS codex_unlocked_json TEXT DEFAULT '[]' NOT NULL;
+        ALTER TABLE characters ADD COLUMN IF NOT EXISTS auto_combat_settings_json TEXT DEFAULT '{"hpThreshold":45,"mpThreshold":30,"lootFilterMinRarity":"rare"}' NOT NULL;
 
         CREATE TABLE IF NOT EXISTS items (
           id TEXT PRIMARY KEY,
@@ -61893,6 +61970,8 @@ async function initDatabase() {
         ALTER TABLE character_items ADD COLUMN IF NOT EXISTS rarity TEXT DEFAULT 'common' NOT NULL;
         ALTER TABLE character_items ADD COLUMN IF NOT EXISTS miracle_passive_1 TEXT;
         ALTER TABLE character_items ADD COLUMN IF NOT EXISTS miracle_passive_2 TEXT;
+        ALTER TABLE character_items ADD COLUMN IF NOT EXISTS sockets_json TEXT DEFAULT '[]' NOT NULL;
+        ALTER TABLE character_items ADD COLUMN IF NOT EXISTS reforge_stats_json TEXT DEFAULT '[]' NOT NULL;
         DROP INDEX IF EXISTS character_item_unique;
 
         CREATE TABLE IF NOT EXISTS battle_logs (
@@ -62000,6 +62079,31 @@ async function initDatabase() {
           created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
           updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
         );
+
+        CREATE TABLE IF NOT EXISTS market_listings (
+          id SERIAL PRIMARY KEY,
+          seller_character_id INTEGER NOT NULL,
+          seller_name TEXT NOT NULL,
+          seller_server_id TEXT DEFAULT 's1_long_vuong' NOT NULL,
+          item_id TEXT NOT NULL,
+          item_name TEXT NOT NULL,
+          item_rarity TEXT DEFAULT 'common' NOT NULL,
+          item_category TEXT DEFAULT 'equipment' NOT NULL,
+          item_class_id TEXT,
+          equip_slot TEXT,
+          enhance_level INTEGER DEFAULT 0 NOT NULL,
+          sockets_json TEXT DEFAULT '[]' NOT NULL,
+          reforge_stats_json TEXT DEFAULT '[]' NOT NULL,
+          quantity INTEGER DEFAULT 1 NOT NULL,
+          price_gold INTEGER NOT NULL,
+          status TEXT DEFAULT 'active' NOT NULL,
+          buyer_character_id INTEGER,
+          listed_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP NOT NULL,
+          sold_at TIMESTAMP
+        );
+        CREATE INDEX IF NOT EXISTS market_status_idx ON market_listings(status);
+        CREATE INDEX IF NOT EXISTS market_seller_idx ON market_listings(seller_character_id);
+        CREATE INDEX IF NOT EXISTS market_item_id_idx ON market_listings(item_id);
         CREATE INDEX IF NOT EXISTS quests_type_idx ON quests(type);
         CREATE INDEX IF NOT EXISTS quests_npc_id_idx ON quests(npc_id);
         CREATE INDEX IF NOT EXISTS quests_order_idx ON quests(order_index);
@@ -62518,7 +62622,9 @@ async function recalculateCharacterStats(characterId, executor = db) {
     item: itemsTable,
     enhanceLevel: characterItemsTable.enhanceLevel,
     bonusCombatPower: characterItemsTable.bonusCombatPower,
-    rarity: characterItemsTable.rarity
+    rarity: characterItemsTable.rarity,
+    socketsJson: characterItemsTable.socketsJson,
+    reforgeStatsJson: characterItemsTable.reforgeStatsJson
   }).from(characterItemsTable).innerJoin(itemsTable, eq(characterItemsTable.itemId, itemsTable.id)).where(and(
     eq(characterItemsTable.characterId, characterId),
     eq(characterItemsTable.equipped, true)
@@ -62537,7 +62643,9 @@ async function recalculateCharacterStats(characterId, executor = db) {
     lukBoost: 0,
     vitBoost: 0,
     critRateBoost: 0,
-    bonusCombatPower: 0
+    bonusCombatPower: 0,
+    evasionBoost: 0,
+    critDmgBoost: 0
   };
   let hasMiracleEquipped = false;
   for (const row of equippedRows) {
@@ -62549,17 +62657,104 @@ async function recalculateCharacterStats(characterId, executor = db) {
     for (const stat of Object.keys(bonuses)) {
       if (stat === "bonusCombatPower") {
         bonuses[stat] += Number(row.bonusCombatPower ?? 0) + (isMiracle ? 2500 : 0);
-      } else {
+      } else if (stat in item || item[stat]) {
         bonuses[stat] += Math.floor(numericItemStat(item, stat) * multiplier);
       }
     }
+    const sockets = typeof row.socketsJson === "string" ? (() => {
+      try {
+        return JSON.parse(row.socketsJson);
+      } catch {
+        return [];
+      }
+    })() : row.socketsJson || [];
+    if (Array.isArray(sockets)) {
+      for (const sock of sockets) {
+        if (!sock || !sock.gemType) continue;
+        const lvl = Math.min(5, Math.max(1, Number(sock.level) || 1));
+        const idx = lvl - 1;
+        if (sock.gemType === "ruby") {
+          const atkVals = [15, 35, 70, 120, 200];
+          bonuses.atkBoost += atkVals[idx] || 15;
+          bonuses.bonusCombatPower += (idx + 1) * 150;
+        } else if (sock.gemType === "sapphire") {
+          const defVals = [12, 28, 55, 95, 160];
+          const mdefVals = [10, 22, 45, 80, 135];
+          const hpVals = [80, 200, 450, 900, 1800];
+          bonuses.defBoost += defVals[idx] || 12;
+          bonuses.mdefBoost += mdefVals[idx] || 10;
+          bonuses.hpBoost += hpVals[idx] || 80;
+          bonuses.bonusCombatPower += (idx + 1) * 150;
+        } else if (sock.gemType === "topaz") {
+          const critVals = [2, 4, 7, 11, 16];
+          const critDmgVals = [5, 10, 18, 28, 45];
+          bonuses.critRateBoost += critVals[idx] || 2;
+          bonuses.critDmgBoost += critDmgVals[idx] || 5;
+          bonuses.bonusCombatPower += (idx + 1) * 160;
+        } else if (sock.gemType === "emerald") {
+          const spdVals = [1, 2, 3, 5, 8];
+          const evaVals = [2, 4, 7, 11, 18];
+          bonuses.spdBoost += spdVals[idx] || 1;
+          bonuses.evasionBoost += evaVals[idx] || 2;
+          bonuses.bonusCombatPower += (idx + 1) * 140;
+        }
+      }
+    }
+    const reforgeLines = typeof row.reforgeStatsJson === "string" ? (() => {
+      try {
+        return JSON.parse(row.reforgeStatsJson);
+      } catch {
+        return [];
+      }
+    })() : row.reforgeStatsJson || [];
+    if (Array.isArray(reforgeLines)) {
+      for (const line2 of reforgeLines) {
+        if (!line2 || !line2.key || line2.value === void 0) continue;
+        const val = Number(line2.value) || 0;
+        if (line2.key === "atk" || line2.key === "bonus_atk") bonuses.atkBoost += val;
+        else if (line2.key === "def" || line2.key === "bonus_def") bonuses.defBoost += val;
+        else if (line2.key === "hp" || line2.key === "bonus_hp") bonuses.hpBoost += val;
+        else if (line2.key === "crit" || line2.key === "crit_rate") bonuses.critRateBoost += val;
+        else if (line2.key === "spd") bonuses.spdBoost += val;
+        const rankBonus = line2.rank === "SS" ? 500 : line2.rank === "S" ? 300 : line2.rank === "A" ? 180 : line2.rank === "B" ? 100 : 50;
+        bonuses.bonusCombatPower += rankBonus;
+      }
+    }
+  }
+  const awakeningTier = Math.min(3, Math.max(0, Number(character.awakeningTier) || 0));
+  const awakeningMult = 1 + awakeningTier * 0.2;
+  let talents = {};
+  try {
+    talents = typeof character.talentsJson === "string" ? JSON.parse(character.talentsJson) : character.talentsJson || {};
+  } catch {
+    talents = {};
+  }
+  bonuses.atkBoost += (Number(talents.fury_1) || 0) * 8;
+  bonuses.critRateBoost += (Number(talents.fury_2) || 0) * 2;
+  bonuses.bonusCombatPower += (Number(talents.fury_3) || 0) * 250;
+  bonuses.defBoost += (Number(talents.fort_1) || 0) * 8;
+  bonuses.hpBoost += (Number(talents.fort_2) || 0) * 120;
+  bonuses.mdefBoost += (Number(talents.fort_3) || 0) * 10;
+  bonuses.spdBoost += (Number(talents.agility_1) || 0) * 1;
+  bonuses.evasionBoost += (Number(talents.agility_2) || 0) * 2;
+  let codexUnlocked = [];
+  try {
+    codexUnlocked = typeof character.codexUnlockedJson === "string" ? JSON.parse(character.codexUnlockedJson) : character.codexUnlockedJson || [];
+  } catch {
+    codexUnlocked = [];
+  }
+  if (Array.isArray(codexUnlocked) && codexUnlocked.length > 0) {
+    bonuses.hpBoost += codexUnlocked.length * 20;
+    bonuses.atkBoost += codexUnlocked.length * 3;
+    bonuses.defBoost += codexUnlocked.length * 3;
+    bonuses.bonusCombatPower += codexUnlocked.length * 100;
   }
   const baseCls = CHARACTER_CLASSES.find((c) => c.id === character.classId) || CHARACTER_CLASSES[0];
-  const baseHp = baseCls.baseHp;
-  const baseMp = baseCls.baseMp;
-  const baseAtk = baseCls.baseAtk;
-  const baseMatk = 10;
-  const baseDef = baseCls.baseDef;
+  const baseHp = Math.floor(baseCls.baseHp * awakeningMult);
+  const baseMp = Math.floor(baseCls.baseMp * awakeningMult);
+  const baseAtk = Math.floor(baseCls.baseAtk * awakeningMult);
+  const baseMatk = Math.floor(10 * awakeningMult);
+  const baseDef = Math.floor(baseCls.baseDef * awakeningMult);
   const baseSpd = baseCls.baseSpd;
   const baseCrit = baseCls.critRate;
   const baseEva = baseCls.evasion;
@@ -62573,9 +62768,10 @@ async function recalculateCharacterStats(characterId, executor = db) {
   const atk = baseAtk + Math.floor(str * 1.5 + dex * 0.5) + bonuses.atkBoost;
   const matk = baseMatk + Math.floor(intel * 1.8) + bonuses.matkBoost;
   const def = baseDef + Math.floor(vit * 0.8 + str * 0.4) + bonuses.defBoost;
-  const spd = baseSpd + Math.min(8, Math.floor(dex * 0.15)) + bonuses.spdBoost;
-  const critRate = Math.min(75, baseCrit + Math.floor(luk * 0.4 + dex * 0.1) + bonuses.critRateBoost);
-  const evasion = Math.min(60, baseEva + Math.floor(dex * 0.3 + luk * 0.2));
+  const spd = baseSpd + Math.min(10, Math.floor(dex * 0.15)) + bonuses.spdBoost;
+  const critRate = Math.min(85, baseCrit + Math.floor(luk * 0.4 + dex * 0.1) + bonuses.critRateBoost);
+  const evasion = Math.min(65, baseEva + Math.floor(dex * 0.3 + luk * 0.2) + (bonuses.evasionBoost || 0));
+  const critDmg = 150 + (bonuses.critDmgBoost || 0);
   const combatPower = Math.floor(
     maxHp * 0.2 + maxMp * 0.1 + atk * 8 + matk * 6 + def * 10 + spd * 15 + critRate * 12 + bonuses.bonusCombatPower
   );
@@ -62597,7 +62793,7 @@ async function recalculateCharacterStats(characterId, executor = db) {
     mdef: 15 + (character.level - 1) + bonuses.mdefBoost,
     spd,
     critRate,
-    critDmg: 150,
+    critDmg,
     accuracy: 95,
     evasion,
     combatPower
@@ -62728,6 +62924,10 @@ async function listInventory(characterId, executor = db) {
     enhanceLevel: characterItemsTable.enhanceLevel,
     bonusCombatPower: characterItemsTable.bonusCombatPower,
     rarity: characterItemsTable.rarity,
+    miraclePassive1: characterItemsTable.miraclePassive1,
+    miraclePassive2: characterItemsTable.miraclePassive2,
+    socketsJson: characterItemsTable.socketsJson,
+    reforgeStatsJson: characterItemsTable.reforgeStatsJson,
     acquiredAt: characterItemsTable.acquiredAt
   }).from(characterItemsTable).innerJoin(itemsTable, eq(characterItemsTable.itemId, itemsTable.id)).where(eq(characterItemsTable.characterId, characterId));
   return rows.map((row) => {
@@ -62736,6 +62936,15 @@ async function listInventory(characterId, executor = db) {
     const equipped = Boolean(row.equipped);
     const acquiredAt = row.acquiredAt ?? row.acquired_at ?? /* @__PURE__ */ new Date();
     if (!it || !it.id) return null;
+    const safeParse3 = (val) => {
+      if (!val) return null;
+      if (typeof val === "object") return val;
+      try {
+        return JSON.parse(val);
+      } catch {
+        return null;
+      }
+    };
     return {
       id: it.id,
       name: it.name || "V\u1EADt ph\u1EA9m",
@@ -62773,6 +62982,10 @@ async function listInventory(characterId, executor = db) {
       quantity: row.quantity ?? 1,
       enhanceLevel: row.enhanceLevel ?? row.enhance_level ?? 0,
       bonusCombatPower: row.bonusCombatPower ?? row.bonus_combat_power ?? 0,
+      miraclePassive1: row.miraclePassive1 ?? null,
+      miraclePassive2: row.miraclePassive2 ?? null,
+      socketsJson: safeParse3(row.socketsJson),
+      reforgeStatsJson: safeParse3(row.reforgeStatsJson),
       acquiredAt: typeof acquiredAt === "string" ? acquiredAt : acquiredAt.toISOString()
     };
   }).filter(Boolean);
@@ -62787,6 +63000,10 @@ async function getOwnedItem(characterId, itemId) {
     enhanceLevel: characterItemsTable.enhanceLevel,
     bonusCombatPower: characterItemsTable.bonusCombatPower,
     rarity: characterItemsTable.rarity,
+    miraclePassive1: characterItemsTable.miraclePassive1,
+    miraclePassive2: characterItemsTable.miraclePassive2,
+    socketsJson: characterItemsTable.socketsJson,
+    reforgeStatsJson: characterItemsTable.reforgeStatsJson,
     characterId: characterItemsTable.characterId,
     item: itemsTable
   }).from(characterItemsTable).innerJoin(itemsTable, eq(characterItemsTable.itemId, itemsTable.id)).where(
@@ -62797,6 +63014,15 @@ async function getOwnedItem(characterId, itemId) {
   ).limit(1);
   if (!owned) return void 0;
   const item = owned.item || owned;
+  const safeParse3 = (val) => {
+    if (!val) return null;
+    if (typeof val === "object") return val;
+    try {
+      return JSON.parse(val);
+    } catch {
+      return null;
+    }
+  };
   return {
     ownershipId: owned.ownershipId ?? owned.id,
     equipped: Boolean(owned.equipped),
@@ -62806,6 +63032,10 @@ async function getOwnedItem(characterId, itemId) {
     enhanceLevel: owned.enhanceLevel ?? 0,
     bonusCombatPower: owned.bonusCombatPower ?? 0,
     rarity: owned.rarity ?? item.rarity ?? "common",
+    miraclePassive1: owned.miraclePassive1 ?? null,
+    miraclePassive2: owned.miraclePassive2 ?? null,
+    socketsJson: safeParse3(owned.socketsJson),
+    reforgeStatsJson: safeParse3(owned.reforgeStatsJson),
     characterId: owned.characterId ?? characterId,
     item
   };
@@ -63182,6 +63412,8 @@ var CharacterPersistenceService = class {
         for (const item of normalizedItems) {
           const numId = Number(item.id);
           const isExisting = !isNaN(numId) && currentDbItems.some((dbIt) => dbIt.id === numId);
+          const socketsVal = item.socketsJson !== void 0 ? typeof item.socketsJson === "string" ? item.socketsJson : JSON.stringify(item.socketsJson) : null;
+          const reforgeVal = item.reforgeStatsJson !== void 0 ? typeof item.reforgeStatsJson === "string" ? item.reforgeStatsJson : JSON.stringify(item.reforgeStatsJson) : null;
           if (isExisting) {
             incomingIds.add(numId);
             await tx.update(characterItemsTable).set({
@@ -63194,7 +63426,9 @@ var CharacterPersistenceService = class {
               rarity: item.rarity ?? "common",
               bonusCombatPower: Number(item.bonusCombatPower ?? 0),
               miraclePassive1: item.miraclePassive1 ?? null,
-              miraclePassive2: item.miraclePassive2 ?? null
+              miraclePassive2: item.miraclePassive2 ?? null,
+              socketsJson: socketsVal,
+              reforgeStatsJson: reforgeVal
             }).where(and(eq(characterItemsTable.id, numId), eq(characterItemsTable.characterId, characterId)));
           } else {
             const [created] = await tx.insert(characterItemsTable).values({
@@ -63208,7 +63442,9 @@ var CharacterPersistenceService = class {
               rarity: item.rarity ?? "common",
               bonusCombatPower: Number(item.bonusCombatPower ?? 0),
               miraclePassive1: item.miraclePassive1 ?? null,
-              miraclePassive2: item.miraclePassive2 ?? null
+              miraclePassive2: item.miraclePassive2 ?? null,
+              socketsJson: socketsVal,
+              reforgeStatsJson: reforgeVal
             }).returning();
             if (created?.id) incomingIds.add(created.id);
           }
@@ -63284,6 +63520,13 @@ var CharacterPersistenceService = class {
       if (payload.luk !== void 0) updateData.luk = Number(payload.luk);
       if (payload.vit !== void 0) updateData.vit = Number(payload.vit);
       if (payload.rageGauge !== void 0) updateData.rageGauge = Math.min(100, Math.max(0, Number(payload.rageGauge)));
+      if (payload.awakeningTier !== void 0) updateData.awakeningTier = Math.min(3, Math.max(0, Number(payload.awakeningTier)));
+      const talents = stringifyJson(payload.talentsJson);
+      if (talents !== void 0) updateData.talentsJson = talents;
+      const codex = stringifyJson(payload.codexUnlockedJson);
+      if (codex !== void 0) updateData.codexUnlockedJson = codex;
+      const autoCombat = stringifyJson(payload.autoCombatSettingsJson);
+      if (autoCombat !== void 0) updateData.autoCombatSettingsJson = autoCombat;
       const hotbar = stringifyJson(payload.hotbarConfigJson);
       if (hotbar !== void 0) updateData.hotbarConfigJson = hotbar;
       const buffs = stringifyJson(payload.activeBuffsJson);
@@ -66047,6 +66290,263 @@ router12.post("/characters/:characterId/blacksmith/craft", requireAuth, async (r
     message: `\u{1F389} Ch\xFAc m\u1EEBng! Ch\u1EBF t\u1EA1o th\xE0nh c\xF4ng ${recipe.name}!`
   });
 });
+router12.post("/characters/:characterId/blacksmith/socket", requireAuth, async (req, res) => {
+  const characterId = Number(req.params.characterId);
+  const userId = req.session.userId;
+  const { ownershipId, socketIndex, gemOwnershipId } = req.body;
+  const [character] = await db.select().from(charactersTable).where(and(eq(charactersTable.id, characterId), eq(charactersTable.userId, userId))).limit(1);
+  if (!character) {
+    res.status(404).json({ error: "Kh\xF4ng t\xECm th\u1EA5y nh\xE2n v\u1EADt" });
+    return;
+  }
+  const [gear] = await db.select().from(characterItemsTable).where(and(eq(characterItemsTable.id, Number(ownershipId)), eq(characterItemsTable.characterId, characterId))).limit(1);
+  if (!gear) {
+    res.status(404).json({ error: "Kh\xF4ng t\xECm th\u1EA5y trang b\u1ECB" });
+    return;
+  }
+  const rarity = (gear.rarity || "common").toLowerCase();
+  const maxSockets = rarity === "miracle" || rarity === "legendary" ? 3 : rarity === "epic" ? 2 : rarity === "rare" ? 1 : 0;
+  if (maxSockets <= 0) {
+    res.status(400).json({ error: "Trang b\u1ECB ph\u1EA9m ch\u1EA5t Rare tr\u1EDF l\xEAn m\u1EDBi c\xF3 l\u1ED7 kh\u1EA3m ng\u1ECDc!" });
+    return;
+  }
+  if (socketIndex < 0 || socketIndex >= maxSockets) {
+    res.status(400).json({ error: `V\u1ECB tr\xED l\u1ED7 kh\u1EA3m kh\xF4ng h\u1EE3p l\u1EC7 (Trang b\u1ECB n\xE0y c\xF3 t\u1ED1i \u0111a ${maxSockets} l\u1ED7)` });
+    return;
+  }
+  const [gemItem] = await db.select().from(characterItemsTable).where(and(eq(characterItemsTable.id, Number(gemOwnershipId)), eq(characterItemsTable.characterId, characterId))).limit(1);
+  if (!gemItem || !gemItem.itemId.startsWith("gem_")) {
+    res.status(400).json({ error: "V\u1EADt ph\u1EA9m ch\u1ECDn kh\xF4ng ph\u1EA3i l\xE0 B\u1EA3o Th\u1EA1ch h\u1EE3p l\u1EC7" });
+    return;
+  }
+  const parts = gemItem.itemId.split("_");
+  const gemType = parts[1];
+  const level = Number(parts[2]) || 1;
+  let currentSockets = [];
+  try {
+    currentSockets = typeof gear.socketsJson === "string" ? JSON.parse(gear.socketsJson) : gear.socketsJson || [];
+  } catch {
+    currentSockets = [];
+  }
+  const existingSocket = currentSockets.find((s) => s.index === socketIndex);
+  if (existingSocket && existingSocket.gemId) {
+    await db.insert(characterItemsTable).values({
+      characterId,
+      itemId: existingSocket.gemId,
+      quantity: 1,
+      equipped: false
+    });
+  }
+  if (gemItem.quantity <= 1) {
+    await db.delete(characterItemsTable).where(eq(characterItemsTable.id, gemItem.id));
+  } else {
+    await db.update(characterItemsTable).set({ quantity: gemItem.quantity - 1 }).where(eq(characterItemsTable.id, gemItem.id));
+  }
+  currentSockets = currentSockets.filter((s) => s.index !== socketIndex);
+  currentSockets.push({
+    index: socketIndex,
+    gemId: gemItem.itemId,
+    gemType,
+    level
+  });
+  await db.update(characterItemsTable).set({ socketsJson: JSON.stringify(currentSockets) }).where(eq(characterItemsTable.id, gear.id));
+  await recalculateCharacterStats(characterId);
+  const updatedInv = await listInventory(characterId);
+  res.status(200).json({
+    success: true,
+    message: `\u2728 Kh\u1EA3m th\xE0nh c\xF4ng ${gemItem.itemId} v\xE0o l\u1ED7 ${socketIndex + 1}!`,
+    sockets: currentSockets,
+    inventory: updatedInv
+  });
+});
+router12.post("/characters/:characterId/blacksmith/unsocket", requireAuth, async (req, res) => {
+  const characterId = Number(req.params.characterId);
+  const userId = req.session.userId;
+  const { ownershipId, socketIndex } = req.body;
+  const [character] = await db.select().from(charactersTable).where(and(eq(charactersTable.id, characterId), eq(charactersTable.userId, userId))).limit(1);
+  if (!character) {
+    res.status(404).json({ error: "Kh\xF4ng t\xECm th\u1EA5y nh\xE2n v\u1EADt" });
+    return;
+  }
+  const [gear] = await db.select().from(characterItemsTable).where(and(eq(characterItemsTable.id, Number(ownershipId)), eq(characterItemsTable.characterId, characterId))).limit(1);
+  if (!gear) {
+    res.status(404).json({ error: "Kh\xF4ng t\xECm th\u1EA5y trang b\u1ECB" });
+    return;
+  }
+  let currentSockets = [];
+  try {
+    currentSockets = typeof gear.socketsJson === "string" ? JSON.parse(gear.socketsJson) : gear.socketsJson || [];
+  } catch {
+    currentSockets = [];
+  }
+  const targetSocket = currentSockets.find((s) => s.index === socketIndex);
+  if (!targetSocket || !targetSocket.gemId) {
+    res.status(400).json({ error: "L\u1ED7 kh\u1EA3m n\xE0y hi\u1EC7n \u0111ang r\u1ED7ng, kh\xF4ng c\xF3 ng\u1ECDc \u0111\u1EC3 th\xE1o" });
+    return;
+  }
+  await db.insert(characterItemsTable).values({
+    characterId,
+    itemId: targetSocket.gemId,
+    quantity: 1,
+    equipped: false
+  });
+  currentSockets = currentSockets.filter((s) => s.index !== socketIndex);
+  await db.update(characterItemsTable).set({ socketsJson: JSON.stringify(currentSockets) }).where(eq(characterItemsTable.id, gear.id));
+  await recalculateCharacterStats(characterId);
+  const updatedInv = await listInventory(characterId);
+  res.status(200).json({
+    success: true,
+    message: `\u{1F48E} \u0110\xE3 th\xE1o ng\u1ECDc ${targetSocket.gemId} th\xE0nh c\xF4ng v\xE0 \u0111\u01B0a v\xE0o t\xFAi \u0111\u1ED3!`,
+    sockets: currentSockets,
+    inventory: updatedInv
+  });
+});
+router12.post("/characters/:characterId/blacksmith/fuse-gems", requireAuth, async (req, res) => {
+  const characterId = Number(req.params.characterId);
+  const userId = req.session.userId;
+  const { gemType, fromLevel } = req.body;
+  const levelNum = Number(fromLevel);
+  if (levelNum < 1 || levelNum >= 5) {
+    res.status(400).json({ error: "C\u1EA5p \u0111\u1ED9 b\u1EA3o th\u1EA1ch \u0111\u1EC3 gh\xE9p ch\u1EC9 t\u1EEB c\u1EA5p 1 \u0111\u1EBFn c\u1EA5p 4!" });
+    return;
+  }
+  const [character] = await db.select().from(charactersTable).where(and(eq(charactersTable.id, characterId), eq(charactersTable.userId, userId))).limit(1);
+  if (!character) {
+    res.status(404).json({ error: "Kh\xF4ng t\xECm th\u1EA5y nh\xE2n v\u1EADt" });
+    return;
+  }
+  const sourceGemId = `gem_${gemType}_${levelNum}`;
+  const targetGemId = `gem_${gemType}_${levelNum + 1}`;
+  const goldCost = levelNum * 300;
+  if (character.gold < goldCost) {
+    res.status(400).json({ error: `Kh\xF4ng \u0111\u1EE7 v\xE0ng \u0111\u1EC3 gh\xE9p ng\u1ECDc (C\u1EA7n ${goldCost} V\xE0ng)` });
+    return;
+  }
+  const gemsInInv = await db.select().from(characterItemsTable).where(and(eq(characterItemsTable.characterId, characterId), eq(characterItemsTable.itemId, sourceGemId), eq(characterItemsTable.equipped, false)));
+  const totalCount = gemsInInv.reduce((sum, g) => sum + (g.quantity || 1), 0);
+  if (totalCount < 3) {
+    res.status(400).json({ error: `C\u1EA7n \xEDt nh\u1EA5t 3 vi\xEAn ${sourceGemId} \u0111\u1EC3 gh\xE9p l\xEAn c\u1EA5p ${levelNum + 1} (Hi\u1EC7n c\xF3 ${totalCount})` });
+    return;
+  }
+  let needToDeduct = 3;
+  for (const g of gemsInInv) {
+    if (needToDeduct <= 0) break;
+    if (g.quantity <= needToDeduct) {
+      needToDeduct -= g.quantity;
+      await db.delete(characterItemsTable).where(eq(characterItemsTable.id, g.id));
+    } else {
+      await db.update(characterItemsTable).set({ quantity: g.quantity - needToDeduct }).where(eq(characterItemsTable.id, g.id));
+      needToDeduct = 0;
+    }
+  }
+  await db.update(charactersTable).set({ gold: character.gold - goldCost }).where(eq(charactersTable.id, characterId));
+  await db.insert(characterItemsTable).values({
+    characterId,
+    itemId: targetGemId,
+    quantity: 1,
+    equipped: false
+  });
+  const updatedInv = await listInventory(characterId);
+  res.status(200).json({
+    success: true,
+    message: `\u{1F389} Ch\xFAc m\u1EEBng! Gh\xE9p th\xE0nh c\xF4ng 1 vi\xEAn ${targetGemId}!`,
+    newGemId: targetGemId,
+    inventory: updatedInv
+  });
+});
+router12.post("/characters/:characterId/blacksmith/reforge", requireAuth, async (req, res) => {
+  const characterId = Number(req.params.characterId);
+  const userId = req.session.userId;
+  const { ownershipId, lockedIndexes = [] } = req.body;
+  const [character] = await db.select().from(charactersTable).where(and(eq(charactersTable.id, characterId), eq(charactersTable.userId, userId))).limit(1);
+  if (!character) {
+    res.status(404).json({ error: "Kh\xF4ng t\xECm th\u1EA5y nh\xE2n v\u1EADt" });
+    return;
+  }
+  const [gear] = await db.select().from(characterItemsTable).where(and(eq(characterItemsTable.id, Number(ownershipId)), eq(characterItemsTable.characterId, characterId))).limit(1);
+  if (!gear) {
+    res.status(404).json({ error: "Kh\xF4ng t\xECm th\u1EA5y trang b\u1ECB" });
+    return;
+  }
+  const [reforgeStone] = await db.select().from(characterItemsTable).where(and(eq(characterItemsTable.characterId, characterId), eq(characterItemsTable.itemId, "material_reforge_stone"), eq(characterItemsTable.equipped, false))).limit(1);
+  if (!reforgeStone || reforgeStone.quantity < 1) {
+    res.status(400).json({ error: "Thi\u1EBFu \u0110\xE1 T\u1EA9y Luy\u1EC7n Th\u1EA7n B\xED (C\u1EA7n 1 vi\xEAn)" });
+    return;
+  }
+  const goldCost = 300 + lockedIndexes.length * 200;
+  if (character.gold < goldCost) {
+    res.status(400).json({ error: `Kh\xF4ng \u0111\u1EE7 V\xE0ng (C\u1EA7n ${goldCost} V\xE0ng)` });
+    return;
+  }
+  if (reforgeStone.quantity <= 1) {
+    await db.delete(characterItemsTable).where(eq(characterItemsTable.id, reforgeStone.id));
+  } else {
+    await db.update(characterItemsTable).set({ quantity: reforgeStone.quantity - 1 }).where(eq(characterItemsTable.id, reforgeStone.id));
+  }
+  await db.update(charactersTable).set({ gold: character.gold - goldCost }).where(eq(charactersTable.id, characterId));
+  const statTemplates = [
+    { key: "lifesteal", name: "H\xFAt m\xE1u khi \u0111\xE1nh tr\xFAng", suffix: "%", minVal: 1, maxVal: 5 },
+    { key: "boss_dmg", name: "S\xE1t th\u01B0\u01A1ng l\xEAn Boss", suffix: "%", minVal: 4, maxVal: 18 },
+    { key: "cooldown_reduction", name: "Gi\u1EA3m th\u1EDDi gian h\u1ED3i chi\xEAu", suffix: "%", minVal: 3, maxVal: 12 },
+    { key: "bonus_atk", name: "S\xE1t th\u01B0\u01A1ng t\u1EA5n c\xF4ng", suffix: "", minVal: 15, maxVal: 90 },
+    { key: "crit_rate", name: "T\u1EC9 l\u1EC7 b\u1EA1o k\xEDch", suffix: "%", minVal: 2, maxVal: 9 },
+    { key: "def_ignore", name: "B\u1ECF qua ph\xF2ng th\u1EE7", suffix: "%", minVal: 3, maxVal: 15 }
+  ];
+  const rollStatLine = () => {
+    const roll = Math.random() * 100;
+    let rank = "C";
+    let mult = 0.3;
+    if (roll < 2) {
+      rank = "SS";
+      mult = 1;
+    } else if (roll < 10) {
+      rank = "S";
+      mult = 0.85;
+    } else if (roll < 25) {
+      rank = "A";
+      mult = 0.65;
+    } else if (roll < 55) {
+      rank = "B";
+      mult = 0.45;
+    } else {
+      rank = "C";
+      mult = 0.3;
+    }
+    const tmpl = statTemplates[Math.floor(Math.random() * statTemplates.length)];
+    const val = tmpl.suffix === "%" ? Number((tmpl.minVal + (tmpl.maxVal - tmpl.minVal) * mult).toFixed(1)) : Math.floor(tmpl.minVal + (tmpl.maxVal - tmpl.minVal) * mult);
+    return {
+      key: tmpl.key,
+      name: tmpl.name,
+      value: val,
+      suffix: tmpl.suffix,
+      rank
+    };
+  };
+  let currentLines = [];
+  try {
+    currentLines = typeof gear.reforgeStatsJson === "string" ? JSON.parse(gear.reforgeStatsJson) : gear.reforgeStatsJson || [];
+  } catch {
+    currentLines = [];
+  }
+  while (currentLines.length < 3) {
+    currentLines.push(rollStatLine());
+  }
+  const nextLines = currentLines.map((line2, idx) => {
+    if (lockedIndexes.includes(idx)) {
+      return { ...line2, isLocked: true };
+    }
+    return rollStatLine();
+  });
+  await db.update(characterItemsTable).set({ reforgeStatsJson: JSON.stringify(nextLines) }).where(eq(characterItemsTable.id, gear.id));
+  await recalculateCharacterStats(characterId);
+  const updatedInv = await listInventory(characterId);
+  res.status(200).json({
+    success: true,
+    message: "\u{1F52E} T\u1EA9y luy\u1EC7n d\xF2ng thu\u1ED9c t\xEDnh \u1EA9n th\xE0nh c\xF4ng!",
+    reforgeStats: nextLines,
+    inventory: updatedInv
+  });
+});
 var blacksmith_default = router12;
 
 // src/routes/multiplayer.ts
@@ -66528,23 +67028,558 @@ router14.post("/characters/:characterId/gm/action", requireAuth, async (req, res
 });
 var endgame_default = router14;
 
-// src/routes/index.ts
+// src/routes/market.ts
+var import_express15 = __toESM(require_express2(), 1);
 var router15 = (0, import_express15.Router)();
-router15.use(health_default);
-router15.use(auth_default);
-router15.use(classes_default);
-router15.use(characters_default);
-router15.use(battle_default);
-router15.use(encounters_default);
-router15.use(leaderboard_default);
-router15.use(inventory_default);
-router15.use(shop_default);
-router15.use(community_default);
-router15.use(quests_default);
-router15.use(blacksmith_default);
-router15.use(multiplayer_default);
-router15.use(endgame_default);
-var routes_default = router15;
+async function ensureMarketSeedListings() {
+  const activeCount = await db.select({ id: marketListingsTable.id }).from(marketListingsTable).where(eq(marketListingsTable.status, "ACTIVE"));
+  if (activeCount.length >= 10) return;
+  const sampleListings = [
+    {
+      sellerCharacterId: 999901,
+      sellerName: "Th\u01B0\u01A1ng Nh\xE2n L\xF4i \u0110\xECnh",
+      sellerServerId: "server-1",
+      itemId: "gear_assassin_weapon_epic",
+      itemName: "Song \u0110o\u1EA3n Ki\u1EBFm U H\u1ED3n",
+      itemCategory: "equipment",
+      itemType: "weapon",
+      itemEquipSlot: "main_weapon",
+      itemRarity: "epic",
+      enhanceLevel: 7,
+      bonusCombatPower: 350,
+      priceGold: 2500,
+      socketsJson: JSON.stringify([{ index: 0, gemId: "gem_ruby_2", gemType: "ruby", level: 2 }]),
+      reforgeStatsJson: JSON.stringify([
+        { key: "lifesteal", name: "H\xFAt m\xE1u khi \u0111\xE1nh tr\xFAng", value: 3.2, suffix: "%", rank: "A" },
+        { key: "boss_dmg", name: "S\xE1t th\u01B0\u01A1ng l\xEAn Boss", value: 12, suffix: "%", rank: "S" }
+      ])
+    },
+    {
+      sellerCharacterId: 999902,
+      sellerName: "Hi\u1EC7p S\u0129 Long T\u1ED9c",
+      sellerServerId: "server-1",
+      itemId: "gear_warrior_weapon_legendary",
+      itemName: "C\u1EF1 Ki\u1EBFm Cu\u1ED3ng Long",
+      itemCategory: "equipment",
+      itemType: "weapon",
+      itemEquipSlot: "main_weapon",
+      itemRarity: "legendary",
+      enhanceLevel: 10,
+      bonusCombatPower: 920,
+      priceGold: 8500,
+      socketsJson: JSON.stringify([
+        { index: 0, gemId: "gem_ruby_3", gemType: "ruby", level: 3 },
+        { index: 1, gemId: "gem_topaz_3", gemType: "topaz", level: 3 }
+      ]),
+      reforgeStatsJson: JSON.stringify([
+        { key: "boss_dmg", name: "S\xE1t th\u01B0\u01A1ng l\xEAn Boss", value: 16.5, suffix: "%", rank: "SS" },
+        { key: "bonus_atk", name: "S\xE1t th\u01B0\u01A1ng t\u1EA5n c\xF4ng", value: 75, suffix: "", rank: "S" }
+      ])
+    },
+    {
+      sellerCharacterId: 999903,
+      sellerName: "Th\u1EA7n H\u1ED9 M\u1EC7nh",
+      sellerServerId: "server-1",
+      itemId: "gear_tank_armor_epic",
+      itemName: "Chi\u1EBFn Gi\xE1p Kim C\u01B0\u01A1ng",
+      itemCategory: "equipment",
+      itemType: "armor",
+      itemEquipSlot: "armor",
+      itemRarity: "epic",
+      enhanceLevel: 8,
+      bonusCombatPower: 480,
+      priceGold: 3200,
+      socketsJson: JSON.stringify([{ index: 0, gemId: "gem_sapphire_3", gemType: "sapphire", level: 3 }]),
+      reforgeStatsJson: JSON.stringify([
+        { key: "hp", name: "M\xE1u t\u1ED1i \u0111a", value: 450, suffix: "", rank: "S" }
+      ])
+    },
+    {
+      sellerCharacterId: 999904,
+      sellerName: "C\u01A1 Quan S\u01B0 Tinh Anh",
+      sellerServerId: "server-1",
+      itemId: "gear_gunner_weapon_rare",
+      itemName: "Ph\xE1o N\u0103ng L\u01B0\u1EE3ng Tinh Chu\u1EA9n",
+      itemCategory: "equipment",
+      itemType: "weapon",
+      itemEquipSlot: "main_weapon",
+      itemRarity: "rare",
+      enhanceLevel: 5,
+      bonusCombatPower: 180,
+      priceGold: 1200,
+      socketsJson: JSON.stringify([{ index: 0, gemId: "gem_emerald_2", gemType: "emerald", level: 2 }]),
+      reforgeStatsJson: JSON.stringify([
+        { key: "crit_rate", name: "T\u1EC9 l\u1EC7 b\u1EA1o k\xEDch", value: 5.5, suffix: "%", rank: "A" }
+      ])
+    },
+    {
+      sellerCharacterId: 999905,
+      sellerName: "Th\u1EE3 S\u0103n Th\xE2m Uy\xEAn",
+      sellerServerId: "server-1",
+      itemId: "gear_assassin_armor_legendary",
+      itemName: "D\u1EA1 H\xE0nh Y Huy\u1EBFt Nguy\u1EC7t",
+      itemCategory: "equipment",
+      itemType: "armor",
+      itemEquipSlot: "armor",
+      itemRarity: "legendary",
+      enhanceLevel: 9,
+      bonusCombatPower: 760,
+      priceGold: 7e3,
+      socketsJson: JSON.stringify([
+        { index: 0, gemId: "gem_emerald_3", gemType: "emerald", level: 3 },
+        { index: 1, gemId: "gem_sapphire_3", gemType: "sapphire", level: 3 }
+      ]),
+      reforgeStatsJson: JSON.stringify([
+        { key: "cooldown_reduction", name: "Gi\u1EA3m th\u1EDDi gian h\u1ED3i chi\xEAu", value: 9, suffix: "%", rank: "S" }
+      ])
+    },
+    {
+      sellerCharacterId: 999906,
+      sellerName: "K\u1EF3 Tr\xE2n Th\u01B0\u01A1ng H\u1ED9i",
+      sellerServerId: "server-1",
+      itemId: "gear_warrior_accessory_rare",
+      itemName: "V\xF2ng Tay Chi\u1EBFn Binh C\u1ED5",
+      itemCategory: "equipment",
+      itemType: "accessory",
+      itemEquipSlot: "ring_1",
+      itemRarity: "rare",
+      enhanceLevel: 4,
+      bonusCombatPower: 140,
+      priceGold: 800,
+      socketsJson: "[]",
+      reforgeStatsJson: "[]"
+    }
+  ];
+  for (const item of sampleListings) {
+    await db.insert(marketListingsTable).values({
+      ...item,
+      status: "ACTIVE"
+    });
+  }
+}
+router15.get("/market/listings", async (req, res) => {
+  try {
+    await ensureMarketSeedListings();
+    const { category, rarity, search, minEnhance } = req.query;
+    const listings = await db.select().from(marketListingsTable).where(eq(marketListingsTable.status, "ACTIVE")).orderBy(desc(marketListingsTable.listedAt));
+    let filtered = listings;
+    if (category && category !== "all") {
+      filtered = filtered.filter((l) => l.itemEquipSlot === category || l.itemCategory === category);
+    }
+    if (rarity && rarity !== "all") {
+      filtered = filtered.filter((l) => l.itemRarity?.toLowerCase() === String(rarity).toLowerCase());
+    }
+    if (minEnhance) {
+      filtered = filtered.filter((l) => l.enhanceLevel >= Number(minEnhance));
+    }
+    if (search) {
+      const q = String(search).toLowerCase();
+      filtered = filtered.filter((l) => l.itemName.toLowerCase().includes(q) || l.sellerName.toLowerCase().includes(q));
+    }
+    const safeParse3 = (val) => {
+      if (!val) return null;
+      if (typeof val === "object") return val;
+      try {
+        return JSON.parse(val);
+      } catch {
+        return null;
+      }
+    };
+    const mapped = filtered.map((l) => ({
+      ...l,
+      socketsJson: safeParse3(l.socketsJson),
+      reforgeStatsJson: safeParse3(l.reforgeStatsJson)
+    }));
+    res.status(200).json({ success: true, listings: mapped });
+  } catch (err) {
+    res.status(500).json({ error: err.message || "L\u1ED7i t\u1EA3i ch\u1EE3 \u0111\u1EA5u gi\xE1" });
+  }
+});
+router15.post("/market/buy/:id", requireAuth, async (req, res) => {
+  const listingId = Number(req.params.id);
+  const userId = req.session.userId;
+  const { buyerCharacterId } = req.body;
+  if (!buyerCharacterId) {
+    res.status(400).json({ error: "Thi\u1EBFu buyerCharacterId" });
+    return;
+  }
+  try {
+    const result = await db.transaction(async (tx) => {
+      const [buyer] = await tx.select().from(charactersTable).where(and(eq(charactersTable.id, Number(buyerCharacterId)), eq(charactersTable.userId, userId))).limit(1);
+      if (!buyer) {
+        throw new Error("Kh\xF4ng t\xECm th\u1EA5y nh\xE2n v\u1EADt ng\u01B0\u1EDDi mua ho\u1EB7c kh\xF4ng c\xF3 quy\u1EC1n s\u1EDF h\u1EEFu.");
+      }
+      const [listing] = await tx.select().from(marketListingsTable).where(eq(marketListingsTable.id, listingId)).limit(1);
+      if (!listing || listing.status !== "ACTIVE") {
+        throw new Error("M\xF3n \u0111\u1ED3 n\xE0y \u0111\xE3 \u0111\u01B0\u1EE3c b\xE1n ho\u1EB7c \u0111\xE3 b\u1ECB h\u1EE7y \u0111\u0103ng!");
+      }
+      if (listing.sellerCharacterId === buyer.id) {
+        throw new Error("B\u1EA1n kh\xF4ng th\u1EC3 t\u1EF1 mua v\u1EADt ph\u1EA9m c\u1EE7a ch\xEDnh m\xECnh!");
+      }
+      if (buyer.gold < listing.priceGold) {
+        throw new Error(`B\u1EA1n kh\xF4ng \u0111\u1EE7 V\xE0ng \u0111\u1EC3 mua (C\u1EA7n ${listing.priceGold.toLocaleString()} V\xE0ng, hi\u1EC7n c\xF3 ${buyer.gold.toLocaleString()} V\xE0ng)`);
+      }
+      const currentItems = await tx.select().from(characterItemsTable).where(and(eq(characterItemsTable.characterId, buyer.id), eq(characterItemsTable.equipped, false)));
+      const maxSlots = buyer.unlockedSlots || 18;
+      if (currentItems.length >= maxSlots) {
+        throw new Error(`H\xE0nh trang c\u1EE7a b\u1EA1n \u0111\xE3 \u0111\u1EA7y (${currentItems.length}/${maxSlots}). H\xE3y d\u1ECDn t\xFAi \u0111\u1ED3 tr\u01B0\u1EDBc khi mua!`);
+      }
+      await tx.update(charactersTable).set({ gold: buyer.gold - listing.priceGold }).where(eq(charactersTable.id, buyer.id));
+      const sellerProfit = Math.floor(listing.priceGold * 0.95);
+      const [seller] = await tx.select().from(charactersTable).where(eq(charactersTable.id, listing.sellerCharacterId)).limit(1);
+      if (seller) {
+        await tx.update(charactersTable).set({ gold: seller.gold + sellerProfit }).where(eq(charactersTable.id, seller.id));
+      }
+      await tx.update(marketListingsTable).set({
+        status: "SOLD",
+        buyerCharacterId: buyer.id,
+        soldAt: /* @__PURE__ */ new Date()
+      }).where(eq(marketListingsTable.id, listing.id));
+      const [createdItem] = await tx.insert(characterItemsTable).values({
+        characterId: buyer.id,
+        itemId: listing.itemId,
+        equipped: false,
+        enhanceLevel: listing.enhanceLevel,
+        bonusCombatPower: listing.bonusCombatPower,
+        rarity: listing.itemRarity,
+        miraclePassive1: listing.miraclePassive1,
+        miraclePassive2: listing.miraclePassive2,
+        socketsJson: listing.socketsJson,
+        reforgeStatsJson: listing.reforgeStatsJson,
+        quantity: 1
+      }).returning();
+      return {
+        listing,
+        sellerProfit,
+        createdItem,
+        buyerGoldLeft: buyer.gold - listing.priceGold
+      };
+    });
+    const updatedInv = await listInventory(Number(buyerCharacterId));
+    res.status(200).json({
+      success: true,
+      message: `\u{1F389} Mua th\xE0nh c\xF4ng [${result.listing.itemName} +${result.listing.enhanceLevel}] v\u1EDBi gi\xE1 ${result.listing.priceGold.toLocaleString()} V\xE0ng!`,
+      buyerGoldLeft: result.buyerGoldLeft,
+      inventory: updatedInv
+    });
+  } catch (err) {
+    res.status(400).json({ error: err.message || "L\u1ED7i mua h\xE0ng tr\xEAn ch\u1EE3" });
+  }
+});
+router15.post("/market/sell", requireAuth, async (req, res) => {
+  const userId = req.session.userId;
+  const { characterId, ownershipId, priceGold } = req.body;
+  const price = Math.floor(Number(priceGold));
+  if (isNaN(price) || price < 10 || price > 99999999) {
+    res.status(400).json({ error: "Gi\xE1 b\xE1n kh\xF4ng h\u1EE3p l\u1EC7 (T\u1ED1i thi\u1EC3u 10 V\xE0ng, t\u1ED1i \u0111a 99,999,999 V\xE0ng)" });
+    return;
+  }
+  try {
+    const result = await db.transaction(async (tx) => {
+      const [char2] = await tx.select().from(charactersTable).where(and(eq(charactersTable.id, Number(characterId)), eq(charactersTable.userId, userId))).limit(1);
+      if (!char2) throw new Error("Kh\xF4ng t\xECm th\u1EA5y nh\xE2n v\u1EADt s\u1EDF h\u1EEFu");
+      const [itemRow] = await tx.select({
+        owned: characterItemsTable,
+        item: itemsTable
+      }).from(characterItemsTable).innerJoin(itemsTable, eq(characterItemsTable.itemId, itemsTable.id)).where(and(eq(characterItemsTable.id, Number(ownershipId)), eq(characterItemsTable.characterId, char2.id))).limit(1);
+      if (!itemRow) throw new Error("V\u1EADt ph\u1EA9m kh\xF4ng c\xF3 trong t\xFAi \u0111\u1ED3");
+      if (itemRow.owned.equipped) throw new Error("Kh\xF4ng th\u1EC3 b\xE1n trang b\u1ECB \u0111ang m\u1EB7c tr\xEAn ng\u01B0\u1EDDi. H\xE3y th\xE1o ra tr\u01B0\u1EDBc!");
+      const [listing] = await tx.insert(marketListingsTable).values({
+        sellerCharacterId: char2.id,
+        sellerName: char2.name,
+        sellerServerId: char2.serverId || "server-1",
+        itemId: itemRow.owned.itemId,
+        itemName: itemRow.item.name,
+        itemCategory: itemRow.item.category,
+        itemType: itemRow.item.type,
+        itemEquipSlot: itemRow.item.equipSlot,
+        itemRarity: itemRow.owned.rarity || itemRow.item.rarity,
+        enhanceLevel: itemRow.owned.enhanceLevel,
+        bonusCombatPower: itemRow.owned.bonusCombatPower,
+        miraclePassive1: itemRow.owned.miraclePassive1,
+        miraclePassive2: itemRow.owned.miraclePassive2,
+        socketsJson: itemRow.owned.socketsJson,
+        reforgeStatsJson: itemRow.owned.reforgeStatsJson,
+        priceGold: price,
+        status: "ACTIVE"
+      }).returning();
+      await tx.delete(characterItemsTable).where(eq(characterItemsTable.id, itemRow.owned.id));
+      return listing;
+    });
+    const updatedInv = await listInventory(Number(characterId));
+    res.status(200).json({
+      success: true,
+      message: `\u{1F4E4} \u0110\u0103ng b\xE1n th\xE0nh c\xF4ng [${result.itemName} +${result.enhanceLevel}] v\u1EDBi gi\xE1 ${price.toLocaleString()} V\xE0ng!`,
+      listing: result,
+      inventory: updatedInv
+    });
+  } catch (err) {
+    res.status(400).json({ error: err.message || "L\u1ED7i \u0111\u0103ng b\xE1n v\u1EADt ph\u1EA9m" });
+  }
+});
+router15.get("/market/my-listings/:characterId", requireAuth, async (req, res) => {
+  const characterId = Number(req.params.characterId);
+  const userId = req.session.userId;
+  const [char2] = await db.select().from(charactersTable).where(and(eq(charactersTable.id, characterId), eq(charactersTable.userId, userId))).limit(1);
+  if (!char2) {
+    res.status(404).json({ error: "Kh\xF4ng t\xECm th\u1EA5y nh\xE2n v\u1EADt" });
+    return;
+  }
+  const myListings = await db.select().from(marketListingsTable).where(eq(marketListingsTable.sellerCharacterId, characterId)).orderBy(desc(marketListingsTable.listedAt));
+  res.status(200).json({ success: true, listings: myListings });
+});
+router15.post("/market/cancel/:id", requireAuth, async (req, res) => {
+  const listingId = Number(req.params.id);
+  const userId = req.session.userId;
+  const { characterId } = req.body;
+  try {
+    const result = await db.transaction(async (tx) => {
+      const [char2] = await tx.select().from(charactersTable).where(and(eq(charactersTable.id, Number(characterId)), eq(charactersTable.userId, userId))).limit(1);
+      if (!char2) throw new Error("Kh\xF4ng t\xECm th\u1EA5y nh\xE2n v\u1EADt");
+      const [listing] = await tx.select().from(marketListingsTable).where(and(eq(marketListingsTable.id, listingId), eq(marketListingsTable.sellerCharacterId, char2.id))).limit(1);
+      if (!listing || listing.status !== "ACTIVE") {
+        throw new Error("M\xF3n h\xE0ng kh\xF4ng t\u1ED3n t\u1EA1i ho\u1EB7c \u0111\xE3 \u0111\u01B0\u1EE3c b\xE1n");
+      }
+      await tx.update(marketListingsTable).set({ status: "CANCELLED" }).where(eq(marketListingsTable.id, listing.id));
+      await tx.insert(characterItemsTable).values({
+        characterId: char2.id,
+        itemId: listing.itemId,
+        equipped: false,
+        enhanceLevel: listing.enhanceLevel,
+        bonusCombatPower: listing.bonusCombatPower,
+        rarity: listing.itemRarity,
+        miraclePassive1: listing.miraclePassive1,
+        miraclePassive2: listing.miraclePassive2,
+        socketsJson: listing.socketsJson,
+        reforgeStatsJson: listing.reforgeStatsJson,
+        quantity: 1
+      });
+      return listing;
+    });
+    const updatedInv = await listInventory(Number(characterId));
+    res.status(200).json({
+      success: true,
+      message: `\u{1F4E5} \u0110\xE3 h\u1EE7y \u0111\u0103ng b\xE1n v\xE0 nh\u1EADn l\u1EA1i [${result.itemName}] v\xE0o t\xFAi \u0111\u1ED3!`,
+      inventory: updatedInv
+    });
+  } catch (err) {
+    res.status(400).json({ error: err.message || "L\u1ED7i h\u1EE7y ni\xEAm y\u1EBFt" });
+  }
+});
+var market_default = router15;
+
+// src/routes/talents.ts
+var import_express16 = __toESM(require_express2(), 1);
+var router16 = (0, import_express16.Router)();
+var AWAKENING_TITLES = {
+  assassin: ["Th\xEDch Kh\xE1ch", "\u1EA2nh V\u0169 S\xE1t Th\u1EA7n", "Huy\u1EBFt Nguy\u1EC7t Ma T\xF4n", "Ch\xE2n Th\u1EA7n Huy\u1EBFt Nguy\u1EC7t"],
+  warrior: ["V\xF5 S\u0129", "Cu\u1ED3ng Long Chi\u1EBFn T\u01B0\u1EDBng", "Chi\u1EBFn Th\u1EA7n B\u1EA5t B\u1EA1i", "Ch\xE2n Th\u1EA7n Chi\u1EBFn Long"],
+  tank: ["H\u1ED9 V\u1EC7", "Kim C\u01B0\u01A1ng Thi\u1EBFt Gi\xE1p", "Th\xE1nh Khi\xEAn B\u1EA5t Di\u1EC7t", "Ch\xE2n Th\u1EA7n B\u1EA5t Ho\u1EA1i"],
+  gunner: ["Thi\u1EC7n X\u1EA1", "Ph\xE1o Th\u1EE7 Qu\u1EF9 \u0110\u1EA1o", "Thi\xEAn Ph\u1EA1t Th\u1EA7n C\u01A1", "Ch\xE2n Th\u1EA7n Tinh T\xFA"]
+};
+function getAwakeningTitle(classId, tier) {
+  const titles = AWAKENING_TITLES[classId] || AWAKENING_TITLES.warrior;
+  return titles[Math.min(titles.length - 1, Math.max(0, tier))] || "Chi\u1EBFn Binh";
+}
+router16.post("/characters/:characterId/awakening/upgrade", requireAuth, async (req, res) => {
+  const characterId = Number(req.params.characterId);
+  const userId = req.session.userId;
+  const [char2] = await db.select().from(charactersTable).where(and(eq(charactersTable.id, characterId), eq(charactersTable.userId, userId))).limit(1);
+  if (!char2) {
+    res.status(404).json({ error: "Kh\xF4ng t\xECm th\u1EA5y nh\xE2n v\u1EADt" });
+    return;
+  }
+  const currentTier = Math.min(3, Math.max(0, Number(char2.awakeningTier) || 0));
+  if (currentTier >= 3) {
+    res.status(400).json({ error: "Nh\xE2n v\u1EADt \u0111\xE3 \u0111\u1EA1t c\u1EA3nh gi\u1EDBi Th\u1EE9c T\u1EC9nh t\u1ED1i cao (B\u1EADc 3 - Th\u1EA7n H\xF3a)!" });
+    return;
+  }
+  const nextTier = currentTier + 1;
+  const requiredLevel = nextTier * 5;
+  if (char2.level < requiredLevel) {
+    res.status(400).json({ error: `C\u1EA7n \u0111\u1EA1t c\u1EA5p \u0111\u1ED9 ${requiredLevel} \u0111\u1EC3 \u0111\u1ED9t ph\xE1 Chuy\u1EC3n Ch\u1EE9c B\u1EADc ${nextTier} (C\u1EA5p hi\u1EC7n t\u1EA1i: ${char2.level})` });
+    return;
+  }
+  const goldCosts = [0, 1e3, 5e3, 15e3];
+  const cost = goldCosts[nextTier] || 5e3;
+  if (char2.gold < cost) {
+    res.status(400).json({ error: `Kh\xF4ng \u0111\u1EE7 V\xE0ng \u0111\u1EC3 \u0111\u1ED9t ph\xE1 (C\u1EA7n ${cost.toLocaleString()} V\xE0ng)` });
+    return;
+  }
+  await db.update(charactersTable).set({
+    awakeningTier: nextTier,
+    gold: char2.gold - cost
+  }).where(eq(charactersTable.id, characterId));
+  const updatedChar = await recalculateCharacterStats(characterId);
+  const title = getAwakeningTitle(char2.classId, nextTier);
+  res.status(200).json({
+    success: true,
+    message: `\u26A1 CH\xDAC M\u1EEANG! \u0110\u1ED9t ph\xE1 th\xE0nh c\xF4ng B\u1EADc ${nextTier} \u2014 Danh hi\u1EC7u [${title}], to\xE0n b\u1ED9 ch\u1EC9 s\u1ED1 t\u0103ng +20%!`,
+    awakeningTier: nextTier,
+    title,
+    character: updatedChar
+  });
+});
+router16.post("/characters/:characterId/talents/allocate", requireAuth, async (req, res) => {
+  const characterId = Number(req.params.characterId);
+  const userId = req.session.userId;
+  const { talentKey } = req.body;
+  if (!talentKey) {
+    res.status(400).json({ error: "Thi\u1EBFu talentKey" });
+    return;
+  }
+  const [char2] = await db.select().from(charactersTable).where(and(eq(charactersTable.id, characterId), eq(charactersTable.userId, userId))).limit(1);
+  if (!char2) {
+    res.status(404).json({ error: "Kh\xF4ng t\xECm th\u1EA5y nh\xE2n v\u1EADt" });
+    return;
+  }
+  const availablePoints = Number(char2.skillPoints) || 0;
+  if (availablePoints <= 0) {
+    res.status(400).json({ error: "Kh\xF4ng c\xF2n \u0111i\u1EC3m Thi\xEAn Ph\xFA \u0111\u1EC3 n\xE2ng c\u1EA5p! H\xE3y l\xEAn c\u1EA5p \u0111\u1EC3 nh\u1EADn th\xEAm \u0111i\u1EC3m." });
+    return;
+  }
+  let talents = {};
+  try {
+    talents = typeof char2.talentsJson === "string" ? JSON.parse(char2.talentsJson) : char2.talentsJson || {};
+  } catch {
+    talents = {};
+  }
+  const currentPoints = Number(talents[talentKey]) || 0;
+  if (currentPoints >= 5) {
+    res.status(400).json({ error: "K\u1EF9 n\u0103ng thi\xEAn ph\xFA n\xE0y \u0111\xE3 \u0111\u1EA1t c\u1EA5p t\u1ED1i \u0111a (5/5)!" });
+    return;
+  }
+  talents[talentKey] = currentPoints + 1;
+  await db.update(charactersTable).set({
+    skillPoints: availablePoints - 1,
+    talentsJson: JSON.stringify(talents)
+  }).where(eq(charactersTable.id, characterId));
+  const updatedChar = await recalculateCharacterStats(characterId);
+  res.status(200).json({
+    success: true,
+    message: `\u{1F31F} N\xE2ng c\u1EA5p thi\xEAn ph\xFA [${talentKey}] l\xEAn c\u1EA5p ${currentPoints + 1}!`,
+    talents,
+    skillPoints: availablePoints - 1,
+    character: updatedChar
+  });
+});
+router16.post("/characters/:characterId/talents/reset", requireAuth, async (req, res) => {
+  const characterId = Number(req.params.characterId);
+  const userId = req.session.userId;
+  const [char2] = await db.select().from(charactersTable).where(and(eq(charactersTable.id, characterId), eq(charactersTable.userId, userId))).limit(1);
+  if (!char2) {
+    res.status(404).json({ error: "Kh\xF4ng t\xECm th\u1EA5y nh\xE2n v\u1EADt" });
+    return;
+  }
+  const resetCost = 500;
+  if (char2.gold < resetCost) {
+    res.status(400).json({ error: `C\u1EA7n ${resetCost} V\xE0ng \u0111\u1EC3 t\u1EA9y \u0111i\u1EC3m thi\xEAn ph\xFA!` });
+    return;
+  }
+  let talents = {};
+  try {
+    talents = typeof char2.talentsJson === "string" ? JSON.parse(char2.talentsJson) : char2.talentsJson || {};
+  } catch {
+    talents = {};
+  }
+  let refundedPoints = 0;
+  for (const k of Object.keys(talents)) {
+    refundedPoints += Number(talents[k]) || 0;
+  }
+  const totalSkillPoints = (Number(char2.skillPoints) || 0) + refundedPoints;
+  await db.update(charactersTable).set({
+    skillPoints: totalSkillPoints,
+    talentsJson: "{}",
+    gold: char2.gold - resetCost
+  }).where(eq(charactersTable.id, characterId));
+  const updatedChar = await recalculateCharacterStats(characterId);
+  res.status(200).json({
+    success: true,
+    message: `\u{1F504} \u0110\xE3 t\u1EA9y to\xE0n b\u1ED9 \u0111i\u1EC3m thi\xEAn ph\xFA! Ho\xE0n l\u1EA1i ${refundedPoints} \u0111i\u1EC3m v\xE0o qu\u1EF9 \u0111i\u1EC3m t\u1EF1 do.`,
+    talents: {},
+    skillPoints: totalSkillPoints,
+    character: updatedChar
+  });
+});
+var talents_default = router16;
+
+// src/routes/codex.ts
+var import_express17 = __toESM(require_express2(), 1);
+var router17 = (0, import_express17.Router)();
+router17.get("/characters/:characterId/codex", requireAuth, async (req, res) => {
+  const characterId = Number(req.params.characterId);
+  const userId = req.session.userId;
+  const [char2] = await db.select().from(charactersTable).where(and(eq(charactersTable.id, characterId), eq(charactersTable.userId, userId))).limit(1);
+  if (!char2) {
+    res.status(404).json({ error: "Kh\xF4ng t\xECm th\u1EA5y nh\xE2n v\u1EADt" });
+    return;
+  }
+  let codexUnlocked = [];
+  try {
+    codexUnlocked = typeof char2.codexUnlockedJson === "string" ? JSON.parse(char2.codexUnlockedJson) : char2.codexUnlockedJson || [];
+  } catch {
+    codexUnlocked = [];
+  }
+  res.status(200).json({
+    success: true,
+    codexUnlocked
+  });
+});
+router17.post("/characters/:characterId/codex/claim", requireAuth, async (req, res) => {
+  const characterId = Number(req.params.characterId);
+  const userId = req.session.userId;
+  const { codexEntryId } = req.body;
+  if (!codexEntryId) {
+    res.status(400).json({ error: "Thi\u1EBFu codexEntryId" });
+    return;
+  }
+  const [char2] = await db.select().from(charactersTable).where(and(eq(charactersTable.id, characterId), eq(charactersTable.userId, userId))).limit(1);
+  if (!char2) {
+    res.status(404).json({ error: "Kh\xF4ng t\xECm th\u1EA5y nh\xE2n v\u1EADt" });
+    return;
+  }
+  let codexUnlocked = [];
+  try {
+    codexUnlocked = typeof char2.codexUnlockedJson === "string" ? JSON.parse(char2.codexUnlockedJson) : char2.codexUnlockedJson || [];
+  } catch {
+    codexUnlocked = [];
+  }
+  if (codexUnlocked.includes(codexEntryId)) {
+    res.status(400).json({ error: "M\u1EE5c \u0111\u1ED3 gi\xE1m n\xE0y \u0111\xE3 \u0111\u01B0\u1EE3c k\xEDch ho\u1EA1t tr\u01B0\u1EDBc \u0111\xF3!" });
+    return;
+  }
+  codexUnlocked.push(codexEntryId);
+  await db.update(charactersTable).set({ codexUnlockedJson: JSON.stringify(codexUnlocked) }).where(eq(charactersTable.id, characterId));
+  const updatedChar = await recalculateCharacterStats(characterId);
+  res.status(200).json({
+    success: true,
+    message: `\u2728 \u0110\xE3 k\xEDch ho\u1EA1t \u0110\u1ED3 Gi\xE1m [${codexEntryId}]! Nh\u1EADn v\u0129nh vi\u1EC5n +20 HP, +3 ATK, +3 DEF v\xE0 +100 L\u1EF1c Chi\u1EBFn!`,
+    codexUnlocked,
+    character: updatedChar
+  });
+});
+var codex_default = router17;
+
+// src/routes/index.ts
+var router18 = (0, import_express18.Router)();
+router18.use(health_default);
+router18.use(auth_default);
+router18.use(classes_default);
+router18.use(characters_default);
+router18.use(battle_default);
+router18.use(encounters_default);
+router18.use(leaderboard_default);
+router18.use(inventory_default);
+router18.use(shop_default);
+router18.use(community_default);
+router18.use(quests_default);
+router18.use(blacksmith_default);
+router18.use(multiplayer_default);
+router18.use(endgame_default);
+router18.use(market_default);
+router18.use(talents_default);
+router18.use(codex_default);
+var routes_default = router18;
 
 // src/lib/logger.ts
 var import_pino = __toESM(require_pino(), 1);
@@ -66565,7 +67600,7 @@ var logger = (0, import_pino.default)({
 });
 
 // src/app.ts
-var app = (0, import_express16.default)();
+var app = (0, import_express19.default)();
 app.set("trust proxy", 1);
 app.use(
   (0, import_pino_http.default)({
@@ -66592,8 +67627,8 @@ app.use(
     credentials: true
   })
 );
-app.use(import_express16.default.json());
-app.use(import_express16.default.urlencoded({ extended: true }));
+app.use(import_express19.default.json());
+app.use(import_express19.default.urlencoded({ extended: true }));
 app.use((0, import_cookie_parser.default)());
 var sessionStore;
 if (isPostgres && pool) {
@@ -66626,8 +67661,8 @@ var sessionMiddleware = (0, import_express_session.default)({
 });
 app.use(sessionMiddleware);
 app.use("/api", routes_default);
-app.use("/assets/exported", import_express16.default.static(path2.resolve(process.cwd(), "assets/exported")));
-app.use("/game-sandbox", import_express16.default.static(path2.resolve(process.cwd(), "game")));
+app.use("/assets/exported", import_express19.default.static(path2.resolve(process.cwd(), "assets/exported")));
+app.use("/game-sandbox", import_express19.default.static(path2.resolve(process.cwd(), "game")));
 var potentialStaticPaths = [
   path2.resolve(process.cwd(), "artifacts/mmorpg-game/dist/public"),
   path2.resolve(process.cwd(), "dist/public"),
@@ -66638,7 +67673,7 @@ var potentialStaticPaths = [
 var staticDir = potentialStaticPaths.find((p) => fs2.existsSync(p));
 if (staticDir) {
   logger.info({ staticDir }, "Serving static frontend assets");
-  app.use(import_express16.default.static(staticDir));
+  app.use(import_express19.default.static(staticDir));
   app.use((req, res, next) => {
     if (req.path.startsWith("/api")) return next();
     res.sendFile(path2.join(staticDir, "index.html"));

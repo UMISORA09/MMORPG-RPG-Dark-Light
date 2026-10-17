@@ -50,6 +50,10 @@ export async function listInventory(characterId: number, executor: any = db) {
       enhanceLevel: characterItemsTable.enhanceLevel,
       bonusCombatPower: characterItemsTable.bonusCombatPower,
       rarity: characterItemsTable.rarity,
+      miraclePassive1: characterItemsTable.miraclePassive1,
+      miraclePassive2: characterItemsTable.miraclePassive2,
+      socketsJson: characterItemsTable.socketsJson,
+      reforgeStatsJson: characterItemsTable.reforgeStatsJson,
       acquiredAt: characterItemsTable.acquiredAt,
     })
     .from(characterItemsTable)
@@ -64,6 +68,16 @@ export async function listInventory(characterId: number, executor: any = db) {
       const acquiredAt = row.acquiredAt ?? row.acquired_at ?? new Date();
 
       if (!it || !it.id) return null;
+
+      const safeParse = (val: any) => {
+        if (!val) return null;
+        if (typeof val === "object") return val;
+        try {
+          return JSON.parse(val);
+        } catch {
+          return null;
+        }
+      };
 
       return {
         id: it.id,
@@ -102,6 +116,10 @@ export async function listInventory(characterId: number, executor: any = db) {
         quantity: row.quantity ?? 1,
         enhanceLevel: row.enhanceLevel ?? row.enhance_level ?? 0,
         bonusCombatPower: row.bonusCombatPower ?? row.bonus_combat_power ?? 0,
+        miraclePassive1: row.miraclePassive1 ?? null,
+        miraclePassive2: row.miraclePassive2 ?? null,
+        socketsJson: safeParse(row.socketsJson),
+        reforgeStatsJson: safeParse(row.reforgeStatsJson),
         acquiredAt: typeof acquiredAt === "string" ? acquiredAt : acquiredAt.toISOString(),
       };
     })
@@ -119,6 +137,10 @@ export async function getOwnedItem(characterId: number, itemId: string) {
       enhanceLevel: characterItemsTable.enhanceLevel,
       bonusCombatPower: characterItemsTable.bonusCombatPower,
       rarity: characterItemsTable.rarity,
+      miraclePassive1: characterItemsTable.miraclePassive1,
+      miraclePassive2: characterItemsTable.miraclePassive2,
+      socketsJson: characterItemsTable.socketsJson,
+      reforgeStatsJson: characterItemsTable.reforgeStatsJson,
       characterId: characterItemsTable.characterId,
       item: itemsTable,
     })
@@ -134,6 +156,15 @@ export async function getOwnedItem(characterId: number, itemId: string) {
 
   if (!owned) return undefined;
   const item = owned.item || owned;
+  const safeParse = (val: any) => {
+    if (!val) return null;
+    if (typeof val === "object") return val;
+    try {
+      return JSON.parse(val);
+    } catch {
+      return null;
+    }
+  };
   return {
     ownershipId: owned.ownershipId ?? (owned as any).id,
     equipped: Boolean(owned.equipped),
@@ -143,6 +174,10 @@ export async function getOwnedItem(characterId: number, itemId: string) {
     enhanceLevel: owned.enhanceLevel ?? 0,
     bonusCombatPower: owned.bonusCombatPower ?? 0,
     rarity: owned.rarity ?? item.rarity ?? "common",
+    miraclePassive1: owned.miraclePassive1 ?? null,
+    miraclePassive2: owned.miraclePassive2 ?? null,
+    socketsJson: safeParse(owned.socketsJson),
+    reforgeStatsJson: safeParse(owned.reforgeStatsJson),
     characterId: owned.characterId ?? characterId,
     item,
   };

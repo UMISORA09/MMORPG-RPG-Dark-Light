@@ -15,6 +15,9 @@ import { cameraControls } from "./cameraControls";
 import { useDeviceType } from "./useDeviceDetect";
 import { initInputRouter, bindCanvasMouseControls, getInputState } from "./input/InputRouter";
 
+import { AutoCombatController } from "../canvas/combat/AutoCombatController";
+import { WorldEventManager } from "../canvas/world/WorldEventManager";
+
 // Initialize InputRouter once
 if (typeof window !== "undefined") {
   initInputRouter();
@@ -81,6 +84,8 @@ const Game = memo(function Game({ onLogout }: GameProps) {
         <MonsterManager25D />
         <LootManager3D />
         <VFXManager />
+        <AutoCombatController />
+        <WorldEventManager />
         <Stars />
       </Canvas>
 

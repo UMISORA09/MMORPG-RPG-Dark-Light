@@ -28,6 +28,7 @@ interface MemoryStoreData {
   world_chats: any[];
   quests: any[];
   character_quests: any[];
+  market_listings: any[];
 }
 
 const memoryStore: MemoryStoreData = {
@@ -45,6 +46,7 @@ const memoryStore: MemoryStoreData = {
   world_chats: [],
   quests: [],
   character_quests: [],
+  market_listings: [],
 };
 
 let autoIncrement = {
@@ -54,6 +56,7 @@ let autoIncrement = {
   battle_logs: 1,
   forum_posts: 1,
   world_chats: 1,
+  market_listings: 100,
 };
 
 const STORE_FILE = path.join(
@@ -118,6 +121,7 @@ function createMemoryDb() {
     if (name.includes("server")) return memoryStore.servers;
     if (name.includes("encounter")) return memoryStore.encounters;
     if (name.includes("character_item")) return memoryStore.character_items;
+    if (name.includes("market_listing")) return memoryStore.market_listings;
     if (name.includes("character")) return memoryStore.characters;
     if (name.includes("user")) return memoryStore.users;
     if (name.includes("item")) return memoryStore.items;
@@ -134,6 +138,7 @@ function createMemoryDb() {
     if (data === memoryStore.forum_posts) return "forum_posts";
     if (data === memoryStore.forum_comments) return "forum_comments";
     if (data === memoryStore.world_chats) return "world_chats";
+    if (data === memoryStore.market_listings) return "market_listings";
     return null;
   };
 
@@ -477,6 +482,10 @@ export async function initDatabase() {
         ALTER TABLE characters ADD COLUMN IF NOT EXISTS hotbar_config_json TEXT DEFAULT '' NOT NULL;
         ALTER TABLE characters ADD COLUMN IF NOT EXISTS active_buffs_json TEXT DEFAULT '[]' NOT NULL;
         ALTER TABLE characters ADD COLUMN IF NOT EXISTS ui_preferences_json TEXT DEFAULT '' NOT NULL;
+        ALTER TABLE characters ADD COLUMN IF NOT EXISTS awakening_tier INTEGER DEFAULT 0 NOT NULL;
+        ALTER TABLE characters ADD COLUMN IF NOT EXISTS talents_json TEXT DEFAULT '{}' NOT NULL;
+        ALTER TABLE characters ADD COLUMN IF NOT EXISTS codex_unlocked_json TEXT DEFAULT '[]' NOT NULL;
+        ALTER TABLE characters ADD COLUMN IF NOT EXISTS auto_combat_settings_json TEXT DEFAULT '{"hpThreshold":45,"mpThreshold":30,"lootFilterMinRarity":"rare"}' NOT NULL;
 
         CREATE TABLE IF NOT EXISTS items (
           id TEXT PRIMARY KEY,
@@ -547,6 +556,8 @@ export async function initDatabase() {
         ALTER TABLE character_items ADD COLUMN IF NOT EXISTS rarity TEXT DEFAULT 'common' NOT NULL;
         ALTER TABLE character_items ADD COLUMN IF NOT EXISTS miracle_passive_1 TEXT;
         ALTER TABLE character_items ADD COLUMN IF NOT EXISTS miracle_passive_2 TEXT;
+        ALTER TABLE character_items ADD COLUMN IF NOT EXISTS sockets_json TEXT DEFAULT '[]' NOT NULL;
+        ALTER TABLE character_items ADD COLUMN IF NOT EXISTS reforge_stats_json TEXT DEFAULT '[]' NOT NULL;
         DROP INDEX IF EXISTS character_item_unique;
 
         CREATE TABLE IF NOT EXISTS battle_logs (
@@ -654,6 +665,31 @@ export async function initDatabase() {
           created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
           updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
         );
+
+        CREATE TABLE IF NOT EXISTS market_listings (
+          id SERIAL PRIMARY KEY,
+          seller_character_id INTEGER NOT NULL,
+          seller_name TEXT NOT NULL,
+          seller_server_id TEXT DEFAULT 's1_long_vuong' NOT NULL,
+          item_id TEXT NOT NULL,
+          item_name TEXT NOT NULL,
+          item_rarity TEXT DEFAULT 'common' NOT NULL,
+          item_category TEXT DEFAULT 'equipment' NOT NULL,
+          item_class_id TEXT,
+          equip_slot TEXT,
+          enhance_level INTEGER DEFAULT 0 NOT NULL,
+          sockets_json TEXT DEFAULT '[]' NOT NULL,
+          reforge_stats_json TEXT DEFAULT '[]' NOT NULL,
+          quantity INTEGER DEFAULT 1 NOT NULL,
+          price_gold INTEGER NOT NULL,
+          status TEXT DEFAULT 'active' NOT NULL,
+          buyer_character_id INTEGER,
+          listed_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP NOT NULL,
+          sold_at TIMESTAMP
+        );
+        CREATE INDEX IF NOT EXISTS market_status_idx ON market_listings(status);
+        CREATE INDEX IF NOT EXISTS market_seller_idx ON market_listings(seller_character_id);
+        CREATE INDEX IF NOT EXISTS market_item_id_idx ON market_listings(item_id);
         CREATE INDEX IF NOT EXISTS quests_type_idx ON quests(type);
         CREATE INDEX IF NOT EXISTS quests_npc_id_idx ON quests(npc_id);
         CREATE INDEX IF NOT EXISTS quests_order_idx ON quests(order_index);

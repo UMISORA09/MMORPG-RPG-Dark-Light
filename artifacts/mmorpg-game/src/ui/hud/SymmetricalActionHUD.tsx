@@ -23,7 +23,8 @@ import {
   Compass, 
   ChevronUp, 
   ChevronDown,
-  Zap
+  Zap,
+  Bot
 } from "lucide-react";
 
 export const SymmetricalActionHUD = memo(function SymmetricalActionHUD() {
@@ -66,6 +67,14 @@ export const SymmetricalActionHUD = memo(function SymmetricalActionHUD() {
   const useQuickTeleport = useGameWorldStore((s) => s.useQuickTeleport);
   const useQuickShield = useGameWorldStore((s) => s.useQuickShield);
   const useQuickFood = useGameWorldStore((s) => s.useQuickFood);
+
+  // Auto-Combat Bot State
+  const autoCombatEnabled = useGameWorldStore((s) => s.autoCombatEnabled);
+  const toggleAutoCombat = useGameWorldStore((s) => s.toggleAutoCombat);
+  const autoCombatSettings = useGameWorldStore((s) => s.autoCombatSettings);
+  const updateAutoCombatSettings = useGameWorldStore((s) => s.updateAutoCombatSettings);
+  const autoCombatStatusText = useGameWorldStore((s) => s.autoCombatStatusText);
+  const [showAutoSettings, setShowAutoSettings] = useState(false);
 
   const [skillPage, setSkillPage] = useState(1);
   const [isLocked, setIsLocked] = useState(false);
@@ -198,6 +207,15 @@ export const SymmetricalActionHUD = memo(function SymmetricalActionHUD() {
         {shieldAmount > 0 && (
           <div className="px-2.5 py-0.5 rounded-full bg-cyan-950/80 border border-cyan-400 text-[10px] font-mono font-bold text-cyan-300 flex items-center gap-1">
             <Shield className="w-3 h-3 text-cyan-400" /> Giáp Ảo ({shieldAmount})
+          </div>
+        )}
+
+        {/* Auto Combat Status banner */}
+        {autoCombatEnabled && (
+          <div className="px-3 py-0.5 rounded-full bg-gradient-to-r from-cyan-950/90 to-teal-950/90 border border-cyan-400 text-[10px] font-mono font-black text-cyan-300 shadow-[0_0_15px_#06b6d4] animate-pulse flex items-center gap-1.5">
+            <span className="animate-spin text-xs">⚙️</span>
+            <span>{autoCombatStatusText || "⚔️ Đang tự động chiến đấu..."}</span>
+            <span className="text-[9px] text-cyan-200 bg-cyan-900/80 px-1 py-0.2 rounded font-sans font-bold">Alt+A</span>
           </div>
         )}
       </div>
@@ -384,6 +402,105 @@ export const SymmetricalActionHUD = memo(function SymmetricalActionHUD() {
         {/* 4. LEFT 10 SLOTS: KỸ NĂNG CHIẾN ĐẤU (2 Hàng x 5 Cột)                */}
         {/* ==================================================================== */}
         <div className="flex items-center gap-1.5">
+          {/* 🤖 AUTO-COMBAT BUTTON WITH CYBER RING (Alt+A) */}
+          <div className="relative flex flex-col items-center justify-center pr-1.5 border-r border-slate-800 mr-0.5">
+            <button
+              onClick={() => {
+                toggleAutoCombat();
+              }}
+              className={`relative px-2 py-1.5 rounded-xl text-xs font-black transition cursor-pointer flex items-center gap-1.5 shadow ${
+                autoCombatEnabled
+                  ? "bg-gradient-to-r from-cyan-500 to-teal-500 text-slate-950 shadow-[0_0_20px_#06b6d4] ring-2 ring-cyan-300 animate-pulse"
+                  : "bg-slate-900/90 hover:bg-slate-800 text-slate-300 border border-slate-700 hover:border-cyan-400"
+              }`}
+              title="Bật/Tắt Tự Động Chiến Đấu & Bơm Máu (Tổ hợp phím Alt + A)"
+            >
+              <Bot className={`w-4 h-4 ${autoCombatEnabled ? "text-slate-950 animate-bounce" : "text-cyan-400"}`} />
+              <div className="flex flex-col text-left leading-none">
+                <span className="text-[10px] font-black">{autoCombatEnabled ? "AUTO: BẬT" : "TỰ ĐÁNH"}</span>
+                <span className="text-[8px] font-mono opacity-80">Alt+A</span>
+              </div>
+            </button>
+
+            {/* Quick settings gear for auto potion & loot filter */}
+            <button
+              onClick={() => setShowAutoSettings(!showAutoSettings)}
+              className="mt-1 text-[8px] font-mono font-bold text-slate-400 hover:text-cyan-300 transition flex items-center gap-0.5 cursor-pointer"
+              title="Cài đặt tự uống máu & lọc nhặt đồ"
+            >
+              <Settings className="w-2.5 h-2.5" /> Lọc/Máu
+            </button>
+
+            {/* Auto Settings Popover */}
+            {showAutoSettings && (
+              <div className="absolute bottom-14 left-0 w-64 p-3.5 rounded-2xl bg-[#090d19] border-2 border-cyan-500/60 shadow-[0_0_30px_rgba(6,182,212,0.4)] z-50 text-white animate-in fade-in slide-in-from-bottom-2 duration-150">
+                <div className="flex items-center justify-between pb-2 border-b border-slate-800 mb-2.5">
+                  <span className="text-xs font-black text-cyan-300 flex items-center gap-1.5">
+                    <Bot className="w-3.5 h-3.5" /> Cài Đặt Auto Treo Máy
+                  </span>
+                  <button
+                    onClick={() => setShowAutoSettings(false)}
+                    className="text-slate-400 hover:text-white text-xs cursor-pointer font-bold px-1"
+                  >
+                    ✕
+                  </button>
+                </div>
+
+                <div className="space-y-2.5 text-[11px]">
+                  <div>
+                    <div className="flex justify-between text-slate-300 font-bold mb-1">
+                      <span>Tự Uống Máu (HP):</span>
+                      <span className="text-rose-400 font-mono">&lt; {autoCombatSettings.hpThreshold}%</span>
+                    </div>
+                    <input
+                      type="range"
+                      min={20}
+                      max={80}
+                      step={5}
+                      value={autoCombatSettings.hpThreshold}
+                      onChange={(e) => updateAutoCombatSettings({ hpThreshold: Number(e.target.value) })}
+                      className="w-full h-1.5 bg-slate-800 rounded-lg appearance-none cursor-pointer accent-rose-500"
+                    />
+                  </div>
+
+                  <div>
+                    <div className="flex justify-between text-slate-300 font-bold mb-1">
+                      <span>Tự Uống Mana (MP):</span>
+                      <span className="text-cyan-400 font-mono">&lt; {autoCombatSettings.mpThreshold}%</span>
+                    </div>
+                    <input
+                      type="range"
+                      min={10}
+                      max={60}
+                      step={5}
+                      value={autoCombatSettings.mpThreshold}
+                      onChange={(e) => updateAutoCombatSettings({ mpThreshold: Number(e.target.value) })}
+                      className="w-full h-1.5 bg-slate-800 rounded-lg appearance-none cursor-pointer accent-cyan-500"
+                    />
+                  </div>
+
+                  <div>
+                    <span className="text-slate-300 font-bold block mb-1">Bộ Lọc Tự Nhặt Đồ:</span>
+                    <select
+                      value={autoCombatSettings.lootFilterMinRarity}
+                      onChange={(e) => updateAutoCombatSettings({ lootFilterMinRarity: e.target.value as any })}
+                      className="w-full bg-slate-950 border border-slate-700 rounded-lg px-2 py-1 text-xs text-white font-bold"
+                    >
+                      <option value="all">Nhặt Tất Cả (Kể cả Common trắng)</option>
+                      <option value="rare">Chỉ Nhặt Từ Hiếm (Rare) Trở Lên</option>
+                      <option value="epic">Chỉ Nhặt Từ Sử Thi (Epic) Trở Lên</option>
+                      <option value="legendary">Chỉ Nhặt Thần Binh (Legendary+)</option>
+                    </select>
+                  </div>
+
+                  <div className="pt-1 text-[9px] text-slate-400 leading-tight">
+                    * Nhường quyền WASD: Khi bạn ấn phím di chuyển, AI tạm dừng 1.2s để bạn né chiêu rồi tự đánh tiếp.
+                  </div>
+                </div>
+              </div>
+            )}
+          </div>
+
           {/* Controls: 1/2 Hàng Toggle & Scale */}
           <div className="flex flex-col items-center justify-center pr-1 text-slate-400 gap-1">
             <button

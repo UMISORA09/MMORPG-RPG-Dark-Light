@@ -22,20 +22,27 @@ export const BlacksmithModal = memo(function BlacksmithModal() {
   const playerPosition = useGameWorldStore((s) => s.playerPosition);
   const setHighestEnhanceLevel = useGameWorldStore((s) => s.setHighestEnhanceLevel);
 
-  const [activeTab, setActiveTab] = useState<"enhance" | "dismantle" | "craft">(blacksmithTab || "enhance");
+  const [activeTab, setActiveTab] = useState<"enhance" | "dismantle" | "craft" | "socket" | "reforge">(blacksmithTab || "enhance");
   const [inventory, setInventory] = useState<any[]>([]);
   const [selectedGear, setSelectedGear] = useState<any | null>(null);
   const [selectedDismantleIds, setSelectedDismantleIds] = useState<number[]>([]);
   const [isProcessing, setIsProcessing] = useState(false);
-  const [playerGold, setPlayerGold] = useState(1500);
+  const activeCharacterId = useGameWorldStore((s) => s.activeCharacterId) || 1;
+  const playerGold = useGameWorldStore((s) => s.playerGold) || 1500;
+
+  // Socket & Reforge States
+  const [selectedSocketIndex, setSelectedSocketIndex] = useState(0);
+  const [fuseGemType, setFuseGemType] = useState<string>("ruby");
+  const [fuseFromLevel, setFuseFromLevel] = useState<number>(1);
+  const [lockedIndexes, setLockedIndexes] = useState<number[]>([]);
 
   const fetchInventory = async () => {
     try {
-      const res = await fetch("/api/characters/1/inventory");
+      const res = await fetch(`/api/characters/${activeCharacterId}/inventory`);
       if (res.ok) {
         const data = await res.json();
         setInventory(data);
-        const equipGears = data.filter((i: any) => i.item.category === "equipment");
+        const equipGears = data.filter((i: any) => i.item?.category === "equipment" || i.category === "equipment");
         if (equipGears.length > 0 && !selectedGear) {
           setSelectedGear(equipGears[0]);
         }
@@ -157,6 +164,126 @@ export const BlacksmithModal = memo(function BlacksmithModal() {
     }
   };
 
+  // ── Tab 4: Khảm Ngọc Handlers ──
+  const handleSocketGem = async (gemOwnershipId: number) => {
+    if (!selectedGear || isProcessing) return;
+    setIsProcessing(true);
+    playCombatSFX("holy_bell", 0.5);
+
+    try {
+      const res = await fetch(`/api/characters/${activeCharacterId}/blacksmith/socket`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          ownershipId: selectedGear.ownershipId || selectedGear.id,
+          socketIndex: selectedSocketIndex,
+          gemOwnershipId,
+        }),
+      });
+      const data = await res.json();
+      if (res.ok && data.success) {
+        playCombatSFX("level_up_fanfare", 0.6);
+        addFloatingText("Khảm bảo thạch thành công!", playerPosition.clone(), "#00ffcc");
+        await fetchInventory();
+        setSelectedGear((prev: any) => ({ ...prev, socketsJson: data.sockets }));
+      } else {
+        addFloatingText(data.error || "Khảm ngọc thất bại!", playerPosition.clone(), "#ef4444");
+      }
+    } catch {
+      addFloatingText("Lỗi kết nối", playerPosition.clone(), "#ef4444");
+    } finally {
+      setIsProcessing(false);
+    }
+  };
+
+  const handleUnsocketGem = async (socketIdx: number) => {
+    if (!selectedGear || isProcessing) return;
+    setIsProcessing(true);
+
+    try {
+      const res = await fetch(`/api/characters/${activeCharacterId}/blacksmith/unsocket`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          ownershipId: selectedGear.ownershipId || selectedGear.id,
+          socketIndex: socketIdx,
+        }),
+      });
+      const data = await res.json();
+      if (res.ok && data.success) {
+        addFloatingText("Đã tháo ngọc thành công!", playerPosition.clone(), "#38bdf8");
+        await fetchInventory();
+        setSelectedGear((prev: any) => ({ ...prev, socketsJson: data.sockets }));
+      } else {
+        addFloatingText(data.error || "Tháo ngọc thất bại!", playerPosition.clone(), "#ef4444");
+      }
+    } catch {
+      addFloatingText("Lỗi kết nối", playerPosition.clone(), "#ef4444");
+    } finally {
+      setIsProcessing(false);
+    }
+  };
+
+  const handleFuseGems = async () => {
+    if (isProcessing) return;
+    setIsProcessing(true);
+    playCombatSFX("heavy_slam", 0.4);
+
+    try {
+      const res = await fetch(`/api/characters/${activeCharacterId}/blacksmith/fuse-gems`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          gemType: fuseGemType,
+          fromLevel: fuseFromLevel,
+        }),
+      });
+      const data = await res.json();
+      if (res.ok && data.success) {
+        playCombatSFX("level_up_fanfare", 0.6);
+        addFloatingText(data.message, playerPosition.clone(), "#fbbf24");
+        await fetchInventory();
+      } else {
+        addFloatingText(data.error || "Ghép ngọc thất bại!", playerPosition.clone(), "#ef4444");
+      }
+    } catch {
+      addFloatingText("Lỗi kết nối", playerPosition.clone(), "#ef4444");
+    } finally {
+      setIsProcessing(false);
+    }
+  };
+
+  // ── Tab 5: Tẩy Luyện Handlers ──
+  const handleReforge = async () => {
+    if (!selectedGear || isProcessing) return;
+    setIsProcessing(true);
+    playCombatSFX("holy_bell", 0.6);
+
+    try {
+      const res = await fetch(`/api/characters/${activeCharacterId}/blacksmith/reforge`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          ownershipId: selectedGear.ownershipId || selectedGear.id,
+          lockedIndexes,
+        }),
+      });
+      const data = await res.json();
+      if (res.ok && data.success) {
+        playCombatSFX("level_up_fanfare", 0.6);
+        addFloatingText("Tẩy luyện thành công!", playerPosition.clone(), "#e879f9");
+        await fetchInventory();
+        setSelectedGear((prev: any) => ({ ...prev, reforgeStatsJson: data.reforgeStats }));
+      } else {
+        addFloatingText(data.error || "Tẩy luyện thất bại!", playerPosition.clone(), "#ef4444");
+      }
+    } catch {
+      addFloatingText("Lỗi kết nối", playerPosition.clone(), "#ef4444");
+    } finally {
+      setIsProcessing(false);
+    }
+  };
+
   const currentEnhance = selectedGear?.enhanceLevel || 0;
   const nextEnhance = currentEnhance + 1;
   const enhanceRate = currentEnhance < 5 ? 100 : currentEnhance < 10 ? Math.round((1 - (currentEnhance - 4) * 0.08) * 100) : Math.round((0.35 - (currentEnhance - 9) * 0.05) * 100);
@@ -202,13 +329,33 @@ export const BlacksmithModal = memo(function BlacksmithModal() {
             </button>
             <button
               onClick={() => { setActiveTab("craft"); playCombatSFX("holy_bell", 0.25); }}
-              className={`px-4 py-1.5 rounded-xl font-bold text-xs transition cursor-pointer flex items-center gap-1.5 ${
+              className={`px-3 py-1.5 rounded-xl font-bold text-xs transition cursor-pointer flex items-center gap-1.5 ${
                 activeTab === "craft"
                   ? "bg-amber-500 text-slate-950 shadow-[0_0_12px_rgba(245,158,11,0.4)]"
                   : "text-slate-400 hover:text-white"
               }`}
             >
               <Sparkles className="w-3.5 h-3.5" /> Chế Tạo
+            </button>
+            <button
+              onClick={() => { setActiveTab("socket"); playCombatSFX("holy_bell", 0.25); }}
+              className={`px-3 py-1.5 rounded-xl font-bold text-xs transition cursor-pointer flex items-center gap-1.5 ${
+                activeTab === "socket"
+                  ? "bg-cyan-500 text-slate-950 shadow-[0_0_12px_#06b6d4]"
+                  : "text-slate-400 hover:text-white"
+              }`}
+            >
+              <span>💎 Khảm Ngọc</span>
+            </button>
+            <button
+              onClick={() => { setActiveTab("reforge"); playCombatSFX("holy_bell", 0.25); }}
+              className={`px-3 py-1.5 rounded-xl font-bold text-xs transition cursor-pointer flex items-center gap-1.5 ${
+                activeTab === "reforge"
+                  ? "bg-purple-500 text-slate-950 shadow-[0_0_12px_#a855f7]"
+                  : "text-slate-400 hover:text-white"
+              }`}
+            >
+              <span>🔮 Tẩy Luyện</span>
             </button>
           </div>
 
@@ -445,6 +592,342 @@ export const BlacksmithModal = memo(function BlacksmithModal() {
                   </button>
                 </div>
               ))}
+            </div>
+          )}
+
+          {/* ── TAB 4: KHẢM NGỌC (GEM SOCKETING) ── */}
+          {activeTab === "socket" && (
+            <div className="h-full flex gap-6">
+              {/* Gear Selection */}
+              <div className="w-1/3 border border-slate-800 rounded-2xl bg-slate-950/60 p-3 overflow-y-auto space-y-2">
+                <h4 className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-2">
+                  Chọn Trang Bị Khảm Ngọc
+                </h4>
+                {inventory
+                  .filter((i: any) => i.item?.category === "equipment" || i.category === "equipment")
+                  .map((i: any) => {
+                    const isSelected = selectedGear?.id === i.id;
+                    const sockets = i.socketsJson || [];
+                    return (
+                      <button
+                        key={i.id}
+                        onClick={() => { setSelectedGear(i); setSelectedSocketIndex(0); playCombatSFX("holy_bell", 0.25); }}
+                        className={`w-full p-2.5 rounded-xl text-left border transition flex items-center justify-between cursor-pointer ${
+                          isSelected
+                            ? "bg-cyan-500/20 border-cyan-500 text-white"
+                            : "bg-slate-900/60 border-slate-800/80 text-slate-300 hover:bg-slate-800"
+                        }`}
+                      >
+                        <div className="flex items-center gap-2">
+                          <span className="text-base">{i.item?.icon || "🛡️"}</span>
+                          <div>
+                            <p className="font-bold text-xs truncate max-w-[120px]">{i.item?.name}</p>
+                            <span className="text-[10px] text-cyan-400 font-mono">
+                              💎 {sockets.filter(Boolean).length}/3 Lỗ Ngọc
+                            </span>
+                          </div>
+                        </div>
+                        {i.equipped && (
+                          <span className="text-[9px] bg-cyan-500/20 text-cyan-300 px-1.5 py-0.5 rounded font-bold">
+                            Đang Mặc
+                          </span>
+                        )}
+                      </button>
+                    );
+                  })}
+              </div>
+
+              {/* Sockets & Gems Container */}
+              <div className="flex-1 flex flex-col gap-4 overflow-y-auto pr-1">
+                {/* 3 Gem Sockets on Current Gear */}
+                <div className="p-4 rounded-2xl bg-slate-900/70 border border-cyan-500/30">
+                  <div className="flex items-center justify-between mb-3">
+                    <h4 className="text-sm font-black text-cyan-300 flex items-center gap-2">
+                      <span>💎</span> 3 Lỗ Khảm Bảo Thạch — {selectedGear?.item?.name || "Chưa chọn"}
+                    </h4>
+                    <span className="text-xs text-slate-400">Tối đa 3 Lỗ Ngọc / Trang bị</span>
+                  </div>
+
+                  <div className="grid grid-cols-3 gap-3">
+                    {[0, 1, 2].map((idx) => {
+                      const socketGem = selectedGear?.socketsJson?.[idx];
+                      const isSelectedSocket = selectedSocketIndex === idx;
+                      return (
+                        <div
+                          key={idx}
+                          onClick={() => setSelectedSocketIndex(idx)}
+                          className={`p-3 rounded-xl border flex flex-col items-center justify-between cursor-pointer transition ${
+                            isSelectedSocket
+                              ? "bg-cyan-950/60 border-cyan-400 ring-2 ring-cyan-500/40"
+                              : "bg-slate-950/60 border-slate-800 hover:border-slate-700"
+                          }`}
+                        >
+                          <span className="text-[10px] font-bold text-slate-400 uppercase">
+                            Lỗ #{idx + 1} {isSelectedSocket && "👈"}
+                          </span>
+                          <div className="my-2 w-12 h-12 rounded-xl bg-slate-900 border border-slate-700 flex items-center justify-center text-xl shadow-inner">
+                            {socketGem ? (
+                              socketGem.type === "ruby" ? "🔴" :
+                              socketGem.type === "sapphire" ? "🔵" :
+                              socketGem.type === "topaz" ? "🟡" : "🟢"
+                            ) : (
+                              <span className="text-xs text-slate-600 font-bold">Trống</span>
+                            )}
+                          </div>
+                          {socketGem ? (
+                            <div className="text-center w-full">
+                              <p className="text-[11px] font-bold text-white truncate">{socketGem.name}</p>
+                              <p className="text-[10px] text-cyan-400 font-mono">
+                                {socketGem.statBonus?.atk ? `+${socketGem.statBonus.atk} ATK` :
+                                 socketGem.statBonus?.def ? `+${socketGem.statBonus.def} DEF` :
+                                 socketGem.statBonus?.critRate ? `+${socketGem.statBonus.critRate}% Crit` : "+Tốc độ"}
+                              </p>
+                              <button
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  handleUnsocketGem(idx);
+                                }}
+                                disabled={isProcessing}
+                                className="mt-2 w-full py-1 rounded-lg bg-rose-500/20 hover:bg-rose-500/40 text-rose-300 font-bold text-[10px] border border-rose-500/30 transition cursor-pointer"
+                              >
+                                Tháo Ngọc
+                              </button>
+                            </div>
+                          ) : (
+                            <span className="text-[10px] text-cyan-400 font-bold">Bấm chọn lỗ này</span>
+                          )}
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+
+                {/* Gems in Inventory */}
+                <div className="p-4 rounded-2xl bg-slate-900/50 border border-slate-800">
+                  <h4 className="text-xs font-bold text-slate-300 uppercase tracking-wider mb-2">
+                    Bảo Thạch Trong Túi (Bấm để khảm vào Lỗ #{selectedSocketIndex + 1})
+                  </h4>
+                  <div className="grid grid-cols-2 gap-2 max-h-40 overflow-y-auto pr-1">
+                    {inventory
+                      .filter((i: any) => i.item?.category === "gem" || i.category === "gem" || i.item?.itemType === "gem")
+                      .map((gem: any) => (
+                        <div
+                          key={gem.id}
+                          className="p-2.5 rounded-xl bg-slate-950/80 border border-slate-800 flex items-center justify-between hover:border-cyan-500/50 transition"
+                        >
+                          <div className="flex items-center gap-2">
+                            <span className="text-lg">{gem.item?.icon || "💎"}</span>
+                            <div>
+                              <p className="text-xs font-bold text-white">{gem.item?.name}</p>
+                              <p className="text-[10px] text-slate-400">{gem.item?.description}</p>
+                            </div>
+                          </div>
+                          <button
+                            onClick={() => handleSocketGem(gem.id)}
+                            disabled={isProcessing}
+                            className="px-3 py-1.5 rounded-lg bg-cyan-500 hover:bg-cyan-400 text-slate-950 font-bold text-xs transition cursor-pointer shrink-0"
+                          >
+                            Khảm
+                          </button>
+                        </div>
+                      ))}
+                    {inventory.filter((i: any) => i.item?.category === "gem" || i.category === "gem" || i.item?.itemType === "gem").length === 0 && (
+                      <p className="text-xs text-slate-500 col-span-2 text-center py-4">
+                        Chưa có bảo thạch trong túi đồ. Hãy săn Quái Tinh Anh hoặc Boss để nhặt ngọc!
+                      </p>
+                    )}
+                  </div>
+                </div>
+
+                {/* Gem Fusion (Ghép 3 Thành 1) */}
+                <div className="p-4 rounded-2xl bg-slate-900/60 border border-amber-500/30 flex items-center justify-between gap-4">
+                  <div>
+                    <h4 className="text-xs font-black text-amber-400 uppercase tracking-wider">
+                      ✨ Lò Ghép Ngọc — Ghép 3 Ngọc Cấp Thấp Thành 1 Ngọc Cấp Cao
+                    </h4>
+                    <p className="text-[11px] text-slate-400 mt-0.5">
+                      Tiêu hao 3 viên cùng loại + Vàng để nâng lên cấp tiếp theo (Cấp tối đa: 5).
+                    </p>
+                    <div className="flex items-center gap-3 mt-2">
+                      <select
+                        value={fuseGemType}
+                        onChange={(e) => setFuseGemType(e.target.value)}
+                        className="bg-slate-950 border border-slate-700 text-white rounded-lg px-2 py-1 text-xs font-bold"
+                      >
+                        <option value="ruby">🔴 Hồng Ngọc (ATK)</option>
+                        <option value="sapphire">🔵 Lam Ngọc (DEF/HP)</option>
+                        <option value="topaz">🟡 Hoàng Ngọc (Crit)</option>
+                        <option value="emerald">🟢 Lục Ngọc (Spd/EVA)</option>
+                      </select>
+                      <select
+                        value={fuseFromLevel}
+                        onChange={(e) => setFuseFromLevel(Number(e.target.value))}
+                        className="bg-slate-950 border border-slate-700 text-white rounded-lg px-2 py-1 text-xs font-bold"
+                      >
+                        <option value={1}>Từ Cấp 1 ➔ Cấp 2</option>
+                        <option value={2}>Từ Cấp 2 ➔ Cấp 3</option>
+                        <option value={3}>Từ Cấp 3 ➔ Cấp 4</option>
+                        <option value={4}>Từ Cấp 4 ➔ Cấp 5</option>
+                      </select>
+                    </div>
+                  </div>
+
+                  <button
+                    onClick={handleFuseGems}
+                    disabled={isProcessing}
+                    className="px-4 py-2.5 rounded-xl bg-amber-500 hover:bg-amber-400 text-slate-950 font-black text-xs transition shadow-[0_0_15px_rgba(245,158,11,0.3)] shrink-0 cursor-pointer"
+                  >
+                    Ghép 3 ➔ 1
+                  </button>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* ── TAB 5: TẨY LUYỆN (SUB-STAT REFORGING) ── */}
+          {activeTab === "reforge" && (
+            <div className="h-full flex gap-6">
+              {/* Gear Selection */}
+              <div className="w-1/3 border border-slate-800 rounded-2xl bg-slate-950/60 p-3 overflow-y-auto space-y-2">
+                <h4 className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-2">
+                  Chọn Trang Bị Tẩy Luyện
+                </h4>
+                {inventory
+                  .filter((i: any) => i.item?.category === "equipment" || i.category === "equipment")
+                  .map((i: any) => {
+                    const isSelected = selectedGear?.id === i.id;
+                    const stats = i.reforgeStatsJson || [];
+                    return (
+                      <button
+                        key={i.id}
+                        onClick={() => { setSelectedGear(i); setLockedIndexes([]); playCombatSFX("holy_bell", 0.25); }}
+                        className={`w-full p-2.5 rounded-xl text-left border transition flex items-center justify-between cursor-pointer ${
+                          isSelected
+                            ? "bg-purple-500/20 border-purple-500 text-white"
+                            : "bg-slate-900/60 border-slate-800/80 text-slate-300 hover:bg-slate-800"
+                        }`}
+                      >
+                        <div className="flex items-center gap-2">
+                          <span className="text-base">{i.item?.icon || "🛡️"}</span>
+                          <div>
+                            <p className="font-bold text-xs truncate max-w-[120px]">{i.item?.name}</p>
+                            <span className="text-[10px] text-purple-400 font-mono">
+                              🔮 {stats.length} Dòng Thuộc Tính
+                            </span>
+                          </div>
+                        </div>
+                        {i.equipped && (
+                          <span className="text-[9px] bg-cyan-500/20 text-cyan-300 px-1.5 py-0.5 rounded font-bold">
+                            Đang Mặc
+                          </span>
+                        )}
+                      </button>
+                    );
+                  })}
+              </div>
+
+              {/* Reforge Pedestal */}
+              <div className="flex-1 flex flex-col justify-between p-6 rounded-2xl bg-gradient-to-b from-[#1b1226] to-[#0c0a14] border border-purple-500/40 relative">
+                <div>
+                  <div className="flex items-center justify-between pb-3 border-b border-purple-500/20">
+                    <div>
+                      <h3 className="font-black text-base text-white flex items-center gap-2">
+                        <span>🔮</span> Tẩy Luyện Dòng Ẩn — {selectedGear?.item?.name || "Chưa chọn"}
+                      </h3>
+                      <p className="text-xs text-purple-300/70 mt-0.5">
+                        Phân cấp thuộc tính: [C] Xám ➔ [B] Xanh ➔ [A] Tím ➔ [S] Vàng ➔ <span className="text-pink-400 font-bold">[SS - CỰC PHẨM]</span>
+                      </p>
+                    </div>
+                  </div>
+
+                  {/* 3 Sub-stat Lines */}
+                  <div className="mt-5 space-y-3">
+                    {[0, 1, 2].map((idx) => {
+                      const stat = selectedGear?.reforgeStatsJson?.[idx];
+                      const isLocked = lockedIndexes.includes(idx);
+                      const isSS = stat?.rank === "SS";
+                      const isS = stat?.rank === "S";
+
+                      return (
+                        <div
+                          key={idx}
+                          className={`p-3.5 rounded-2xl border transition flex items-center justify-between ${
+                            isSS
+                              ? "bg-pink-950/40 border-pink-500/60 shadow-[0_0_15px_rgba(244,63,94,0.25)]"
+                              : isS
+                              ? "bg-amber-950/40 border-amber-500/50"
+                              : stat?.rank === "A"
+                              ? "bg-purple-950/40 border-purple-500/40"
+                              : "bg-slate-950/70 border-slate-800"
+                          }`}
+                        >
+                          <div className="flex items-center gap-3">
+                            <span
+                              className={`px-2 py-0.5 rounded-lg text-xs font-black font-mono ${
+                                isSS
+                                  ? "bg-pink-500 text-white animate-pulse"
+                                  : isS
+                                  ? "bg-amber-500 text-slate-950 font-black"
+                                  : stat?.rank === "A"
+                                  ? "bg-purple-500 text-white"
+                                  : stat?.rank === "B"
+                                  ? "bg-cyan-500 text-slate-950"
+                                  : "bg-slate-700 text-slate-300"
+                              }`}
+                            >
+                              [{stat?.rank || "Chưa có"}]
+                            </span>
+                            <div>
+                              <p className={`text-sm font-bold ${isSS ? "text-pink-300" : isS ? "text-amber-300" : "text-white"}`}>
+                                {stat?.label || "Dòng trống — Hãy tẩy luyện để mở khóa"}
+                              </p>
+                            </div>
+                          </div>
+
+                          {stat && (
+                            <button
+                              onClick={() => {
+                                setLockedIndexes((prev) =>
+                                  prev.includes(idx) ? prev.filter((i) => i !== idx) : [...prev, idx]
+                                );
+                                playCombatSFX("holy_bell", 0.2);
+                              }}
+                              className={`px-3 py-1.5 rounded-xl font-bold text-xs transition cursor-pointer flex items-center gap-1.5 border ${
+                                isLocked
+                                  ? "bg-amber-500/20 text-amber-300 border-amber-500/50"
+                                  : "bg-slate-800/80 text-slate-400 border-slate-700 hover:text-white"
+                              }`}
+                            >
+                              {isLocked ? "🔒 Đã Khóa" : "🔓 Khóa Dòng"}
+                            </button>
+                          )}
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+
+                {/* Cost & Reforge Action */}
+                <div className="pt-4 border-t border-purple-500/20 flex items-center justify-between">
+                  <div className="flex items-center gap-4 text-xs font-mono font-bold">
+                    <span className="text-yellow-400">🪙 {200 + lockedIndexes.length * 150} Vàng</span>
+                    <span className="text-purple-400">🔮 1x Đá Tẩy Luyện</span>
+                    {lockedIndexes.length > 0 && (
+                      <span className="text-amber-400 font-sans text-xs">
+                        (Đã khóa {lockedIndexes.length} dòng — giữ nguyên chỉ số khi xoay)
+                      </span>
+                    )}
+                  </div>
+
+                  <button
+                    onClick={handleReforge}
+                    disabled={isProcessing || !selectedGear}
+                    className="px-6 py-3 rounded-2xl bg-gradient-to-r from-purple-500 to-pink-500 hover:from-purple-400 hover:to-pink-400 text-white font-black text-sm transition shadow-[0_0_25px_rgba(168,85,247,0.4)] cursor-pointer"
+                  >
+                    🔮 Tẩy Luyện Dòng Ẩn
+                  </button>
+                </div>
+              </div>
             </div>
           )}
         </div>

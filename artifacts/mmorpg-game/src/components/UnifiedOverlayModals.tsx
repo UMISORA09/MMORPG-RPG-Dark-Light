@@ -4,6 +4,9 @@ import { CharacterInventoryModal } from "@/ui/modals/CharacterInventoryModal";
 import { GameSettingsPanel } from "./GameSettingsPanel";
 import { QuestLogModal } from "@/ui/modals/QuestLogModal";
 import { BlacksmithModal } from "@/ui/modals/BlacksmithModal";
+import { AuctionHouseModal } from "@/ui/modals/AuctionHouseModal";
+import { TalentAndAwakeningModal } from "@/ui/modals/TalentAndAwakeningModal";
+import { CodexModal } from "@/ui/modals/CodexModal";
 import { CharacterAttributesPanel } from "@/ui/modals/CharacterAttributesPanel";
 import { PvPArenaModal } from "@/ui/modals/PvPArenaModal";
 import { GMAdminPanel } from "@/ui/modals/GMAdminPanel";
@@ -191,6 +194,15 @@ export const UnifiedOverlayModals = memo(function UnifiedOverlayModals({
 
       {/* 3. Blacksmith +15 Forge & Crafting */}
       {activeModal === "blacksmith" && <BlacksmithModal />}
+
+      {/* 3.1 Player Auction House (Alt+K) */}
+      {activeModal === "auctionHouse" && <AuctionHouseModal />}
+
+      {/* 3.2 Class Awakening & Talent Tree (Alt+N) */}
+      {activeModal === "talents" && <TalentAndAwakeningModal />}
+
+      {/* 3.3 Bestiary & Item Codex (Alt+L) */}
+      {activeModal === "codex" && <CodexModal />}
 
       {/* 4. Ranked 1v1 PvP Arena Matchmaking */}
       {activeModal === "pvpArena" && <PvPArenaModal />}

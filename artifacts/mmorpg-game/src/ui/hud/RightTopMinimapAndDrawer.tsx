@@ -30,6 +30,9 @@ import {
   ZoomIn,
   ZoomOut,
   Sparkles,
+  Hammer,
+  BookOpen,
+  Store,
 } from "lucide-react";
 import { playCombatSFX } from "@/audio/CombatSoundSynth";
 
@@ -187,7 +190,43 @@ export const RightTopMinimapAndDrawer = memo(function RightTopMinimapAndDrawer({
               <Shield className="w-4 h-4" />
             </button>
 
-            {/* 9. Cưỡi Thú (Z / M) */}
+            {/* 8.1 Chợ Đấu Giá (Alt+K) */}
+            <button
+              onClick={() => openModal("auctionHouse")}
+              className="p-1.5 bg-slate-900 hover:bg-slate-800 border border-slate-700 hover:border-yellow-400 rounded-xl text-yellow-400 transition cursor-pointer hover:scale-105 active:scale-95 shadow-[0_0_10px_rgba(234,179,8,0.2)]"
+              title="Chợ Đấu Giá Liên Người Chơi (Tổ hợp Alt+K)"
+            >
+              <Store className="w-4 h-4" />
+            </button>
+
+            {/* 8.2 Lò Rèn & Khảm Ngọc (Alt+U) */}
+            <button
+              onClick={() => openModal("blacksmith")}
+              className="p-1.5 bg-slate-900 hover:bg-slate-800 border border-slate-700 hover:border-amber-400 rounded-xl text-amber-400 transition cursor-pointer hover:scale-105 active:scale-95 shadow-[0_0_10px_rgba(245,158,11,0.2)]"
+              title="Lò Rèn: Cường Hóa, Khảm Ngọc & Tẩy Luyện (Tổ hợp Alt+U)"
+            >
+              <Hammer className="w-4 h-4" />
+            </button>
+
+            {/* 8.3 Chuyển Chức & Thiên Phú (Alt+N) */}
+            <button
+              onClick={() => openModal("talents")}
+              className="p-1.5 bg-slate-900 hover:bg-slate-800 border border-slate-700 hover:border-cyan-400 rounded-xl text-cyan-400 transition cursor-pointer hover:scale-105 active:scale-95 shadow-[0_0_10px_rgba(6,182,212,0.2)]"
+              title="Thức Tỉnh Chuyển Chức & Cây Thiên Phú (Tổ hợp Alt+N)"
+            >
+              <Sparkles className="w-4 h-4" />
+            </button>
+
+            {/* 8.4 Đồ Giám Sưu Tầm (Alt+L) */}
+            <button
+              onClick={() => openModal("codex")}
+              className="p-1.5 bg-slate-900 hover:bg-slate-800 border border-slate-700 hover:border-purple-400 rounded-xl text-purple-400 transition cursor-pointer hover:scale-105 active:scale-95 shadow-[0_0_10px_rgba(168,85,247,0.2)]"
+              title="Sách Đồ Giám Quái Vật & Trang Bị (Tổ hợp Alt+L)"
+            >
+              <BookOpen className="w-4 h-4" />
+            </button>
+
+            {/* 9. Cưỡi Thú (Alt+M / Shift+Space) */}
             <button
               onClick={toggleMount}
               className={`p-1.5 border rounded-xl transition cursor-pointer hover:scale-105 active:scale-95 text-xs ${
@@ -195,7 +234,7 @@ export const RightTopMinimapAndDrawer = memo(function RightTopMinimapAndDrawer({
                   ? "bg-cyan-500/30 border-cyan-400 text-cyan-300 shadow-[0_0_12px_rgba(40,195,225,0.45)]"
                   : "bg-slate-900 border-slate-700 text-slate-300 hover:text-white"
               }`}
-              title="Cưỡi Thú (+70% Tốc Độ) - Phím Z/M"
+              title="Cưỡi Thú (+70% Tốc Độ) - Tổ hợp Alt+M hoặc Shift+Space"
             >
               🐎
             </button>

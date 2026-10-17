@@ -21,6 +21,8 @@ export interface FullSyncItemInput {
   bonusCombatPower?: number;
   miraclePassive1?: string | null;
   miraclePassive2?: string | null;
+  socketsJson?: any;
+  reforgeStatsJson?: any;
 }
 
 export interface FullSyncQuestInput {
@@ -57,6 +59,12 @@ export interface FullCharacterSyncPayload {
   luk?: number;
   vit?: number;
   rageGauge?: number;
+
+  // MMORPG Core Systems: Awakening, Talents, Codex, Auto-Combat
+  awakeningTier?: number;
+  talentsJson?: any;
+  codexUnlockedJson?: any;
+  autoCombatSettingsJson?: any;
 
   // Storage & UI State
   unlockedSlots?: number;
@@ -195,42 +203,49 @@ export class CharacterPersistenceService {
           const numId = Number(item.id);
           const isExisting = !isNaN(numId) && currentDbItems.some((dbIt: any) => dbIt.id === numId);
 
-          if (isExisting) {
-            incomingIds.add(numId);
-            await tx
-              .update(characterItemsTable)
-              .set({
-                itemId: item.itemId,
-                equipped: Boolean(item.equipped),
-                equippedSlot: item.equipped ? item.equippedSlot : null,
-                slotIndex: item.equipped ? -1 : Number(item.slotIndex ?? 0),
-                quantity: Number(item.quantity ?? 1),
-                enhanceLevel: Number(item.enhanceLevel ?? 0),
-                rarity: item.rarity ?? "common",
-                bonusCombatPower: Number(item.bonusCombatPower ?? 0),
-                miraclePassive1: item.miraclePassive1 ?? null,
-                miraclePassive2: item.miraclePassive2 ?? null,
-              })
-              .where(and(eq(characterItemsTable.id, numId), eq(characterItemsTable.characterId, characterId)));
-          } else {
-            const [created] = await tx
-              .insert(characterItemsTable)
-              .values({
-                characterId,
-                itemId: item.itemId,
-                equipped: Boolean(item.equipped),
-                equippedSlot: item.equipped ? item.equippedSlot : null,
-                slotIndex: item.equipped ? -1 : Number(item.slotIndex ?? 0),
-                quantity: Number(item.quantity ?? 1),
-                enhanceLevel: Number(item.enhanceLevel ?? 0),
-                rarity: item.rarity ?? "common",
-                bonusCombatPower: Number(item.bonusCombatPower ?? 0),
-                miraclePassive1: item.miraclePassive1 ?? null,
-                miraclePassive2: item.miraclePassive2 ?? null,
-              })
-              .returning();
-            if (created?.id) incomingIds.add(created.id);
-          }
+            const socketsVal = item.socketsJson !== undefined ? (typeof item.socketsJson === "string" ? item.socketsJson : JSON.stringify(item.socketsJson)) : null;
+            const reforgeVal = item.reforgeStatsJson !== undefined ? (typeof item.reforgeStatsJson === "string" ? item.reforgeStatsJson : JSON.stringify(item.reforgeStatsJson)) : null;
+
+            if (isExisting) {
+              incomingIds.add(numId);
+              await tx
+                .update(characterItemsTable)
+                .set({
+                  itemId: item.itemId,
+                  equipped: Boolean(item.equipped),
+                  equippedSlot: item.equipped ? item.equippedSlot : null,
+                  slotIndex: item.equipped ? -1 : Number(item.slotIndex ?? 0),
+                  quantity: Number(item.quantity ?? 1),
+                  enhanceLevel: Number(item.enhanceLevel ?? 0),
+                  rarity: item.rarity ?? "common",
+                  bonusCombatPower: Number(item.bonusCombatPower ?? 0),
+                  miraclePassive1: item.miraclePassive1 ?? null,
+                  miraclePassive2: item.miraclePassive2 ?? null,
+                  socketsJson: socketsVal,
+                  reforgeStatsJson: reforgeVal,
+                })
+                .where(and(eq(characterItemsTable.id, numId), eq(characterItemsTable.characterId, characterId)));
+            } else {
+              const [created] = await tx
+                .insert(characterItemsTable)
+                .values({
+                  characterId,
+                  itemId: item.itemId,
+                  equipped: Boolean(item.equipped),
+                  equippedSlot: item.equipped ? item.equippedSlot : null,
+                  slotIndex: item.equipped ? -1 : Number(item.slotIndex ?? 0),
+                  quantity: Number(item.quantity ?? 1),
+                  enhanceLevel: Number(item.enhanceLevel ?? 0),
+                  rarity: item.rarity ?? "common",
+                  bonusCombatPower: Number(item.bonusCombatPower ?? 0),
+                  miraclePassive1: item.miraclePassive1 ?? null,
+                  miraclePassive2: item.miraclePassive2 ?? null,
+                  socketsJson: socketsVal,
+                  reforgeStatsJson: reforgeVal,
+                })
+                .returning();
+              if (created?.id) incomingIds.add(created.id);
+            }
         }
 
         // Xóa những item đã bị bán / phân giải (không còn trong danh sách gửi lên)
@@ -324,6 +339,16 @@ export class CharacterPersistenceService {
       if (payload.luk !== undefined) updateData.luk = Number(payload.luk);
       if (payload.vit !== undefined) updateData.vit = Number(payload.vit);
       if (payload.rageGauge !== undefined) updateData.rageGauge = Math.min(100, Math.max(0, Number(payload.rageGauge)));
+      if (payload.awakeningTier !== undefined) updateData.awakeningTier = Math.min(3, Math.max(0, Number(payload.awakeningTier)));
+
+      const talents = stringifyJson(payload.talentsJson);
+      if (talents !== undefined) updateData.talentsJson = talents;
+
+      const codex = stringifyJson(payload.codexUnlockedJson);
+      if (codex !== undefined) updateData.codexUnlockedJson = codex;
+
+      const autoCombat = stringifyJson(payload.autoCombatSettingsJson);
+      if (autoCombat !== undefined) updateData.autoCombatSettingsJson = autoCombat;
 
       const hotbar = stringifyJson(payload.hotbarConfigJson);
       if (hotbar !== undefined) updateData.hotbarConfigJson = hotbar;

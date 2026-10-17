@@ -7,6 +7,7 @@ import { cameraControls, PITCH_MIN, PITCH_MAX } from "../cameraControls";
 import { mobileState } from "../mobileControls";
 import { useGameWorldStore } from "@/stores/useGameWorldStore";
 import { useGameStore } from "@/stores";
+import { handleChordedKeydown } from "@/controls/ConflictFreeKeybindManager";
 
 export interface InputState {
   forward: boolean;
@@ -59,12 +60,25 @@ export function initInputRouter() {
   isInitialized = true;
 
   window.addEventListener("keydown", (e: KeyboardEvent) => {
-    // 1. Ignore if typing in text fields
+    // 1. Chặn phím hoàn toàn khi người chơi đang gõ chữ trong <input>, <textarea>
     if (isInputElement(e.target)) return;
 
+    // 2. Xử lý Tổ hợp 2 Phím (Chorded Keybindings: Alt + A, Alt + M, Alt + U, Alt + K, Alt + N, Alt + L, Alt + Q, Alt + S)
+    if (handleChordedKeydown(e)) {
+      activeKeyCodes.delete(e.code);
+      return;
+    }
+
+    // 3. Nếu phím ấn kèm Alt / Ctrl / Meta, không ghi nhận vào danh sách di chuyển
+    if (e.altKey || e.ctrlKey || e.metaKey) return;
+
     const code = e.code;
-    const key = e.key.toLowerCase();
     activeKeyCodes.add(code);
+
+    // Bất cứ khi nào người chơi chủ động bấm WASD, kích hoạt cờ ưu tiên điều khiển thủ công 1.2s (Manual Override)
+    if (["KeyW", "KeyA", "KeyS", "KeyD", "ArrowUp", "ArrowDown", "ArrowLeft", "ArrowRight"].includes(code)) {
+      useGameWorldStore.getState().triggerManualMovementOverride();
+    }
 
     // Prevent default browser scrolling for game navigation keys
     if (["Space", "ArrowUp", "ArrowDown", "ArrowLeft", "ArrowRight"].includes(code)) {
@@ -83,8 +97,8 @@ export function initInputRouter() {
       return;
     }
 
-    // Interface Modals Toggle: B or I (Inventory & Character), P (Shop), O (Leaderboard - NOT L), H (Battle Log), V (2.5D/3D Mode)
-    if (code === "KeyB" || code === "KeyI") {
+    // Interface Modals Toggle: B (Túi đồ), P (Cửa hàng), O (BXH), H (Chiến báo), V (Đổi 2.5D/3D Mode)
+    if (code === "KeyB") {
       if (worldStore.activeModal === "inventory") {
         worldStore.closeActiveModal();
         gameStore.closeActiveModal();
@@ -117,20 +131,6 @@ export function initInputRouter() {
         gameStore.setActiveModal("battle_logs");
       }
       return;
-    } else if (code === "KeyY") {
-      if (worldStore.activeModal === "achievements") {
-        worldStore.closeActiveModal();
-      } else {
-        worldStore.setActiveModal("achievements");
-      }
-      return;
-    } else if (code === "KeyU") {
-      if (worldStore.activeModal === "dailyRewards") {
-        worldStore.closeActiveModal();
-      } else {
-        worldStore.setActiveModal("dailyRewards");
-      }
-      return;
     } else if (code === "KeyV") {
       worldStore.toggleCharacterRenderMode();
       return;
@@ -139,7 +139,7 @@ export function initInputRouter() {
     // If modal is open, ignore gameplay combat hotkeys
     if (hasModal) return;
 
-    // Basic Attack / Combo: J or Left Mouse (W, A, S, D are strictly reserved for movement!)
+    // Basic Attack / Combo: J (W, A, S, D are strictly reserved for movement!)
     if (code === "KeyJ") {
       wantsAttackEdge = true;
       return;
@@ -188,8 +188,8 @@ export function initInputRouter() {
       return;
     }
 
-    // Skill 1: Phím 1 hoặc Q (hoặc K)
-    if (code === "Digit1" || code === "KeyQ" || code === "KeyK") {
+    // Skill 1: Phím 1 hoặc Q
+    if (code === "Digit1" || code === "KeyQ") {
       worldStore.triggerSkill(1);
       gameStore.triggerSkill(1);
       return;
@@ -202,14 +202,14 @@ export function initInputRouter() {
       return;
     }
 
-    // Skill 3 (Tuyệt Kỹ / Ult): Phím 3 hoặc R (hoặc U)
-    if (code === "Digit3" || code === "KeyR" || code === "KeyU") {
+    // Skill 3: Phím 3 hoặc R
+    if (code === "Digit3" || code === "KeyR") {
       worldStore.triggerSkill(3);
       gameStore.triggerSkill(3);
       return;
     }
 
-    // Cuồng Nộ Thức Tỉnh (Fever Awakening): Phím T
+    // Cuồng Nộ Thức Tỉnh (Fever Awakening / Skill 4): Phím T
     if (code === "KeyT") {
       if (worldStore.feverGauge >= 100) {
         worldStore.activateFever();
@@ -226,21 +226,20 @@ export function initInputRouter() {
       return;
     }
 
-    // Thú Cưỡi (Mount System): Phím Z hoặc M
-    if (code === "KeyZ" || code === "KeyM") {
-      worldStore.toggleMount();
-      return;
-    }
-
     // 3. Quick Consumables / Potions
-    // Bình Máu (HP Potion): Phím 4 hoặc X
-    if (code === "Digit4" || code === "KeyX") {
+    // Bình Máu (HP Potion): Phím Z
+    if (code === "KeyZ") {
       worldStore.useQuickPotionHp();
       return;
     }
-    // Bình Năng Lượng (MP Potion): Phím 5 hoặc C
-    if (code === "Digit5" || code === "KeyC") {
+    // Bình Năng Lượng (MP Potion): Phím X
+    if (code === "KeyX") {
       worldStore.useQuickPotionMp();
+      return;
+    }
+    // Cuộn Buff / Khiên Hộ Mệnh: Phím C
+    if (code === "KeyC") {
+      worldStore.useQuickShield();
       return;
     }
     // La Bàn Dịch Chuyển Về Làng (Town Teleport): Phím 7

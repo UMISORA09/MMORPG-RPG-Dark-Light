@@ -600,4 +600,389 @@ router.post("/characters/:characterId/blacksmith/craft", requireAuth, async (req
   });
 });
 
+// ── 4. KHẢM BẢO THẠCH VÀO TRANG BỊ (GEM SOCKETING) ──
+router.post("/characters/:characterId/blacksmith/socket", requireAuth, async (req, res): Promise<void> => {
+  const characterId = Number(req.params.characterId);
+  const userId = req.session.userId!;
+  const { ownershipId, socketIndex, gemOwnershipId } = req.body;
+
+  const [character] = await db
+    .select()
+    .from(charactersTable)
+    .where(and(eq(charactersTable.id, characterId), eq(charactersTable.userId, userId)))
+    .limit(1);
+
+  if (!character) {
+    res.status(404).json({ error: "Không tìm thấy nhân vật" });
+    return;
+  }
+
+  const [gear] = await db
+    .select()
+    .from(characterItemsTable)
+    .where(and(eq(characterItemsTable.id, Number(ownershipId)), eq(characterItemsTable.characterId, characterId)))
+    .limit(1);
+
+  if (!gear) {
+    res.status(404).json({ error: "Không tìm thấy trang bị" });
+    return;
+  }
+
+  const rarity = (gear.rarity || "common").toLowerCase();
+  const maxSockets = rarity === "miracle" || rarity === "legendary" ? 3 : rarity === "epic" ? 2 : rarity === "rare" ? 1 : 0;
+  if (maxSockets <= 0) {
+    res.status(400).json({ error: "Trang bị phẩm chất Rare trở lên mới có lỗ khảm ngọc!" });
+    return;
+  }
+
+  if (socketIndex < 0 || socketIndex >= maxSockets) {
+    res.status(400).json({ error: `Vị trí lỗ khảm không hợp lệ (Trang bị này có tối đa ${maxSockets} lỗ)` });
+    return;
+  }
+
+  // Lấy viên ngọc từ túi đồ
+  const [gemItem] = await db
+    .select()
+    .from(characterItemsTable)
+    .where(and(eq(characterItemsTable.id, Number(gemOwnershipId)), eq(characterItemsTable.characterId, characterId)))
+    .limit(1);
+
+  if (!gemItem || !gemItem.itemId.startsWith("gem_")) {
+    res.status(400).json({ error: "Vật phẩm chọn không phải là Bảo Thạch hợp lệ" });
+    return;
+  }
+
+  // Parse ngọc
+  const parts = gemItem.itemId.split("_");
+  const gemType = parts[1]; // ruby, sapphire, topaz, emerald
+  const level = Number(parts[2]) || 1;
+
+  let currentSockets: any[] = [];
+  try {
+    currentSockets = typeof gear.socketsJson === "string" ? JSON.parse(gear.socketsJson) : (gear.socketsJson || []);
+  } catch {
+    currentSockets = [];
+  }
+
+  // Nếu lỗ đã có ngọc, tháo trả ngọc cũ vào túi
+  const existingSocket = currentSockets.find((s) => s.index === socketIndex);
+  if (existingSocket && existingSocket.gemId) {
+    await db.insert(characterItemsTable).values({
+      characterId,
+      itemId: existingSocket.gemId,
+      quantity: 1,
+      equipped: false,
+    });
+  }
+
+  // Trừ 1 viên ngọc vừa dùng
+  if (gemItem.quantity <= 1) {
+    await db.delete(characterItemsTable).where(eq(characterItemsTable.id, gemItem.id));
+  } else {
+    await db
+      .update(characterItemsTable)
+      .set({ quantity: gemItem.quantity - 1 })
+      .where(eq(characterItemsTable.id, gemItem.id));
+  }
+
+  // Ghi nhận ngọc mới vào sockets
+  currentSockets = currentSockets.filter((s) => s.index !== socketIndex);
+  currentSockets.push({
+    index: socketIndex,
+    gemId: gemItem.itemId,
+    gemType,
+    level,
+  });
+
+  await db
+    .update(characterItemsTable)
+    .set({ socketsJson: JSON.stringify(currentSockets) })
+    .where(eq(characterItemsTable.id, gear.id));
+
+  await recalculateCharacterStats(characterId);
+  const updatedInv = await listInventory(characterId);
+
+  res.status(200).json({
+    success: true,
+    message: `✨ Khảm thành công ${gemItem.itemId} vào lỗ ${socketIndex + 1}!`,
+    sockets: currentSockets,
+    inventory: updatedInv,
+  });
+});
+
+// ── 5. THÁO BẢO THẠCH KHỎI TRANG BỊ (UNSOCKET) ──
+router.post("/characters/:characterId/blacksmith/unsocket", requireAuth, async (req, res): Promise<void> => {
+  const characterId = Number(req.params.characterId);
+  const userId = req.session.userId!;
+  const { ownershipId, socketIndex } = req.body;
+
+  const [character] = await db
+    .select()
+    .from(charactersTable)
+    .where(and(eq(charactersTable.id, characterId), eq(charactersTable.userId, userId)))
+    .limit(1);
+
+  if (!character) {
+    res.status(404).json({ error: "Không tìm thấy nhân vật" });
+    return;
+  }
+
+  const [gear] = await db
+    .select()
+    .from(characterItemsTable)
+    .where(and(eq(characterItemsTable.id, Number(ownershipId)), eq(characterItemsTable.characterId, characterId)))
+    .limit(1);
+
+  if (!gear) {
+    res.status(404).json({ error: "Không tìm thấy trang bị" });
+    return;
+  }
+
+  let currentSockets: any[] = [];
+  try {
+    currentSockets = typeof gear.socketsJson === "string" ? JSON.parse(gear.socketsJson) : (gear.socketsJson || []);
+  } catch {
+    currentSockets = [];
+  }
+
+  const targetSocket = currentSockets.find((s) => s.index === socketIndex);
+  if (!targetSocket || !targetSocket.gemId) {
+    res.status(400).json({ error: "Lỗ khảm này hiện đang rỗng, không có ngọc để tháo" });
+    return;
+  }
+
+  // Hoàn trả ngọc về túi
+  await db.insert(characterItemsTable).values({
+    characterId,
+    itemId: targetSocket.gemId,
+    quantity: 1,
+    equipped: false,
+  });
+
+  currentSockets = currentSockets.filter((s) => s.index !== socketIndex);
+
+  await db
+    .update(characterItemsTable)
+    .set({ socketsJson: JSON.stringify(currentSockets) })
+    .where(eq(characterItemsTable.id, gear.id));
+
+  await recalculateCharacterStats(characterId);
+  const updatedInv = await listInventory(characterId);
+
+  res.status(200).json({
+    success: true,
+    message: `💎 Đã tháo ngọc ${targetSocket.gemId} thành công và đưa vào túi đồ!`,
+    sockets: currentSockets,
+    inventory: updatedInv,
+  });
+});
+
+// ── 6. GHÉP BẢO THẠCH CẤP CAO (FUSE GEMS: 3 GEM LV.N -> 1 GEM LV.N+1) ──
+router.post("/characters/:characterId/blacksmith/fuse-gems", requireAuth, async (req, res): Promise<void> => {
+  const characterId = Number(req.params.characterId);
+  const userId = req.session.userId!;
+  const { gemType, fromLevel } = req.body;
+
+  const levelNum = Number(fromLevel);
+  if (levelNum < 1 || levelNum >= 5) {
+    res.status(400).json({ error: "Cấp độ bảo thạch để ghép chỉ từ cấp 1 đến cấp 4!" });
+    return;
+  }
+
+  const [character] = await db
+    .select()
+    .from(charactersTable)
+    .where(and(eq(charactersTable.id, characterId), eq(charactersTable.userId, userId)))
+    .limit(1);
+
+  if (!character) {
+    res.status(404).json({ error: "Không tìm thấy nhân vật" });
+    return;
+  }
+
+  const sourceGemId = `gem_${gemType}_${levelNum}`;
+  const targetGemId = `gem_${gemType}_${levelNum + 1}`;
+  const goldCost = levelNum * 300;
+
+  if (character.gold < goldCost) {
+    res.status(400).json({ error: `Không đủ vàng để ghép ngọc (Cần ${goldCost} Vàng)` });
+    return;
+  }
+
+  // Đếm tổng số ngọc cùng loại
+  const gemsInInv = await db
+    .select()
+    .from(characterItemsTable)
+    .where(and(eq(characterItemsTable.characterId, characterId), eq(characterItemsTable.itemId, sourceGemId), eq(characterItemsTable.equipped, false)));
+
+  const totalCount = gemsInInv.reduce((sum: number, g: any) => sum + (g.quantity || 1), 0);
+  if (totalCount < 3) {
+    res.status(400).json({ error: `Cần ít nhất 3 viên ${sourceGemId} để ghép lên cấp ${levelNum + 1} (Hiện có ${totalCount})` });
+    return;
+  }
+
+  // Trừ 3 viên ngọc
+  let needToDeduct = 3;
+  for (const g of gemsInInv) {
+    if (needToDeduct <= 0) break;
+    if (g.quantity <= needToDeduct) {
+      needToDeduct -= g.quantity;
+      await db.delete(characterItemsTable).where(eq(characterItemsTable.id, g.id));
+    } else {
+      await db
+        .update(characterItemsTable)
+        .set({ quantity: g.quantity - needToDeduct })
+        .where(eq(characterItemsTable.id, g.id));
+      needToDeduct = 0;
+    }
+  }
+
+  // Trừ vàng
+  await db
+    .update(charactersTable)
+    .set({ gold: character.gold - goldCost })
+    .where(eq(charactersTable.id, characterId));
+
+  // Trao 1 viên ngọc cấp cao
+  await db.insert(characterItemsTable).values({
+    characterId,
+    itemId: targetGemId,
+    quantity: 1,
+    equipped: false,
+  });
+
+  const updatedInv = await listInventory(characterId);
+  res.status(200).json({
+    success: true,
+    message: `🎉 Chúc mừng! Ghép thành công 1 viên ${targetGemId}!`,
+    newGemId: targetGemId,
+    inventory: updatedInv,
+  });
+});
+
+// ── 7. TẨY LUYỆN DÒNG CHỈ SỐ PHỤ (SUB-STAT REFORGING) ──
+router.post("/characters/:characterId/blacksmith/reforge", requireAuth, async (req, res): Promise<void> => {
+  const characterId = Number(req.params.characterId);
+  const userId = req.session.userId!;
+  const { ownershipId, lockedIndexes = [] } = req.body;
+
+  const [character] = await db
+    .select()
+    .from(charactersTable)
+    .where(and(eq(charactersTable.id, characterId), eq(charactersTable.userId, userId)))
+    .limit(1);
+
+  if (!character) {
+    res.status(404).json({ error: "Không tìm thấy nhân vật" });
+    return;
+  }
+
+  const [gear] = await db
+    .select()
+    .from(characterItemsTable)
+    .where(and(eq(characterItemsTable.id, Number(ownershipId)), eq(characterItemsTable.characterId, characterId)))
+    .limit(1);
+
+  if (!gear) {
+    res.status(404).json({ error: "Không tìm thấy trang bị" });
+    return;
+  }
+
+  // Kiểm tra đá tẩy luyện
+  const [reforgeStone] = await db
+    .select()
+    .from(characterItemsTable)
+    .where(and(eq(characterItemsTable.characterId, characterId), eq(characterItemsTable.itemId, "material_reforge_stone"), eq(characterItemsTable.equipped, false)))
+    .limit(1);
+
+  if (!reforgeStone || reforgeStone.quantity < 1) {
+    res.status(400).json({ error: "Thiếu Đá Tẩy Luyện Thần Bí (Cần 1 viên)" });
+    return;
+  }
+
+  // Chi phí vàng: 300 vàng + 200 vàng mỗi dòng khóa
+  const goldCost = 300 + (lockedIndexes.length * 200);
+  if (character.gold < goldCost) {
+    res.status(400).json({ error: `Không đủ Vàng (Cần ${goldCost} Vàng)` });
+    return;
+  }
+
+  // Trừ đá tẩy luyện & vàng
+  if (reforgeStone.quantity <= 1) {
+    await db.delete(characterItemsTable).where(eq(characterItemsTable.id, reforgeStone.id));
+  } else {
+    await db.update(characterItemsTable).set({ quantity: reforgeStone.quantity - 1 }).where(eq(characterItemsTable.id, reforgeStone.id));
+  }
+
+  await db.update(charactersTable).set({ gold: character.gold - goldCost }).where(eq(charactersTable.id, characterId));
+
+  // Tạo các dòng chỉ số ngẫu nhiên
+  const statTemplates = [
+    { key: "lifesteal", name: "Hút máu khi đánh trúng", suffix: "%", minVal: 1.0, maxVal: 5.0 },
+    { key: "boss_dmg", name: "Sát thương lên Boss", suffix: "%", minVal: 4.0, maxVal: 18.0 },
+    { key: "cooldown_reduction", name: "Giảm thời gian hồi chiêu", suffix: "%", minVal: 3.0, maxVal: 12.0 },
+    { key: "bonus_atk", name: "Sát thương tấn công", suffix: "", minVal: 15, maxVal: 90 },
+    { key: "crit_rate", name: "Tỉ lệ bạo kích", suffix: "%", minVal: 2.0, maxVal: 9.0 },
+    { key: "def_ignore", name: "Bỏ qua phòng thủ", suffix: "%", minVal: 3.0, maxVal: 15.0 },
+  ];
+
+  const rollStatLine = () => {
+    const roll = Math.random() * 100;
+    let rank = "C";
+    let mult = 0.3;
+    if (roll < 2.0) { rank = "SS"; mult = 1.0; } // 2% SS Cực Phẩm
+    else if (roll < 10.0) { rank = "S"; mult = 0.85; } // 8% S Vàng
+    else if (roll < 25.0) { rank = "A"; mult = 0.65; } // 15% A Tím
+    else if (roll < 55.0) { rank = "B"; mult = 0.45; } // 30% B Xanh
+    else { rank = "C"; mult = 0.3; } // 45% C Xám
+
+    const tmpl = statTemplates[Math.floor(Math.random() * statTemplates.length)];
+    const val = tmpl.suffix === "%"
+      ? Number((tmpl.minVal + (tmpl.maxVal - tmpl.minVal) * mult).toFixed(1))
+      : Math.floor(tmpl.minVal + (tmpl.maxVal - tmpl.minVal) * mult);
+
+    return {
+      key: tmpl.key,
+      name: tmpl.name,
+      value: val,
+      suffix: tmpl.suffix,
+      rank,
+    };
+  };
+
+  let currentLines: any[] = [];
+  try {
+    currentLines = typeof gear.reforgeStatsJson === "string" ? JSON.parse(gear.reforgeStatsJson) : (gear.reforgeStatsJson || []);
+  } catch {
+    currentLines = [];
+  }
+
+  // Luôn đảm bảo có 3 dòng
+  while (currentLines.length < 3) {
+    currentLines.push(rollStatLine());
+  }
+
+  const nextLines = currentLines.map((line, idx) => {
+    if (lockedIndexes.includes(idx)) {
+      return { ...line, isLocked: true };
+    }
+    return rollStatLine();
+  });
+
+  await db
+    .update(characterItemsTable)
+    .set({ reforgeStatsJson: JSON.stringify(nextLines) })
+    .where(eq(characterItemsTable.id, gear.id));
+
+  await recalculateCharacterStats(characterId);
+  const updatedInv = await listInventory(characterId);
+
+  res.status(200).json({
+    success: true,
+    message: "🔮 Tẩy luyện dòng thuộc tính ẩn thành công!",
+    reforgeStats: nextLines,
+    inventory: updatedInv,
+  });
+});
+
 export default router;

@@ -13,6 +13,9 @@ import questsRouter from "./quests";
 import blacksmithRouter from "./blacksmith";
 import multiplayerRouter from "./multiplayer";
 import endgameRouter from "./endgame";
+import marketRouter from "./market";
+import talentsRouter from "./talents";
+import codexRouter from "./codex";
 
 const router: IRouter = Router();
 
@@ -30,5 +33,8 @@ router.use(questsRouter);
 router.use(blacksmithRouter);
 router.use(multiplayerRouter);
 router.use(endgameRouter);
+router.use(marketRouter);
+router.use(talentsRouter);
+router.use(codexRouter);
 
 export default router;

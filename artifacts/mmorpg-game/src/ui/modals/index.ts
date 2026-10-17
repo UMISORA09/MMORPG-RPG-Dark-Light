@@ -16,3 +16,6 @@ export { PvPArenaModal } from "./PvPArenaModal";
 export { GMAdminPanel } from "./GMAdminPanel";
 export { AchievementsModal, type AchievementsModalProps } from "./AchievementsModal";
 export { DailyLoginModal, type DailyLoginModalProps } from "./DailyLoginModal";
+export { AuctionHouseModal } from "./AuctionHouseModal";
+export { TalentAndAwakeningModal } from "./TalentAndAwakeningModal";
+export { CodexModal } from "./CodexModal";

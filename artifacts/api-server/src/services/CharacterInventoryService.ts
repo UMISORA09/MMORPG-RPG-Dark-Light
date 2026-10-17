@@ -31,6 +31,8 @@ export async function recalculateCharacterStats(characterId: number, executor: a
     enhanceLevel: characterItemsTable.enhanceLevel,
     bonusCombatPower: characterItemsTable.bonusCombatPower,
     rarity: characterItemsTable.rarity,
+    socketsJson: characterItemsTable.socketsJson,
+    reforgeStatsJson: characterItemsTable.reforgeStatsJson,
   }).from(characterItemsTable)
     .innerJoin(itemsTable, eq(characterItemsTable.itemId, itemsTable.id))
     .where(and(
@@ -41,7 +43,7 @@ export async function recalculateCharacterStats(characterId: number, executor: a
   const bonuses: Record<string, number> = {
     hpBoost: 0, mpBoost: 0, atkBoost: 0, matkBoost: 0, defBoost: 0, mdefBoost: 0,
     spdBoost: 0, strBoost: 0, dexBoost: 0, intBoost: 0, lukBoost: 0, vitBoost: 0,
-    critRateBoost: 0, bonusCombatPower: 0,
+    critRateBoost: 0, bonusCombatPower: 0, evasionBoost: 0, critDmgBoost: 0,
   };
 
   let hasMiracleEquipped = false;
@@ -58,18 +60,108 @@ export async function recalculateCharacterStats(characterId: number, executor: a
     for (const stat of Object.keys(bonuses)) {
       if (stat === "bonusCombatPower") {
         bonuses[stat] += Number(row.bonusCombatPower ?? 0) + (isMiracle ? 2500 : 0);
-      } else {
+      } else if (stat in item || (item as any)[stat]) {
         bonuses[stat] += Math.floor(numericItemStat(item, stat) * multiplier);
+      }
+    }
+
+    // ── Khảm Bảo Thạch (Gem Sockets) ──
+    const sockets = typeof row.socketsJson === "string" ? (() => { try { return JSON.parse(row.socketsJson); } catch { return []; } })() : (row.socketsJson || []);
+    if (Array.isArray(sockets)) {
+      for (const sock of sockets) {
+        if (!sock || !sock.gemType) continue;
+        const lvl = Math.min(5, Math.max(1, Number(sock.level) || 1));
+        const idx = lvl - 1;
+        if (sock.gemType === "ruby") {
+          const atkVals = [15, 35, 70, 120, 200];
+          bonuses.atkBoost += atkVals[idx] || 15;
+          bonuses.bonusCombatPower += (idx + 1) * 150;
+        } else if (sock.gemType === "sapphire") {
+          const defVals = [12, 28, 55, 95, 160];
+          const mdefVals = [10, 22, 45, 80, 135];
+          const hpVals = [80, 200, 450, 900, 1800];
+          bonuses.defBoost += defVals[idx] || 12;
+          bonuses.mdefBoost += mdefVals[idx] || 10;
+          bonuses.hpBoost += hpVals[idx] || 80;
+          bonuses.bonusCombatPower += (idx + 1) * 150;
+        } else if (sock.gemType === "topaz") {
+          const critVals = [2, 4, 7, 11, 16];
+          const critDmgVals = [5, 10, 18, 28, 45];
+          bonuses.critRateBoost += critVals[idx] || 2;
+          bonuses.critDmgBoost += critDmgVals[idx] || 5;
+          bonuses.bonusCombatPower += (idx + 1) * 160;
+        } else if (sock.gemType === "emerald") {
+          const spdVals = [1, 2, 3, 5, 8];
+          const evaVals = [2, 4, 7, 11, 18];
+          bonuses.spdBoost += spdVals[idx] || 1;
+          bonuses.evasionBoost += evaVals[idx] || 2;
+          bonuses.bonusCombatPower += (idx + 1) * 140;
+        }
+      }
+    }
+
+    // ── Tẩy Luyện Dòng Ẩn (Sub-stat Reforging) ──
+    const reforgeLines = typeof row.reforgeStatsJson === "string" ? (() => { try { return JSON.parse(row.reforgeStatsJson); } catch { return []; } })() : (row.reforgeStatsJson || []);
+    if (Array.isArray(reforgeLines)) {
+      for (const line of reforgeLines) {
+        if (!line || !line.key || line.value === undefined) continue;
+        const val = Number(line.value) || 0;
+        if (line.key === "atk" || line.key === "bonus_atk") bonuses.atkBoost += val;
+        else if (line.key === "def" || line.key === "bonus_def") bonuses.defBoost += val;
+        else if (line.key === "hp" || line.key === "bonus_hp") bonuses.hpBoost += val;
+        else if (line.key === "crit" || line.key === "crit_rate") bonuses.critRateBoost += val;
+        else if (line.key === "spd") bonuses.spdBoost += val;
+        
+        // Combat power bonus based on rank
+        const rankBonus = line.rank === "SS" ? 500 : line.rank === "S" ? 300 : line.rank === "A" ? 180 : line.rank === "B" ? 100 : 50;
+        bonuses.bonusCombatPower += rankBonus;
       }
     }
   }
 
+  // ── Thức Tỉnh Chuyển Chức: +20% mỗi Bậc (Tier 1-3) ──
+  const awakeningTier = Math.min(3, Math.max(0, Number(character.awakeningTier) || 0));
+  const awakeningMult = 1.0 + (awakeningTier * 0.20);
+
+  // ── Cây Thiên Phú (Talent Tree) ──
+  let talents: Record<string, number> = {};
+  try {
+    talents = typeof character.talentsJson === "string" ? JSON.parse(character.talentsJson) : (character.talentsJson || {});
+  } catch {
+    talents = {};
+  }
+  // Nhánh Cuồng Nộ:
+  bonuses.atkBoost += (Number(talents.fury_1) || 0) * 8; // Cuồng Long Trảm (+8 ATK/point)
+  bonuses.critRateBoost += (Number(talents.fury_2) || 0) * 2; // Tử Thần Chi Nhãn (+2% Crit/point)
+  bonuses.bonusCombatPower += (Number(talents.fury_3) || 0) * 250; // Thiên Băng Trảm (+250 CP)
+  // Nhánh Kiên Cường:
+  bonuses.defBoost += (Number(talents.fort_1) || 0) * 8; // Kim Cương Hộ Thể (+8 DEF/point)
+  bonuses.hpBoost += (Number(talents.fort_2) || 0) * 120; // Bất Diệt Sinh Mệnh (+120 HP/point)
+  bonuses.mdefBoost += (Number(talents.fort_3) || 0) * 10; // Thánh Thuẫn (+10 MDEF)
+  // Nhánh Linh Hoạt:
+  bonuses.spdBoost += (Number(talents.agility_1) || 0) * 1; // Thần Tốc Du Long (+1 SPD)
+  bonuses.evasionBoost += (Number(talents.agility_2) || 0) * 2; // Thời Khắc Tinh Thông (+2% EVA)
+
+  // ── Sách Đồ Giám Sưu Tầm (Codex Permanent Buffs) ──
+  let codexUnlocked: string[] = [];
+  try {
+    codexUnlocked = typeof character.codexUnlockedJson === "string" ? JSON.parse(character.codexUnlockedJson) : (character.codexUnlockedJson || []);
+  } catch {
+    codexUnlocked = [];
+  }
+  if (Array.isArray(codexUnlocked) && codexUnlocked.length > 0) {
+    bonuses.hpBoost += codexUnlocked.length * 20; // +20 HP mỗi mốc đồ giám
+    bonuses.atkBoost += codexUnlocked.length * 3; // +3 ATK mỗi mốc đồ giám
+    bonuses.defBoost += codexUnlocked.length * 3; // +3 DEF mỗi mốc đồ giám
+    bonuses.bonusCombatPower += codexUnlocked.length * 100;
+  }
+
   const baseCls = CHARACTER_CLASSES.find((c) => c.id === character.classId) || CHARACTER_CLASSES[0];
-  const baseHp = baseCls.baseHp;
-  const baseMp = baseCls.baseMp;
-  const baseAtk = baseCls.baseAtk;
-  const baseMatk = 10;
-  const baseDef = baseCls.baseDef;
+  const baseHp = Math.floor(baseCls.baseHp * awakeningMult);
+  const baseMp = Math.floor(baseCls.baseMp * awakeningMult);
+  const baseAtk = Math.floor(baseCls.baseAtk * awakeningMult);
+  const baseMatk = Math.floor(10 * awakeningMult);
+  const baseDef = Math.floor(baseCls.baseDef * awakeningMult);
   const baseSpd = baseCls.baseSpd;
   const baseCrit = baseCls.critRate;
   const baseEva = baseCls.evasion;
@@ -85,9 +177,10 @@ export async function recalculateCharacterStats(characterId: number, executor: a
   const atk = baseAtk + Math.floor(str * 1.5 + dex * 0.5) + bonuses.atkBoost;
   const matk = baseMatk + Math.floor(intel * 1.8) + bonuses.matkBoost;
   const def = baseDef + Math.floor(vit * 0.8 + str * 0.4) + bonuses.defBoost;
-  const spd = baseSpd + Math.min(8, Math.floor(dex * 0.15)) + bonuses.spdBoost;
-  const critRate = Math.min(75, baseCrit + Math.floor(luk * 0.4 + dex * 0.1) + bonuses.critRateBoost);
-  const evasion = Math.min(60, baseEva + Math.floor(dex * 0.3 + luk * 0.2));
+  const spd = baseSpd + Math.min(10, Math.floor(dex * 0.15)) + bonuses.spdBoost;
+  const critRate = Math.min(85, baseCrit + Math.floor(luk * 0.4 + dex * 0.1) + bonuses.critRateBoost);
+  const evasion = Math.min(65, baseEva + Math.floor(dex * 0.3 + luk * 0.2) + (bonuses.evasionBoost || 0));
+  const critDmg = 150 + (bonuses.critDmgBoost || 0);
   const combatPower = Math.floor(
     maxHp * 0.2 + maxMp * 0.1 + atk * 8 + matk * 6 + def * 10 + spd * 15 + critRate * 12 + bonuses.bonusCombatPower
   );
@@ -111,7 +204,7 @@ export async function recalculateCharacterStats(characterId: number, executor: a
     mdef: 15 + (character.level - 1) + bonuses.mdefBoost,
     spd,
     critRate,
-    critDmg: 150,
+    critDmg,
     accuracy: 95,
     evasion,
     combatPower,

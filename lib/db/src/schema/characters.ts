@@ -66,6 +66,12 @@ export const charactersTable = pgTable("characters", {
   activeBuffsJson: text("active_buffs_json").notNull().default("[]"),
   uiPreferencesJson: text("ui_preferences_json").notNull().default(""),
 
+  // --- Advanced MMORPG Systems (Awakening, Talents, Codex, Auto-Bot) ---
+  awakeningTier: integer("awakening_tier").notNull().default(0),
+  talentsJson: text("talents_json").notNull().default("{}"),
+  codexUnlockedJson: text("codex_unlocked_json").notNull().default("[]"),
+  autoCombatSettingsJson: text("auto_combat_settings_json").notNull().default("{\"hpThreshold\":45,\"mpThreshold\":30,\"lootFilterMinRarity\":\"rare\"}"),
+
   createdAt: timestamp("created_at").defaultNow().notNull(),
 }, (table) => ({
   userIdIndex: index("characters_user_id_idx").on(table.userId),

@@ -190,9 +190,9 @@ export interface GameWorldState {
   nearbyTargetEnemies: { id: number; name: string; hp: number; maxHp: number; dist: number; color: string }[];
 
   // --- Overlay Modals ---
-  activeModal: "inventory" | "shop" | "leaderboard" | "battleLog" | "settings" | "quests" | "blacksmith" | "party" | "rewards" | "attributes" | "pvpArena" | "gmAdmin" | "achievements" | "dailyRewards" | null;
-  blacksmithTab: "enhance" | "dismantle" | "craft";
-  setBlacksmithTab: (tab: "enhance" | "dismantle" | "craft") => void;
+  activeModal: "inventory" | "shop" | "leaderboard" | "battleLog" | "settings" | "quests" | "blacksmith" | "party" | "rewards" | "attributes" | "pvpArena" | "gmAdmin" | "achievements" | "dailyRewards" | "auctionHouse" | "talents" | "codex" | null;
+  blacksmithTab: "enhance" | "dismantle" | "craft" | "socket" | "reforge";
+  setBlacksmithTab: (tab: "enhance" | "dismantle" | "craft" | "socket" | "reforge") => void;
 
   // --- Quests & Waypoints ---
   trackedQuest: any | null;
@@ -309,6 +309,48 @@ export interface GameWorldState {
   addFever: (amt: number) => void;
   activateFever: () => void;
 
+  // --- Smart Auto-Combat & AFK Hunt ---
+  autoCombatEnabled: boolean;
+  autoCombatSettings: {
+    hpThreshold: number;
+    mpThreshold: number;
+    lootFilterMinRarity: "all" | "rare" | "epic" | "legendary";
+    huntRadius: number;
+  };
+  autoCombatTargetMonsterId: string | null;
+  autoCombatStatusText: string;
+  isManualMovementOverridden: boolean;
+  manualMovementOverrideTimer: number;
+  toggleAutoCombat: () => void;
+  setAutoCombatEnabled: (enabled: boolean) => void;
+  updateAutoCombatSettings: (settings: Partial<{ hpThreshold: number; mpThreshold: number; lootFilterMinRarity: "all" | "rare" | "epic" | "legendary"; huntRadius: number }>) => void;
+  setAutoCombatTarget: (targetId: string | null) => void;
+  setAutoCombatStatusText: (text: string) => void;
+  triggerManualMovementOverride: () => void;
+
+  // --- Awakening, Talents & Codex ---
+  awakeningTier: number;
+  talents: Record<string, number>;
+  codexUnlocked: string[];
+  monsterKillCounts: Record<string, number>;
+  setAwakeningTier: (tier: number) => void;
+  setTalents: (talents: Record<string, number>) => void;
+  setCodexUnlocked: (codex: string[]) => void;
+  recordMonsterKill: (monsterType: string) => void;
+
+  // --- Dynamic World Events ---
+  activeWorldEvent: {
+    id: "village_siege" | "meteor_shower" | "world_boss_invasion";
+    title: string;
+    description: string;
+    durationSeconds: number;
+    targetZone: WorldZone;
+    targetPos: { x: number; z: number };
+  } | null;
+  worldEventTimer: number;
+  triggerWorldEvent: (eventId: "village_siege" | "meteor_shower" | "world_boss_invasion") => void;
+  clearWorldEvent: () => void;
+
   // --- Actions ---
   registerCombatCallbacks: (
     onDefeat: (monsterId: string) => void,
@@ -367,7 +409,7 @@ export interface GameWorldState {
   enterDungeon: (difficulty: "normal" | "hard" | "nightmare") => void;
   leaveDungeon: () => void;
   toggleCharacterRenderMode: () => void;
-  setActiveModal: (modal: "inventory" | "shop" | "leaderboard" | "battleLog" | "settings" | "quests" | "blacksmith" | "party" | "rewards" | "attributes" | "pvpArena" | "gmAdmin" | "achievements" | "dailyRewards" | null) => void;
+  setActiveModal: (modal: "inventory" | "shop" | "leaderboard" | "battleLog" | "settings" | "quests" | "blacksmith" | "party" | "rewards" | "attributes" | "pvpArena" | "gmAdmin" | "achievements" | "dailyRewards" | "auctionHouse" | "talents" | "codex" | null) => void;
   closeActiveModal: () => void;
   updateMonsterMarkers: (markers: { id: number; x: number; z: number; isBoss: boolean; name: string }[]) => void;
   syncFromBackendCharacter: (char: any) => void;
@@ -573,6 +615,92 @@ export const useGameWorldStore = create<GameWorldState>((set, get) => ({
   activeModal: null,
   blacksmithTab: "enhance",
   setBlacksmithTab: (tab) => set({ blacksmithTab: tab }),
+
+  // --- Smart Auto-Combat & AFK Hunt ---
+  autoCombatEnabled: false,
+  autoCombatSettings: {
+    hpThreshold: 45,
+    mpThreshold: 30,
+    lootFilterMinRarity: "rare",
+    huntRadius: 18,
+  },
+  autoCombatTargetMonsterId: null,
+  autoCombatStatusText: "",
+  isManualMovementOverridden: false,
+  manualMovementOverrideTimer: 0,
+  toggleAutoCombat: () => set((s) => {
+    const next = !s.autoCombatEnabled;
+    return {
+      autoCombatEnabled: next,
+      autoCombatStatusText: next ? "⚔️ Đang tự động chiến đấu..." : "",
+      autoCombatTargetMonsterId: next ? s.autoCombatTargetMonsterId : null,
+    };
+  }),
+  setAutoCombatEnabled: (enabled: boolean) => set({
+    autoCombatEnabled: enabled,
+    autoCombatStatusText: enabled ? "⚔️ Đang tự động chiến đấu..." : "",
+    autoCombatTargetMonsterId: enabled ? undefined : null,
+  }),
+  updateAutoCombatSettings: (settings) => set((s) => ({
+    autoCombatSettings: { ...s.autoCombatSettings, ...settings },
+  })),
+  setAutoCombatTarget: (targetId) => set({ autoCombatTargetMonsterId: targetId }),
+  setAutoCombatStatusText: (text) => set({ autoCombatStatusText: text }),
+  triggerManualMovementOverride: () => set({
+    isManualMovementOverridden: true,
+    manualMovementOverrideTimer: 1.2,
+  }),
+
+  // --- Awakening, Talents & Codex ---
+  awakeningTier: 0,
+  talents: {},
+  codexUnlocked: [],
+  monsterKillCounts: {},
+  setAwakeningTier: (tier) => set({ awakeningTier: tier }),
+  setTalents: (talents) => set({ talents }),
+  setCodexUnlocked: (codex) => set({ codexUnlocked: codex }),
+  recordMonsterKill: (monsterType) => set((s) => {
+    const nextCounts = { ...s.monsterKillCounts, [monsterType]: (s.monsterKillCounts[monsterType] || 0) + 1 };
+    return { monsterKillCounts: nextCounts };
+  }),
+
+  // --- Dynamic World Events ---
+  activeWorldEvent: null,
+  worldEventTimer: 0,
+  triggerWorldEvent: (eventId) => {
+    const events = {
+      village_siege: {
+        id: "village_siege" as const,
+        title: "🔥 Binh Đoàn Hắc Ám Công Thành",
+        description: "12 Quái Tinh Anh và Thống Lĩnh đang bao vây cổng Làng Tân Thủ! Tiêu diệt để nhận x2 EXP & Rương Bảo Thạch!",
+        durationSeconds: 180,
+        targetZone: "SAFE_VILLAGE" as const,
+        targetPos: { x: 12, z: -10 },
+      },
+      meteor_shower: {
+        id: "meteor_shower" as const,
+        title: "🌠 Mưa Sao Băng Kho Báu",
+        description: "8 Tinh Thể Kho Báu đã rơi rải rác quanh Rừng Nguyên Sinh! Khai thác nhận Đá Cường Hóa & Vàng!",
+        durationSeconds: 150,
+        targetZone: "WILDERNESS" as const,
+        targetPos: { x: -8, z: 25 },
+      },
+      world_boss_invasion: {
+        id: "world_boss_invasion" as const,
+        title: "🐉 Hắc Long Vương Giáng Thế",
+        description: "Mặt đất rung chuyển dữ dội! Hắc Long Vương Thức Tỉnh tại Cấm Địa! Hãy tập hợp săn Boss nhận trang bị Kì Tích!",
+        durationSeconds: 300,
+        targetZone: "BOSS_ALTAR" as const,
+        targetPos: { x: 0, z: -45 },
+      },
+    };
+    const ev = events[eventId];
+    if (ev) {
+      set({ activeWorldEvent: ev, worldEventTimer: ev.durationSeconds });
+      get().triggerZoneWarning(`📢 SỰ KIỆN THẾ GIỚI: ${ev.title}!`);
+    }
+  },
+  clearWorldEvent: () => set({ activeWorldEvent: null, worldEventTimer: 0 }),
 
   // Quests & Waypoints
   trackedQuest: {
@@ -1911,6 +2039,10 @@ export const useGameWorldStore = create<GameWorldState>((set, get) => ({
         playerFacingLeft: char.facing === "left" ? true : char.facing === "right" ? false : s.playerFacingLeft,
         currentZone: (char.zoneId as any) || s.currentZone,
         isMounted: char.isMounted !== undefined ? Boolean(char.isMounted) : s.isMounted,
+        awakeningTier: char.awakeningTier !== undefined ? Number(char.awakeningTier) : s.awakeningTier,
+        talents: char.talentsJson ? (typeof char.talentsJson === "string" ? JSON.parse(char.talentsJson) : char.talentsJson) : s.talents,
+        codexUnlocked: char.codexUnlockedJson ? (typeof char.codexUnlockedJson === "string" ? JSON.parse(char.codexUnlockedJson) : char.codexUnlockedJson) : s.codexUnlocked,
+        autoCombatSettings: char.autoCombatSettingsJson ? (typeof char.autoCombatSettingsJson === "string" ? JSON.parse(char.autoCombatSettingsJson) : char.autoCombatSettingsJson) : s.autoCombatSettings,
       };
     });
   },
