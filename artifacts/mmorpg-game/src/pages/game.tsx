@@ -44,18 +44,29 @@ export default function GamePage() {
   const preferredCharId = selectedCharId || (user as any)?.lastCharacterId || null;
   const character = (charList.length > 0 && preferredCharId ? charList.find((c) => c.id === preferredCharId) : null) || charList[0];
 
-  useEffect(() => {
-    if (character?.id && typeof window !== "undefined") {
-      localStorage.setItem("selectedCharacterId", String(character.id));
+  const localSelectedChar = typeof window !== "undefined" ? (() => {
+    try {
+      const s = localStorage.getItem("clb_selected_character");
+      return s ? JSON.parse(s) : null;
+    } catch {
+      return null;
     }
-  }, [character?.id]);
+  })() : null;
+
+  const targetCharId = character?.id || localSelectedChar?.id || selectedCharId || 0;
+
+  useEffect(() => {
+    if (targetCharId && typeof window !== "undefined") {
+      localStorage.setItem("selectedCharacterId", String(targetCharId));
+    }
+  }, [targetCharId]);
 
   const { data: characterDetail, isLoading: characterLoading } = useGetCharacter(
-    character?.id || 0,
+    targetCharId,
     {
       query: {
-        queryKey: getGetCharacterQueryKey(character?.id || 0),
-        enabled: !!character?.id,
+        queryKey: getGetCharacterQueryKey(targetCharId),
+        enabled: !!targetCharId,
       },
     }
   );
@@ -68,30 +79,34 @@ export default function GamePage() {
   const startBattle = useStartBattle();
   const logout = useLogout();
 
-  // Navigation Guard: Redirect if not logged in or no character
+  // Navigation Guard: Redirect if not logged in or no character anywhere
   useEffect(() => {
     if (!userLoading && !user) {
       setLocation("/");
-    } else if (!charactersLoading && (!characters || characters.length === 0)) {
+    } else if (!charactersLoading && (!characters || characters.length === 0) && !localSelectedChar) {
       setLocation("/characters");
     }
-  }, [user, userLoading, characters, charactersLoading, setLocation]);
+  }, [user, userLoading, characters, charactersLoading, localSelectedChar, setLocation]);
 
-  // Synchronize backend character stats to Zustand Game Store on first load or change
+  // Synchronize backend/cached character stats to Zustand Game Store on first load or change
+  const activeCharacter = characterDetail || character || localSelectedChar;
+
   useEffect(() => {
-    if (characterDetail) {
-      useGameStore.getState().syncFromCharacter(characterDetail);
-      useGameWorldStore.getState().syncFromBackendCharacter(characterDetail);
+    if (activeCharacter) {
+      useGameStore.getState().syncFromCharacter(activeCharacter);
+      useGameWorldStore.getState().syncFromBackendCharacter(activeCharacter);
     }
-  }, [characterDetail]);
+  }, [activeCharacter]);
 
   // Store latest character detail in a ref to avoid stale closure in callbacks
   const charRef = useRef<Character | null>(null);
-  charRef.current = characterDetail || null;
+  if (activeCharacter) {
+    charRef.current = activeCharacter;
+  }
 
   // Track if game canvas has been mounted once to NEVER unmount 3D WebGL context on background refetch
   const hasInitializedRef = useRef(false);
-  if (characterDetail) {
+  if (activeCharacter) {
     hasInitializedRef.current = true;
   }
 
@@ -171,17 +186,19 @@ export default function GamePage() {
   const handleLogout = () => {
     logout.mutate(undefined, {
       onSuccess: async () => {
+        try {
+          localStorage.removeItem("clb_token");
+        } catch {}
         await queryClient.invalidateQueries({ queryKey: getGetMeQueryKey() });
         setLocation("/");
       },
     });
   };
 
-  const activeCharacter = characterDetail || charRef.current;
   const { showIndicator, lastSavedTime } = useCharacterAutoSave(activeCharacter?.id);
 
   // Loading state: Only show full-screen spinner on first initialization. NEVER unmount once mounted!
-  if (!hasInitializedRef.current && (userLoading || charactersLoading || characterLoading || !activeCharacter)) {
+  if (!hasInitializedRef.current && (userLoading || (!activeCharacter && (charactersLoading || characterLoading)))) {
     return (
       <div className="min-h-screen w-full flex items-center justify-center bg-slate-950 text-white select-none">
         <div className="text-center space-y-4">

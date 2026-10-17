@@ -61,13 +61,13 @@ const STORE_FILE = path.join(
   ".clb_memory_db.json"
 );
 
-function persistMemoryStore() {
+export function persistMemoryStore() {
   try {
     fs.writeFileSync(STORE_FILE, JSON.stringify({ memoryStore, autoIncrement }), "utf8");
   } catch {}
 }
 
-function restoreMemoryStore() {
+export function restoreMemoryStore() {
   try {
     if (fs.existsSync(STORE_FILE)) {
       const content = fs.readFileSync(STORE_FILE, "utf8");
@@ -86,10 +86,15 @@ function restoreMemoryStore() {
   } catch {}
 }
 
+export { memoryStore };
+
 restoreMemoryStore();
 
 function createMemoryDb() {
   const getTableData = (table: any): any[] => {
+    if (memoryStore.users.length === 0 || memoryStore.characters.length === 0) {
+      restoreMemoryStore();
+    }
     let name = "";
     if (typeof table === "string") name = table;
     else if (table?._?.name) name = table._.name;
@@ -324,9 +329,10 @@ function createMemoryDb() {
           for (let i = 0; i < target.length; i++) {
             if (matchesPredicate(target[i], predicate)) {
               target[i] = { ...target[i], ...val };
-              if (val.userId !== undefined) target[i].user_id = val.userId;
-              if (val.classId !== undefined) target[i].class_id = val.classId;
-              if (val.maxHp !== undefined) target[i].max_hp = val.maxHp;
+              for (const [k, v] of Object.entries(val)) {
+                target[i][camelCase(k)] = v;
+                target[i][snakeCase(k)] = v;
+              }
               updated.push(target[i]);
             }
           }
@@ -693,6 +699,7 @@ export async function initDatabase() {
   }
 
   console.log("[DB] Running in Standalone / In-Memory Mode with zero external dependencies.");
+  restoreMemoryStore();
   db = createMemoryDb();
   isPostgres = false;
 }

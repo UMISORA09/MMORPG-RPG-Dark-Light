@@ -70,6 +70,15 @@ export default function AuthScreen() {
     }
     if (data?.user) {
       queryClient.setQueryData(getGetMeQueryKey(), data.user);
+      try {
+        if (data.user.username) {
+          localStorage.setItem("clb_username", data.user.username);
+          const savedChars = localStorage.getItem(`clb_characters_${data.user.username}`);
+          if (savedChars) {
+            localStorage.setItem("clb_client_characters", savedChars);
+          }
+        }
+      } catch {}
     }
     await queryClient.invalidateQueries({ queryKey: getGetMeQueryKey() });
     await queryClient.invalidateQueries({ queryKey: getGetCharactersQueryKey() });

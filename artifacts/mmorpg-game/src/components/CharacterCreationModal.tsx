@@ -146,12 +146,19 @@ export function CharacterCreationModal({ isOpen, onClose, onCharacterCreated }: 
       { data: { name: trimmed, classId: selectedClassId, gender } as any },
       {
         onSuccess: async (created: any) => {
-          // Persist gender and selection
+          // Persist gender, character object and selection in localStorage
           if (typeof window !== "undefined") {
             const charId = created?.id || created?.character?.id;
             if (charId) {
               localStorage.setItem("selectedCharacterId", String(charId));
               localStorage.setItem(`character_gender_${charId}`, gender);
+              localStorage.setItem("clb_selected_character", JSON.stringify(created));
+              try {
+                const existingStr = localStorage.getItem("clb_client_characters");
+                const existing = existingStr ? JSON.parse(existingStr) : [];
+                const updated = [...existing.filter((c: any) => c.id !== charId), created];
+                localStorage.setItem("clb_client_characters", JSON.stringify(updated));
+              } catch {}
             }
           }
 

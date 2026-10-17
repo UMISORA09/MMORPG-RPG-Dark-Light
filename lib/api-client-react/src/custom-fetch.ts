@@ -364,6 +364,16 @@ export async function customFetch<T = unknown>(
     }
   }
 
+  // Attach client characters backup header to ensure seamless persistence on serverless lambdas
+  if (typeof window !== "undefined" && window.localStorage && !headers.has("x-clb-client-characters")) {
+    try {
+      const clientChars = window.localStorage.getItem("clb_client_characters");
+      if (clientChars && clientChars.length < 4000) {
+        headers.set("x-clb-client-characters", encodeURIComponent(clientChars));
+      }
+    } catch {}
+  }
+
   const requestInfo = { method, url: resolveUrl(input) };
 
   const response = await fetch(input, { ...init, method, headers, credentials: "include" });

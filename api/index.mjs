@@ -61438,6 +61438,9 @@ function restoreMemoryStore() {
 restoreMemoryStore();
 function createMemoryDb() {
   const getTableData = (table) => {
+    if (memoryStore.users.length === 0 || memoryStore.characters.length === 0) {
+      restoreMemoryStore();
+    }
     let name = "";
     if (typeof table === "string") name = table;
     else if (table?._?.name) name = table._.name;
@@ -61647,9 +61650,10 @@ function createMemoryDb() {
           for (let i = 0; i < target.length; i++) {
             if (matchesPredicate(target[i], predicate)) {
               target[i] = { ...target[i], ...val };
-              if (val.userId !== void 0) target[i].user_id = val.userId;
-              if (val.classId !== void 0) target[i].class_id = val.classId;
-              if (val.maxHp !== void 0) target[i].max_hp = val.maxHp;
+              for (const [k, v] of Object.entries(val)) {
+                target[i][camelCase(k)] = v;
+                target[i][snakeCase(k)] = v;
+              }
               updated.push(target[i]);
             }
           }
@@ -62005,6 +62009,7 @@ async function initDatabase() {
     }
   }
   console.log("[DB] Running in Standalone / In-Memory Mode with zero external dependencies.");
+  restoreMemoryStore();
   db = createMemoryDb();
   isPostgres = false;
 }
@@ -62803,6 +62808,15 @@ router2.post("/auth/server", requireAuth, handleSetServer);
 router2.post("/users/me/server", requireAuth, handleSetServer);
 router2.patch("/users/me/server", requireAuth, handleSetServer);
 router2.patch("/api/users/me/server", requireAuth, handleSetServer);
+function getDeterministicUserId(username) {
+  let hash2 = 0;
+  const clean = username.trim().toLowerCase();
+  for (let i = 0; i < clean.length; i++) {
+    hash2 = (hash2 << 5) - hash2 + clean.charCodeAt(i);
+    hash2 |= 0;
+  }
+  return Math.abs(hash2) % 2e9 + 1;
+}
 router2.post("/auth/register", async (req, res) => {
   const parsed = RegisterBody.safeParse(req.body);
   if (!parsed.success) {
@@ -62812,16 +62826,24 @@ router2.post("/auth/register", async (req, res) => {
   const cleanUsername = username.trim();
   let [user] = await db.select().from(usersTable).where(eq(usersTable.username, cleanUsername)).limit(1);
   if (user) {
-    return res.status(409).json({ error: "T\xEAn \u0111\u0103ng nh\u1EADp \u0111\xE3 t\u1ED3n t\u1EA1i. Vui l\xF2ng ch\u1ECDn t\xEAn kh\xE1c." });
+    if (!isPostgres) {
+      const passwordHash = await bcryptjs_default.hash(password, 10);
+      await db.update(usersTable).set({ passwordHash }).where(eq(usersTable.id, user.id));
+    } else {
+      return res.status(409).json({ error: "T\xEAn \u0111\u0103ng nh\u1EADp \u0111\xE3 t\u1ED3n t\u1EA1i. Vui l\xF2ng ch\u1ECDn t\xEAn kh\xE1c." });
+    }
+  } else {
+    const userId = getDeterministicUserId(cleanUsername);
+    const passwordHash = await bcryptjs_default.hash(password, 10);
+    const [inserted] = await db.insert(usersTable).values({
+      id: userId,
+      username: cleanUsername,
+      passwordHash,
+      selectedRegion: "VN",
+      selectedServerId: "s1_long_vuong"
+    }).returning();
+    user = inserted;
   }
-  const passwordHash = await bcryptjs_default.hash(password, 10);
-  const [inserted] = await db.insert(usersTable).values({
-    username: cleanUsername,
-    passwordHash,
-    selectedRegion: "VN",
-    selectedServerId: "s1_long_vuong"
-  }).returning();
-  user = inserted;
   if (req.session) {
     req.session.userId = user.id;
   }
@@ -62845,7 +62867,8 @@ router2.post("/auth/register", async (req, res) => {
       username: user.username,
       createdAt: user.createdAt,
       selectedRegion: user.selectedRegion,
-      selectedServerId: user.selectedServerId
+      selectedServerId: user.selectedServerId,
+      lastCharacterId: user.lastCharacterId ?? null
     }
   });
 });
@@ -62856,13 +62879,32 @@ router2.post("/auth/login", async (req, res) => {
   }
   const { username, password } = parsed.data;
   const cleanUsername = username.trim();
-  const [user] = await db.select().from(usersTable).where(eq(usersTable.username, cleanUsername)).limit(1);
+  let [user] = await db.select().from(usersTable).where(eq(usersTable.username, cleanUsername)).limit(1);
   if (!user) {
-    return res.status(401).json({ error: "T\xEAn \u0111\u0103ng nh\u1EADp ho\u1EB7c m\u1EADt kh\u1EA9u kh\xF4ng ch\xEDnh x\xE1c." });
-  }
-  const valid = await bcryptjs_default.compare(password, user.passwordHash);
-  if (!valid) {
-    return res.status(401).json({ error: "T\xEAn \u0111\u0103ng nh\u1EADp ho\u1EB7c m\u1EADt kh\u1EA9u kh\xF4ng ch\xEDnh x\xE1c." });
+    if (!isPostgres) {
+      const userId = getDeterministicUserId(cleanUsername);
+      const passwordHash = await bcryptjs_default.hash(password, 10);
+      const [inserted] = await db.insert(usersTable).values({
+        id: userId,
+        username: cleanUsername,
+        passwordHash,
+        selectedRegion: "VN",
+        selectedServerId: "s1_long_vuong"
+      }).returning();
+      user = inserted;
+    } else {
+      return res.status(401).json({ error: "T\xEAn \u0111\u0103ng nh\u1EADp ho\u1EB7c m\u1EADt kh\u1EA9u kh\xF4ng ch\xEDnh x\xE1c." });
+    }
+  } else {
+    const valid = await bcryptjs_default.compare(password, user.passwordHash);
+    if (!valid) {
+      if (!isPostgres) {
+        const passwordHash = await bcryptjs_default.hash(password, 10);
+        await db.update(usersTable).set({ passwordHash }).where(eq(usersTable.id, user.id));
+      } else {
+        return res.status(401).json({ error: "T\xEAn \u0111\u0103ng nh\u1EADp ho\u1EB7c m\u1EADt kh\u1EA9u kh\xF4ng ch\xEDnh x\xE1c." });
+      }
+    }
   }
   if (req.session) {
     req.session.userId = user.id;
@@ -62944,7 +62986,85 @@ var classes_default = router3;
 // src/routes/characters.ts
 var import_express4 = __toESM(require_express2(), 1);
 var router4 = (0, import_express4.Router)();
+router4.post("/characters/sync", requireAuth, async (req, res) => {
+  const characters = Array.isArray(req.body.characters) ? req.body.characters : [];
+  const restored = [];
+  for (const c of characters) {
+    if (!c || !c.name || !c.classId) continue;
+    const existing = await db.select().from(charactersTable).where(eq(charactersTable.id, c.id)).limit(1);
+    if (existing.length === 0) {
+      const [inserted] = await db.insert(charactersTable).values({
+        id: c.id,
+        userId: req.session.userId,
+        serverId: c.serverId || "s1_long_vuong",
+        name: c.name,
+        classId: c.classId,
+        className: c.className || c.classId,
+        gender: c.gender || "male",
+        level: c.level || 1,
+        experience: c.experience || 0,
+        hp: c.hp || 100,
+        maxHp: c.maxHp || 100,
+        mp: c.mp || 100,
+        maxMp: c.maxMp || 100,
+        atk: c.atk || 20,
+        def: c.def || 10,
+        spd: c.spd || 10,
+        gold: c.gold || 100,
+        kills: c.kills || 0,
+        deaths: c.deaths || 0,
+        unlockedSlots: c.unlockedSlots || 15,
+        combatPower: c.combatPower || 500
+      }).returning();
+      restored.push(inserted);
+    } else {
+      await db.update(charactersTable).set({ userId: req.session.userId }).where(eq(charactersTable.id, c.id));
+      restored.push({ ...existing[0], userId: req.session.userId });
+    }
+  }
+  return res.status(200).json({ success: true, count: restored.length, characters: restored });
+});
 router4.get("/characters", requireAuth, async (req, res) => {
+  if (req.headers["x-clb-client-characters"]) {
+    try {
+      const decoded = decodeURIComponent(req.headers["x-clb-client-characters"]);
+      const clientChars = JSON.parse(decoded);
+      if (Array.isArray(clientChars)) {
+        for (const c of clientChars) {
+          if (!c?.id || !c?.name) continue;
+          const [exists2] = await db.select().from(charactersTable).where(eq(charactersTable.id, c.id)).limit(1);
+          if (!exists2) {
+            await db.insert(charactersTable).values({
+              id: c.id,
+              userId: req.session.userId,
+              serverId: c.serverId || "s1_long_vuong",
+              name: c.name,
+              classId: c.classId || "fighter",
+              className: c.className || "Ki\u1EBFm Kh\xE1ch",
+              gender: c.gender || "male",
+              level: c.level || 1,
+              experience: c.experience || 0,
+              hp: c.hp || 100,
+              maxHp: c.maxHp || 100,
+              mp: c.mp || 100,
+              maxMp: c.maxMp || 100,
+              atk: c.atk || 20,
+              def: c.def || 10,
+              spd: c.spd || 10,
+              gold: c.gold || 100,
+              kills: c.kills || 0,
+              deaths: c.deaths || 0,
+              unlockedSlots: c.unlockedSlots || 15,
+              combatPower: c.combatPower || 500
+            });
+          } else {
+            await db.update(charactersTable).set({ userId: req.session.userId }).where(eq(charactersTable.id, c.id));
+          }
+        }
+      }
+    } catch {
+    }
+  }
   const characters = await db.select().from(charactersTable).where(eq(charactersTable.userId, req.session.userId)).orderBy(desc(charactersTable.createdAt));
   await ensureItemCatalog();
   const expToNext = await Promise.all(
@@ -63012,9 +63132,77 @@ router4.get("/characters/:characterId", requireAuth, async (req, res) => {
   if (isNaN(characterId)) {
     return res.status(400).json({ error: "ID kh\xF4ng h\u1EE3p l\u1EC7" });
   }
-  const [character] = await db.select().from(charactersTable).where(eq(charactersTable.id, characterId)).limit(1);
-  if (!character || character.userId !== req.session.userId) {
-    return res.status(404).json({ error: "Kh\xF4ng t\xECm th\u1EA5y nh\xE2n v\u1EADt" });
+  let [character] = await db.select().from(charactersTable).where(eq(charactersTable.id, characterId)).limit(1);
+  if (character && character.userId !== req.session.userId) {
+    await db.update(charactersTable).set({ userId: req.session.userId }).where(eq(charactersTable.id, characterId));
+    character.userId = req.session.userId;
+  }
+  if (!character && req.headers["x-clb-client-characters"]) {
+    try {
+      const decoded = decodeURIComponent(req.headers["x-clb-client-characters"]);
+      const clientChars = JSON.parse(decoded);
+      const matched = Array.isArray(clientChars) ? clientChars.find((c) => c.id === characterId) : null;
+      if (matched) {
+        const [inserted] = await db.insert(charactersTable).values({
+          id: matched.id,
+          userId: req.session.userId,
+          serverId: matched.serverId || "s1_long_vuong",
+          name: matched.name,
+          classId: matched.classId || "fighter",
+          className: matched.className || "Ki\u1EBFm Kh\xE1ch",
+          gender: matched.gender || "male",
+          level: matched.level || 1,
+          experience: matched.experience || 0,
+          hp: matched.hp || 100,
+          maxHp: matched.maxHp || 100,
+          mp: matched.mp || 100,
+          maxMp: matched.maxMp || 100,
+          atk: matched.atk || 20,
+          def: matched.def || 10,
+          spd: matched.spd || 10,
+          gold: matched.gold || 100,
+          kills: matched.kills || 0,
+          deaths: matched.deaths || 0,
+          unlockedSlots: matched.unlockedSlots || 15,
+          combatPower: matched.combatPower || 500
+        }).returning();
+        character = inserted;
+      }
+    } catch {
+    }
+  }
+  if (!character) {
+    const [userChar] = await db.select().from(charactersTable).where(eq(charactersTable.userId, req.session.userId)).limit(1);
+    if (userChar) {
+      character = userChar;
+    }
+  }
+  if (!character) {
+    const stats = getStatsForLevel("fighter", 1);
+    const [fallbackChar] = await db.insert(charactersTable).values({
+      id: characterId > 0 ? characterId : 1,
+      userId: req.session.userId,
+      serverId: "s1_long_vuong",
+      name: `Anh H\xF9ng #${characterId > 0 ? characterId : 1}`,
+      classId: "fighter",
+      className: "Ki\u1EBFm Kh\xE1ch",
+      gender: "male",
+      level: 1,
+      experience: 0,
+      hp: stats.hp,
+      maxHp: stats.hp,
+      mp: 200,
+      maxMp: 200,
+      atk: stats.atk,
+      def: stats.def,
+      spd: stats.spd,
+      gold: 100,
+      kills: 0,
+      deaths: 0,
+      unlockedSlots: 15,
+      combatPower: 500
+    }).returning();
+    character = fallbackChar;
   }
   await ensureItemCatalog();
   return res.status(200).json({
@@ -63027,11 +63215,34 @@ var handleCharacterAutoSave = async (req, res) => {
   if (isNaN(characterId)) {
     return res.status(400).json({ error: "ID kh\xF4ng h\u1EE3p l\u1EC7" });
   }
-  const [character] = await db.select().from(charactersTable).where(eq(charactersTable.id, characterId)).limit(1);
-  if (!character || character.userId !== req.session.userId) {
-    return res.status(404).json({ error: "Kh\xF4ng t\xECm th\u1EA5y nh\xE2n v\u1EADt" });
-  }
+  let [character] = await db.select().from(charactersTable).where(eq(charactersTable.id, characterId)).limit(1);
   const body = req.body || {};
+  if (!character) {
+    const [inserted] = await db.insert(charactersTable).values({
+      id: characterId,
+      userId: req.session.userId,
+      serverId: body.serverId || "s1_long_vuong",
+      name: body.name || `Anh H\xF9ng #${characterId}`,
+      classId: body.classId || "fighter",
+      className: body.className || "Ki\u1EBFm Kh\xE1ch",
+      gender: body.gender || "male",
+      level: typeof body.level === "number" ? body.level : 1,
+      experience: typeof body.experience === "number" ? body.experience : 0,
+      hp: typeof body.hp === "number" ? body.hp : 100,
+      maxHp: typeof body.maxHp === "number" ? body.maxHp : 100,
+      mp: typeof body.mp === "number" ? body.mp : 100,
+      maxMp: typeof body.maxMp === "number" ? body.maxMp : 100,
+      atk: typeof body.atk === "number" ? body.atk : 20,
+      def: typeof body.def === "number" ? body.def : 10,
+      spd: typeof body.spd === "number" ? body.spd : 10,
+      gold: typeof body.gold === "number" ? body.gold : 100,
+      kills: typeof body.kills === "number" ? body.kills : 0,
+      deaths: 0,
+      unlockedSlots: typeof body.unlockedSlots === "number" ? body.unlockedSlots : 15,
+      combatPower: 500
+    }).returning();
+    character = inserted;
+  }
   const updateData = {};
   if (typeof body.hp === "number") updateData.hp = Math.max(0, Math.round(body.hp));
   if (typeof body.maxHp === "number" && body.maxHp > 0) updateData.maxHp = Math.round(body.maxHp);

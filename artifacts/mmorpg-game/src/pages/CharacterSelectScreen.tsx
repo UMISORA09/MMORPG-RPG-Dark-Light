@@ -92,20 +92,49 @@ export default function CharacterSelectScreen() {
   useEffect(() => {
     if (!userLoading && !user) {
       setLocation("/");
-    } else if (!userLoading && user && !launchRequested) {
-      setLocation("/portal");
     }
     if (user) {
       useCommunityPortalStore.getState().syncWithUserProfile(user);
     }
-  }, [user, userLoading, launchRequested, setLocation]);
+  }, [user, userLoading, setLocation]);
+
+  // Synchronize and preserve characters in localStorage across logins & serverless cold starts
+  useEffect(() => {
+    if (Array.isArray(characters) && characters.length > 0) {
+      try {
+        localStorage.setItem("clb_client_characters", JSON.stringify(characters));
+        if (user?.username) {
+          localStorage.setItem(`clb_characters_${user.username}`, JSON.stringify(characters));
+        }
+      } catch {}
+    } else if (Array.isArray(characters) && characters.length === 0 && user?.username) {
+      // If serverless container has empty memory, check if localStorage has saved characters
+      try {
+        const backupStr = localStorage.getItem(`clb_characters_${user.username}`) || localStorage.getItem("clb_client_characters");
+        if (backupStr) {
+          const parsed = JSON.parse(backupStr);
+          if (Array.isArray(parsed) && parsed.length > 0) {
+            // Push cached characters to backend sync endpoint to restore container memory
+            fetch("/api/characters/sync", {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({ characters: parsed }),
+              credentials: "include",
+            }).then(() => {
+              queryClient.invalidateQueries({ queryKey: getGetCharactersQueryKey() });
+            }).catch(() => {});
+          }
+        }
+      } catch {}
+    }
+  }, [characters, user?.username, queryClient]);
 
   // Action: Enter game with specific character
   const handleSelectCharacter = (char: Character) => {
     assignCharacterToRealm(char.id);
-    setLaunchRequested(false);
     if (typeof window !== "undefined") {
       localStorage.setItem("selectedCharacterId", String(char.id));
+      localStorage.setItem("clb_selected_character", JSON.stringify(char));
       const gender = (char as any).gender || "male";
       localStorage.setItem(`character_gender_${char.id}`, gender);
     }

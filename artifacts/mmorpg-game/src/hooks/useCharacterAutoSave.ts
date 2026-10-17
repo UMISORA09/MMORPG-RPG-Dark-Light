@@ -81,6 +81,27 @@ export function useCharacterAutoSave(characterIdOverride?: number) {
         return;
       }
 
+      // Synchronously update local storage for bulletproof client-side preservation
+      if (typeof window !== "undefined") {
+        try {
+          const cachedStr = localStorage.getItem("clb_selected_character");
+          if (cachedStr) {
+            const cached = JSON.parse(cachedStr);
+            const merged = { ...cached, ...payload };
+            localStorage.setItem("clb_selected_character", JSON.stringify(merged));
+          }
+          const listStr = localStorage.getItem("clb_client_characters");
+          if (listStr) {
+            const list = JSON.parse(listStr);
+            const idx = list.findIndex((c: any) => c.id === characterId);
+            if (idx >= 0) {
+              list[idx] = { ...list[idx], ...payload };
+              localStorage.setItem("clb_client_characters", JSON.stringify(list));
+            }
+          }
+        } catch {}
+      }
+
       const url = `/api/characters/${characterId}/autosave`;
 
       if (isBeaconOrUnload) {
