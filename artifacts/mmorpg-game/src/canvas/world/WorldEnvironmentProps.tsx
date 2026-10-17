@@ -149,13 +149,39 @@ export const WorldEnvironmentProps = memo(function WorldEnvironmentProps() {
 
   return (
     <group>
-      {/* ── 1. CENTRAL HEALING STATUE & FOUNTAIN AT VILLAGE CORE (0, 0, 0) ── */}
+      {/* ── 1. CENTRAL SACRED DRAGON PLAZA AT VILLAGE CORE (0, 0, 0) - FLAT & FULLY WALKABLE ── */}
       <group position={[0, 0, 0]}>
-        {/* Ground Healing Aura Decal (Z-Fighting Free with polygonOffset) */}
-        <mesh position={[0, 0.03, 0]} rotation={[-Math.PI / 2, 0, 0]}>
+        {/* Ground Ancient Dragon Sacred Runic Plaza (Completely Flat, Walkable & Camera-Unobstructed) */}
+        <mesh position={[0, 0.02, 0]} rotation={[-Math.PI / 2, 0, 0]} receiveShadow>
           <circleGeometry args={[5.5, 32]} />
           <meshBasicMaterial
             color="#06b6d4"
+            transparent
+            opacity={0.25}
+            depthWrite={false}
+            polygonOffset={true}
+            polygonOffsetFactor={-1}
+          />
+        </mesh>
+
+        {/* Inner Sacred Rune Ring on Ground */}
+        <mesh position={[0, 0.025, 0]} rotation={[-Math.PI / 2, 0, 0]}>
+          <ringGeometry args={[2.5, 3.2, 32]} />
+          <meshBasicMaterial
+            color="#22d3ee"
+            transparent
+            opacity={0.4}
+            depthWrite={false}
+            polygonOffset={true}
+            polygonOffsetFactor={-1}
+          />
+        </mesh>
+
+        {/* Center Sacred Golden Emblem on Ground */}
+        <mesh position={[0, 0.03, 0]} rotation={[-Math.PI / 2, 0, 0]}>
+          <circleGeometry args={[1.2, 24]} />
+          <meshBasicMaterial
+            color="#fbbf24"
             transparent
             opacity={0.35}
             depthWrite={false}
@@ -164,41 +190,8 @@ export const WorldEnvironmentProps = memo(function WorldEnvironmentProps() {
           />
         </mesh>
 
-        {/* Fountain Stone Basin */}
-        <mesh castShadow receiveShadow position={[0, 0.45, 0]}>
-          <cylinderGeometry args={[3.2, 3.6, 0.9, 24]} />
-          <meshStandardMaterial color="#2c2738" roughness={0.65} />
-        </mesh>
-
-        {/* Healing Glowing Pool Water */}
-        <mesh position={[0, 0.9, 0]} rotation={[-Math.PI / 2, 0, 0]}>
-          <circleGeometry args={[2.9, 24]} />
-          <meshStandardMaterial
-            color="#00f2ff"
-            emissive="#0891b2"
-            emissiveIntensity={1.2}
-            roughness={0.15}
-          />
-        </mesh>
-
-        {/* Golden Dragon Light Obelisk */}
-        <mesh castShadow position={[0, 2.8, 0]}>
-          <cylinderGeometry args={[0.45, 0.95, 3.8, 8]} />
-          <meshStandardMaterial color="#1a1429" roughness={0.4} />
-        </mesh>
-
-        {/* Radiant Heart Gem at Core */}
-        <mesh position={[0, 5.0, 0]}>
-          <octahedronGeometry args={[0.8, 0]} />
-          <meshStandardMaterial
-            color="#38bdf8"
-            emissive="#00f2ff"
-            emissiveIntensity={2.5}
-          />
-        </mesh>
-
-        {/* Fountain Warm Ambient Light */}
-        <pointLight position={[0, 4.0, 0]} color="#00f2ff" intensity={3.5} distance={16} />
+        {/* Soft Ambient Village Core Warm Light */}
+        <pointLight position={[0, 1.8, 0]} color="#00f2ff" intensity={2.0} distance={14} />
       </group>
 
       {/* ── 2. DARK FANTASY WOODEN HOUSES IN VILLAGE ── */}

@@ -83,7 +83,7 @@ export default function GamePage() {
   // Navigation Guard: Redirect if not logged in or no character anywhere
   useEffect(() => {
     if (!userLoading && !user) {
-      setLocation("/");
+      setLocation("/login");
     } else if (!charactersLoading && (!characters || characters.length === 0) && !localSelectedChar) {
       setLocation("/characters");
     }

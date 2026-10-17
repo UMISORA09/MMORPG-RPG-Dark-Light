@@ -20,13 +20,13 @@ const queryClient = new QueryClient({
 function Router() {
   return (
     <Switch>
-      <Route path="/" component={AuthScreen} />
+      <Route path="/" component={GamePage} />
+      <Route path="/game" component={GamePage} />
       <Route path="/login" component={AuthScreen} />
       <Route path="/register" component={AuthScreen} />
       <Route path="/portal" component={CommunityPortalScreen} />
       <Route path="/characters" component={CharacterSelectScreen} />
       <Route path="/select-class" component={CharacterSelectScreen} />
-      <Route path="/game" component={GamePage} />
       <Route component={NotFound} />
     </Switch>
   );

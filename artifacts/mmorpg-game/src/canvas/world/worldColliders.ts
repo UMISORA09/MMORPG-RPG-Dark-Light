@@ -186,7 +186,6 @@ const DEAD_MARSH_OBSTACLES: ObstacleCollider[] = [
 
 // Complete Obstacle Registry
 export const WORLD_OBSTACLES: ObstacleCollider[] = [
-  CENTRAL_FOUNTAIN,
   MEMORIAL_TABLET,
   ...VILLAGE_HOUSES,
   ...VILLAGE_FENCE_POSTS,

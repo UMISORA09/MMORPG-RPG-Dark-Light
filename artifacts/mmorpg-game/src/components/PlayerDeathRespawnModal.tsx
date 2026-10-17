@@ -59,7 +59,7 @@ export const PlayerDeathRespawnModal = memo(function PlayerDeathRespawnModal() {
 
         <p className="text-xs md:text-sm text-slate-300 mt-2 max-w-md leading-relaxed">
           Sức mạnh của quái vật đã hạ gục bạn. Linh hồn của bạn sẽ được bảo vệ và dịch chuyển bắt buộc về{" "}
-          <strong className="text-amber-300 font-bold">Đài Phun Nước Làng Tân Thủ (Safe Zone)</strong> để hồi phục 100% sinh lực.
+          <strong className="text-amber-300 font-bold">Quảng Trường Làng Tân Thủ (Safe Zone)</strong> để hồi phục 100% sinh lực.
         </p>
 
         {/* Penalty Card */}

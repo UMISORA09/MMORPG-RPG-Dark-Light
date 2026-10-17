@@ -171,33 +171,12 @@ function Lantern({ position }: { position: [number, number, number] }) {
 }
 
 function FountainOfLife() {
-  const waterRef = useRef<THREE.Mesh>(null);
-
-  useFrame((_, delta) => {
-    if (waterRef.current) {
-      waterRef.current.rotation.y += delta * 0.5;
-    }
-  });
-
   return (
     <group position={[0, 0, 0]}>
-      {/* Stone Basin */}
-      <mesh position={[0, 0.4, 0]}>
-        <cylinderGeometry args={[2.5, 2.8, 0.8, 24]} />
-        <meshStandardMaterial color="#cbd5e1" roughness={0.4} />
+      <mesh position={[0, 0.02, 0]} rotation={[-Math.PI / 2, 0, 0]}>
+        <circleGeometry args={[3.5, 32]} />
+        <meshBasicMaterial color="#38bdf8" transparent opacity={0.3} depthWrite={false} />
       </mesh>
-      {/* Glowing Water */}
-      <mesh ref={waterRef} position={[0, 0.7, 0]} rotation={[-Math.PI / 2, 0, 0]}>
-        <circleGeometry args={[2.2, 24]} />
-        <meshStandardMaterial color="#38bdf8" roughness={0.1} metalness={0.2} transparent opacity={0.85} />
-      </mesh>
-      {/* Center Dragon Spire */}
-      <mesh position={[0, 1.6, 0]}>
-        <cylinderGeometry args={[0.3, 0.6, 2.2, 8]} />
-        <meshStandardMaterial color="#94a3b8" />
-      </mesh>
-      {/* Healing Aura Light */}
-      <pointLight position={[0, 1.5, 0]} color="#38bdf8" intensity={2.5} distance={12} decay={2} />
     </group>
   );
 }
