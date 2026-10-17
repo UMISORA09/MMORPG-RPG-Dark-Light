@@ -72,10 +72,19 @@ const Game = memo(function Game({ onLogout }: GameProps) {
 
   return (
     <div style={{ position: "fixed", inset: 0, width: "100%", height: "100%", overflow: "hidden", background: "#030712" }}>
-      {/* ── Single Unified 3D Canvas with 2.5D Billboard Sprite Engine ── */}
+      {/* ── Single Unified 3D Canvas with High-Performance 2.5D GPU Optimization ── */}
       <Canvas
         ref={canvasRef}
         shadows
+        dpr={[1, 1.5]}
+        gl={{
+          powerPreference: "high-performance",
+          antialias: false,
+          stencil: false,
+          depth: true,
+          alpha: false,
+          preserveDrawingBuffer: false,
+        }}
         camera={{ position: [0, 18, 16], fov: 48 }}
         style={{ width: "100%", height: "100%", display: "block" }}
       >
