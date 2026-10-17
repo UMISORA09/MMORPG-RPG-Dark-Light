@@ -1,6 +1,6 @@
 import { memo, useEffect, useState } from "react";
 import { useGameWorldStore } from "@/stores/useGameWorldStore";
-import { playCombatSFX } from "@/audio/CombatSoundSynth";
+import { playCombatSFX, playButtonClick } from "@/audio/CombatSoundSynth";
 import { X, Scroll, Award, CheckCircle2, ChevronRight, Compass } from "lucide-react";
 
 export const QuestLogModal = memo(function QuestLogModal() {
@@ -68,12 +68,20 @@ export const QuestLogModal = memo(function QuestLogModal() {
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-md">
-      <div className="relative w-full max-w-4xl h-[560px] bg-[#0d121d] border border-amber-500/40 rounded-3xl overflow-hidden shadow-[0_0_50px_rgba(245,158,11,0.25)] flex flex-col animate-in fade-in zoom-in-95 duration-200">
+    <div
+      className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/75 backdrop-blur-md animate-in fade-in duration-200"
+      onClick={(e) => {
+        if (e.target === e.currentTarget) {
+          playButtonClick();
+          closeActiveModal();
+        }
+      }}
+    >
+      <div className="relative w-full max-w-4xl h-[560px] bg-[#0b0e14]/95 border border-amber-500/40 rounded-3xl overflow-hidden shadow-[0_8px_32px_rgba(0,0,0,0.85),0_0_50px_rgba(245,158,11,0.25)] flex flex-col animate-in fade-in zoom-in-95 duration-200 ease-[cubic-bezier(0.16,1,0.3,1)]">
         {/* Header */}
         <div className="px-6 py-4 border-b border-slate-800/80 bg-slate-900/60 flex items-center justify-between">
           <div className="flex items-center gap-2.5">
-            <div className="w-9 h-9 rounded-xl bg-amber-500/20 border border-amber-500/40 flex items-center justify-center text-amber-400">
+            <div className="w-9 h-9 rounded-xl bg-amber-500/20 border border-amber-500/40 flex items-center justify-center text-amber-400 shadow-[0_0_15px_rgba(245,158,11,0.3)]">
               <Scroll className="w-5 h-5" />
             </div>
             <div>
@@ -84,8 +92,12 @@ export const QuestLogModal = memo(function QuestLogModal() {
             </div>
           </div>
           <button
-            onClick={closeActiveModal}
-            className="w-8 h-8 rounded-full bg-slate-800 hover:bg-slate-700 text-slate-400 hover:text-white flex items-center justify-center transition cursor-pointer"
+            onClick={() => {
+              playButtonClick();
+              closeActiveModal();
+            }}
+            className="w-8 h-8 rounded-full bg-slate-800/80 hover:bg-red-500 hover:text-white border border-slate-700 text-slate-400 flex items-center justify-center transition-colors duration-150 cursor-pointer shadow-md hover:scale-110 active:scale-95"
+            title="Đóng (ESC)"
           >
             <X className="w-4 h-4" />
           </button>

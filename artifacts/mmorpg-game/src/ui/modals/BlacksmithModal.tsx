@@ -1,6 +1,6 @@
 import { memo, useState, useEffect } from "react";
 import { useGameWorldStore } from "@/stores/useGameWorldStore";
-import { playCombatSFX } from "@/audio/CombatSoundSynth";
+import { playCombatSFX, playButtonClick } from "@/audio/CombatSoundSynth";
 import {
   X,
   Flame,
@@ -289,8 +289,8 @@ export const BlacksmithModal = memo(function BlacksmithModal() {
   const enhanceRate = currentEnhance < 5 ? 100 : currentEnhance < 10 ? Math.round((1 - (currentEnhance - 4) * 0.08) * 100) : Math.round((0.35 - (currentEnhance - 9) * 0.05) * 100);
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-md">
-      <div className="relative w-full max-w-4xl h-[600px] bg-[#0c101a] border border-amber-500/50 rounded-3xl overflow-hidden shadow-[0_0_60px_rgba(245,158,11,0.3)] flex flex-col animate-in fade-in zoom-in-95 duration-200">
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/75 backdrop-blur-md select-none font-sans">
+      <div className="relative w-full max-w-4xl h-[600px] bg-[#0b0e14]/95 border border-slate-800/80 rounded-3xl overflow-hidden shadow-[0_8px_32px_rgba(0,0,0,0.85),0_0_30px_rgba(245,158,11,0.2)] flex flex-col animate-in fade-in zoom-in-95 duration-200 ease-[cubic-bezier(0.16,1,0.3,1)]">
         {/* Header */}
         <div className="px-6 py-4 border-b border-slate-800/80 bg-slate-900/80 flex items-center justify-between">
           <div className="flex items-center gap-3">
@@ -308,8 +308,8 @@ export const BlacksmithModal = memo(function BlacksmithModal() {
           {/* Tab Selector */}
           <div className="flex items-center gap-1.5 p-1 rounded-2xl bg-slate-950 border border-slate-800">
             <button
-              onClick={() => { setActiveTab("enhance"); playCombatSFX("holy_bell", 0.25); }}
-              className={`px-4 py-1.5 rounded-xl font-bold text-xs transition cursor-pointer flex items-center gap-1.5 ${
+              onClick={() => { playButtonClick(); setActiveTab("enhance"); playCombatSFX("holy_bell", 0.25); }}
+              className={`px-4 py-1.5 rounded-xl font-bold text-xs transition cursor-pointer flex items-center gap-1.5 hover:scale-105 active:scale-95 ${
                 activeTab === "enhance"
                   ? "bg-amber-500 text-slate-950 shadow-[0_0_12px_rgba(245,158,11,0.4)]"
                   : "text-slate-400 hover:text-white"
@@ -318,8 +318,8 @@ export const BlacksmithModal = memo(function BlacksmithModal() {
               <ChevronsUp className="w-3.5 h-3.5" /> Cường Hóa (+15)
             </button>
             <button
-              onClick={() => { setActiveTab("dismantle"); playCombatSFX("holy_bell", 0.25); }}
-              className={`px-4 py-1.5 rounded-xl font-bold text-xs transition cursor-pointer flex items-center gap-1.5 ${
+              onClick={() => { playButtonClick(); setActiveTab("dismantle"); playCombatSFX("holy_bell", 0.25); }}
+              className={`px-4 py-1.5 rounded-xl font-bold text-xs transition cursor-pointer flex items-center gap-1.5 hover:scale-105 active:scale-95 ${
                 activeTab === "dismantle"
                   ? "bg-amber-500 text-slate-950 shadow-[0_0_12px_rgba(245,158,11,0.4)]"
                   : "text-slate-400 hover:text-white"
@@ -328,8 +328,8 @@ export const BlacksmithModal = memo(function BlacksmithModal() {
               <Recycle className="w-3.5 h-3.5" /> Phân Giải
             </button>
             <button
-              onClick={() => { setActiveTab("craft"); playCombatSFX("holy_bell", 0.25); }}
-              className={`px-3 py-1.5 rounded-xl font-bold text-xs transition cursor-pointer flex items-center gap-1.5 ${
+              onClick={() => { playButtonClick(); setActiveTab("craft"); playCombatSFX("holy_bell", 0.25); }}
+              className={`px-3 py-1.5 rounded-xl font-bold text-xs transition cursor-pointer flex items-center gap-1.5 hover:scale-105 active:scale-95 ${
                 activeTab === "craft"
                   ? "bg-amber-500 text-slate-950 shadow-[0_0_12px_rgba(245,158,11,0.4)]"
                   : "text-slate-400 hover:text-white"
@@ -338,8 +338,8 @@ export const BlacksmithModal = memo(function BlacksmithModal() {
               <Sparkles className="w-3.5 h-3.5" /> Chế Tạo
             </button>
             <button
-              onClick={() => { setActiveTab("socket"); playCombatSFX("holy_bell", 0.25); }}
-              className={`px-3 py-1.5 rounded-xl font-bold text-xs transition cursor-pointer flex items-center gap-1.5 ${
+              onClick={() => { playButtonClick(); setActiveTab("socket"); playCombatSFX("holy_bell", 0.25); }}
+              className={`px-3 py-1.5 rounded-xl font-bold text-xs transition cursor-pointer flex items-center gap-1.5 hover:scale-105 active:scale-95 ${
                 activeTab === "socket"
                   ? "bg-cyan-500 text-slate-950 shadow-[0_0_12px_#06b6d4]"
                   : "text-slate-400 hover:text-white"
@@ -348,8 +348,8 @@ export const BlacksmithModal = memo(function BlacksmithModal() {
               <span>💎 Khảm Ngọc</span>
             </button>
             <button
-              onClick={() => { setActiveTab("reforge"); playCombatSFX("holy_bell", 0.25); }}
-              className={`px-3 py-1.5 rounded-xl font-bold text-xs transition cursor-pointer flex items-center gap-1.5 ${
+              onClick={() => { playButtonClick(); setActiveTab("reforge"); playCombatSFX("holy_bell", 0.25); }}
+              className={`px-3 py-1.5 rounded-xl font-bold text-xs transition cursor-pointer flex items-center gap-1.5 hover:scale-105 active:scale-95 ${
                 activeTab === "reforge"
                   ? "bg-purple-500 text-slate-950 shadow-[0_0_12px_#a855f7]"
                   : "text-slate-400 hover:text-white"
@@ -360,8 +360,12 @@ export const BlacksmithModal = memo(function BlacksmithModal() {
           </div>
 
           <button
-            onClick={closeActiveModal}
-            className="w-8 h-8 rounded-full bg-slate-800 hover:bg-slate-700 text-slate-400 hover:text-white flex items-center justify-center transition cursor-pointer"
+            onClick={() => {
+              playButtonClick();
+              closeActiveModal();
+            }}
+            className="w-8 h-8 rounded-full bg-slate-800/80 hover:bg-red-500 hover:text-white border border-slate-700 text-slate-400 flex items-center justify-center transition-colors duration-150 cursor-pointer shadow-md hover:scale-110 active:scale-95"
+            title="Đóng Lò Rèn"
           >
             <X className="w-4 h-4" />
           </button>

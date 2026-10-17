@@ -7,7 +7,7 @@
 import { memo, useState } from "react";
 import { useGameWorldStore } from "@/stores/useGameWorldStore";
 import { useToast } from "@/hooks/use-toast";
-import { playCombatSFX } from "@/audio/CombatSoundSynth";
+import { playCombatSFX, playButtonClick } from "@/audio/CombatSoundSynth";
 import {
   X,
   BookOpen,
@@ -77,8 +77,16 @@ export const CodexModal = memo(function CodexModal() {
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-3 bg-black/80 backdrop-blur-md select-none font-sans">
-      <div className="relative w-full max-w-4xl max-h-[92vh] flex flex-col rounded-3xl bg-[#090c16] border-2 border-cyan-500/60 shadow-[0_0_50px_rgba(6,182,212,0.3)] overflow-hidden">
+    <div
+      className="fixed inset-0 z-50 flex items-center justify-center p-3 bg-black/75 backdrop-blur-md select-none font-sans animate-in fade-in duration-200"
+      onClick={(e) => {
+        if (e.target === e.currentTarget) {
+          playButtonClick();
+          closeActiveModal();
+        }
+      }}
+    >
+      <div className="relative w-full max-w-4xl max-h-[92vh] flex flex-col rounded-3xl bg-[#0b0e14]/95 border border-slate-800/80 shadow-[0_8px_32px_rgba(0,0,0,0.85),0_0_40px_rgba(6,182,212,0.25)] overflow-hidden animate-in fade-in zoom-in-95 duration-200 ease-[cubic-bezier(0.16,1,0.3,1)]">
         
         {/* Header */}
         <div className="flex items-center justify-between px-6 py-4 border-b border-cyan-500/30 bg-gradient-to-r from-cyan-950/80 via-[#0c1222] to-cyan-950/80">
@@ -102,10 +110,14 @@ export const CodexModal = memo(function CodexModal() {
           </div>
 
           <button
-            onClick={closeActiveModal}
-            className="p-2 rounded-xl bg-slate-900 hover:bg-red-950/80 border border-slate-700 hover:border-red-500 text-slate-400 hover:text-red-300 transition cursor-pointer"
+            onClick={() => {
+              playButtonClick();
+              closeActiveModal();
+            }}
+            className="w-8 h-8 rounded-full bg-slate-800/80 hover:bg-red-500 hover:text-white border border-slate-700 text-slate-400 flex items-center justify-center transition-colors duration-150 cursor-pointer shadow-md hover:scale-110 active:scale-95"
+            title="Đóng (ESC)"
           >
-            <X className="w-5 h-5" />
+            <X className="w-4 h-4" />
           </button>
         </div>
 

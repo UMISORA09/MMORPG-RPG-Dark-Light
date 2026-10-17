@@ -75,7 +75,8 @@ export type SFXSynthPreset =
   | "coin_chime"
   | "loot_drop"
   | "rarity_chime"
-  | "level_up_fanfare";
+  | "level_up_fanfare"
+  | "button_click";
 
 export interface GameFeelSpec {
   cameraShake: number; // 0.0 to 1.0 (screen impulse)

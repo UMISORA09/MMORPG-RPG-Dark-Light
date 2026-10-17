@@ -35,6 +35,7 @@ import { useQueryClient } from "@tanstack/react-query";
 import { useGameStore } from "../stores";
 import { useToast } from "@/hooks/use-toast";
 import { useGameWorldStore } from "@/stores/useGameWorldStore";
+import { playButtonClick } from "@/audio/CombatSoundSynth";
 import { 
   X, 
   Backpack, 
@@ -246,14 +247,17 @@ export const UnifiedOverlayModals = memo(function UnifiedOverlayModals({
           className={`fixed inset-0 z-50 flex transition-all duration-200 ${
             isSidePanel
               ? "items-center justify-end p-2 sm:p-4 pointer-events-none"
-              : "items-center justify-center p-3 sm:p-6 bg-black/60 backdrop-blur-md pointer-events-auto"
+              : "items-center justify-center p-3 sm:p-6 bg-black/75 backdrop-blur-md pointer-events-auto animate-in fade-in duration-200"
           }`}
           onClick={(e) => {
-            if (!isSidePanel && e.target === e.currentTarget) closeActiveModal();
+            if (!isSidePanel && e.target === e.currentTarget) {
+              playButtonClick();
+              closeActiveModal();
+            }
           }}
         >
           <div
-            className={`relative flex flex-col bg-[#1f191b]/95 border border-[#5d4648] rounded-[24px] shadow-[0_30px_90px_rgba(0,0,0,0.8)] overflow-hidden text-slate-100 pointer-events-auto backdrop-blur-xl transition-all duration-300 ${
+            className={`relative flex flex-col bg-[#0b0e14]/95 border border-slate-800/80 rounded-[24px] shadow-[0_8px_32px_rgba(0,0,0,0.85)] overflow-hidden text-slate-100 pointer-events-auto backdrop-blur-xl transition-all duration-300 animate-in fade-in zoom-in-95 duration-200 ease-[cubic-bezier(0.16,1,0.3,1)] ${
               isSidePanel ? "w-full max-w-md max-h-[92vh] border-cyan-500/40" : "w-full max-w-5xl max-h-[90vh]"
             }`}
           >
@@ -275,18 +279,24 @@ export const UnifiedOverlayModals = memo(function UnifiedOverlayModals({
                 </div>
               </div>
 
-              <div className="flex items-center gap-1.5">
+              <div className="flex items-center gap-2">
                 {/* [🗖 / 🗕] Side-Panel Mode Toggle */}
                 <button
-                  onClick={() => setIsSidePanel(!isSidePanel)}
-                  className="p-1.5 rounded-lg bg-slate-800/80 hover:bg-slate-700 text-slate-300 hover:text-white border border-slate-600/60 transition cursor-pointer"
+                  onClick={() => {
+                    playButtonClick();
+                    setIsSidePanel(!isSidePanel);
+                  }}
+                  className="p-1.5 rounded-lg bg-slate-800/80 hover:bg-slate-700 text-slate-300 hover:text-white border border-slate-600/60 transition cursor-pointer hover:scale-105 active:scale-95"
                   title={isSidePanel ? "Mở rộng toàn màn hình" : "Thu gọn về bên cạnh (Nhìn thấy game 3D)"}
                 >
                   {isSidePanel ? <Maximize2 className="w-4 h-4 text-cyan-400" /> : <Minimize2 className="w-4 h-4" />}
                 </button>
                 <button
-                  onClick={closeActiveModal}
-                  className="p-1.5 rounded-lg bg-slate-800/80 hover:bg-red-500/20 hover:text-red-300 text-slate-400 border border-slate-700 transition cursor-pointer"
+                  onClick={() => {
+                    playButtonClick();
+                    closeActiveModal();
+                  }}
+                  className="w-8 h-8 rounded-full bg-slate-800/80 hover:bg-red-500 hover:text-white border border-slate-700 text-slate-400 flex items-center justify-center transition-colors duration-150 cursor-pointer shadow-md hover:scale-110 active:scale-95"
                   title="Đóng (ESC)"
                 >
                   <X className="w-4 h-4" />

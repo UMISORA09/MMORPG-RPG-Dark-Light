@@ -26,6 +26,8 @@ import {
   Zap,
   Bot
 } from "lucide-react";
+import { SkillTooltipCard, type SkillTooltipData } from "../tooltips/SkillTooltipCard";
+import { playButtonClick } from "@/audio/CombatSoundSynth";
 
 export const SymmetricalActionHUD = memo(function SymmetricalActionHUD() {
   // Store bindings
@@ -80,6 +82,7 @@ export const SymmetricalActionHUD = memo(function SymmetricalActionHUD() {
   const [isLocked, setIsLocked] = useState(false);
   const [showSecondRow, setShowSecondRow] = useState(false);
   const [hudScale, setHudScale] = useState<"100%" | "85%">("100%");
+  const [hoveredSkillTooltip, setHoveredSkillTooltip] = useState<SkillTooltipData | null>(null);
   const [lastActionTime, setLastActionTime] = useState(Date.now());
   const [isIdleInVillage, setIsIdleInVillage] = useState(false);
   const currentZone = useGameWorldStore((s) => s.currentZone);
@@ -521,16 +524,39 @@ export const SymmetricalActionHUD = memo(function SymmetricalActionHUD() {
           </div>
 
           {/* 2x5 Grid */}
-          <div className="grid grid-cols-5 gap-1.5">
+          <div className="grid grid-cols-5 gap-1.5 relative">
+            {/* Tooltip Card Floating Above Action Bar */}
+            {hoveredSkillTooltip && (
+              <div className="absolute -top-64 left-1/2 -translate-x-1/2 z-50 pointer-events-none">
+                <SkillTooltipCard skill={hoveredSkillTooltip} />
+              </div>
+            )}
+
             {/* Row 1: J, 1/Q, 2/E, 3/R, T (Strictly conflict-free, WASD reserved for movement) */}
             {/* Slot 0: Basic Attack / Combo (J / Left Click) */}
             <button
-              onClick={triggerComboAttack}
-              className="relative w-11 h-11 sm:w-12 sm:h-12 rounded-xl bg-gradient-to-br from-[#1e1333] to-[#0f081d] border-2 border-amber-400/80 hover:border-amber-300 flex flex-col items-center justify-center transition cursor-pointer shadow-[0_0_10px_rgba(245,158,11,0.25)] hover:scale-105 active:scale-95"
+              onClick={() => {
+                playButtonClick();
+                triggerComboAttack();
+              }}
+              onMouseEnter={() => setHoveredSkillTooltip({
+                name: "Đòn Đánh Thường (Combo 1-2-3)",
+                keybind: "J",
+                icon: "⚔️",
+                mpCost: 0,
+                cooldown: 0,
+                damageMultiplier: 1.0,
+                range: 2.5,
+                classId: playerClassId,
+                description: "Chuỗi liên hoàn kích hoạt combo 3 đòn liên tiếp. Đòn thứ 3 gây đẩy lùi kẻ địch.",
+              })}
+              onMouseLeave={() => setHoveredSkillTooltip(null)}
+              className="relative w-11 h-11 sm:w-12 sm:h-12 rounded-xl bg-gradient-to-br from-[#1e1333] to-[#0f081d] border-2 border-amber-400/80 hover:border-amber-300 flex flex-col items-center justify-center transition cursor-pointer shadow-[0_0_10px_rgba(245,158,11,0.25)] hover:scale-[1.08] hover:brightness-110 active:scale-[0.95] group"
               title="Đánh thường / Combo 1-2-3 (Phím J hoặc Chuột Trái)"
             >
               <Swords className="w-5 h-5 text-amber-300 drop-shadow" />
-              <span className="absolute bottom-0.5 right-1 font-mono text-[8px] font-black text-amber-300">
+              {/* Ergonomic Keybind Badge */}
+              <span className="absolute top-0.5 left-0.5 px-1 py-0.2 rounded bg-black/90 border border-amber-400/50 font-mono text-[8px] font-black text-amber-200 pointer-events-none">
                 J
               </span>
             </button>
@@ -538,61 +564,124 @@ export const SymmetricalActionHUD = memo(function SymmetricalActionHUD() {
             {/* Slot 1: Skill 1 (1 / Q) */}
             <button
               disabled={cd1 > 0}
-              onClick={() => triggerSkill(1)}
+              onClick={() => {
+                playButtonClick();
+                triggerSkill(1);
+              }}
+              onMouseEnter={() => setHoveredSkillTooltip({
+                name: skill1Spec?.name || "Kỹ Năng 1",
+                keybind: "Q",
+                icon: "⚡",
+                mpCost: 15,
+                cooldown: maxCd1,
+                damageMultiplier: skill1Spec?.targetImpact?.damageMultiplier || 1.8,
+                range: skill1Spec?.targetImpact?.range || 4.0,
+                classId: playerClassId,
+                description: skill1Spec?.description || "Tung đòn trảm sét gây 180% sát thương và làm choáng kẻ địch 1 giây.",
+              })}
+              onMouseLeave={() => setHoveredSkillTooltip(null)}
               className={`relative w-11 h-11 sm:w-12 sm:h-12 rounded-xl flex flex-col items-center justify-center transition border-2 overflow-hidden ${
                 cd1 > 0
                   ? "bg-[#140e21] border-slate-700 opacity-80 cursor-not-allowed"
-                  : "bg-gradient-to-br from-[#181a38] to-[#0c0d24] border-cyan-400/80 hover:border-cyan-300 hover:scale-105 active:scale-95 shadow-[0_0_10px_rgba(6,182,212,0.3)] cursor-pointer"
+                  : "bg-gradient-to-br from-[#181a38] to-[#0c0d24] border-cyan-400/80 hover:border-cyan-300 hover:scale-[1.08] hover:brightness-110 active:scale-[0.95] shadow-[0_0_10px_rgba(6,182,212,0.3)] cursor-pointer"
               }`}
               title={`${skill1Spec?.name || "Kỹ năng 1"} (Phím 1 hoặc Q)`}
             >
               {renderCooldownOverlay(cd1, maxCd1)}
               <span className="text-base select-none">⚡</span>
-              <span className="absolute bottom-0.5 right-1 font-mono text-[8px] font-black text-cyan-300">
-                1/Q
+              {/* Ergonomic Keybind Badge */}
+              <span className="absolute top-0.5 left-0.5 px-1 py-0.2 rounded bg-black/90 border border-cyan-400/50 font-mono text-[8px] font-black text-cyan-200 pointer-events-none">
+                Q
               </span>
             </button>
 
             {/* Slot 2: Skill 2 (2 / E) */}
             <button
               disabled={cd2 > 0}
-              onClick={() => triggerSkill(2)}
+              onClick={() => {
+                playButtonClick();
+                triggerSkill(2);
+              }}
+              onMouseEnter={() => setHoveredSkillTooltip({
+                name: skill2Spec?.name || "Kỹ Năng 2",
+                keybind: "E",
+                icon: "🌪️",
+                mpCost: 25,
+                cooldown: maxCd2,
+                damageMultiplier: skill2Spec?.targetImpact?.damageMultiplier || 2.4,
+                range: skill2Spec?.targetImpact?.range || 5.0,
+                classId: playerClassId,
+                description: skill2Spec?.description || "Cuồng phong ảo ảnh xoay tròn quét sạch kẻ địch xung quanh với 240% sát thương.",
+              })}
+              onMouseLeave={() => setHoveredSkillTooltip(null)}
               className={`relative w-11 h-11 sm:w-12 sm:h-12 rounded-xl flex flex-col items-center justify-center transition border-2 overflow-hidden ${
                 cd2 > 0
                   ? "bg-[#140e21] border-slate-700 opacity-80 cursor-not-allowed"
-                  : "bg-gradient-to-br from-[#261036] to-[#12051f] border-purple-400/80 hover:border-purple-300 hover:scale-105 active:scale-95 shadow-[0_0_10px_rgba(168,85,247,0.3)] cursor-pointer"
+                  : "bg-gradient-to-br from-[#261036] to-[#12051f] border-purple-400/80 hover:border-purple-300 hover:scale-[1.08] hover:brightness-110 active:scale-[0.95] shadow-[0_0_10px_rgba(168,85,247,0.3)] cursor-pointer"
               }`}
               title={`${skill2Spec?.name || "Kỹ năng 2"} (Phím 2 hoặc E)`}
             >
               {renderCooldownOverlay(cd2, maxCd2)}
               <span className="text-base select-none">🌪️</span>
-              <span className="absolute bottom-0.5 right-1 font-mono text-[8px] font-black text-purple-300">
-                2/E
+              {/* Ergonomic Keybind Badge */}
+              <span className="absolute top-0.5 left-0.5 px-1 py-0.2 rounded bg-black/90 border border-purple-400/50 font-mono text-[8px] font-black text-purple-200 pointer-events-none">
+                E
               </span>
             </button>
 
             {/* Slot 3: Skill 3 / Ult (3 / R) */}
             <button
               disabled={cd3 > 0}
-              onClick={() => triggerSkill(3)}
+              onClick={() => {
+                playButtonClick();
+                triggerSkill(3);
+              }}
+              onMouseEnter={() => setHoveredSkillTooltip({
+                name: skill3Spec?.name || "Tuyệt Kỹ Nộ Khí",
+                keybind: "R",
+                icon: "✨",
+                mpCost: 50,
+                cooldown: maxCd3,
+                damageMultiplier: skill3Spec?.targetImpact?.damageMultiplier || 3.8,
+                range: skill3Spec?.targetImpact?.range || 6.5,
+                classId: playerClassId,
+                description: skill3Spec?.description || "Triệu hồi bản mệnh Long Thần giáng thế, bùng nổ 380% sát thương diện rộng hủy diệt.",
+              })}
+              onMouseLeave={() => setHoveredSkillTooltip(null)}
               className={`relative w-11 h-11 sm:w-12 sm:h-12 rounded-xl flex flex-col items-center justify-center transition border-2 overflow-hidden ${
                 cd3 > 0
                   ? "bg-[#140e21] border-slate-700 opacity-80 cursor-not-allowed"
-                  : "bg-gradient-to-br from-[#381119] to-[#1a050b] border-rose-500 hover:border-rose-300 hover:scale-105 active:scale-95 shadow-[0_0_15px_rgba(244,63,94,0.4)] cursor-pointer"
+                  : "bg-gradient-to-br from-[#381119] to-[#1a050b] border-rose-500 hover:border-rose-300 hover:scale-[1.08] hover:brightness-110 active:scale-[0.95] shadow-[0_0_15px_rgba(244,63,94,0.4)] cursor-pointer"
               }`}
               title={`${skill3Spec?.name || "Tuyệt Kỹ"} (Phím 3 hoặc R)`}
             >
               {renderCooldownOverlay(cd3, maxCd3)}
               <Sparkles className="w-5 h-5 text-rose-400 drop-shadow" />
-              <span className="absolute bottom-0.5 right-1 font-mono text-[8px] font-black text-rose-300">
-                3/R
+              {/* Ergonomic Keybind Badge */}
+              <span className="absolute top-0.5 left-0.5 px-1 py-0.2 rounded bg-black/90 border border-rose-400/50 font-mono text-[8px] font-black text-rose-200 pointer-events-none">
+                R
               </span>
             </button>
 
             {/* Slot T: Ultimate / Fever Awakening */}
             <button
-              onClick={activateFever}
-              className={`relative w-11 h-11 sm:w-12 sm:h-12 rounded-xl flex flex-col items-center justify-center transition border-2 cursor-pointer ${
+              onClick={() => {
+                playButtonClick();
+                activateFever();
+              }}
+              onMouseEnter={() => setHoveredSkillTooltip({
+                name: "Thức Tỉnh Cuồng Nộ (Fever Mode)",
+                keybind: "T",
+                icon: "🔥",
+                mpCost: 0,
+                cooldown: 0,
+                damageMultiplier: 2.0,
+                range: 8.0,
+                classId: playerClassId,
+                description: "Kích hoạt khi thanh Nộ Khí đạt 100%. Tăng 50% tốc đánh, +100% sát thương và miễn nhiễm khống chế trong 10s.",
+              })}
+              onMouseLeave={() => setHoveredSkillTooltip(null)}
+              className={`relative w-11 h-11 sm:w-12 sm:h-12 rounded-xl flex flex-col items-center justify-center transition border-2 cursor-pointer hover:scale-[1.08] hover:brightness-110 active:scale-[0.95] ${
                 feverActive
                   ? "bg-gradient-to-br from-emerald-600 to-teal-900 border-emerald-300 shadow-[0_0_15px_#00ff88] animate-pulse"
                   : "bg-gradient-to-br from-amber-600/40 to-slate-900 border-amber-500/60 hover:border-amber-400"
@@ -600,7 +689,8 @@ export const SymmetricalActionHUD = memo(function SymmetricalActionHUD() {
               title="Cuồng Nộ Thức Tỉnh (Phím T)"
             >
               <Flame className={`w-5 h-5 ${feverActive ? "text-emerald-300 animate-spin" : "text-amber-400"}`} />
-              <span className="absolute bottom-0.5 right-1 font-mono text-[8px] font-black text-emerald-300">
+              {/* Ergonomic Keybind Badge */}
+              <span className="absolute top-0.5 left-0.5 px-1 py-0.2 rounded bg-black/90 border border-amber-400/50 font-mono text-[8px] font-black text-amber-200 pointer-events-none">
                 T
               </span>
             </button>
@@ -616,15 +706,18 @@ export const SymmetricalActionHUD = memo(function SymmetricalActionHUD() {
               ].map(({ slot, name, icon, color }) => (
                 <button
                   key={slot}
-                  onClick={triggerComboAttack}
-                  className={`relative w-11 h-11 sm:w-12 sm:h-12 rounded-xl bg-[#0c101d] border-2 ${color} hover:border-white/80 flex flex-col items-center justify-center transition cursor-pointer`}
+                  onClick={() => {
+                    playButtonClick();
+                    triggerComboAttack();
+                  }}
+                  className={`relative w-11 h-11 sm:w-12 sm:h-12 rounded-xl bg-[#0c101d] border-2 ${color} hover:border-white/80 flex flex-col items-center justify-center transition cursor-pointer hover:scale-[1.08] hover:brightness-110 active:scale-[0.95]`}
                   title={`${name} (Phím ${slot})`}
                 >
                   <span className="text-sm select-none">{icon}</span>
                   <span className="text-[7px] font-bold text-slate-400 truncate max-w-[40px] scale-90">
                     {name}
                   </span>
-                  <span className="absolute bottom-0.5 right-1 font-mono text-[8px] font-black text-slate-400">
+                  <span className="absolute top-0.5 left-0.5 px-1 py-0.2 rounded bg-black/90 border border-slate-700 font-mono text-[7px] font-black text-slate-300 pointer-events-none">
                     {slot}
                   </span>
                 </button>
@@ -639,13 +732,17 @@ export const SymmetricalActionHUD = memo(function SymmetricalActionHUD() {
           <div className="grid grid-cols-5 gap-1.5">
             
             {/* Slot 1: Bình Máu Đỏ (HP Potion - Phím 4 hoặc Z) */}
+            {/* Slot 1: Bình Máu Đỏ (HP Potion - Phím 4 hoặc Z) */}
             <button
-              onClick={useQuickPotionHp}
-              className="relative w-11 h-11 sm:w-12 sm:h-12 rounded-xl bg-gradient-to-br from-[#2a0b12] to-[#120407] border-2 border-red-500/80 hover:border-red-400 flex flex-col items-center justify-center transition cursor-pointer shadow-[0_0_10px_rgba(239,68,68,0.25)] hover:scale-105 active:scale-95"
+              onClick={() => {
+                playButtonClick();
+                useQuickPotionHp();
+              }}
+              className="relative w-11 h-11 sm:w-12 sm:h-12 rounded-xl bg-gradient-to-br from-[#2a0b12] to-[#120407] border-2 border-red-500/80 hover:border-red-400 flex flex-col items-center justify-center transition cursor-pointer shadow-[0_0_10px_rgba(239,68,68,0.25)] hover:scale-[1.08] hover:brightness-110 active:scale-[0.95]"
               title="Bình Máu Thánh: Hồi 35% HP (Phím 4 hoặc Z)"
             >
               <span className="text-base select-none">🧪</span>
-              <span className="absolute top-0.5 left-1 font-mono text-[8px] font-black text-rose-300">
+              <span className="absolute top-0.5 left-0.5 font-mono text-[8px] font-black text-rose-200 bg-black/90 px-1 py-0.2 rounded border border-rose-500/40 pointer-events-none">
                 4/Z
               </span>
               <span className="absolute bottom-0.5 right-1 font-mono text-[9px] font-black text-white px-1 rounded bg-black/80">
@@ -655,12 +752,15 @@ export const SymmetricalActionHUD = memo(function SymmetricalActionHUD() {
 
             {/* Slot 2: Bình Năng Lượng Xanh (MP Potion - Phím 5 hoặc X) */}
             <button
-              onClick={useQuickPotionMp}
-              className="relative w-11 h-11 sm:w-12 sm:h-12 rounded-xl bg-gradient-to-br from-[#0c182e] to-[#050b18] border-2 border-cyan-400/80 hover:border-cyan-300 flex flex-col items-center justify-center transition cursor-pointer shadow-[0_0_10px_rgba(6,182,212,0.25)] hover:scale-105 active:scale-95"
+              onClick={() => {
+                playButtonClick();
+                useQuickPotionMp();
+              }}
+              className="relative w-11 h-11 sm:w-12 sm:h-12 rounded-xl bg-gradient-to-br from-[#0c182e] to-[#050b18] border-2 border-cyan-400/80 hover:border-cyan-300 flex flex-col items-center justify-center transition cursor-pointer shadow-[0_0_10px_rgba(6,182,212,0.25)] hover:scale-[1.08] hover:brightness-110 active:scale-[0.95]"
               title="Bình Năng Lượng: Hồi 40% MP (Phím 5 hoặc X)"
             >
               <span className="text-base select-none">💧</span>
-              <span className="absolute top-0.5 left-1 font-mono text-[8px] font-black text-cyan-300">
+              <span className="absolute top-0.5 left-0.5 font-mono text-[8px] font-black text-cyan-200 bg-black/90 px-1 py-0.2 rounded border border-cyan-500/40 pointer-events-none">
                 5/X
               </span>
               <span className="absolute bottom-0.5 right-1 font-mono text-[9px] font-black text-white px-1 rounded bg-black/80">
@@ -670,12 +770,15 @@ export const SymmetricalActionHUD = memo(function SymmetricalActionHUD() {
 
             {/* Slot 3: Cuộn Sách Tăng Công (ATK Buff Scroll - Phím 6 hoặc C) */}
             <button
-              onClick={useQuickAtkBuff}
-              className="relative w-11 h-11 sm:w-12 sm:h-12 rounded-xl bg-gradient-to-br from-[#291b0c] to-[#140b04] border-2 border-amber-500/80 hover:border-amber-400 flex flex-col items-center justify-center transition cursor-pointer shadow-[0_0_10px_rgba(245,158,11,0.25)] hover:scale-105 active:scale-95"
+              onClick={() => {
+                playButtonClick();
+                useQuickAtkBuff();
+              }}
+              className="relative w-11 h-11 sm:w-12 sm:h-12 rounded-xl bg-gradient-to-br from-[#291b0c] to-[#140b04] border-2 border-amber-500/80 hover:border-amber-400 flex flex-col items-center justify-center transition cursor-pointer shadow-[0_0_10px_rgba(245,158,11,0.25)] hover:scale-[1.08] hover:brightness-110 active:scale-[0.95]"
               title="Sách Cổ Tăng Công: +25% ATK trong 15s (Phím 6 hoặc C)"
             >
               <span className="text-base select-none">📜</span>
-              <span className="absolute top-0.5 left-1 font-mono text-[8px] font-black text-amber-300">
+              <span className="absolute top-0.5 left-0.5 font-mono text-[8px] font-black text-amber-200 bg-black/90 px-1 py-0.2 rounded border border-amber-500/40 pointer-events-none">
                 6/C
               </span>
               <span className="absolute bottom-0.5 right-1 font-mono text-[9px] font-black text-white px-1 rounded bg-black/80">
@@ -685,12 +788,15 @@ export const SymmetricalActionHUD = memo(function SymmetricalActionHUD() {
 
             {/* Slot 4: La Bàn Dịch Chuyển Làng (Town Teleport - Phím 7) */}
             <button
-              onClick={useQuickTeleport}
-              className="relative w-11 h-11 sm:w-12 sm:h-12 rounded-xl bg-gradient-to-br from-[#0c2419] to-[#04120b] border-2 border-emerald-500/80 hover:border-emerald-400 flex flex-col items-center justify-center transition cursor-pointer shadow-[0_0_10px_rgba(16,185,129,0.25)] hover:scale-105 active:scale-95"
+              onClick={() => {
+                playButtonClick();
+                useQuickTeleport();
+              }}
+              className="relative w-11 h-11 sm:w-12 sm:h-12 rounded-xl bg-gradient-to-br from-[#0c2419] to-[#04120b] border-2 border-emerald-500/80 hover:border-emerald-400 flex flex-col items-center justify-center transition cursor-pointer shadow-[0_0_10px_rgba(16,185,129,0.25)] hover:scale-[1.08] hover:brightness-110 active:scale-[0.95]"
               title="La Bàn Dịch Chuyển: Trở về Làng Long Tộc an toàn (Phím 7)"
             >
               <Compass className="w-5 h-5 text-emerald-400" />
-              <span className="absolute top-0.5 left-1 font-mono text-[8px] font-black text-emerald-300">
+              <span className="absolute top-0.5 left-0.5 font-mono text-[8px] font-black text-emerald-200 bg-black/90 px-1 py-0.2 rounded border border-emerald-500/40 pointer-events-none">
                 7
               </span>
               <span className="absolute bottom-0.5 right-1 font-mono text-[9px] font-black text-white px-1 rounded bg-black/80">
@@ -700,12 +806,15 @@ export const SymmetricalActionHUD = memo(function SymmetricalActionHUD() {
 
             {/* Slot 5: Cuộn Khiên Thánh (Shield Scroll - Phím 8) */}
             <button
-              onClick={useQuickShield}
-              className="relative w-11 h-11 sm:w-12 sm:h-12 rounded-xl bg-gradient-to-br from-[#101e38] to-[#070e1c] border-2 border-sky-400/80 hover:border-sky-300 flex flex-col items-center justify-center transition cursor-pointer shadow-[0_0_10px_rgba(56,189,248,0.25)] hover:scale-105 active:scale-95"
+              onClick={() => {
+                playButtonClick();
+                useQuickShield();
+              }}
+              className="relative w-11 h-11 sm:w-12 sm:h-12 rounded-xl bg-gradient-to-br from-[#101e38] to-[#070e1c] border-2 border-sky-400/80 hover:border-sky-300 flex flex-col items-center justify-center transition cursor-pointer shadow-[0_0_10px_rgba(56,189,248,0.25)] hover:scale-[1.08] hover:brightness-110 active:scale-[0.95]"
               title="Khiên Thánh Bất Hoại: Chặn 35% HP sát thương (Phím 8)"
             >
               <Shield className="w-5 h-5 text-sky-400" />
-              <span className="absolute top-0.5 left-1 font-mono text-[8px] font-black text-sky-300">
+              <span className="absolute top-0.5 left-0.5 font-mono text-[8px] font-black text-sky-200 bg-black/90 px-1 py-0.2 rounded border border-sky-500/40 pointer-events-none">
                 8
               </span>
               <span className="absolute bottom-0.5 right-1 font-mono text-[9px] font-black text-white px-1 rounded bg-black/80">

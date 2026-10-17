@@ -34,7 +34,7 @@ import {
   BookOpen,
   Store,
 } from "lucide-react";
-import { playCombatSFX } from "@/audio/CombatSoundSynth";
+import { playCombatSFX, playButtonClick } from "@/audio/CombatSoundSynth";
 
 interface RightTopProps {
   onLogout?: () => void;
@@ -111,174 +111,175 @@ export const RightTopMinimapAndDrawer = memo(function RightTopMinimapAndDrawer({
 
       {/* ── 2. COLLAPSIBLE SYSTEM TRAY (RADIAL / SLIDING DRAWER) ── */}
       <div className="relative flex items-center justify-end">
-        {/* ── EXPANDED TRAY: Dãy 12 nút chức năng trượt êm ái từ phải sang trái ── */}
+        {/* ── EXPANDED TRAY: Dãy 12+ nút chức năng trượt thác nước lệch nhịp (staggered 35ms) ── */}
         {isTrayExpanded ? (
-          <div className="flex items-center gap-1 p-1 rounded-2xl bg-[#0a0514]/95 backdrop-blur-xl border border-cyan-500/40 shadow-[0_8px_30px_rgba(0,0,0,0.95)] animate-in slide-in-from-right-4 duration-300">
-            {/* 1. Toggle Render Mode 2.5D / 3D */}
-            <button
-              onClick={toggleCharacterRenderMode}
-              className={`p-1.5 border rounded-xl transition cursor-pointer hover:scale-105 active:scale-95 ${
-                characterRenderMode === "3d_model"
-                  ? "bg-emerald-950/80 border-emerald-500 text-emerald-300 shadow-[0_0_10px_rgba(16,185,129,0.3)]"
-                  : "bg-slate-900 border-slate-700 text-slate-300 hover:text-white"
-              }`}
-              title="Chuyển chế độ 2.5D Sprite / 3D Model (Phím V)"
-            >
-              <Box className="w-4 h-4" />
-            </button>
-
-            {/* 2. Hành Trang (B / I) */}
-            <button
-              onClick={() => openModal("inventory")}
-              className="p-1.5 bg-slate-900 hover:bg-slate-800 border border-slate-700 hover:border-cyan-400 rounded-xl text-cyan-300 transition cursor-pointer hover:scale-105 active:scale-95"
-              title="Hành Trang & Trang Bị (Phím B / I)"
-            >
-              <Backpack className="w-4 h-4" />
-            </button>
-
-            {/* 3. Cửa Hàng (P) */}
-            <button
-              onClick={() => openModal("shop")}
-              className="p-1.5 bg-slate-900 hover:bg-slate-800 border border-slate-700 hover:border-amber-400 rounded-xl text-amber-300 transition cursor-pointer hover:scale-105 active:scale-95"
-              title="Cửa Hàng Dị Bảo (Phím P)"
-            >
-              <ShoppingBag className="w-4 h-4" />
-            </button>
-
-            {/* 4. Bảng Xếp Hạng (O) */}
-            <button
-              onClick={() => openModal("leaderboard")}
-              className="p-1.5 bg-slate-900 hover:bg-slate-800 border border-slate-700 hover:border-purple-400 rounded-xl text-purple-300 transition cursor-pointer hover:scale-105 active:scale-95"
-              title="Bảng Vinh Danh Long Tộc (Phím O)"
-            >
-              <Trophy className="w-4 h-4" />
-            </button>
-
-            {/* 5. Lịch Sử Chiến Đấu (H) */}
-            <button
-              onClick={() => openModal("battleLog")}
-              className="p-1.5 bg-slate-900 hover:bg-slate-800 border border-slate-700 hover:border-red-400 rounded-xl text-red-300 transition cursor-pointer hover:scale-105 active:scale-95"
-              title="Lịch Sử Chiến Đấu (Phím H)"
-            >
-              <ScrollText className="w-4 h-4" />
-            </button>
-
-            {/* 6. Thành Tựu (Y) */}
-            <button
-              onClick={() => openModal("achievements")}
-              className="p-1.5 bg-slate-900 hover:bg-slate-800 border border-slate-700 hover:border-amber-400 rounded-xl text-amber-400 transition cursor-pointer hover:scale-105 active:scale-95 shadow-[0_0_10px_rgba(245,158,11,0.2)]"
-              title="Bảng Thành Tựu (Phím Y)"
-            >
-              <Award className="w-4 h-4" />
-            </button>
-
-            {/* 7. Quà Ngày (U) */}
-            <button
-              onClick={() => openModal("dailyRewards")}
-              className="p-1.5 bg-slate-900 hover:bg-slate-800 border border-slate-700 hover:border-emerald-400 rounded-xl text-emerald-400 transition cursor-pointer hover:scale-105 active:scale-95 shadow-[0_0_10px_rgba(16,185,129,0.2)]"
-              title="Quà Đăng Nhập 7 Ngày (Phím U)"
-            >
-              <Gift className="w-4 h-4" />
-            </button>
-
-            {/* 8. Đấu Trường PvP Arena */}
-            <button
-              onClick={() => openModal("pvpArena")}
-              className="p-1.5 bg-slate-900 hover:bg-slate-800 border border-slate-700 hover:border-rose-400 rounded-xl text-rose-400 transition cursor-pointer hover:scale-105 active:scale-95"
-              title="Đấu Trường 1v1 PvP Xếp Hạng"
-            >
-              <Shield className="w-4 h-4" />
-            </button>
-
-            {/* 8.1 Chợ Đấu Giá (Alt+K) */}
-            <button
-              onClick={() => openModal("auctionHouse")}
-              className="p-1.5 bg-slate-900 hover:bg-slate-800 border border-slate-700 hover:border-yellow-400 rounded-xl text-yellow-400 transition cursor-pointer hover:scale-105 active:scale-95 shadow-[0_0_10px_rgba(234,179,8,0.2)]"
-              title="Chợ Đấu Giá Liên Người Chơi (Tổ hợp Alt+K)"
-            >
-              <Store className="w-4 h-4" />
-            </button>
-
-            {/* 8.2 Lò Rèn & Khảm Ngọc (Alt+U) */}
-            <button
-              onClick={() => openModal("blacksmith")}
-              className="p-1.5 bg-slate-900 hover:bg-slate-800 border border-slate-700 hover:border-amber-400 rounded-xl text-amber-400 transition cursor-pointer hover:scale-105 active:scale-95 shadow-[0_0_10px_rgba(245,158,11,0.2)]"
-              title="Lò Rèn: Cường Hóa, Khảm Ngọc & Tẩy Luyện (Tổ hợp Alt+U)"
-            >
-              <Hammer className="w-4 h-4" />
-            </button>
-
-            {/* 8.3 Chuyển Chức & Thiên Phú (Alt+N) */}
-            <button
-              onClick={() => openModal("talents")}
-              className="p-1.5 bg-slate-900 hover:bg-slate-800 border border-slate-700 hover:border-cyan-400 rounded-xl text-cyan-400 transition cursor-pointer hover:scale-105 active:scale-95 shadow-[0_0_10px_rgba(6,182,212,0.2)]"
-              title="Thức Tỉnh Chuyển Chức & Cây Thiên Phú (Tổ hợp Alt+N)"
-            >
-              <Sparkles className="w-4 h-4" />
-            </button>
-
-            {/* 8.4 Đồ Giám Sưu Tầm (Alt+L) */}
-            <button
-              onClick={() => openModal("codex")}
-              className="p-1.5 bg-slate-900 hover:bg-slate-800 border border-slate-700 hover:border-purple-400 rounded-xl text-purple-400 transition cursor-pointer hover:scale-105 active:scale-95 shadow-[0_0_10px_rgba(168,85,247,0.2)]"
-              title="Sách Đồ Giám Quái Vật & Trang Bị (Tổ hợp Alt+L)"
-            >
-              <BookOpen className="w-4 h-4" />
-            </button>
-
-            {/* 9. Cưỡi Thú (Alt+M / Shift+Space) */}
-            <button
-              onClick={toggleMount}
-              className={`p-1.5 border rounded-xl transition cursor-pointer hover:scale-105 active:scale-95 text-xs ${
-                isMounted
-                  ? "bg-cyan-500/30 border-cyan-400 text-cyan-300 shadow-[0_0_12px_rgba(40,195,225,0.45)]"
-                  : "bg-slate-900 border-slate-700 text-slate-300 hover:text-white"
-              }`}
-              title="Cưỡi Thú (+70% Tốc Độ) - Tổ hợp Alt+M hoặc Shift+Space"
-            >
-              🐎
-            </button>
-
-            {/* 10. Âm Thanh Toggle */}
-            <button
-              onClick={toggleSoundMute}
-              className={`p-1.5 border rounded-xl transition cursor-pointer hover:scale-105 active:scale-95 ${
-                soundMuted
-                  ? "bg-red-950/70 border-red-700/80 text-red-400"
-                  : "bg-cyan-950/60 border-cyan-700/80 text-cyan-400"
-              }`}
-              title={soundMuted ? "Bật Âm Thanh" : "Tắt Âm Thanh"}
-            >
-              {soundMuted ? <VolumeX className="w-4 h-4" /> : <Volume2 className="w-4 h-4" />}
-            </button>
-
-            {/* 11. Cài Đặt */}
-            <button
-              onClick={() => openModal("settings")}
-              className="p-1.5 bg-slate-900 hover:bg-slate-800 border border-slate-700 hover:border-cyan-400 rounded-xl text-slate-300 hover:text-white transition cursor-pointer hover:scale-105 active:scale-95"
-              title="Cài Đặt Game"
-            >
-              <Settings className="w-4 h-4" />
-            </button>
-
-            {/* 12. Đăng Xuất */}
-            {onLogout && (
+          <div className="flex items-center gap-1.5 p-1.5 rounded-2xl bg-[#0b0e14]/95 backdrop-blur-xl border border-slate-800/80 shadow-[0_8px_32px_rgba(0,0,0,0.85),0_0_20px_rgba(0,242,255,0.15)] animate-in fade-in duration-200">
+            {[
+              {
+                id: "render_mode",
+                icon: <Box className="w-4 h-4" />,
+                title: "Chế Độ 2.5D Sprite / 3D Model",
+                keybind: "V",
+                active: characterRenderMode === "3d_model",
+                activeClass: "bg-emerald-950/80 border-emerald-500 text-emerald-300 shadow-[0_0_10px_rgba(16,185,129,0.4)]",
+                normalClass: "bg-slate-900 border-slate-700 hover:border-emerald-400 text-slate-300 hover:text-white",
+                onClick: toggleCharacterRenderMode,
+              },
+              {
+                id: "inventory",
+                icon: <Backpack className="w-4 h-4 text-cyan-300" />,
+                title: "Hành Trang & Trang Bị",
+                keybind: "B",
+                normalClass: "bg-slate-900 hover:bg-slate-800 border-slate-700 hover:border-cyan-400 text-cyan-300",
+                onClick: () => openModal("inventory"),
+              },
+              {
+                id: "shop",
+                icon: <ShoppingBag className="w-4 h-4 text-amber-300" />,
+                title: "Cửa Hàng Dị Bảo",
+                keybind: "P",
+                normalClass: "bg-slate-900 hover:bg-slate-800 border-slate-700 hover:border-amber-400 text-amber-300",
+                onClick: () => openModal("shop"),
+              },
+              {
+                id: "leaderboard",
+                icon: <Trophy className="w-4 h-4 text-purple-300" />,
+                title: "Bảng Vinh Danh Long Tộc",
+                keybind: "O",
+                normalClass: "bg-slate-900 hover:bg-slate-800 border-slate-700 hover:border-purple-400 text-purple-300",
+                onClick: () => openModal("leaderboard"),
+              },
+              {
+                id: "battleLog",
+                icon: <ScrollText className="w-4 h-4 text-red-300" />,
+                title: "Lịch Sử Chiến Đấu",
+                keybind: "H",
+                normalClass: "bg-slate-900 hover:bg-slate-800 border-slate-700 hover:border-red-400 text-red-300",
+                onClick: () => openModal("battleLog"),
+              },
+              {
+                id: "achievements",
+                icon: <Award className="w-4 h-4 text-amber-400" />,
+                title: "Bảng Thành Tựu",
+                keybind: "Y",
+                normalClass: "bg-slate-900 hover:bg-slate-800 border-slate-700 hover:border-amber-400 text-amber-400",
+                onClick: () => openModal("achievements"),
+              },
+              {
+                id: "dailyRewards",
+                icon: <Gift className="w-4 h-4 text-emerald-400" />,
+                title: "Quà Đăng Nhập 7 Ngày",
+                keybind: "U",
+                normalClass: "bg-slate-900 hover:bg-slate-800 border-slate-700 hover:border-emerald-400 text-emerald-400",
+                onClick: () => openModal("dailyRewards"),
+              },
+              {
+                id: "pvpArena",
+                icon: <Shield className="w-4 h-4 text-rose-400" />,
+                title: "Đấu Trường 1v1 PvP Xếp Hạng",
+                keybind: "K",
+                normalClass: "bg-slate-900 hover:bg-slate-800 border-slate-700 hover:border-rose-400 text-rose-400",
+                onClick: () => openModal("pvpArena"),
+              },
+              {
+                id: "auctionHouse",
+                icon: <Store className="w-4 h-4 text-yellow-400" />,
+                title: "Chợ Đấu Giá Liên Người Chơi",
+                keybind: "Alt+K",
+                normalClass: "bg-slate-900 hover:bg-slate-800 border-slate-700 hover:border-yellow-400 text-yellow-400 shadow-[0_0_10px_rgba(234,179,8,0.2)]",
+                onClick: () => openModal("auctionHouse"),
+              },
+              {
+                id: "blacksmith",
+                icon: <Hammer className="w-4 h-4 text-amber-400" />,
+                title: "Lò Rèn: Cường Hóa, Khảm Ngọc & Tẩy Luyện",
+                keybind: "Alt+U",
+                normalClass: "bg-slate-900 hover:bg-slate-800 border-slate-700 hover:border-amber-400 text-amber-400 shadow-[0_0_10px_rgba(245,158,11,0.2)]",
+                onClick: () => openModal("blacksmith"),
+              },
+              {
+                id: "talents",
+                icon: <Sparkles className="w-4 h-4 text-cyan-400" />,
+                title: "Thức Tỉnh Chuyển Chức & Cây Thiên Phú",
+                keybind: "Alt+N",
+                normalClass: "bg-slate-900 hover:bg-slate-800 border-slate-700 hover:border-cyan-400 text-cyan-400 shadow-[0_0_10px_rgba(6,182,212,0.2)]",
+                onClick: () => openModal("talents"),
+              },
+              {
+                id: "codex",
+                icon: <BookOpen className="w-4 h-4 text-purple-400" />,
+                title: "Sách Đồ Giám Quái Vật & Trang Bị",
+                keybind: "Alt+L",
+                normalClass: "bg-slate-900 hover:bg-slate-800 border-slate-700 hover:border-purple-400 text-purple-400 shadow-[0_0_10px_rgba(168,85,247,0.2)]",
+                onClick: () => openModal("codex"),
+              },
+              {
+                id: "mount",
+                icon: <span className="text-xs">🐎</span>,
+                title: "Cưỡi Thú (+70% Tốc Độ)",
+                keybind: "Alt+M",
+                active: isMounted,
+                activeClass: "bg-cyan-500/30 border-cyan-400 text-cyan-300 shadow-[0_0_12px_rgba(40,195,225,0.45)]",
+                normalClass: "bg-slate-900 border-slate-700 text-slate-300 hover:text-white",
+                onClick: toggleMount,
+              },
+              {
+                id: "sound",
+                icon: soundMuted ? <VolumeX className="w-4 h-4" /> : <Volume2 className="w-4 h-4" />,
+                title: soundMuted ? "Bật Âm Thanh" : "Tắt Âm Thanh",
+                keybind: "M",
+                active: soundMuted,
+                activeClass: "bg-red-950/70 border-red-700/80 text-red-400",
+                normalClass: "bg-cyan-950/60 border-cyan-700/80 text-cyan-400",
+                onClick: toggleSoundMute,
+              },
+              {
+                id: "settings",
+                icon: <Settings className="w-4 h-4" />,
+                title: "Cài Đặt Game",
+                keybind: "Esc",
+                normalClass: "bg-slate-900 hover:bg-slate-800 border-slate-700 hover:border-cyan-400 text-slate-300 hover:text-white",
+                onClick: () => openModal("settings"),
+              },
+              ...(onLogout ? [{
+                id: "logout",
+                icon: <LogOut className="w-4 h-4" />,
+                title: "Đăng Xuất",
+                keybind: "X",
+                normalClass: "bg-slate-900 hover:bg-red-950 border-slate-700 hover:border-red-500 text-slate-400 hover:text-red-300",
+                onClick: onLogout,
+              }] : []),
+            ].map((btn, idx) => (
               <button
-                onClick={onLogout}
-                className="p-1.5 bg-slate-900 hover:bg-red-950 border border-slate-700 hover:border-red-500 rounded-xl text-slate-400 hover:text-red-300 transition cursor-pointer hover:scale-105 active:scale-95"
-                title="Đăng Xuất"
+                key={btn.id}
+                onClick={() => {
+                  playButtonClick();
+                  btn.onClick();
+                }}
+                style={{
+                  animationDelay: `${idx * 35}ms`,
+                }}
+                className={`relative p-1.5 border rounded-xl transition cursor-pointer hover:scale-[1.08] hover:brightness-110 active:scale-[0.95] animate-in fade-in slide-in-from-right-3 duration-200 fill-mode-backwards group ${
+                  btn.active ? btn.activeClass : btn.normalClass
+                }`}
+                title={`${btn.title} (Phím [${btn.keybind}])`}
               >
-                <LogOut className="w-4 h-4" />
+                {btn.icon}
+                {/* Micro Keybind Badge */}
+                <span className="absolute -top-1.5 -right-1 px-1 py-0.2 rounded-full bg-black/90 border border-amber-400/40 text-[8px] font-mono font-black text-amber-200 opacity-80 group-hover:opacity-100 group-hover:scale-110 transition-all pointer-events-none">
+                  {btn.keybind}
+                </span>
               </button>
-            )}
+            ))}
 
             {/* Nút Thu Gọn Drawer [▶] */}
             <button
               onClick={() => {
+                playButtonClick();
                 playCombatSFX("coin_chime", 0.2);
                 setIsTrayExpanded(false);
               }}
-              className="ml-1 px-2 py-1 rounded-xl bg-cyan-950/80 hover:bg-cyan-900 border border-cyan-400/60 text-cyan-300 text-[10px] font-bold flex items-center gap-0.5 cursor-pointer transition hover:scale-105 active:scale-95"
+              className="ml-1 px-2 py-1.5 rounded-xl bg-cyan-950/80 hover:bg-cyan-900 border border-cyan-400/60 text-cyan-300 text-[10px] font-bold flex items-center gap-0.5 cursor-pointer transition hover:scale-[1.05] hover:brightness-110 active:scale-[0.95]"
               title="Thu gọn thanh công cụ"
             >
               <span>Thu gọn</span>
@@ -286,51 +287,70 @@ export const RightTopMinimapAndDrawer = memo(function RightTopMinimapAndDrawer({
             </button>
           </div>
         ) : (
-          /* ── COLLAPSED TRAY (Mặc Định): 3 Nút Quan Trọng + Nút Mở Rộng [◀ +9] ── */
-          <div className="flex items-center gap-1.5 p-1 rounded-2xl bg-[#0a0514]/85 backdrop-blur-md border border-slate-800 shadow-xl">
+          /* ── COLLAPSED TRAY (Mặc Định): 3 Nút Quan Trọng + Nút Mở Rộng [◀ +12] ── */
+          <div className="flex items-center gap-1.5 p-1 rounded-2xl bg-[#0b0e14]/90 backdrop-blur-md border border-slate-800 shadow-xl">
             {/* Quick 1: Hành Trang (B / I) */}
             <button
-              onClick={() => openModal("inventory")}
-              className="p-2 bg-slate-900 hover:bg-slate-800 border border-slate-700 hover:border-cyan-400 rounded-xl text-cyan-300 transition cursor-pointer hover:scale-105 active:scale-95 shadow-[0_0_10px_rgba(6,182,212,0.2)]"
-              title="Hành Trang & Trang Bị (Phím B / I)"
+              onClick={() => {
+                playButtonClick();
+                openModal("inventory");
+              }}
+              className="relative p-2 bg-slate-900 hover:bg-slate-800 border border-slate-700 hover:border-cyan-400 rounded-xl text-cyan-300 transition cursor-pointer hover:scale-[1.08] hover:brightness-110 active:scale-[0.95] shadow-[0_0_10px_rgba(6,182,212,0.2)] group"
+              title="Hành Trang & Trang Bị (Phím [B] / [I])"
             >
               <Backpack className="w-4 h-4" />
+              <span className="absolute -top-1 -right-1 px-1 rounded-full bg-black/90 border border-amber-400/40 text-[7px] font-mono font-black text-amber-200 opacity-80 group-hover:opacity-100 transition-opacity pointer-events-none">
+                B
+              </span>
             </button>
 
             {/* Quick 2: Nhiệm Vụ (Quests) */}
             <button
-              onClick={() => openModal("quests")}
-              className="p-2 bg-slate-900 hover:bg-slate-800 border border-slate-700 hover:border-amber-400 rounded-xl text-amber-300 transition cursor-pointer hover:scale-105 active:scale-95 shadow-[0_0_10px_rgba(245,158,11,0.2)]"
-              title="Nhiệm Vụ & Chỉ Dẫn 3D"
+              onClick={() => {
+                playButtonClick();
+                openModal("quests");
+              }}
+              className="relative p-2 bg-slate-900 hover:bg-slate-800 border border-slate-700 hover:border-amber-400 rounded-xl text-amber-300 transition cursor-pointer hover:scale-[1.08] hover:brightness-110 active:scale-[0.95] shadow-[0_0_10px_rgba(245,158,11,0.2)] group"
+              title="Nhiệm Vụ & Chỉ Dẫn 3D (Phím [L])"
             >
               <ScrollText className="w-4 h-4" />
+              <span className="absolute -top-1 -right-1 px-1 rounded-full bg-black/90 border border-amber-400/40 text-[7px] font-mono font-black text-amber-200 opacity-80 group-hover:opacity-100 transition-opacity pointer-events-none">
+                L
+              </span>
             </button>
 
             {/* Quick 3: Âm Thanh Mute Toggle */}
             <button
-              onClick={toggleSoundMute}
-              className={`p-2 border rounded-xl transition cursor-pointer hover:scale-105 active:scale-95 ${
+              onClick={() => {
+                playButtonClick();
+                toggleSoundMute();
+              }}
+              className={`relative p-2 border rounded-xl transition cursor-pointer hover:scale-[1.08] hover:brightness-110 active:scale-[0.95] group ${
                 soundMuted
                   ? "bg-red-950/70 border-red-700/80 text-red-400"
                   : "bg-cyan-950/60 border-cyan-700/80 text-cyan-400"
               }`}
-              title={soundMuted ? "Bật Âm Thanh" : "Tắt Âm Thanh"}
+              title={soundMuted ? "Bật Âm Thanh (Phím [M])" : "Tắt Âm Thanh (Phím [M])"}
             >
               {soundMuted ? <VolumeX className="w-4 h-4" /> : <Volume2 className="w-4 h-4" />}
+              <span className="absolute -top-1 -right-1 px-1 rounded-full bg-black/90 border border-amber-400/40 text-[7px] font-mono font-black text-amber-200 opacity-80 group-hover:opacity-100 transition-opacity pointer-events-none">
+                M
+              </span>
             </button>
 
-            {/* Nút Trụ Chính: [◀ +9 Menu] Mở Rộng Toàn Bộ 12 Chức Năng */}
+            {/* Nút Trụ Chính: [◀ +12 Menu] Mở Rộng Toàn Bộ 12+ Chức Năng */}
             <button
               onClick={() => {
+                playButtonClick();
                 playCombatSFX("holy_bell", 0.3);
                 setIsTrayExpanded(true);
               }}
-              className="px-2.5 py-1.5 rounded-xl bg-gradient-to-r from-cyan-950/90 to-blue-950/90 hover:from-cyan-900 hover:to-blue-900 border border-cyan-500/60 text-cyan-300 text-[11px] font-black tracking-wider flex items-center gap-1.5 transition cursor-pointer hover:scale-105 active:scale-95 shadow-[0_0_15px_rgba(0,242,255,0.25)]"
-              title="Mở rộng menu đầy đủ (12 chức năng)"
+              className="px-2.5 py-1.5 rounded-xl bg-gradient-to-r from-cyan-950/90 to-blue-950/90 hover:from-cyan-900 hover:to-blue-900 border border-cyan-500/60 text-cyan-300 text-[11px] font-black tracking-wider flex items-center gap-1.5 transition cursor-pointer hover:scale-[1.05] hover:brightness-110 active:scale-[0.95] shadow-[0_0_15px_rgba(0,242,255,0.25)]"
+              title="Mở rộng menu đầy đủ (12+ chức năng)"
             >
               <ChevronLeft className="w-3.5 h-3.5 animate-pulse" />
               <Menu className="w-3.5 h-3.5" />
-              <span>+9</span>
+              <span>+12</span>
             </button>
           </div>
         )}

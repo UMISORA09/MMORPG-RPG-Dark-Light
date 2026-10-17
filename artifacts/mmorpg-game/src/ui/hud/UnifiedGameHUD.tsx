@@ -16,6 +16,8 @@ import { RightTopMinimapAndDrawer } from "./RightTopMinimapAndDrawer";
 import { RightEdgeQuickDock } from "./RightEdgeQuickDock";
 import { SymmetricalActionHUD } from "./SymmetricalActionHUD";
 import { PixelEnemyHealthBars } from "./PixelEnemyHealthBars";
+import { TargetHealthBar } from "./TargetHealthBar";
+import { LevelUpAndLootFlashOverlay } from "./LevelUpAndLootFlashOverlay";
 
 export interface UnifiedGameHUDProps {
   onLogout?: () => void;
@@ -96,6 +98,9 @@ export const UnifiedGameHUD = memo(function UnifiedGameHUD({
         
         {/* Top-Left: Ergonomic Flex-Column HUD (Player Status + Passive Badge + 3-Mode Quest Tracker) */}
         <LeftTopHudColumn />
+
+        {/* Top-Center: Target Health Bar (Monster / Boss) */}
+        <TargetHealthBar />
 
         {/* Top-Center: Zone Warning Banner, Boss Raid Health Bar & Smooth Notices */}
         <div className="flex flex-col items-center flex-1 max-w-md mx-3">
@@ -295,6 +300,9 @@ export const UnifiedGameHUD = memo(function UnifiedGameHUD({
           </div>
         </div>
       )}
+
+      {/* ── Cinematic Level-Up Banner & High-Tier Loot Screen Flash ── */}
+      <LevelUpAndLootFlashOverlay />
     </div>
   );
 });

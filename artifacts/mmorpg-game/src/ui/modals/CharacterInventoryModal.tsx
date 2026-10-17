@@ -42,7 +42,8 @@ import {
 import { ClassSprite } from "@/components/ClassSprite";
 import { useGameWorldStore } from "@/stores/useGameWorldStore";
 import { useGameStore } from "@/game/useGameStore";
-import { playCombatSFX } from "@/audio/CombatSoundSynth";
+import { playCombatSFX, playButtonClick } from "@/audio/CombatSoundSynth";
+import { ItemTooltipCard, type ItemTooltipData } from "../tooltips/ItemTooltipCard";
 import { triggerGlobalAutoSave } from "@/hooks/useCharacterAutoSave";
 import type { Character, InventoryItem } from "@workspace/api-client-react";
 
@@ -1255,6 +1256,36 @@ export const CharacterInventoryModal = memo(function CharacterInventoryModal({
   });
 
   const [isSidePanel, setIsSidePanel] = useState(false);
+  const [hoveredTooltipItem, setHoveredTooltipItem] = useState<ItemTooltipData | null>(null);
+  const [tooltipPos, setTooltipPos] = useState<{ x: number; y: number }>({ x: 0, y: 0 });
+
+  const handleItemHover = useCallback((e: React.MouseEvent, it: UnifiedItem) => {
+    const rect = e.currentTarget.getBoundingClientRect();
+    setTooltipPos({ x: rect.right + 12, y: Math.max(20, rect.top - 20) });
+    setHoveredTooltipItem({
+      name: it.name,
+      rarity: it.rarity,
+      icon: it.icon,
+      enhanceLevel: it.enhanceLevel,
+      category: it.category,
+      equipSlot: (it as any).equipSlot || (it as any).slot || it.category,
+      requiredLevel: it.requiredLevel || 1,
+      hpBoost: it.hpBoost,
+      atkBoost: it.atkBoost,
+      defBoost: it.defBoost,
+      spdBoost: it.spdBoost,
+      critRate: it.critBoost,
+      lore: it.lore,
+      price: it.price,
+      socketsJson: (it as any).sockets,
+      reforgeStatsJson: (it as any).reforgeStats,
+      miraclePassive: (it as any).miraclePassive,
+    });
+  }, []);
+
+  const handleItemUnhover = useCallback(() => {
+    setHoveredTooltipItem(null);
+  }, []);
 
   // Items State (100% empty starter inventory when new character has 0 items)
   const [items, setItems] = useState<UnifiedItem[]>(() => {
@@ -1788,13 +1819,13 @@ export const CharacterInventoryModal = memo(function CharacterInventoryModal({
       className={`fixed inset-0 z-50 flex transition-all duration-200 select-none font-sans ${
         isSidePanel
           ? "items-center justify-end p-2 sm:p-4 pointer-events-none"
-          : "items-center justify-center p-2 sm:p-4 bg-black/85 backdrop-blur-md pointer-events-auto"
+          : "items-center justify-center p-2 sm:p-4 bg-black/75 backdrop-blur-md pointer-events-auto"
       }`}
       onPointerDown={(e) => e.stopPropagation()}
     >
-      {/* ── MODAL WINDOW CONTAINER ── */}
+      {/* ── MODAL WINDOW CONTAINER WITH SPRING SCALE & FADE-IN ── */}
       <div
-        className={`relative rounded-[30px] bg-[#0f131c] border border-[#232a3b] shadow-[0_30px_90px_rgba(0,0,0,0.9),0_0_40px_rgba(40,195,225,0.15)] p-4 sm:p-5 text-slate-100 flex flex-col gap-3.5 backdrop-blur-2xl pointer-events-auto transition-all duration-300 ${
+        className={`relative rounded-[30px] bg-[#0b0e14]/95 border border-slate-800/80 shadow-[0_8px_32px_rgba(0,0,0,0.85),0_0_30px_rgba(0,242,255,0.15)] p-4 sm:p-5 text-slate-100 flex flex-col gap-3.5 backdrop-blur-2xl pointer-events-auto animate-in fade-in zoom-in-95 duration-200 ease-[cubic-bezier(0.16,1,0.3,1)] transition-all ${
           isSidePanel ? "w-full max-w-[560px] max-h-[94vh] overflow-y-auto" : "w-full max-w-[980px]"
         }`}
       >
@@ -1877,7 +1908,10 @@ export const CharacterInventoryModal = memo(function CharacterInventoryModal({
             </div>
 
             <button
-              onClick={() => setIsSidePanel(!isSidePanel)}
+              onClick={() => {
+                playButtonClick();
+                setIsSidePanel(!isSidePanel);
+              }}
               className="w-8 h-8 rounded-full bg-[#171c28] hover:bg-slate-700 text-slate-400 hover:text-white border border-[#2b3548] flex items-center justify-center transition cursor-pointer"
               title={isSidePanel ? "Mở rộng toàn màn hình" : "Thu gọn sang một bên (Vừa xem đồ vừa thấy 3D)"}
             >
@@ -1885,8 +1919,11 @@ export const CharacterInventoryModal = memo(function CharacterInventoryModal({
             </button>
 
             <button
-              onClick={handleClose}
-              className="w-8 h-8 rounded-full bg-[#171c28] hover:bg-rose-950/70 hover:text-rose-300 border border-[#2b3548] text-slate-400 hover:border-rose-500/60 flex items-center justify-center transition cursor-pointer"
+              onClick={() => {
+                playButtonClick();
+                handleClose();
+              }}
+              className="w-8 h-8 rounded-full bg-slate-800/80 hover:bg-red-500 hover:text-white border border-slate-700 text-slate-400 transition-colors duration-150 flex items-center justify-center cursor-pointer shadow-md hover:scale-110 active:scale-95"
               title="Đóng Hành Trang (Escape)"
             >
               <X className="w-4 h-4" />
@@ -1950,11 +1987,14 @@ export const CharacterInventoryModal = memo(function CharacterInventoryModal({
                         key={slot.id}
                         onClick={() => {
                           if (item) {
+                            playButtonClick();
                             setSelectedItem(item);
                             playCombatSFX("coin_chime", 0.25);
                           }
                         }}
-                        className={`relative w-11 h-11 rounded-2xl flex items-center justify-center transition-all cursor-pointer border ${
+                        onMouseEnter={(e) => item && handleItemHover(e, item)}
+                        onMouseLeave={handleItemUnhover}
+                        className={`relative w-11 h-11 rounded-2xl flex items-center justify-center transition-all cursor-pointer border hover:scale-[1.08] active:scale-[0.95] ${
                           item
                             ? isSelected
                               ? "bg-[#1d2536] border-2 border-cyan-400 shadow-[0_0_15px_rgba(40,195,225,0.7)] scale-105"
@@ -2024,11 +2064,14 @@ export const CharacterInventoryModal = memo(function CharacterInventoryModal({
                         key={slot.id}
                         onClick={() => {
                           if (item) {
+                            playButtonClick();
                             setSelectedItem(item);
                             playCombatSFX("coin_chime", 0.25);
                           }
                         }}
-                        className={`relative w-11 h-11 rounded-2xl flex items-center justify-center transition-all cursor-pointer border ${
+                        onMouseEnter={(e) => item && handleItemHover(e, item)}
+                        onMouseLeave={handleItemUnhover}
+                        className={`relative w-11 h-11 rounded-2xl flex items-center justify-center transition-all cursor-pointer border hover:scale-[1.08] active:scale-[0.95] ${
                           item
                             ? isSelected
                               ? "bg-[#1d2536] border-2 border-cyan-400 shadow-[0_0_15px_rgba(40,195,225,0.7)] scale-105"
@@ -2265,13 +2308,16 @@ export const CharacterInventoryModal = memo(function CharacterInventoryModal({
                   <button
                     key={item.id || idx}
                     onClick={() => {
+                      playButtonClick();
                       setSelectedItem(item);
                       playCombatSFX("coin_chime", 0.2);
                     }}
-                    className={`relative w-full aspect-square rounded-2xl flex items-center justify-center transition-all cursor-pointer border ${
+                    onMouseEnter={(e) => handleItemHover(e, item)}
+                    onMouseLeave={handleItemUnhover}
+                    className={`relative w-full aspect-square rounded-2xl flex items-center justify-center transition-all cursor-pointer border hover:scale-[1.05] active:scale-[0.95] ${
                       isSelected
                         ? "bg-[#1f283b] border-2 border-cyan-400 shadow-[0_0_18px_rgba(40,195,225,0.6)] scale-105 z-10"
-                        : `${rarityInfo.border} ${rarityInfo.bg} ${rarityInfo.glow} hover:scale-102`
+                        : `${rarityInfo.border} ${rarityInfo.bg} ${rarityInfo.glow} hover:brightness-110`
                     }`}
                     title={`${item.name} (${item.rarity.toUpperCase()})`}
                   >
@@ -2667,6 +2713,19 @@ export const CharacterInventoryModal = memo(function CharacterInventoryModal({
               </button>
 
             </div>
+          </div>
+        )}
+
+        {/* Floating Smart Tooltip Card */}
+        {hoveredTooltipItem && (
+          <div
+            className="fixed z-50 pointer-events-none"
+            style={{
+              left: `${Math.min(window.innerWidth - 340, tooltipPos.x)}px`,
+              top: `${Math.min(window.innerHeight - 380, tooltipPos.y)}px`,
+            }}
+          >
+            <ItemTooltipCard item={hoveredTooltipItem} />
           </div>
         )}
 

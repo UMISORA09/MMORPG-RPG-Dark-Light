@@ -85,6 +85,9 @@ class CombatSoundSynthesizer {
           case "level_up_fanfare":
             this.synthesizeLevelUpFanfare(ctx, now, volume);
             break;
+          case "button_click":
+            this.synthesizeButtonClick(ctx, now, volume);
+            break;
         }
       } catch {
         // Audio autoplay policy fallback
@@ -325,12 +328,31 @@ class CombatSoundSynthesizer {
       osc.stop(startT + decay + 0.05);
     });
   }
+
+  // ── Tactile Button Click: Crisp procedural tap ─────────────────────────────
+  private synthesizeButtonClick(ctx: AudioContext, t: number, vol: number) {
+    const osc = ctx.createOscillator();
+    const gain = ctx.createGain();
+    osc.type = "sine";
+    osc.frequency.setValueAtTime(800, t);
+    osc.frequency.exponentialRampToValueAtTime(350, t + 0.035);
+    gain.gain.setValueAtTime(vol * 0.35, t);
+    gain.gain.exponentialRampToValueAtTime(0.001, t + 0.04);
+    osc.connect(gain);
+    gain.connect(ctx.destination);
+    osc.start(t);
+    osc.stop(t + 0.045);
+  }
 }
 
 export const combatSoundSynth = new CombatSoundSynthesizer();
 
 export function playCombatSFX(preset: SFXSynthPreset, volume: number = 0.35) {
   combatSoundSynth.play(preset, volume);
+}
+
+export function playButtonClick(volume: number = 0.3) {
+  combatSoundSynth.play("button_click", volume);
 }
 
 export function isAudioMuted(): boolean {

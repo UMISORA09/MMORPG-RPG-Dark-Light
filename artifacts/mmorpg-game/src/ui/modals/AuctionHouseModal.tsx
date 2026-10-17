@@ -7,7 +7,8 @@
 import { memo, useState, useEffect } from "react";
 import { useGameWorldStore } from "@/stores/useGameWorldStore";
 import { useToast } from "@/hooks/use-toast";
-import { playCombatSFX } from "@/audio/CombatSoundSynth";
+import { playCombatSFX, playButtonClick } from "@/audio/CombatSoundSynth";
+import { ItemTooltipCard, type ItemTooltipData } from "../tooltips/ItemTooltipCard";
 import {
   X,
   Store,
@@ -53,6 +54,8 @@ export const AuctionHouseModal = memo(function AuctionHouseModal() {
   const [myListings, setMyListings] = useState<ListingItem[]>([]);
   const [inventory, setInventory] = useState<any[]>([]);
   const [isLoading, setIsLoading] = useState(false);
+  const [hoveredItemTooltip, setHoveredItemTooltip] = useState<ItemTooltipData | null>(null);
+  const [tooltipPos, setTooltipPos] = useState<{ x: number; y: number }>({ x: 0, y: 0 });
 
   // Filters for Browse
   const [searchQuery, setSearchQuery] = useState("");
@@ -238,8 +241,8 @@ export const AuctionHouseModal = memo(function AuctionHouseModal() {
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-3 bg-black/80 backdrop-blur-md select-none font-sans">
-      <div className="relative w-full max-w-4xl max-h-[92vh] flex flex-col rounded-3xl bg-[#090d16] border-2 border-cyan-500/60 shadow-[0_0_50px_rgba(6,182,212,0.35)] overflow-hidden">
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-3 bg-black/75 backdrop-blur-md select-none font-sans">
+      <div className="relative w-full max-w-4xl max-h-[92vh] flex flex-col rounded-3xl bg-[#0b0e14]/95 border border-slate-800/80 shadow-[0_8px_32px_rgba(0,0,0,0.85),0_0_30px_rgba(0,242,255,0.15)] overflow-hidden animate-in fade-in zoom-in-95 duration-200 ease-[cubic-bezier(0.16,1,0.3,1)]">
         
         {/* Header */}
         <div className="flex items-center justify-between px-6 py-4 border-b border-cyan-500/30 bg-gradient-to-r from-cyan-950/80 via-[#0a101f] to-cyan-950/80">
@@ -272,10 +275,14 @@ export const AuctionHouseModal = memo(function AuctionHouseModal() {
             </div>
 
             <button
-              onClick={closeActiveModal}
-              className="p-2 rounded-xl bg-slate-900 hover:bg-red-950/80 border border-slate-700 hover:border-red-500 text-slate-400 hover:text-red-300 transition cursor-pointer"
+              onClick={() => {
+                playButtonClick();
+                closeActiveModal();
+              }}
+              className="w-8 h-8 rounded-full bg-slate-800/80 hover:bg-red-500 hover:text-white border border-slate-700 text-slate-400 flex items-center justify-center transition-colors duration-150 cursor-pointer shadow-md hover:scale-110 active:scale-95"
+              title="Đóng Chợ Đấu Giá"
             >
-              <X className="w-5 h-5" />
+              <X className="w-4 h-4" />
             </button>
           </div>
         </div>
@@ -384,7 +391,27 @@ export const AuctionHouseModal = memo(function AuctionHouseModal() {
                 listings.map((l) => (
                   <div
                     key={l.id}
-                    className={`flex flex-col justify-between p-3.5 rounded-2xl border-2 transition ${rarityColor(l.itemRarity)}`}
+                    onMouseEnter={(e) => {
+                      const rect = e.currentTarget.getBoundingClientRect();
+                      setTooltipPos({ x: rect.right + 12, y: Math.max(20, rect.top) });
+                      setHoveredItemTooltip({
+                        name: l.itemName,
+                        rarity: l.itemRarity,
+                        enhanceLevel: l.enhanceLevel,
+                        category: l.itemCategory,
+                        equipSlot: l.itemEquipSlot,
+                        requiredLevel: 5,
+                        atkBoost: l.bonusCombatPower ? Math.round(l.bonusCombatPower * 0.4) : 40,
+                        defBoost: l.bonusCombatPower ? Math.round(l.bonusCombatPower * 0.3) : 25,
+                        hpBoost: l.bonusCombatPower ? Math.round(l.bonusCombatPower * 2.0) : 150,
+                        price: l.priceGold,
+                        socketsJson: l.socketsJson,
+                        reforgeStatsJson: l.reforgeStatsJson,
+                        lore: "Trang bị được niêm yết trên Chợ Đấu Giá Liên Server.",
+                      });
+                    }}
+                    onMouseLeave={() => setHoveredItemTooltip(null)}
+                    className={`flex flex-col justify-between p-3.5 rounded-2xl border-2 transition hover:scale-[1.02] ${rarityColor(l.itemRarity)}`}
                   >
                     <div>
                       {/* Title & Seller */}
@@ -605,6 +632,19 @@ export const AuctionHouseModal = memo(function AuctionHouseModal() {
                 </div>
               ))
             )}
+          </div>
+        )}
+
+        {/* Floating Smart Tooltip Card */}
+        {hoveredItemTooltip && (
+          <div
+            className="fixed z-50 pointer-events-none"
+            style={{
+              left: `${Math.min(window.innerWidth - 340, tooltipPos.x)}px`,
+              top: `${Math.min(window.innerHeight - 380, tooltipPos.y)}px`,
+            }}
+          >
+            <ItemTooltipCard item={hoveredItemTooltip} />
           </div>
         )}
 
