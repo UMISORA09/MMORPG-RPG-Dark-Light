@@ -26,6 +26,7 @@ import { ProceduralBiomeMonuments } from "./ProceduralBiomeMonuments";
 import { InteractiveRelics } from "./InteractiveRelics";
 import { DimensionalPortals3D } from "./DimensionalPortals3D";
 import { DynamicTreasureChests3D } from "./DynamicTreasureChests3D";
+import { CanvasErrorBoundary } from "../CanvasErrorBoundary";
 
 export const SeamlessWorldMap = memo(function SeamlessWorldMap() {
   const bossRingRef = useRef<THREE.Mesh>(null);
@@ -60,19 +61,27 @@ export const SeamlessWorldMap = memo(function SeamlessWorldMap() {
       <DynamicWeatherSystem />
 
       {/* ── 2.7 PROCEDURAL BIOME MONUMENTS & ARCHITECTURE (Active Zone Culling) ── */}
-      <ProceduralBiomeMonuments
-        biome={currentMap.biome}
-        isSafeVillage={currentZone === "SAFE_VILLAGE"}
-      />
+      <CanvasErrorBoundary name="MonumentsLayer">
+        <ProceduralBiomeMonuments
+          biome={currentMap.biome}
+          isSafeVillage={currentZone === "SAFE_VILLAGE"}
+        />
+      </CanvasErrorBoundary>
 
       {/* ── 2.8 INTERACTIVE MYSTERIOUS CONTINENTAL RELICS (3-5 Per Zone) ── */}
-      <InteractiveRelics currentZone={currentZone} biome={currentMap.biome} />
+      <CanvasErrorBoundary name="RelicsLayer">
+        <InteractiveRelics currentZone={currentZone} biome={currentMap.biome} />
+      </CanvasErrorBoundary>
 
       {/* ── 2.9 3D DIMENSIONAL PORTALS (Village Plaza & End of Maps) ── */}
-      <DimensionalPortals3D currentZone={currentZone} />
+      <CanvasErrorBoundary name="PortalsLayer">
+        <DimensionalPortals3D currentZone={currentZone} />
+      </CanvasErrorBoundary>
 
       {/* ── 2.95 DYNAMIC RESPAWNING TREASURE CHESTS (5 Active per Map) ── */}
-      <DynamicTreasureChests3D />
+      <CanvasErrorBoundary name="ChestsLayer">
+        <DynamicTreasureChests3D />
+      </CanvasErrorBoundary>
 
       {/* ── 3. PIXEL ART ENVIRONMENTAL PROPS (ANCIENT TREES, FALLING LEAVES, GROUNDED ROCKS, GRASS TUFTS) ── */}
       <PixelWorldEnvironmentProps />

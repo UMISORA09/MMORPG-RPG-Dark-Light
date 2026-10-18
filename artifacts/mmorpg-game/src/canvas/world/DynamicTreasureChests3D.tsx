@@ -3,10 +3,9 @@
 // Active Zone Culling, Hinged Lid Animation, Beacon Beams & [F] Interaction
 // ==============================================================================
 
-import { memo, useRef, useEffect, useState } from "react";
+import { memo, useRef, useEffect } from "react";
 import * as THREE from "three";
 import { useFrame } from "@react-three/fiber";
-import { Billboard, Text } from "@react-three/drei";
 import { useGameWorldStore } from "@/stores/useGameWorldStore";
 import {
   type ActiveTreasureChest,
@@ -17,9 +16,6 @@ export const DynamicTreasureChests3D = memo(function DynamicTreasureChests3D() {
   const activeChests = useGameWorldStore((s) => s.activeTreasureChests);
   const playerPosition = useGameWorldStore((s) => s.playerPosition);
   const openTreasureChestById = useGameWorldStore((s) => s.openTreasureChestById);
-
-  // Proximity detection for HUD prompt (< 3.5m)
-  const [nearestChestId, setNearestChestId] = useState<string | null>(null);
   const lastNearestIdRef = useRef<string | null>(null);
 
   useFrame(() => {
@@ -40,7 +36,6 @@ export const DynamicTreasureChests3D = memo(function DynamicTreasureChests3D() {
     const closestId = closestChest ? closestChest.id : null;
     if (closestId !== lastNearestIdRef.current) {
       lastNearestIdRef.current = closestId;
-      setNearestChestId(closestId);
       useGameWorldStore.getState().setNearbyTreasureChest(closestChest);
     }
   });
@@ -53,16 +48,17 @@ export const DynamicTreasureChests3D = memo(function DynamicTreasureChests3D() {
         const tag = (e.target as HTMLElement)?.tagName?.toLowerCase();
         if (tag === "input" || tag === "textarea") return;
 
-        if (nearestChestId) {
+        const near = useGameWorldStore.getState().nearbyTreasureChest;
+        if (near && !near.isOpened) {
           e.preventDefault();
-          openTreasureChestById(nearestChestId);
+          openTreasureChestById(near.id);
         }
       }
     };
 
     window.addEventListener("keydown", onKeyDown);
     return () => window.removeEventListener("keydown", onKeyDown);
-  }, [nearestChestId, openTreasureChestById]);
+  }, [openTreasureChestById]);
 
   return (
     <group name="DynamicTreasureChestsLayer">
@@ -70,7 +66,6 @@ export const DynamicTreasureChests3D = memo(function DynamicTreasureChests3D() {
         <SingleTreasureChest3D
           key={chest.id}
           chest={chest}
-          isNearby={nearestChestId === chest.id}
           onInteract={() => openTreasureChestById(chest.id)}
         />
       ))}
@@ -80,13 +75,11 @@ export const DynamicTreasureChests3D = memo(function DynamicTreasureChests3D() {
 
 interface SingleChestProps {
   chest: ActiveTreasureChest;
-  isNearby: boolean;
   onInteract: () => void;
 }
 
 const SingleTreasureChest3D = memo(function SingleTreasureChest3D({
   chest,
-  isNearby,
   onInteract,
 }: SingleChestProps) {
   const lidRef = useRef<THREE.Group>(null);
@@ -229,49 +222,6 @@ const SingleTreasureChest3D = memo(function SingleTreasureChest3D({
         position={[0, 0.8, 0]}
       />
 
-      {/* ── 6. PROXIMITY INTERACTION BILLBOARD PROMPT (< 3.2M) ── */}
-      {isNearby && !chest.isOpened && (
-        <Billboard position={[0, 1.35, 0]}>
-          <group>
-            {/* Background pill card */}
-            <mesh position={[0, 0, -0.01]}>
-              <planeGeometry args={[2.5, 0.6]} />
-              <meshBasicMaterial color="#0b0e14" transparent opacity={0.85} />
-            </mesh>
-
-            {/* Glowing Border */}
-            <mesh position={[0, 0, -0.02]}>
-              <planeGeometry args={[2.54, 0.64]} />
-              <meshBasicMaterial color={chest.beamColor} transparent opacity={0.65} />
-            </mesh>
-
-            {/* Text Title */}
-            <Text
-              position={[0, 0.08, 0.01]}
-              fontSize={0.2}
-              color={chest.beamColor}
-              anchorX="center"
-              anchorY="middle"
-              outlineWidth={0.025}
-              outlineColor="#000000"
-            >
-              {`[F] MỞ ${chest.tierName.toUpperCase()}`}
-            </Text>
-
-            <Text
-              position={[0, -0.12, 0.01]}
-              fontSize={0.12}
-              color="#e2e8f0"
-              anchorX="center"
-              anchorY="middle"
-              outlineWidth={0.015}
-              outlineColor="#000000"
-            >
-              {`✨ Rơi ${chest.itemCount} Món Đồ Theo Cấp (Lv.1 - 999)`}
-            </Text>
-          </group>
-        </Billboard>
-      )}
     </group>
   );
 });

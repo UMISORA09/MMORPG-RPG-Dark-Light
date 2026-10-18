@@ -6,7 +6,7 @@
 import { memo, useRef, useState, useEffect, useMemo } from "react";
 import * as THREE from "three";
 import { useFrame } from "@react-three/fiber";
-import { Text } from "@react-three/drei";
+import { Html } from "@react-three/drei";
 import { useGameWorldStore } from "@/stores/useGameWorldStore";
 import { playCombatSFX } from "@/audio/CombatSoundSynth";
 import type { BiomeType } from "@/world/WorldMapRegistry";
@@ -116,7 +116,9 @@ export const InteractiveRelics = memo(function InteractiveRelics({ currentZone, 
         closest = r;
       }
     }
-    setNearbyRelic(closest);
+    if (closest?.id !== nearbyRelic?.id) {
+      setNearbyRelic(closest);
+    }
   });
 
   // Handle Interaction Logic
@@ -216,39 +218,27 @@ export const InteractiveRelics = memo(function InteractiveRelics({ currentZone, 
               <pointLight color={relic.lightColor} intensity={1.8} distance={7} decay={2} position={[0, 1.6, 0]} />
             )}
 
-            {/* Overhead Title Label */}
-            <Text
-              position={[0, 3.2, 0]}
-              fontSize={0.42}
-              color={isOnCooldown ? "#94a3b8" : "#ffffff"}
-              anchorX="center"
-              anchorY="middle"
-              outlineWidth={0.06}
-              outlineColor="#0f172a"
-            >
-              {isOnCooldown ? `⌛ Đang Hồi Phục (${Math.ceil(relic.cooldownTimer)}s)` : relic.name}
-            </Text>
-
-            {/* Proximity Interaction Button Prompt */}
-            {isNearby && !isOnCooldown && (
-              <group position={[0, 2.4, 0]}>
-                <mesh position={[0, 0, -0.02]}>
-                  <planeGeometry args={[2.8, 0.65]} />
-                  <meshBasicMaterial color="#0284c7" transparent opacity={0.9} />
-                </mesh>
-                <Text
-                  position={[0, 0, 0]}
-                  fontSize={0.34}
-                  color="#ffffff"
-                  anchorX="center"
-                  anchorY="middle"
-                  outlineWidth={0.04}
-                  outlineColor="#0369a1"
+            {/* Overhead Title Label & Proximity Interaction Prompt */}
+            <Html center position={[0, 3.2, 0]} distanceFactor={14} style={{ pointerEvents: "none" }}>
+              <div className="flex flex-col items-center select-none pointer-events-none whitespace-nowrap">
+                <span
+                  className="px-3 py-1 rounded-full text-xs font-black tracking-wide shadow-[0_4px_16px_rgba(0,0,0,0.85)] border backdrop-blur-md"
+                  style={{
+                    backgroundColor: isOnCooldown ? "rgba(15, 23, 42, 0.9)" : "rgba(2, 132, 199, 0.92)",
+                    borderColor: isOnCooldown ? "#475569" : "#38bdf8",
+                    color: isOnCooldown ? "#94a3b8" : "#ffffff",
+                  }}
                 >
-                  ⚡ [F] TƯƠNG TÁC
-                </Text>
-              </group>
-            )}
+                  {isOnCooldown ? `⌛ Đang Hồi Phục (${Math.ceil(relic.cooldownTimer)}s)` : relic.name}
+                </span>
+
+                {isNearby && !isOnCooldown && (
+                  <span className="mt-1 px-3 py-1 rounded-lg bg-emerald-500/95 border border-emerald-300 text-white font-black text-xs shadow-lg animate-bounce">
+                    ⚡ [F] TƯƠNG TÁC
+                  </span>
+                )}
+              </div>
+            </Html>
           </group>
         );
       })}

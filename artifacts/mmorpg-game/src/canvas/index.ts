@@ -34,3 +34,4 @@ export { SlashArcShader } from "./vfx/SlashArcShader";
 export { ShockwaveRingShader } from "./vfx/ShockwaveRingShader";
 export { CyberProjectileVFX } from "./vfx/CyberProjectileVFX";
 export { HolyShieldDomeVFX } from "./vfx/HolyShieldDomeVFX";
+export { CanvasErrorBoundary } from "./CanvasErrorBoundary";

@@ -6,7 +6,7 @@
 import { memo, useRef, useMemo } from "react";
 import * as THREE from "three";
 import { useFrame } from "@react-three/fiber";
-import { Text, Billboard } from "@react-three/drei";
+import { Html } from "@react-three/drei";
 import { useGameWorldStore } from "@/stores/useGameWorldStore";
 import { playCombatSFX } from "@/audio/CombatSoundSynth";
 import { RARITY_COLORS, type DroppedItem } from "./loot.types";
@@ -153,60 +153,28 @@ const LootItemInstance = memo(function LootItemInstance({
         />
       </mesh>
 
-      {/* ── 3. Rotating 3D Item Crystal & Icon Billboard ── */}
-      <Billboard follow lockX={false} lockY={false} lockZ={false}>
-        <Text
-          position={[0, 0.45, 0]}
-          fontSize={0.52}
-          anchorX="center"
-          anchorY="middle"
-          outlineWidth={0.05}
-          outlineColor="#000000"
-        >
+      {/* ── 3. Rotating 3D Item Icon Badge ── */}
+      <Html center position={[0, 0.45, 0]} distanceFactor={14} style={{ pointerEvents: "none" }}>
+        <div className="text-2xl select-none drop-shadow-[0_2px_8px_rgba(0,0,0,0.85)] filter animate-pulse">
           {item.icon}
-        </Text>
-      </Billboard>
+        </div>
+      </Html>
 
       {/* ── 4. Floating Name & Stats Tooltip (Near Player) ── */}
       {showTooltip && (
-        <Billboard position={[0, 1.25, 0]} follow>
-          {/* Glassmorphic Background Card */}
-          <mesh position={[0, 0, -0.01]}>
-            <planeGeometry args={[2.4, 0.7]} />
-            <meshBasicMaterial color="#020617" transparent opacity={0.88} />
-          </mesh>
-          {/* Border Outline */}
-          <mesh position={[0, 0, -0.02]}>
-            <planeGeometry args={[2.45, 0.75]} />
-            <meshBasicMaterial color={colors.beam} transparent opacity={0.8} />
-          </mesh>
-
-          {/* Item Name */}
-          <Text
-            position={[0, 0.14, 0.01]}
-            fontSize={0.2}
-            color={colors.beam}
-            anchorX="center"
-            anchorY="middle"
-            outlineWidth={0.02}
-            outlineColor="#000000"
+        <Html center position={[0, 1.25, 0]} distanceFactor={14} style={{ pointerEvents: "none" }}>
+          <div
+            className="flex flex-col items-center px-2.5 py-1 rounded-xl bg-slate-950/92 border shadow-[0_4px_20px_rgba(0,0,0,0.85)] backdrop-blur-md whitespace-nowrap select-none"
+            style={{ borderColor: colors.beam }}
           >
-            {item.name}
-          </Text>
-
-          {/* Rarity & Stat Text */}
-          <Text
-            position={[0, -0.14, 0.01]}
-            fontSize={0.15}
-            color="#e2e8f0"
-            anchorX="center"
-            anchorY="middle"
-            outlineWidth={0.015}
-            outlineColor="#000000"
-          >
-            {item.statText ? `[${colors.text}] ${item.statText}` : `[${colors.text}] +${item.value} Vàng`}
-          </Text>
-        </Billboard>
+            <span className="text-xs font-black tracking-wide drop-shadow-sm" style={{ color: colors.beam }}>
+              {item.name}
+            </span>
+            <span className="text-[10px] font-mono text-slate-300 font-bold">
+              {item.statText ? `[${colors.text}] ${item.statText}` : `[${colors.text}] +${item.value.toLocaleString()} Vàng`}
+            </span>
+          </div>
+        </Html>
       )}
     </group>
   );

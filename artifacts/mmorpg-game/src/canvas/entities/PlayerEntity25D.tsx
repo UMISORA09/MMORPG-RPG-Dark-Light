@@ -1,7 +1,7 @@
 import { memo, useRef, useEffect, useState } from "react";
 import * as THREE from "three";
 import { useFrame, useThree } from "@react-three/fiber";
-import { Text } from "@react-three/drei";
+import { Html } from "@react-three/drei";
 import { SpriteBillboard25D } from "../sprites/SpriteBillboard25D";
 import { RPGCharacterModel3D } from "./RPGCharacterModel3D";
 import { useGameWorldStore } from "@/stores/useGameWorldStore";
@@ -528,11 +528,11 @@ export const PlayerEntity25D = memo(function PlayerEntity25D() {
 
         {/* Stun Overhead Spinning Stars */}
         {isStunned && (
-          <group position={[0, 2.35, 0]}>
-            <Text fontSize={0.28} anchorX="center" anchorY="middle" outlineWidth={0.03} outlineColor="#000000">
+          <Html center position={[0, 2.35, 0]} distanceFactor={14} style={{ pointerEvents: "none" }}>
+            <div className="text-xl select-none animate-spin">
               💫 ✨ 💫
-            </Text>
-          </group>
+            </div>
+          </Html>
         )}
 
         {characterRenderMode === "3d_model" ? (

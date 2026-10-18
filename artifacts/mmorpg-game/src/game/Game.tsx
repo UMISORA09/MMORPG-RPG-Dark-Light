@@ -7,6 +7,7 @@ import {
   LootManager3D,
   VFXManager,
   Particles as Stars,
+  CanvasErrorBoundary,
 } from "../canvas";
 import { UnifiedGameHUD } from "../ui";
 import { useGameStore, useGameWorldStore } from "../stores";
@@ -85,16 +86,47 @@ const Game = memo(function Game({ onLogout }: GameProps) {
           alpha: false,
           preserveDrawingBuffer: false,
         }}
+        onCreated={({ gl }) => {
+          gl.domElement.addEventListener(
+            "webglcontextlost",
+            (event) => {
+              event.preventDefault();
+              console.warn("[WebGL] Context lost detected! Preserving canvas state...");
+            },
+            false
+          );
+          gl.domElement.addEventListener(
+            "webglcontextrestored",
+            () => {
+              console.log("[WebGL] Context restored successfully!");
+            },
+            false
+          );
+        }}
         camera={{ position: [0, 18, 16], fov: 48 }}
         style={{ width: "100%", height: "100%", display: "block" }}
       >
-        <SeamlessWorldMap />
-        <PlayerEntity25D />
-        <MonsterManager25D />
-        <LootManager3D />
-        <VFXManager />
-        <AutoCombatController />
-        <WorldEventManager />
+        <CanvasErrorBoundary name="WorldMapLayer">
+          <SeamlessWorldMap />
+        </CanvasErrorBoundary>
+        <CanvasErrorBoundary name="PlayerEntityLayer">
+          <PlayerEntity25D />
+        </CanvasErrorBoundary>
+        <CanvasErrorBoundary name="MonsterLayer">
+          <MonsterManager25D />
+        </CanvasErrorBoundary>
+        <CanvasErrorBoundary name="LootLayer">
+          <LootManager3D />
+        </CanvasErrorBoundary>
+        <CanvasErrorBoundary name="VFXLayer">
+          <VFXManager />
+        </CanvasErrorBoundary>
+        <CanvasErrorBoundary name="AutoCombatLayer">
+          <AutoCombatController />
+        </CanvasErrorBoundary>
+        <CanvasErrorBoundary name="WorldEventLayer">
+          <WorldEventManager />
+        </CanvasErrorBoundary>
         <Stars />
       </Canvas>
 

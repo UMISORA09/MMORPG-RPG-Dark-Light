@@ -6,7 +6,7 @@
 import { memo, useRef, useState, useEffect, useCallback } from "react";
 import * as THREE from "three";
 import { useFrame } from "@react-three/fiber";
-import { Text } from "@react-three/drei";
+import { Html } from "@react-three/drei";
 import { SpriteBillboard25D } from "../sprites/SpriteBillboard25D";
 import { TelegraphZoneItem, isPlayerInsideTelegraphZone } from "../vfx/TelegraphZoneShader";
 import { useGameWorldStore } from "@/stores/useGameWorldStore";
@@ -1487,16 +1487,13 @@ export const MonsterManager25D = memo(function MonsterManager25D() {
               )}
 
               {/* Radiant Elite Overhead Crown Label */}
+              {/* Radiant Elite Overhead Crown Label */}
               {monster.isElite && (
-                <Text
-                  position={[monster.currentPos.x, overheadY + 0.45, monster.currentPos.z]}
-                  fontSize={0.36}
-                  color="#fbbf24"
-                  outlineWidth={0.05}
-                  outlineColor="#000000"
-                >
-                  👑 [TINH ANH]
-                </Text>
+                <Html center position={[monster.currentPos.x, overheadY + 0.45, monster.currentPos.z]} distanceFactor={14} style={{ pointerEvents: "none" }}>
+                  <span className="px-2 py-0.5 rounded-full bg-black/85 border border-amber-400 text-amber-300 font-black text-[11px] whitespace-nowrap shadow-md select-none">
+                    👑 [TINH ANH]
+                  </span>
+                </Html>
               )}
 
               {/* Lone Predator Ground Purple Aura Decal */}
@@ -1517,37 +1514,23 @@ export const MonsterManager25D = memo(function MonsterManager25D() {
 
               {/* Monster State Overhead Icon: ! for Aggro / Warning for Cast (Positioned safely above name HUD, culled for distant mobs) */}
               {showOverhead && monster.aiState === "AGGRO_CHASE" && (
-                <Text
-                  position={[monster.currentPos.x, overheadY, monster.currentPos.z]}
-                  fontSize={0.36}
-                  color="#ef4444"
-                  outlineWidth={0.04}
-                  outlineColor="#000000"
-                >
-                  !
-                </Text>
+                <Html center position={[monster.currentPos.x, overheadY, monster.currentPos.z]} distanceFactor={14} style={{ pointerEvents: "none" }}>
+                  <span className="text-rose-500 font-black text-lg select-none drop-shadow">!</span>
+                </Html>
               )}
               {showOverhead && monster.aiState === "TELEGRAPH_WINDUP" && (
-                <Text
-                  position={[monster.currentPos.x, overheadY, monster.currentPos.z]}
-                  fontSize={0.28}
-                  color="#f59e0b"
-                  outlineWidth={0.04}
-                  outlineColor="#000000"
-                >
-                  ⚠️ GỒNG CHIÊU
-                </Text>
+                <Html center position={[monster.currentPos.x, overheadY, monster.currentPos.z]} distanceFactor={14} style={{ pointerEvents: "none" }}>
+                  <span className="px-2 py-0.5 rounded-md bg-rose-950/90 border border-rose-500 text-rose-300 font-bold text-[10px] whitespace-nowrap select-none animate-pulse">
+                    ⚠️ GỒNG CHIÊU
+                  </span>
+                </Html>
               )}
               {showOverhead && monster.aiState === "STAGGERED" && (
-                <Text
-                  position={[monster.currentPos.x, overheadY, monster.currentPos.z]}
-                  fontSize={0.28}
-                  color="#facc15"
-                  outlineWidth={0.04}
-                  outlineColor="#000000"
-                >
-                  ⚡ CHOÁNG (1.5x)
-                </Text>
+                <Html center position={[monster.currentPos.x, overheadY, monster.currentPos.z]} distanceFactor={14} style={{ pointerEvents: "none" }}>
+                  <span className="px-2 py-0.5 rounded-md bg-yellow-950/90 border border-yellow-400 text-yellow-300 font-bold text-[10px] whitespace-nowrap select-none">
+                    ⚡ CHOÁNG (1.5x)
+                  </span>
+                </Html>
               )}
 
               <SpriteBillboard25D
@@ -1628,19 +1611,20 @@ export const MonsterManager25D = memo(function MonsterManager25D() {
 
       {/* ── Floating Damage & Reward Texts Render ── */}
       {floatingTexts.map((ft) => (
-        <Text
+        <Html
           key={`txt-${ft.id}`}
-          position={ft.position}
-          fontSize={0.48}
-          color={ft.color}
-          anchorX="center"
-          anchorY="middle"
-          outlineWidth={0.06}
-          outlineColor="#000000"
-          letterSpacing={0.05}
+          center
+          position={[ft.position.x, ft.position.y, ft.position.z]}
+          distanceFactor={14}
+          style={{ pointerEvents: "none" }}
         >
-          {ft.text}
-        </Text>
+          <div
+            className="font-black text-sm drop-shadow-[0_2px_8px_rgba(0,0,0,0.95)] whitespace-nowrap select-none"
+            style={{ color: ft.color, opacity: Math.max(0, ft.opacity) }}
+          >
+            {ft.text}
+          </div>
+        </Html>
       ))}
     </group>
   );

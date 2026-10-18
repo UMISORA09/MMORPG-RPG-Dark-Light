@@ -6,7 +6,7 @@
 import { memo, useRef, useState, useEffect } from "react";
 import * as THREE from "three";
 import { useFrame } from "@react-three/fiber";
-import { Text } from "@react-three/drei";
+import { Html } from "@react-three/drei";
 import { useGameWorldStore } from "@/stores/useGameWorldStore";
 import { getMapById, type MapPortalDestination } from "@/world/WorldMapRegistry";
 import { playCombatSFX } from "@/audio/CombatSoundSynth";
@@ -36,7 +36,9 @@ export const DimensionalPortals3D = memo(function DimensionalPortals3D({ current
         closest = p;
       }
     }
-    setNearbyPortal(closest);
+    if (closest?.targetMapId !== nearbyPortal?.targetMapId) {
+      setNearbyPortal(closest);
+    }
   });
 
   // Teleport action
@@ -153,39 +155,19 @@ function PortalInstance({
       {/* Point Light Radiance */}
       <pointLight color={portal.color} intensity={2.4} distance={8} decay={2} position={[0, 2.2, 0.5]} />
 
-      {/* Overhead Target Map Label */}
-      <Text
-        position={[0, 5.3, 0]}
-        fontSize={0.45}
-        color="#ffffff"
-        anchorX="center"
-        anchorY="middle"
-        outlineWidth={0.06}
-        outlineColor="#0f172a"
-      >
-        {portal.name}
-      </Text>
-
-      {/* Interaction Prompt when player is close */}
-      {isNearby && (
-        <group position={[0, 3.2, 0]}>
-          <mesh position={[0, 0, -0.02]}>
-            <planeGeometry args={[3.2, 0.75]} />
-            <meshBasicMaterial color="#10b981" transparent opacity={0.92} />
-          </mesh>
-          <Text
-            position={[0, 0, 0]}
-            fontSize={0.36}
-            color="#ffffff"
-            anchorX="center"
-            anchorY="middle"
-            outlineWidth={0.05}
-            outlineColor="#064e3b"
-          >
-            ⚡ [F] DỊCH CHUYỂN
-          </Text>
-        </group>
-      )}
+      {/* Overhead Target Map Label & Interaction Prompt */}
+      <Html center position={[0, 4.8, 0]} distanceFactor={14} style={{ pointerEvents: "none" }}>
+        <div className="flex flex-col items-center select-none pointer-events-none whitespace-nowrap">
+          <span className="px-3.5 py-1 rounded-full text-xs font-black tracking-wide bg-slate-950/90 border border-cyan-400 text-cyan-300 shadow-[0_4px_16px_rgba(0,242,255,0.4)] backdrop-blur-md">
+            {portal.name}
+          </span>
+          {isNearby && (
+            <span className="mt-1 px-3 py-1 rounded-lg bg-emerald-500/95 border border-emerald-300 text-white font-black text-xs shadow-lg animate-bounce">
+              ⚡ [F] DỊCH CHUYỂN
+            </span>
+          )}
+        </div>
+      </Html>
     </group>
   );
 }
