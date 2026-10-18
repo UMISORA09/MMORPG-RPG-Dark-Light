@@ -13,6 +13,12 @@ export interface LootItemPayload {
   characterId: number;
   dropId?: string;
   itemId: string;
+  name?: string;
+  rarity?: string;
+  icon?: string;
+  statText?: string;
+  classId?: string;
+  requiredLevel?: number;
   quantity?: number;
   dropType?: string;
   value?: number;
@@ -25,7 +31,7 @@ export class LootService {
   /**
    * Xác thực và nhặt đồ chính xác tuyệt đối từ mặt đất vào túi đồ của nhân vật.
    * Đảm bảo:
-   * 1. Xác thực khoảng cách (lootRadius = 3.5m + dung sai mạng 1.5m = 5.0m).
+   * 1. Xác thực khoảng cách (lootRadius cho phép đến 45m đối với loot phun vòm rương).
    * 2. Kiểm tra túi hành trang còn ô trống hay không (usedSlots < unlockedSlots).
    * 3. Tự động chồng dồn stack nếu là vật phẩm tiêu hao/nguyên liệu còn chỗ.
    * 4. Tìm ô trống slotIndex thấp nhất (0 đến unlockedSlots - 1).
@@ -71,8 +77,8 @@ export class LootService {
 
         if (typeof dx === "number" && typeof px === "number") {
           const dist = Math.hypot(dx - px, dz - pz);
-          // Cho phép bán kính 3.5m cộng thêm dung sai độ trễ mạng 1.5m = 5.0m
-          if (dist > 5.5) {
+          // Cho phép dung sai đến 45m để nhặt được đồ phun xa từ rương và boss
+          if (dist > 45.0) {
             throw new InventoryRuleError("Khoảng cách quá xa, không thể nhặt vật phẩm này!", 400);
           }
         }
@@ -98,10 +104,50 @@ export class LootService {
         };
       }
 
-      // 4. Lấy thông tin vật phẩm từ catalog
-      const itemDef = await getItem(itemId);
+      // 4. Lấy thông tin vật phẩm từ catalog, nếu chưa có thì tự động khởi tạo
+      let itemDef: any = await getItem(itemId);
       if (!itemDef) {
-        throw new InventoryRuleError(`Không tìm thấy dữ liệu vật phẩm '${itemId}' trong cơ sở dữ liệu!`, 404);
+        try {
+          const category = dropType === "weapon" || dropType === "armor" || dropType === "accessory" ? "equipment" : "consumable";
+          const equipSlot = dropType === "weapon" ? "main_weapon" : dropType === "armor" ? "armor" : dropType === "accessory" ? "relic" : "none";
+          const [inserted] = await tx
+            .insert(itemsTable)
+            .values({
+              id: itemId,
+              name: payload.name || itemId,
+              category,
+              type: dropType || "weapon",
+              equipSlot,
+              description: payload.statText || "Vật phẩm rơi từ thế giới Chiến Long Bá",
+              lore: "Vật phẩm thu thập từ rương kho báu và quái vật",
+              rarity: payload.rarity || "common",
+              price: 100,
+              maxStack: category === "equipment" ? 1 : 99,
+              classId: payload.classId || "all",
+              requiredLevel: payload.requiredLevel || 1,
+              icon: payload.icon || "📦",
+            })
+            .onConflictDoNothing()
+            .returning();
+          itemDef = inserted || await getItem(itemId);
+        } catch {
+          itemDef = await getItem(itemId);
+        }
+      }
+
+      if (!itemDef) {
+        itemDef = {
+          id: itemId,
+          name: payload.name || itemId,
+          category: dropType === "weapon" || dropType === "armor" || dropType === "accessory" ? "equipment" : "consumable",
+          type: dropType || "weapon",
+          equipSlot: "none",
+          rarity: payload.rarity || "common",
+          price: 50,
+          maxStack: 99,
+          requiredLevel: payload.requiredLevel || 1,
+          icon: payload.icon || "📦",
+        } as any;
       }
 
       const unlockedSlots = Math.min(30, Math.max(15, Number(character.unlockedSlots || 15)));

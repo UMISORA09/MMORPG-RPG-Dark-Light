@@ -186,9 +186,30 @@ export function createTreasureChestInstance(
 }
 
 /**
- * Khởi tạo danh sách 5 rương báu đang hoạt động cùng lúc trên bản đồ
+ * Thời gian hồi ngẫu nhiên của Rương theo từng cấp bậc (rương cấp càng cao hồi càng lâu):
+ * - WOODEN (Gỗ Cổ): 60s - 120s (1 - 2 phút)
+ * - SILVER (Bạc Tinh Xảo): 150s - 270s (2.5 - 4.5 phút)
+ * - GOLDEN (Hoàng Kim): 360s - 600s (6 - 10 phút)
+ * - MIRACLE_CHEST (Thần Tích Hư Không): 1200s - 1800s (20 - 30 phút)
  */
-export function initializeActiveMapChests(count: number = 5): ActiveTreasureChest[] {
+export function getChestRespawnDelaySeconds(tier: ChestTier): number {
+  switch (tier) {
+    case "MIRACLE_CHEST":
+      return 1200 + Math.floor(Math.random() * 600);
+    case "GOLDEN":
+      return 360 + Math.floor(Math.random() * 240);
+    case "SILVER":
+      return 150 + Math.floor(Math.random() * 120);
+    case "WOODEN":
+    default:
+      return 60 + Math.floor(Math.random() * 60);
+  }
+}
+
+/**
+ * Khởi tạo danh sách 3 rương báu đang hoạt động cùng lúc trên bản đồ (vị trí bí mật khám phá)
+ */
+export function initializeActiveMapChests(count: number = 3): ActiveTreasureChest[] {
   const chests: ActiveTreasureChest[] = [];
   for (let i = 0; i < count; i++) {
     // Đảm bảo có ít nhất 1 rương Hoàng Kim hoặc Thần Tích khi bắt đầu
