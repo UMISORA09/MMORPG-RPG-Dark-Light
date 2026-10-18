@@ -249,6 +249,15 @@ export interface GameWorldState {
   setHasMiracleEquipped: (active: boolean) => void;
   activeTreasureChests: ActiveTreasureChest[];
   setActiveTreasureChests: (chests: ActiveTreasureChest[]) => void;
+  nearbyTreasureChest: ActiveTreasureChest | null;
+  setNearbyTreasureChest: (chest: ActiveTreasureChest | null) => void;
+  openedChestLoot: {
+    chest: ActiveTreasureChest;
+    drops: DroppedItem[];
+    level: number;
+  } | null;
+  setOpenedChestLoot: (data: { chest: ActiveTreasureChest; drops: DroppedItem[]; level: number } | null) => void;
+  claimAllOpenedChestLoot: () => void;
   openTreasureChestById: (chestId: string) => Promise<void>;
   spawnGMTestChest: (tier?: "GOLDEN" | "MIRACLE_CHEST") => void;
   monsterMarkers: { id: number; x: number; z: number; isBoss: boolean; name: string }[];
@@ -711,6 +720,21 @@ export const useGameWorldStore = create<GameWorldState>((set, get) => ({
 
   activeTreasureChests: initializeActiveMapChests(5),
   setActiveTreasureChests: (activeTreasureChests) => set({ activeTreasureChests }),
+  nearbyTreasureChest: null,
+  setNearbyTreasureChest: (nearbyTreasureChest) => set({ nearbyTreasureChest }),
+  openedChestLoot: null,
+  setOpenedChestLoot: (openedChestLoot) => set({ openedChestLoot }),
+  claimAllOpenedChestLoot: () => {
+    const s = get();
+    const data = s.openedChestLoot;
+    if (!data) return;
+
+    for (const drop of data.drops) {
+      s.pickUpLoot(drop);
+    }
+    set({ openedChestLoot: null });
+    playCombatSFX("loot_drop", 0.6);
+  },
 
   monsterMarkers: [],
   updateMonsterMarkers: (markers) => set({ monsterMarkers: markers }),
@@ -1200,9 +1224,15 @@ export const useGameWorldStore = create<GameWorldState>((set, get) => ({
     const charClass = s.playerClassId;
     const burstDrops = generateChestLootBurst(chest, charLevel, charClass);
 
-    // 3. Spray items out into 3D world with parabolic physics
+    // 3. Spray items out into 3D world with parabolic physics & open Loot UI
     set((state) => ({
       droppedLoot: [...state.droppedLoot, ...burstDrops],
+      openedChestLoot: {
+        chest,
+        drops: burstDrops,
+        level: charLevel,
+      },
+      nearbyTreasureChest: null,
       zoneNotification: `✨ [MỞ KHO BÁU] ${chest.tierName} bùng nổ ${burstDrops.length} Món Đồ Cấp ${charLevel}!`,
       zoneNotificationTimer: 5.0,
     }));

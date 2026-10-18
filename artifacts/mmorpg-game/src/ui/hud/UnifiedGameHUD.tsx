@@ -18,6 +18,7 @@ import { SymmetricalActionHUD } from "./SymmetricalActionHUD";
 import { PixelEnemyHealthBars } from "./PixelEnemyHealthBars";
 import { TargetHealthBar } from "./TargetHealthBar";
 import { LevelUpAndLootFlashOverlay } from "./LevelUpAndLootFlashOverlay";
+import { ChestInteractionAndLootHUD } from "./ChestInteractionAndLootHUD";
 
 export interface UnifiedGameHUDProps {
   onLogout?: () => void;
@@ -300,6 +301,9 @@ export const UnifiedGameHUD = memo(function UnifiedGameHUD({
           </div>
         </div>
       )}
+
+      {/* ── Chest Proximity Prompt & Opened Loot Modal ── */}
+      <ChestInteractionAndLootHUD />
 
       {/* ── Cinematic Level-Up Banner & High-Tier Loot Screen Flash ── */}
       <LevelUpAndLootFlashOverlay />

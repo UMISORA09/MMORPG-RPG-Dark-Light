@@ -18,12 +18,13 @@ export const DynamicTreasureChests3D = memo(function DynamicTreasureChests3D() {
   const playerPosition = useGameWorldStore((s) => s.playerPosition);
   const openTreasureChestById = useGameWorldStore((s) => s.openTreasureChestById);
 
-  // Proximity detection for HUD prompt (< 3.2m)
+  // Proximity detection for HUD prompt (< 3.5m)
   const [nearestChestId, setNearestChestId] = useState<string | null>(null);
+  const lastNearestIdRef = useRef<string | null>(null);
 
   useFrame(() => {
-    let closestId: string | null = null;
-    let minD = 3.2;
+    let closestChest: ActiveTreasureChest | null = null;
+    let minD = 3.5;
 
     for (const chest of activeChests) {
       if (chest.isOpened) continue;
@@ -33,10 +34,15 @@ export const DynamicTreasureChests3D = memo(function DynamicTreasureChests3D() {
       );
       if (d < minD) {
         minD = d;
-        closestId = chest.id;
+        closestChest = chest;
       }
     }
-    setNearestChestId(closestId);
+    const closestId = closestChest ? closestChest.id : null;
+    if (closestId !== lastNearestIdRef.current) {
+      lastNearestIdRef.current = closestId;
+      setNearestChestId(closestId);
+      useGameWorldStore.getState().setNearbyTreasureChest(closestChest);
+    }
   });
 
   // Handle interaction key 'F'
@@ -246,7 +252,8 @@ const SingleTreasureChest3D = memo(function SingleTreasureChest3D({
               color={chest.beamColor}
               anchorX="center"
               anchorY="middle"
-              font="https://fonts.gstatic.com/s/inter/v12/UcCO3FwrK3iLTeHuS_fvQtMwCp50KnMw2boKoduKmMEVuLyfAZ9hiA.woff2"
+              outlineWidth={0.025}
+              outlineColor="#000000"
             >
               {`[F] MỞ ${chest.tierName.toUpperCase()}`}
             </Text>
@@ -257,7 +264,8 @@ const SingleTreasureChest3D = memo(function SingleTreasureChest3D({
               color="#e2e8f0"
               anchorX="center"
               anchorY="middle"
-              font="https://fonts.gstatic.com/s/inter/v12/UcCO3FwrK3iLTeHuS_fvQtMwCp50KnMw2boKoduKmMEVuLyfAZ9hiA.woff2"
+              outlineWidth={0.015}
+              outlineColor="#000000"
             >
               {`✨ Rơi ${chest.itemCount} Món Đồ Theo Cấp (Lv.1 - 999)`}
             </Text>

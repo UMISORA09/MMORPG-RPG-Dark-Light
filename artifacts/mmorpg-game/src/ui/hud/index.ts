@@ -9,3 +9,4 @@ export { PlayerStatusFrame } from "./PlayerStatusFrame";
 export { MinimapRadar } from "./MinimapRadar";
 export { ActionCombatBar } from "./ActionCombatBar";
 export { SymmetricalActionHUD } from "./SymmetricalActionHUD";
+export { ChestInteractionAndLootHUD } from "./ChestInteractionAndLootHUD";
