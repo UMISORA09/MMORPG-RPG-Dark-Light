@@ -1325,16 +1325,20 @@ export const CharacterInventoryModal = memo(function CharacterInventoryModal({
     setHoveredTooltipItem(null);
   }, []);
 
-  // Items State (100% empty starter inventory when new character has 0 items)
+  // Items State: prioritized from propInv (if non-empty), world store, or localStorage
   const [items, setItems] = useState<UnifiedItem[]>(() => {
-    if (propInv) {
+    if (propInv && propInv.length > 0) {
       return propInv.map(mapBackendItemToUnified);
+    }
+    const worldInv = useGameWorldStore.getState().inventoryItems;
+    if (worldInv && worldInv.length > 0) {
+      return worldInv.map(mapBackendItemToUnified);
     }
     try {
       const saved = localStorage.getItem(storageKey);
       if (saved) {
         const parsed = JSON.parse(saved);
-        if (Array.isArray(parsed)) {
+        if (Array.isArray(parsed) && parsed.length > 0) {
           return parsed;
         }
       }
@@ -1342,9 +1346,22 @@ export const CharacterInventoryModal = memo(function CharacterInventoryModal({
     return [];
   });
 
-  // Sync when propInv or character changes from backend
+  // Listen for items added in the game world (e.g. from chests, monster drops)
+  const worldInventory = useGameWorldStore((s) => s.inventoryItems);
   useEffect(() => {
-    if (propInv) {
+    if (worldInventory && worldInventory.length > 0) {
+      setItems((prev) => {
+        const prevIds = new Set(prev.map((i) => i.id));
+        const missing = worldInventory.filter((wi) => !prevIds.has(wi.id));
+        if (missing.length === 0) return prev;
+        return [...missing.map(mapBackendItemToUnified), ...prev];
+      });
+    }
+  }, [worldInventory]);
+
+  // Sync when propInv changes from backend (strictly only if non-empty!)
+  useEffect(() => {
+    if (propInv && propInv.length > 0) {
       setItems(propInv.map(mapBackendItemToUnified));
     }
   }, [propInv]);

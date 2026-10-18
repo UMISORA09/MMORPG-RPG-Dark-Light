@@ -13,6 +13,7 @@ export const ChestInteractionAndLootHUD = memo(function ChestInteractionAndLootH
   const openedChestLoot = useGameWorldStore((s) => s.openedChestLoot);
   const openTreasureChestById = useGameWorldStore((s) => s.openTreasureChestById);
   const claimAllOpenedChestLoot = useGameWorldStore((s) => s.claimAllOpenedChestLoot);
+  const pickUpLoot = useGameWorldStore((s) => s.pickUpLoot);
   const setOpenedChestLoot = useGameWorldStore((s) => s.setOpenedChestLoot);
   const playerLevel = useGameWorldStore((s) => s.playerLevel);
 
@@ -165,11 +166,22 @@ export const ChestInteractionAndLootHUD = memo(function ChestInteractionAndLootH
                   return (
                     <div
                       key={item.id || `drop-${idx}`}
-                      className="flex items-center gap-3 p-3 rounded-2xl bg-slate-900/70 border transition hover:bg-slate-800/80"
+                      onClick={() => {
+                        playButtonClick();
+                        pickUpLoot(item);
+                        const remaining = openedChestLoot.drops.filter((d) => d.id !== item.id);
+                        if (remaining.length === 0) {
+                          setOpenedChestLoot(null);
+                        } else {
+                          setOpenedChestLoot({ ...openedChestLoot, drops: remaining });
+                        }
+                      }}
+                      className="group flex items-center gap-3 p-3 rounded-2xl bg-slate-900/70 border transition hover:bg-slate-800/90 hover:scale-[1.02] cursor-pointer active:scale-95 shadow-md"
                       style={{ borderColor: `${borderCol}66` }}
+                      title="Nhấn để nhặt món đồ này vào hành trang"
                     >
                       <div
-                        className="w-12 h-12 rounded-xl flex items-center justify-center text-2xl border shrink-0 shadow-inner"
+                        className="w-12 h-12 rounded-xl flex items-center justify-center text-2xl border shrink-0 shadow-inner group-hover:scale-110 transition-transform"
                         style={{
                           backgroundColor: `${borderCol}18`,
                           borderColor: borderCol,
@@ -185,6 +197,9 @@ export const ChestInteractionAndLootHUD = memo(function ChestInteractionAndLootH
                           >
                             {item.name}
                           </p>
+                          <span className="text-[10px] text-cyan-400 opacity-0 group-hover:opacity-100 transition-opacity font-bold">
+                            + Nhặt
+                          </span>
                         </div>
                         <p className="text-[11px] text-slate-300 truncate font-mono mt-0.5">
                           {item.statText || (item.value ? `+${item.value}` : "Vật phẩm rương")}

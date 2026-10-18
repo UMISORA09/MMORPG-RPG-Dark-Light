@@ -44,12 +44,12 @@ export const InteractiveRelics = memo(function InteractiveRelics({ currentZone, 
     const sarcophagusName = isEgypt
       ? "Quách Vàng Hoàng Gia Pharaoh"
       : isOcean
-      ? "Rương Báu Đại Dương Chìm Sâu"
+      ? "Hòm Bí Pháp Đại Dương Cổ"
       : isSnow
-      ? "Rương Băng Pha Lê Ngàn Năm"
+      ? "Băng Quan Pha Lê Ngàn Năm"
       : isVoid
-      ? "Rương Hư Không Tinh Tú"
-      : "Rương Kho Báu Bị Phong Ấn";
+      ? "Cổ Quan Hư Không Tinh Tú"
+      : "Quách Cổ Phong Ấn Hoàng Gia";
 
     return [
       {

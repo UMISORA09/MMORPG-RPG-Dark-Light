@@ -216,7 +216,7 @@ export const UnifiedOverlayModals = memo(function UnifiedOverlayModals({
       {activeModal === "inventory" && (
         <CharacterInventoryModal
           character={character}
-          inventory={inventory}
+          inventory={inventory && inventory.length > 0 ? inventory : undefined}
           onEquip={handleEquip}
           onClose={closeActiveModal}
         />

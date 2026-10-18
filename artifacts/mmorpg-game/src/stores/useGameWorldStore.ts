@@ -1294,8 +1294,16 @@ export const useGameWorldStore = create<GameWorldState>((set, get) => ({
 
   pickUpLoot: async (item) => {
     const s = get();
-    const charId = s.activeCharacterId;
+    const charId = s.activeCharacterId || s.playerName || "hero_default";
     const p = s.playerPosition;
+
+    // Tránh nhặt trùng lặp cùng 1 drop
+    if (s.inventoryItems.some((inv) => inv.id === item.id)) {
+      set((state) => ({
+        droppedLoot: state.droppedLoot.filter((x) => x.id !== item.id),
+      }));
+      return;
+    }
 
     // 1. Kiểm tra an toàn phía Client trước (dung lượng túi)
     const unlocked = s.unlockedSlots || 15;
@@ -1350,7 +1358,7 @@ export const useGameWorldStore = create<GameWorldState>((set, get) => ({
 
       // Thêm trang bị / vật phẩm trực tiếp vào Hành Trang Client
       const newInvItem: CharacterInventoryItem = {
-        id: `inv-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
+        id: item.id || `inv-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
         itemId: item.itemId,
         name: item.name,
         type: item.type as any,
@@ -1375,7 +1383,7 @@ export const useGameWorldStore = create<GameWorldState>((set, get) => ({
 
       set((state) => {
         const nextInv = [newInvItem, ...state.inventoryItems];
-        if (typeof window !== "undefined" && charId) {
+        if (typeof window !== "undefined") {
           try {
             localStorage.setItem(`clb_inventory_${charId}`, JSON.stringify(nextInv));
           } catch {}
