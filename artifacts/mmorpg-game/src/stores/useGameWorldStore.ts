@@ -67,7 +67,11 @@ export interface BulletProjectile {
   velocity: THREE.Vector3;
   damage: number;
   lifetime: number;
+  maxLifetime?: number;
   color: string;
+  size?: number;
+  isFromMonster?: boolean;
+  shooterId?: number;
 }
 
 export interface SlashEffect {
@@ -77,6 +81,11 @@ export interface SlashEffect {
   color: string;
   lifetime: number;
   maxLifetime: number;
+  shape?: "CONE_FAN" | "CIRCLE_AOE";
+  directionVec?: THREE.Vector3;
+  fanAngleDeg?: number; // e.g. 75 degrees (60-90 deg)
+  damage?: number;
+  hitMonsterIds?: Set<number>;
 }
 
 export interface AfterimageGhost {
@@ -126,6 +135,10 @@ export interface GameWorldState {
   playerPosition: THREE.Vector3;
   playerVelocity: THREE.Vector3;
   playerFacingLeft: boolean;
+  playerFacingDirection: THREE.Vector3;
+  playerFacingAngle: number;
+  playerAimTarget: THREE.Vector3;
+  updatePlayerAim: (target: THREE.Vector3, dir: THREE.Vector3) => void;
   playerAnimState:
     | "idle"
     | "walk"
@@ -432,7 +445,9 @@ export interface GameWorldState {
       | "attack4"
       | "air_attack"
       | "hurt"
-      | "death"
+      | "death",
+    facingDirection?: THREE.Vector3,
+    aimTarget?: THREE.Vector3
   ) => void;
   damagePlayer: (amount: number, fromDir?: THREE.Vector3) => void;
   healPlayer: (amount: number) => void;
@@ -553,6 +568,18 @@ export const useGameWorldStore = create<GameWorldState>((set, get) => ({
   playerPosition: new THREE.Vector3(0, 0, 0),
   playerVelocity: new THREE.Vector3(0, 0, 0),
   playerFacingLeft: false,
+  playerFacingDirection: new THREE.Vector3(1, 0, 0),
+  playerFacingAngle: 0,
+  playerAimTarget: new THREE.Vector3(1, 0, 0),
+  updatePlayerAim: (target: THREE.Vector3, dir: THREE.Vector3) => {
+    const angle = Math.atan2(dir.x, dir.z);
+    set({
+      playerAimTarget: target,
+      playerFacingDirection: dir,
+      playerFacingAngle: angle,
+      playerFacingLeft: dir.x < -0.05,
+    });
+  },
   playerAnimState: "idle",
   playerHealth: 120,
   playerMaxHealth: 120,
@@ -1505,7 +1532,7 @@ export const useGameWorldStore = create<GameWorldState>((set, get) => ({
     playCombatSFX("blade_slash", 0.35);
   },
 
-  updatePlayerPosition: (pos, facingLeft, animState) => {
+  updatePlayerPosition: (pos, facingLeft, animState, facingDirection, aimTarget) => {
     const state = get();
     // Determine Zone based on position
     const distFromOrigin = Math.sqrt(pos.x * pos.x + pos.z * pos.z);
@@ -1541,6 +1568,11 @@ export const useGameWorldStore = create<GameWorldState>((set, get) => ({
       zoneNotification: notif,
       zoneNotificationTimer: notifTimer,
       bossActive: newZone === "BOSS_ALTAR",
+      ...(facingDirection ? {
+        playerFacingDirection: facingDirection.clone(),
+        playerFacingAngle: Math.atan2(facingDirection.x, facingDirection.z),
+      } : {}),
+      ...(aimTarget ? { playerAimTarget: aimTarget.clone() } : {}),
     });
   },
 
@@ -1837,9 +1869,12 @@ export const useGameWorldStore = create<GameWorldState>((set, get) => ({
     const currentStep = s.comboIndex; // 0, 1, or 2
     const attackSpec: CombatSkillSpec = blueprint.comboAttacks[currentStep] || blueprint.comboAttacks[0];
 
-    const forwardDir = s.playerFacingLeft ? -1 : 1;
-    const forwardVec = new THREE.Vector3(forwardDir, 0, 0);
-    const facingAngle = s.playerFacingLeft ? Math.PI : 0;
+    // ── Directional Aiming (Vector từ vị trí nhân vật tới điểm ngắm hoặc hướng di chuyển) ──
+    const forwardVec = s.playerFacingDirection && s.playerFacingDirection.lengthSq() > 0.05
+      ? s.playerFacingDirection.clone().setY(0).normalize()
+      : new THREE.Vector3(s.playerFacingLeft ? -1 : 1, 0, 0);
+    const facingAngle = Math.atan2(forwardVec.x, forwardVec.z);
+    const forwardDir = forwardVec.x < -0.05 ? -1 : 1;
 
     // Advance combo step & reset window timer
     const nextStep = ((currentStep + 1) % 3) as 0 | 1 | 2;
@@ -1905,27 +1940,37 @@ export const useGameWorldStore = create<GameWorldState>((set, get) => ({
     const finalDamage = Math.round(liveAtk * attackSpec.targetImpact.damageMultiplier * comboMultiplier * levelDmgScale * (isGunnerCrit ? 2.0 : 1.0));
 
     if (attackSpec.targetImpact.hitShape === "PROJECTILE_SINGLE" || attackSpec.targetImpact.hitShape === "LINE_PIERCE") {
+      const bulletSpeed = 22 + currentStep * 4;
       s.addBullet({
         id: nextBulletId++,
-        position: newPos.clone().add(new THREE.Vector3(forwardDir * 0.8, 1.2, 0)),
-        velocity: new THREE.Vector3(forwardDir * (20 + currentStep * 4), 0, 0),
+        position: newPos.clone().add(forwardVec.clone().multiplyScalar(0.8)).add(new THREE.Vector3(0, 1.2, 0)),
+        velocity: forwardVec.clone().multiplyScalar(bulletSpeed),
         damage: finalDamage,
         lifetime: 1.8,
+        maxLifetime: 1.8,
         color: isGunnerCrit ? "#f43f5e" : comboColor,
+        size: 0.28,
+        isFromMonster: false,
       });
     } else {
+      // Combo 1 & 2: Kỹ năng dạng quạt 75° (60-90°). Combo 3 Finisher: Vòng tròn 360° quét xung quanh
+      const isCircleFinisher = currentStep === 2;
       s.addSlashEffect({
         id: nextSlashId++,
-        position: newPos.clone().add(new THREE.Vector3(forwardDir * 1.2, 1.0, 0)),
-        radius: aoeRadiusScale * (currentStep === 2 ? 1.3 : 1.0),
+        position: newPos.clone().add(forwardVec.clone().multiplyScalar(1.2)).add(new THREE.Vector3(0, 1.0, 0)),
+        radius: aoeRadiusScale * (isCircleFinisher ? 1.4 : 1.1),
         color: comboColor,
         lifetime: attackSpec.vfx.duration * (isNovice ? 1.2 : 0.9),
         maxLifetime: attackSpec.vfx.duration * (isNovice ? 1.2 : 0.9),
+        shape: isCircleFinisher ? "CIRCLE_AOE" : "CONE_FAN",
+        directionVec: forwardVec.clone(),
+        fanAngleDeg: 75,
+        damage: finalDamage,
       });
     }
 
-    // Spawn 3D Shader VFX with combo color
-    const vfxSpawnPos = newPos.clone().add(new THREE.Vector3(forwardDir * 1.0, 0.8, 0));
+    // Spawn 3D Shader VFX with combo color along aim direction
+    const vfxSpawnPos = newPos.clone().add(forwardVec.clone().multiplyScalar(1.0)).add(new THREE.Vector3(0, 0.8, 0));
     const modifiedVFX = {
       ...attackSpec.vfx,
       primaryColor: comboColor,
@@ -1977,9 +2022,12 @@ export const useGameWorldStore = create<GameWorldState>((set, get) => ({
       return;
     }
 
-    const forwardDir = s.playerFacingLeft ? -1 : 1;
-    const forwardVec = new THREE.Vector3(forwardDir, 0, 0);
-    const facingAngle = s.playerFacingLeft ? Math.PI : 0;
+    // ── Directional Aiming ──
+    const forwardVec = s.playerFacingDirection && s.playerFacingDirection.lengthSq() > 0.05
+      ? s.playerFacingDirection.clone().setY(0).normalize()
+      : new THREE.Vector3(s.playerFacingLeft ? -1 : 1, 0, 0);
+    const facingAngle = Math.atan2(forwardVec.x, forwardVec.z);
+    const forwardDir = forwardVec.x < -0.05 ? -1 : 1;
 
     // 1. Deduct MP & Set Cooldown
     const newPp = Math.max(0, s.playerPp - requiredMp);
@@ -2015,6 +2063,8 @@ export const useGameWorldStore = create<GameWorldState>((set, get) => ({
       color: skill.vfx.primaryColor,
       lifetime: 0.65,
       maxLifetime: 0.65,
+      shape: "CIRCLE_AOE",
+      damage: 0,
     });
     s.addFloatingText(`-${requiredMp} MP (${skill.name})`, newPos.clone().add(new THREE.Vector3(0, 2.1, 0)), "#60a5fa");
 
@@ -2022,29 +2072,39 @@ export const useGameWorldStore = create<GameWorldState>((set, get) => ({
     playCombatSFX(skill.gameFeel.sfxSynthPreset, 0.55);
     const shake = Math.max(s.cameraShakeIntensity, skill.gameFeel.cameraShake);
 
-    // 6. Spawn Custom Shader VFX
-    const vfxSpawnPos = newPos.clone().add(new THREE.Vector3(forwardDir * 1.0, 0.8, 0));
+    // 6. Spawn Custom Shader VFX along facing vector
+    const vfxSpawnPos = newPos.clone().add(forwardVec.clone().multiplyScalar(1.0)).add(new THREE.Vector3(0, 0.8, 0));
     s.spawnVFX(skill.vfx, vfxSpawnPos, facingAngle);
 
-    // 7. Projectile or Slash for skills
+    // 7. Projectile or Slash for skills (Directional 3D)
     const liveSkillAtk = s.playerAtk || blueprint.baseStats.atk || 10;
+    const skillDmg = Math.round(liveSkillAtk * skill.targetImpact.damageMultiplier);
+
     if (skill.targetImpact.hitShape === "PROJECTILE_SINGLE" || skill.targetImpact.hitShape === "LINE_PIERCE") {
       s.addBullet({
         id: nextBulletId++,
-        position: newPos.clone().add(new THREE.Vector3(forwardDir * 0.8, 1.2, 0)),
-        velocity: new THREE.Vector3(forwardDir * 24, 0, 0),
-        damage: Math.round(liveSkillAtk * skill.targetImpact.damageMultiplier),
+        position: newPos.clone().add(forwardVec.clone().multiplyScalar(0.8)).add(new THREE.Vector3(0, 1.2, 0)),
+        velocity: forwardVec.clone().multiplyScalar(26.0),
+        damage: skillDmg,
         lifetime: 2.0,
+        maxLifetime: 2.0,
         color: skill.vfx.primaryColor,
+        size: 0.35,
+        isFromMonster: false,
       });
     } else {
+      const isCone = skill.targetImpact.hitShape === "CONE_FRONT" || skill.targetImpact.hitShape === "ARC_SWEEP";
       s.addSlashEffect({
         id: nextSlashId++,
-        position: newPos.clone().add(new THREE.Vector3(forwardDir * 1.5, 0.9, 0)),
+        position: newPos.clone().add(forwardVec.clone().multiplyScalar(1.5)).add(new THREE.Vector3(0, 0.9, 0)),
         radius: skill.targetImpact.aoeRadius,
         color: skill.vfx.primaryColor,
         lifetime: skill.vfx.duration,
         maxLifetime: skill.vfx.duration,
+        shape: isCone ? "CONE_FAN" : "CIRCLE_AOE",
+        directionVec: forwardVec.clone(),
+        fanAngleDeg: 80, // Within 60-90° range
+        damage: skillDmg,
       });
     }
 

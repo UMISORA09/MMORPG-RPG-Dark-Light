@@ -105,9 +105,12 @@ const ClassCombatVFXHalo = memo(function ClassCombatVFXHalo({
 const _camOffset = new THREE.Vector3();
 const _targetCamPos = new THREE.Vector3();
 const _zeroVec = new THREE.Vector3(0, 0, 0);
+const _groundPlane = new THREE.Plane(new THREE.Vector3(0, 1, 0), 0);
+const _aimTargetPoint = new THREE.Vector3();
+const _facingDir = new THREE.Vector3(1, 0, 0);
 
 export const PlayerEntity25D = memo(function PlayerEntity25D() {
-  const { camera } = useThree();
+  const { camera, raycaster, pointer } = useThree();
 
   // Store bindings
   const playerPosition = useGameWorldStore((s) => s.playerPosition);
@@ -154,6 +157,7 @@ export const PlayerEntity25D = memo(function PlayerEntity25D() {
   const dustPuffs = useGameWorldStore((s) => s.dustPuffs);
 
   const updatePlayerPosition = useGameWorldStore((s) => s.updatePlayerPosition);
+  const updatePlayerAim = useGameWorldStore((s) => s.updatePlayerAim);
   const triggerComboAttack = useGameWorldStore((s) => s.triggerComboAttack);
   const tickWorld = useGameWorldStore((s) => s.tickWorld);
 
@@ -280,11 +284,37 @@ export const PlayerEntity25D = memo(function PlayerEntity25D() {
     const moveX = forwardX * inputForward + rightX * inputRight;
     const moveZ = forwardZ * inputForward + rightZ * inputRight;
 
-    // Determine facing direction with deadzone hysteresis to avoid jittering
-    if (Math.abs(inputRight) > 0.12) {
-      facingLeftRef.current = inputRight < 0;
-    } else if (Math.abs(moveX) > 0.15) {
-      facingLeftRef.current = moveX < 0;
+    // ── Directional Aiming & Facing Vector Calculation (Pointer on Ground Y=0 or Movement) ──
+    let hasAimTarget = false;
+    if (raycaster && raycaster.ray) {
+      const hit = raycaster.ray.intersectPlane(_groundPlane, _aimTargetPoint);
+      if (hit) {
+        hasAimTarget = true;
+      }
+    }
+
+    const wantsAttack = !isStunned && (input.attack || mobileState.attack || mobileState.shoot);
+
+    // If attacking or aiming actively with pointer, face target point
+    if (hasAimTarget && (wantsAttack || (inputMag <= 0.05 && pointer && Math.hypot(pointer.x, pointer.y) > 0.02))) {
+      _facingDir.subVectors(_aimTargetPoint, pos.current).setY(0);
+      if (_facingDir.lengthSq() > 0.04) {
+        _facingDir.normalize();
+        facingLeftRef.current = _facingDir.x < -0.05;
+      }
+    } else if (inputMag > 0.05) {
+      _facingDir.set(moveX, 0, moveZ).normalize();
+      if (Math.abs(inputRight) > 0.12) {
+        facingLeftRef.current = inputRight < 0;
+      } else if (Math.abs(moveX) > 0.15) {
+        facingLeftRef.current = moveX < 0;
+      }
+    } else {
+      _facingDir.set(facingLeftRef.current ? -1 : 1, 0, 0);
+    }
+
+    if (hasAimTarget && (wantsAttack || inputMag > 0.05)) {
+      updatePlayerAim(_aimTargetPoint, _facingDir);
     }
 
     // 3. Jump Physics with landing impact
@@ -346,8 +376,6 @@ export const PlayerEntity25D = memo(function PlayerEntity25D() {
     }
 
     // 4. Attack Execution (Left Mouse Click or J Combo Chain - Heavy & Deliberate Timing)
-    const wantsAttack = !isStunned && (input.attack || mobileState.attack || mobileState.shoot);
-
     // Auto-dismount when attacking or taking damage
     if (isMounted && (wantsAttack || hitFlashTimer > 0)) {
       dismount();
@@ -419,7 +447,7 @@ export const PlayerEntity25D = memo(function PlayerEntity25D() {
     const facingChanged = prevFacingRef.current !== facingLeftRef.current;
     if (now - lastSyncTime.current > 50 || animChanged || facingChanged) {
       lastSyncTime.current = now;
-      updatePlayerPosition(pos.current, facingLeftRef.current, currentAnim);
+      updatePlayerPosition(pos.current, facingLeftRef.current, currentAnim, _facingDir, _aimTargetPoint);
     }
 
     // 5. Smooth 2.5D Action RPG Camera Follow with Frame-Rate Independent Exponential Dampening
