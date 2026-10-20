@@ -60614,6 +60614,7 @@ var characterItemsTable = pgTable("character_items", {
   bonusCombatPower: integer2("bonus_combat_power").notNull().default(0),
   socketsJson: text("sockets_json").notNull().default("[]"),
   reforgeStatsJson: text("reforge_stats_json").notNull().default("[]"),
+  runesJson: text("runes_json").notNull().default("[]"),
   miraclePassive1: text("miracle_passive_1"),
   miraclePassive2: text("miracle_passive_2"),
   acquiredAt: timestamp("acquired_at").defaultNow().notNull()
@@ -62695,7 +62696,8 @@ async function recalculateCharacterStats(characterId, executor = db) {
     bonusCombatPower: characterItemsTable.bonusCombatPower,
     rarity: characterItemsTable.rarity,
     socketsJson: characterItemsTable.socketsJson,
-    reforgeStatsJson: characterItemsTable.reforgeStatsJson
+    reforgeStatsJson: characterItemsTable.reforgeStatsJson,
+    runesJson: characterItemsTable.runesJson
   }).from(characterItemsTable).innerJoin(itemsTable, eq(characterItemsTable.itemId, itemsTable.id)).where(and(
     eq(characterItemsTable.characterId, characterId),
     eq(characterItemsTable.equipped, true)
@@ -62723,13 +62725,30 @@ async function recalculateCharacterStats(characterId, executor = db) {
     const item = row.item ?? row;
     const isMiracle = (item.rarity || row.rarity || "").toLowerCase() === "miracle";
     if (isMiracle) hasMiracleEquipped = true;
+    const isClassMatch = !item.classId || item.classId === "all" || item.classId.toLowerCase() === (character.classId || "").toLowerCase() || item.classId.includes("assassin") && (character.classId || "").includes("sat_thu") || item.classId.includes("sat_thu") && (character.classId || "").includes("assassin") || item.classId.includes("fighter") && (character.classId || "").includes("chien_binh") || item.classId.includes("tank") && (character.classId || "").includes("ho_ve") || item.classId.includes("gunner") && (character.classId || "").includes("xa_thu");
+    const classMultiplier = isClassMatch ? 1 : 0.5;
     const miracleMult = isMiracle ? 3.5 : 1;
-    const multiplier = (1 + Number(row.enhanceLevel ?? 0) * ENHANCEMENT_MULTIPLIER) * miracleMult;
+    const multiplier = (1 + Number(row.enhanceLevel ?? 0) * ENHANCEMENT_MULTIPLIER) * miracleMult * classMultiplier;
     for (const stat of Object.keys(bonuses)) {
       if (stat === "bonusCombatPower") {
-        bonuses[stat] += Number(row.bonusCombatPower ?? 0) + (isMiracle ? 2500 : 0);
+        bonuses[stat] += Math.floor((Number(row.bonusCombatPower ?? 0) + (isMiracle ? 2500 : 0)) * classMultiplier);
       } else if (stat in item || item[stat]) {
         bonuses[stat] += Math.floor(numericItemStat(item, stat) * multiplier);
+      }
+    }
+    if (isClassMatch) {
+      const runes = typeof row.runesJson === "string" ? (() => {
+        try {
+          return JSON.parse(row.runesJson);
+        } catch {
+          return [];
+        }
+      })() : row.runesJson || [];
+      if (Array.isArray(runes)) {
+        for (const r of runes) {
+          if (!r) continue;
+          if (r.combatPower) bonuses.bonusCombatPower += Number(r.combatPower);
+        }
       }
     }
     const sockets = typeof row.socketsJson === "string" ? (() => {
@@ -62999,6 +63018,7 @@ async function listInventory(characterId, executor = db) {
     miraclePassive2: characterItemsTable.miraclePassive2,
     socketsJson: characterItemsTable.socketsJson,
     reforgeStatsJson: characterItemsTable.reforgeStatsJson,
+    runesJson: characterItemsTable.runesJson,
     acquiredAt: characterItemsTable.acquiredAt
   }).from(characterItemsTable).innerJoin(itemsTable, eq(characterItemsTable.itemId, itemsTable.id)).where(eq(characterItemsTable.characterId, characterId));
   return rows.map((row) => {
@@ -63057,6 +63077,7 @@ async function listInventory(characterId, executor = db) {
       miraclePassive2: row.miraclePassive2 ?? null,
       socketsJson: safeParse3(row.socketsJson),
       reforgeStatsJson: safeParse3(row.reforgeStatsJson),
+      runesJson: safeParse3(row.runesJson),
       acquiredAt: typeof acquiredAt === "string" ? acquiredAt : acquiredAt.toISOString()
     };
   }).filter(Boolean);
@@ -63120,11 +63141,11 @@ async function getCharacterForUser(characterId, userId) {
   return character;
 }
 function canUseItem(item, character) {
-  if (item.classId !== null && item.classId !== character.classId) {
-    return "V\u1EADt ph\u1EA9m kh\xF4ng d\xE0nh cho ch\u1EE9c nghi\u1EC7p n\xE0y";
-  }
   if (item.requiredLevel > character.level) {
-    return `C\u1EA7n \u0111\u1EA1t c\u1EA5p ${item.requiredLevel} \u0111\u1EC3 s\u1EED d\u1EE5ng`;
+    return `Y\xEAu c\u1EA7u \u0111\u1EA1t C\u1EA5p ${item.requiredLevel} (Hi\u1EC7n t\u1EA1i: C\u1EA5p ${character.level})`;
+  }
+  if (item.category !== "equipment" && item.classId && item.classId !== "all" && item.classId !== character.classId) {
+    return `V\u1EADt ph\u1EA9m ch\u1EC9 d\xE0nh cho ch\u1EE9c nghi\u1EC7p ${item.classId}`;
   }
   if (item.category === "equipment" && item.equipSlot === "none") {
     return "Trang b\u1ECB ch\u01B0a \u0111\u01B0\u1EE3c g\xE1n \xF4 m\u1EB7c h\u1EE3p l\u1EC7";
@@ -65479,7 +65500,7 @@ var LootService = class {
   /**
    * Xác thực và nhặt đồ chính xác tuyệt đối từ mặt đất vào túi đồ của nhân vật.
    * Đảm bảo:
-   * 1. Xác thực khoảng cách (lootRadius = 3.5m + dung sai mạng 1.5m = 5.0m).
+   * 1. Xác thực khoảng cách (lootRadius cho phép đến 45m đối với loot phun vòm rương).
    * 2. Kiểm tra túi hành trang còn ô trống hay không (usedSlots < unlockedSlots).
    * 3. Tự động chồng dồn stack nếu là vật phẩm tiêu hao/nguyên liệu còn chỗ.
    * 4. Tìm ô trống slotIndex thấp nhất (0 đến unlockedSlots - 1).
@@ -65496,7 +65517,8 @@ var LootService = class {
       dropType,
       value = 0,
       dropPosition,
-      playerPosition
+      playerPosition,
+      runesJson
     } = payload;
     return await db.transaction(async (tx) => {
       const [character] = await tx.select().from(charactersTable).where(and(eq(charactersTable.id, characterId), eq(charactersTable.userId, userId))).limit(1);
@@ -65513,7 +65535,7 @@ var LootService = class {
         const pz = Array.isArray(playerPosition) ? playerPosition[2] : playerPosition.z;
         if (typeof dx === "number" && typeof px === "number") {
           const dist = Math.hypot(dx - px, dz - pz);
-          if (dist > 5.5) {
+          if (dist > 45) {
             throw new InventoryRuleError("Kho\u1EA3ng c\xE1ch qu\xE1 xa, kh\xF4ng th\u1EC3 nh\u1EB7t v\u1EADt ph\u1EA9m n\xE0y!", 400);
           }
         }
@@ -65531,9 +65553,44 @@ var LootService = class {
           inventory: await listInventory(characterId)
         };
       }
-      const itemDef = await getItem(itemId);
+      let itemDef = await getItem(itemId);
       if (!itemDef) {
-        throw new InventoryRuleError(`Kh\xF4ng t\xECm th\u1EA5y d\u1EEF li\u1EC7u v\u1EADt ph\u1EA9m '${itemId}' trong c\u01A1 s\u1EDF d\u1EEF li\u1EC7u!`, 404);
+        try {
+          const category = dropType === "weapon" || dropType === "armor" || dropType === "accessory" ? "equipment" : "consumable";
+          const equipSlot = dropType === "weapon" ? "main_weapon" : dropType === "armor" ? "armor" : dropType === "accessory" ? "relic" : "none";
+          const [inserted] = await tx.insert(itemsTable).values({
+            id: itemId,
+            name: payload.name || itemId,
+            category,
+            type: dropType || "weapon",
+            equipSlot,
+            description: payload.statText || "V\u1EADt ph\u1EA9m r\u01A1i t\u1EEB th\u1EBF gi\u1EDBi Chi\u1EBFn Long B\xE1",
+            lore: "V\u1EADt ph\u1EA9m thu th\u1EADp t\u1EEB r\u01B0\u01A1ng kho b\xE1u v\xE0 qu\xE1i v\u1EADt",
+            rarity: payload.rarity || "common",
+            price: 100,
+            maxStack: category === "equipment" ? 1 : 99,
+            classId: payload.classId || "all",
+            requiredLevel: payload.requiredLevel || 1,
+            icon: payload.icon || "\u{1F4E6}"
+          }).onConflictDoNothing().returning();
+          itemDef = inserted || await getItem(itemId);
+        } catch {
+          itemDef = await getItem(itemId);
+        }
+      }
+      if (!itemDef) {
+        itemDef = {
+          id: itemId,
+          name: payload.name || itemId,
+          category: dropType === "weapon" || dropType === "armor" || dropType === "accessory" ? "equipment" : "consumable",
+          type: dropType || "weapon",
+          equipSlot: "none",
+          rarity: payload.rarity || "common",
+          price: 50,
+          maxStack: 99,
+          requiredLevel: payload.requiredLevel || 1,
+          icon: payload.icon || "\u{1F4E6}"
+        };
       }
       const unlockedSlots = Math.min(30, Math.max(15, Number(character.unlockedSlots || 15)));
       const maxStack = Math.max(1, Number(itemDef.maxStack ?? (itemDef.category === "equipment" ? 1 : 99)));
@@ -65587,6 +65644,7 @@ var LootService = class {
           enhanceLevel: 0,
           bonusCombatPower: 0,
           rarity: itemDef.rarity || "common",
+          runesJson: typeof runesJson === "string" ? runesJson : JSON.stringify(runesJson || []),
           equipped: false
         }).returning();
         targetOwnershipId = inserted.id;
@@ -65868,8 +65926,12 @@ router8.post("/characters/:characterId/inventory/:itemId/sell", requireAuth, asy
     return;
   }
   const sellPrice = Math.max(10, Number(owned.item?.price || 50));
-  await db.delete(characterItemsTable).where(eq(characterItemsTable.id, owned.ownershipId));
-  const [updatedCharacter] = await db.update(charactersTable).set({ gold: character.gold + sellPrice }).where(eq(charactersTable.id, characterId)).returning();
+  let updatedCharacter = character;
+  await db.transaction(async (tx) => {
+    await tx.delete(characterItemsTable).where(eq(characterItemsTable.id, owned.ownershipId));
+    const [upd] = await tx.update(charactersTable).set({ gold: character.gold + sellPrice }).where(eq(charactersTable.id, characterId)).returning();
+    if (upd) updatedCharacter = upd;
+  });
   res.status(200).json({
     success: true,
     soldItemId: itemId,
@@ -65947,11 +66009,18 @@ router8.post("/characters/:characterId/loot", requireAuth, async (req, res) => {
   const {
     dropId,
     itemId,
+    name,
+    rarity,
+    icon,
+    statText,
+    classId,
+    requiredLevel,
     quantity = 1,
     dropType,
     value,
     dropPosition,
-    playerPosition
+    playerPosition,
+    runesJson
   } = req.body;
   if (!itemId && dropType !== "gold") {
     res.status(400).json({ error: "Thi\u1EBFu th\xF4ng tin itemId c\u1EE7a v\u1EADt ph\u1EA9m r\u01A1i" });
@@ -65963,11 +66032,18 @@ router8.post("/characters/:characterId/loot", requireAuth, async (req, res) => {
       characterId,
       dropId,
       itemId: itemId || "gold",
+      name,
+      rarity,
+      icon,
+      statText,
+      classId,
+      requiredLevel,
       quantity,
       dropType,
       value,
       dropPosition,
-      playerPosition
+      playerPosition,
+      runesJson
     });
     res.status(200).json(result);
   } catch (error40) {
@@ -65992,11 +66068,18 @@ router8.post("/characters/:characterId/loot/:dropId", requireAuth, async (req, r
   }
   const {
     itemId,
+    name,
+    rarity,
+    icon,
+    statText,
+    classId,
+    requiredLevel,
     quantity = 1,
     dropType,
     value,
     dropPosition,
-    playerPosition
+    playerPosition,
+    runesJson
   } = req.body;
   try {
     const result = await LootService.lootItem({
@@ -66004,11 +66087,18 @@ router8.post("/characters/:characterId/loot/:dropId", requireAuth, async (req, r
       characterId,
       dropId,
       itemId: itemId || dropId,
+      name,
+      rarity,
+      icon,
+      statText,
+      classId,
+      requiredLevel,
       quantity,
       dropType,
       value,
       dropPosition,
-      playerPosition
+      playerPosition,
+      runesJson
     });
     res.status(200).json(result);
   } catch (error40) {
