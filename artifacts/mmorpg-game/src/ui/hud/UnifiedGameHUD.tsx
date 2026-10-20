@@ -68,8 +68,8 @@ export const UnifiedGameHUD = memo(function UnifiedGameHUD({
       const res = await fetch(`/api/party/${activeCharId}`, {
         credentials: "include",
         headers: {
-          ...(typeof window !== "undefined" && localStorage.getItem("token")
-            ? { Authorization: `Bearer ${localStorage.getItem("token")}` }
+          ...(typeof window !== "undefined" && (localStorage.getItem("clb_token") || localStorage.getItem("token"))
+            ? { Authorization: `Bearer ${(localStorage.getItem("clb_token") || localStorage.getItem("token"))}` }
             : {}),
         },
       });

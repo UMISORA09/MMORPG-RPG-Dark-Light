@@ -94,8 +94,8 @@ export const PartyModal = memo(function PartyModal({
         method: "GET",
         headers: {
           "Content-Type": "application/json",
-          ...(typeof window !== "undefined" && localStorage.getItem("token")
-            ? { Authorization: `Bearer ${localStorage.getItem("token")}` }
+          ...(typeof window !== "undefined" && (localStorage.getItem("clb_token") || localStorage.getItem("token"))
+            ? { Authorization: `Bearer ${(localStorage.getItem("clb_token") || localStorage.getItem("token"))}` }
             : {}),
         },
         credentials: "include",
@@ -150,8 +150,8 @@ export const PartyModal = memo(function PartyModal({
         method: "POST",
         headers: {
           "Content-Type": "application/json",
-          ...(typeof window !== "undefined" && localStorage.getItem("token")
-            ? { Authorization: `Bearer ${localStorage.getItem("token")}` }
+          ...(typeof window !== "undefined" && (localStorage.getItem("clb_token") || localStorage.getItem("token"))
+            ? { Authorization: `Bearer ${(localStorage.getItem("clb_token") || localStorage.getItem("token"))}` }
             : {}),
         },
         credentials: "include",
@@ -204,8 +204,8 @@ export const PartyModal = memo(function PartyModal({
         method: "POST",
         headers: {
           "Content-Type": "application/json",
-          ...(typeof window !== "undefined" && localStorage.getItem("token")
-            ? { Authorization: `Bearer ${localStorage.getItem("token")}` }
+          ...(typeof window !== "undefined" && (localStorage.getItem("clb_token") || localStorage.getItem("token"))
+            ? { Authorization: `Bearer ${(localStorage.getItem("clb_token") || localStorage.getItem("token"))}` }
             : {}),
         },
         credentials: "include",
@@ -252,8 +252,8 @@ export const PartyModal = memo(function PartyModal({
         method: "POST",
         headers: {
           "Content-Type": "application/json",
-          ...(typeof window !== "undefined" && localStorage.getItem("token")
-            ? { Authorization: `Bearer ${localStorage.getItem("token")}` }
+          ...(typeof window !== "undefined" && (localStorage.getItem("clb_token") || localStorage.getItem("token"))
+            ? { Authorization: `Bearer ${(localStorage.getItem("clb_token") || localStorage.getItem("token"))}` }
             : {}),
         },
         credentials: "include",
