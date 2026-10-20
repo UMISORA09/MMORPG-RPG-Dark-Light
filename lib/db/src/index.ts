@@ -426,20 +426,48 @@ function createMemoryDb() {
   return memoryDb;
 }
 
+function getPoolConfig(rawUrl: string) {
+  const isCloudDb =
+    rawUrl.includes("supabase") ||
+    rawUrl.includes("neon") ||
+    rawUrl.includes("sslmode=require") ||
+    rawUrl.includes("pooler.supabase.com");
+
+  if (!isCloudDb) {
+    return {
+      connectionString: rawUrl,
+      connectionTimeoutMillis: 8000,
+      idleTimeoutMillis: 30000,
+      max: 10,
+    };
+  }
+
+  // Strip sslmode from the URL so pg-connection-string does not force rejectUnauthorized: true
+  let cleanUrl = rawUrl;
+  try {
+    const parsed = new URL(rawUrl);
+    parsed.searchParams.delete("sslmode");
+    cleanUrl = parsed.toString();
+  } catch {
+    cleanUrl = rawUrl.replace(/[?&]sslmode=[^&]+/g, "").replace(/\?&/, "?").replace(/\?$/, "");
+  }
+
+  return {
+    connectionString: cleanUrl,
+    connectionTimeoutMillis: 8000,
+    idleTimeoutMillis: 30000,
+    max: 10,
+    ssl: { rejectUnauthorized: false },
+  };
+}
+
 export async function initDatabase() {
   const dbUrl = process.env.DATABASE_URL || process.env.POSTGRES_URL;
 
   if (dbUrl && dbUrl !== "memory" && !dbUrl.startsWith("sqlite")) {
     try {
       console.log("[DB] Connecting to PostgreSQL:", dbUrl.replace(/:[^:@]+@/, ":***@"));
-      const isCloudDb = dbUrl.includes("supabase") || dbUrl.includes("neon") || dbUrl.includes("sslmode=require") || dbUrl.includes("pooler.supabase.com");
-      pool = new Pool({
-        connectionString: dbUrl,
-        connectionTimeoutMillis: 8000,
-        idleTimeoutMillis: 30000,
-        max: 10,
-        ssl: isCloudDb ? { rejectUnauthorized: false } : undefined,
-      });
+      pool = new Pool(getPoolConfig(dbUrl));
 
       // Quick test
       const client = await pool.connect();
@@ -814,12 +842,7 @@ export async function initDatabase() {
 const initialDbUrl = process.env.DATABASE_URL || process.env.POSTGRES_URL;
 if (initialDbUrl && initialDbUrl !== "memory" && !initialDbUrl.startsWith("sqlite")) {
   try {
-    const isCloudDb = initialDbUrl.includes("supabase") || initialDbUrl.includes("neon") || initialDbUrl.includes("sslmode=require") || initialDbUrl.includes("pooler.supabase.com");
-    pool = new Pool({
-      connectionString: initialDbUrl,
-      connectionTimeoutMillis: 8000,
-      ssl: isCloudDb ? { rejectUnauthorized: false } : undefined,
-    });
+    pool = new Pool(getPoolConfig(initialDbUrl));
     db = drizzle(pool, { schema });
     isPostgres = true;
   } catch {
