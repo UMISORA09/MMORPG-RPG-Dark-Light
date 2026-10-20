@@ -141,31 +141,33 @@ router.post("/characters/:characterId/blacksmith/enhance", requireAuth, async (r
     }
   }
 
-  // Sau khi xác thực hợp lệ cả Vàng, Đá Cường Hóa VÀ Bùa Bảo Hộ (nếu yêu cầu), mới thực hiện trừ tài nguyên
-  await db
-    .update(charactersTable)
-    .set({ gold: character.gold - goldCost })
-    .where(eq(charactersTable.id, characterId));
+  // Thực hiện trừ tài nguyên và vàng an toàn trong Transaction
+  await db.transaction(async (tx: any) => {
+    await tx
+      .update(charactersTable)
+      .set({ gold: character.gold - goldCost })
+      .where(eq(charactersTable.id, characterId));
 
-  if (stoneItem.quantity <= stoneCost) {
-    await db.delete(characterItemsTable).where(eq(characterItemsTable.id, stoneItem.id));
-  } else {
-    await db
-      .update(characterItemsTable)
-      .set({ quantity: stoneItem.quantity - stoneCost })
-      .where(eq(characterItemsTable.id, stoneItem.id));
-  }
-
-  if (protectionUsed && protectionCharmItem) {
-    if (protectionCharmItem.quantity <= 1) {
-      await db.delete(characterItemsTable).where(eq(characterItemsTable.id, protectionCharmItem.id));
+    if (stoneItem.quantity <= stoneCost) {
+      await tx.delete(characterItemsTable).where(eq(characterItemsTable.id, stoneItem.id));
     } else {
-      await db
+      await tx
         .update(characterItemsTable)
-        .set({ quantity: protectionCharmItem.quantity - 1 })
-        .where(eq(characterItemsTable.id, protectionCharmItem.id));
+        .set({ quantity: stoneItem.quantity - stoneCost })
+        .where(eq(characterItemsTable.id, stoneItem.id));
     }
-  }
+
+    if (protectionUsed && protectionCharmItem) {
+      if (protectionCharmItem.quantity <= 1) {
+        await tx.delete(characterItemsTable).where(eq(characterItemsTable.id, protectionCharmItem.id));
+      } else {
+        await tx
+          .update(characterItemsTable)
+          .set({ quantity: protectionCharmItem.quantity - 1 })
+          .where(eq(characterItemsTable.id, protectionCharmItem.id));
+      }
+    }
+  });
 
   // Quay tỉ lệ
   const successRate = getEnhanceSuccessRate(curLevel);

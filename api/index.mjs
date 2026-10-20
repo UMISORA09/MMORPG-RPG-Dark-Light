@@ -53779,10 +53779,10 @@ var PgEnumColumn = class extends PgColumn {
 // node_modules/.pnpm/drizzle-orm@0.45.2_@types+pg@8.20.0_pg@8.22.0/node_modules/drizzle-orm/subquery.js
 var Subquery = class {
   static [entityKind] = "Subquery";
-  constructor(sql2, fields, alias, isWith = false, usedTables = []) {
+  constructor(sql3, fields, alias, isWith = false, usedTables = []) {
     this._ = {
       brand: "Subquery",
-      sql: sql2,
+      sql: sql3,
       selectedFields: fields,
       alias,
       isWith,
@@ -54183,19 +54183,19 @@ function sql(strings, ...params) {
   }
   return new SQL(queryChunks);
 }
-((sql2) => {
+((sql22) => {
   function empty() {
     return new SQL([]);
   }
-  sql2.empty = empty;
+  sql22.empty = empty;
   function fromList(list) {
     return new SQL(list);
   }
-  sql2.fromList = fromList;
+  sql22.fromList = fromList;
   function raw(str) {
     return new SQL([new StringChunk(str)]);
   }
-  sql2.raw = raw;
+  sql22.raw = raw;
   function join(chunks, separator) {
     const result = [];
     for (const [i, chunk] of chunks.entries()) {
@@ -54206,24 +54206,24 @@ function sql(strings, ...params) {
     }
     return new SQL(result);
   }
-  sql2.join = join;
+  sql22.join = join;
   function identifier(value) {
     return new Name(value);
   }
-  sql2.identifier = identifier;
+  sql22.identifier = identifier;
   function placeholder2(name2) {
     return new Placeholder(name2);
   }
-  sql2.placeholder = placeholder2;
+  sql22.placeholder = placeholder2;
   function param2(value, encoder) {
     return new Param(value, encoder);
   }
-  sql2.param = param2;
+  sql22.param = param2;
 })(sql || (sql = {}));
 ((SQL2) => {
   class Aliased {
-    constructor(sql2, fieldAlias) {
-      this.sql = sql2;
+    constructor(sql22, fieldAlias) {
+      this.sql = sql22;
       this.fieldAlias = fieldAlias;
     }
     static [entityKind] = "SQL.Aliased";
@@ -57029,8 +57029,8 @@ var PgDialect = class {
       return "none";
     }
   }
-  sqlToQuery(sql2, invokeSource) {
-    return sql2.toQuery({
+  sqlToQuery(sql22, invokeSource) {
+    return sql22.toQuery({
       casing: this.casing,
       escapeName: this.escapeName,
       escapeParam: this.escapeParam,
@@ -59389,10 +59389,10 @@ var PgRelationalQuery = class extends QueryPromise {
 
 // node_modules/.pnpm/drizzle-orm@0.45.2_@types+pg@8.20.0_pg@8.22.0/node_modules/drizzle-orm/pg-core/query-builders/raw.js
 var PgRaw = class extends QueryPromise {
-  constructor(execute, sql2, query, mapBatchResult) {
+  constructor(execute, sql3, query, mapBatchResult) {
     super();
     this.execute = execute;
-    this.sql = sql2;
+    this.sql = sql3;
     this.query = query;
     this.mapBatchResult = mapBatchResult;
   }
@@ -59712,8 +59712,8 @@ var NoopCache = class extends Cache {
   async onMutate(_params) {
   }
 };
-async function hashQuery(sql2, params) {
-  const dataToHash = `${sql2}-${JSON.stringify(params)}`;
+async function hashQuery(sql3, params) {
+  const dataToHash = `${sql3}-${JSON.stringify(params)}`;
   const encoder = new TextEncoder();
   const data = encoder.encode(dataToHash);
   const hashBuffer = await crypto.subtle.digest("SHA-256", data);
@@ -59846,8 +59846,8 @@ var PgSession = class {
     ).all();
   }
   /** @internal */
-  async count(sql2, token) {
-    const res = await this.execute(sql2, token);
+  async count(sql22, token) {
+    const res = await this.execute(sql22, token);
     return Number(
       res[0]["count"]
     );
@@ -60069,8 +60069,8 @@ var NodePgSession = class _NodePgSession extends PgSession {
       if (isPool) session2.client.release();
     }
   }
-  async count(sql2) {
-    const res = await this.execute(sql2);
+  async count(sql22) {
+    const res = await this.execute(sql22);
     return Number(
       res["rows"][0]["count"]
     );
@@ -66342,7 +66342,11 @@ router9.post("/characters/:characterId/inventory/unlock-slot", requireAuth, asyn
   const [updatedChar] = await db.update(charactersTable).set({
     gold: character.gold - UNLOCK_COST,
     unlockedSlots: currentUnlocked + 1
-  }).where(eq(charactersTable.id, characterId)).returning();
+  }).where(and(eq(charactersTable.id, characterId), eq(charactersTable.userId, userId))).returning();
+  if (!updatedChar) {
+    res.status(400).json({ error: "Kh\xF4ng th\u1EC3 c\u1EADp nh\u1EADt \xF4 h\xE0nh trang!" });
+    return;
+  }
   res.status(200).json({
     success: true,
     unlockedSlots: updatedChar.unlockedSlots,
@@ -67075,11 +67079,16 @@ router12.post("/characters/:characterId/quests/:questId/claim", requireAuth, asy
   }
   const recordId = `${characterId}_${questId}`;
   const [existing] = await db.select().from(characterQuestsTable).where(eq(characterQuestsTable.id, recordId)).limit(1);
-  if (!existing || existing.status !== "READY_TO_CLAIM") {
+  const [claimedRecord] = await db.update(characterQuestsTable).set({ status: "COMPLETED", updatedAt: /* @__PURE__ */ new Date() }).where(
+    and(
+      eq(characterQuestsTable.id, recordId),
+      eq(characterQuestsTable.status, "READY_TO_CLAIM")
+    )
+  ).returning();
+  if (!claimedRecord) {
     res.status(400).json({ error: "Nhi\u1EC7m v\u1EE5 ch\u01B0a ho\xE0n th\xE0nh ho\u1EB7c \u0111\xE3 \u0111\u01B0\u1EE3c nh\u1EADn th\u01B0\u1EDFng!" });
     return;
   }
-  await db.update(characterQuestsTable).set({ status: "COMPLETED", updatedAt: /* @__PURE__ */ new Date() }).where(eq(characterQuestsTable.id, recordId));
   if (quest.nextQuestId) {
     const nextRecordId = `${characterId}_${quest.nextQuestId}`;
     const [nextExist] = await db.select().from(characterQuestsTable).where(eq(characterQuestsTable.id, nextRecordId)).limit(1);
@@ -67251,19 +67260,21 @@ router13.post("/characters/:characterId/blacksmith/enhance", requireAuth, async 
       return;
     }
   }
-  await db.update(charactersTable).set({ gold: character.gold - goldCost }).where(eq(charactersTable.id, characterId));
-  if (stoneItem.quantity <= stoneCost) {
-    await db.delete(characterItemsTable).where(eq(characterItemsTable.id, stoneItem.id));
-  } else {
-    await db.update(characterItemsTable).set({ quantity: stoneItem.quantity - stoneCost }).where(eq(characterItemsTable.id, stoneItem.id));
-  }
-  if (protectionUsed && protectionCharmItem) {
-    if (protectionCharmItem.quantity <= 1) {
-      await db.delete(characterItemsTable).where(eq(characterItemsTable.id, protectionCharmItem.id));
+  await db.transaction(async (tx) => {
+    await tx.update(charactersTable).set({ gold: character.gold - goldCost }).where(eq(charactersTable.id, characterId));
+    if (stoneItem.quantity <= stoneCost) {
+      await tx.delete(characterItemsTable).where(eq(characterItemsTable.id, stoneItem.id));
     } else {
-      await db.update(characterItemsTable).set({ quantity: protectionCharmItem.quantity - 1 }).where(eq(characterItemsTable.id, protectionCharmItem.id));
+      await tx.update(characterItemsTable).set({ quantity: stoneItem.quantity - stoneCost }).where(eq(characterItemsTable.id, stoneItem.id));
     }
-  }
+    if (protectionUsed && protectionCharmItem) {
+      if (protectionCharmItem.quantity <= 1) {
+        await tx.delete(characterItemsTable).where(eq(characterItemsTable.id, protectionCharmItem.id));
+      } else {
+        await tx.update(characterItemsTable).set({ quantity: protectionCharmItem.quantity - 1 }).where(eq(characterItemsTable.id, protectionCharmItem.id));
+      }
+    }
+  });
   const successRate = getEnhanceSuccessRate(curLevel);
   const roll = Math.random();
   const isSuccess = roll < successRate;

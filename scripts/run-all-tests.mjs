@@ -57,7 +57,7 @@ const TEST_SUITES = [
   {
     id: 6,
     name: "RPG Economy & Progression",
-    script: "scratch/test-phase6-economy.mjs",
+    script: "scripts/test-phase6-economy.mjs",
     description: "Blacksmith +1..+15, gem socketing, auction house 2% fee / 5% tax",
   },
   {

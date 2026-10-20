@@ -1,5 +1,5 @@
 import { Router } from "express";
-import { and, eq } from "drizzle-orm";
+import { and, eq, sql, gte, lt } from "drizzle-orm";
 import {
   db,
   charactersTable,
@@ -208,8 +208,13 @@ router.post("/characters/:characterId/inventory/unlock-slot", requireAuth, async
       gold: character.gold - UNLOCK_COST,
       unlockedSlots: currentUnlocked + 1,
     })
-    .where(eq(charactersTable.id, characterId))
+    .where(and(eq(charactersTable.id, characterId), eq(charactersTable.userId, userId)))
     .returning();
+
+  if (!updatedChar) {
+    res.status(400).json({ error: "Không thể cập nhật ô hành trang!" });
+    return;
+  }
 
   res.status(200).json({
     success: true,
