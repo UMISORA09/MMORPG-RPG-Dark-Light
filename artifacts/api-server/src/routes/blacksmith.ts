@@ -115,22 +115,7 @@ router.post("/characters/:characterId/blacksmith/enhance", requireAuth, async (r
     return;
   }
 
-  // Trừ tài nguyên
-  await db
-    .update(charactersTable)
-    .set({ gold: character.gold - goldCost })
-    .where(eq(charactersTable.id, characterId));
-
-  if (stoneItem.quantity <= stoneCost) {
-    await db.delete(characterItemsTable).where(eq(characterItemsTable.id, stoneItem.id));
-  } else {
-    await db
-      .update(characterItemsTable)
-      .set({ quantity: stoneItem.quantity - stoneCost })
-      .where(eq(characterItemsTable.id, stoneItem.id));
-  }
-
-  // Kiểm tra Bùa Bảo Hộ nếu cấp >= 10 và có yêu cầu bảo hộ
+  // Kiểm tra Bùa Bảo Hộ nếu cấp >= 10 và có yêu cầu bảo hộ (TRƯỚC KHI TRỪ TÀI NGUYÊN)
   let protectionUsed = false;
   let protectionCharmItem: any = null;
 
@@ -150,17 +135,35 @@ router.post("/characters/:characterId/blacksmith/enhance", requireAuth, async (r
     if (charm && charm.quantity > 0) {
       protectionCharmItem = charm;
       protectionUsed = true;
-      if (charm.quantity <= 1) {
-        await db.delete(characterItemsTable).where(eq(characterItemsTable.id, charm.id));
-      } else {
-        await db
-          .update(characterItemsTable)
-          .set({ quantity: charm.quantity - 1 })
-          .where(eq(characterItemsTable.id, charm.id));
-      }
     } else {
       res.status(400).json({ error: "Bạn không có Bùa Bảo Hộ Cường Hóa trong túi đồ!" });
       return;
+    }
+  }
+
+  // Sau khi xác thực hợp lệ cả Vàng, Đá Cường Hóa VÀ Bùa Bảo Hộ (nếu yêu cầu), mới thực hiện trừ tài nguyên
+  await db
+    .update(charactersTable)
+    .set({ gold: character.gold - goldCost })
+    .where(eq(charactersTable.id, characterId));
+
+  if (stoneItem.quantity <= stoneCost) {
+    await db.delete(characterItemsTable).where(eq(characterItemsTable.id, stoneItem.id));
+  } else {
+    await db
+      .update(characterItemsTable)
+      .set({ quantity: stoneItem.quantity - stoneCost })
+      .where(eq(characterItemsTable.id, stoneItem.id));
+  }
+
+  if (protectionUsed && protectionCharmItem) {
+    if (protectionCharmItem.quantity <= 1) {
+      await db.delete(characterItemsTable).where(eq(characterItemsTable.id, protectionCharmItem.id));
+    } else {
+      await db
+        .update(characterItemsTable)
+        .set({ quantity: protectionCharmItem.quantity - 1 })
+        .where(eq(characterItemsTable.id, protectionCharmItem.id));
     }
   }
 

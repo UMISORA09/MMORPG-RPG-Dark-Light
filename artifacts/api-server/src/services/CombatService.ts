@@ -2,6 +2,7 @@ import { and, eq } from "drizzle-orm";
 import { db, battleLogsTable, charactersTable, monstersTable } from "@workspace/db";
 import { calculateLevelProgression, getStatsForLevel } from "../rules/combatRules";
 import { recalculateCharacterStats } from "./CharacterInventoryService";
+import { playerPartyMap } from "../routes/multiplayer";
 
 export class CombatService {
   static async getMonster(monsterId: string) {
@@ -25,7 +26,13 @@ export class CombatService {
       )).limit(1);
       if (!character) throw new Error("Không tìm thấy nhân vật hoặc không có quyền chiến đấu");
 
-      const progression = calculateLevelProgression(character.experience, character.level, input.expGained);
+      // Party System: Nếu nhân vật thuộc tổ đội đang hoạt động, nhận Buff +15% EXP
+      const inParty = playerPartyMap.has(input.characterId);
+      const effectiveExp = (inParty && input.expGained > 0)
+        ? Math.round(input.expGained * 1.15)
+        : input.expGained;
+
+      const progression = calculateLevelProgression(character.experience, character.level, effectiveExp);
       const levelStats = getStatsForLevel(character.classId, progression.newLevel);
       const [updatedBase] = await tx.update(charactersTable).set({
         level: progression.newLevel,
@@ -52,7 +59,7 @@ export class CombatService {
         monsterId: input.monsterId,
         monsterName: input.monsterName,
         victory: input.victory,
-        expGained: input.expGained,
+        expGained: effectiveExp,
         goldGained: input.goldGained,
       });
 
@@ -61,6 +68,8 @@ export class CombatService {
         newLevel: progression.newLevel,
         leveledUp: progression.leveledUp,
         expToNextLevel: progression.expToNextLevel,
+        expGained: effectiveExp,
+        partyBuffActive: inParty,
       };
     });
   }

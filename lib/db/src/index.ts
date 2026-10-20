@@ -240,30 +240,43 @@ function createMemoryDb() {
       flatten(predicate.queryChunks);
 
       let lastColName = "";
-      const pairs: Array<{ col: string; val: any }> = [];
+      const pairs: Array<{ col: string; val: any; isInArray?: boolean }> = [];
 
       for (let i = 0; i < allChunks.length; i++) {
         const chunk = allChunks[i];
-        if (chunk?.name && typeof chunk.name === "string" && !Array.isArray(chunk.value)) {
+        if (!chunk || chunk?.constructor?.name === "StringChunk") continue;
+        if (chunk?.name && typeof chunk.name === "string") {
           lastColName = chunk.name;
+        } else if (lastColName && Array.isArray(chunk)) {
+          const list = chunk.map((item: any) =>
+            item?.constructor?.name === "Param" || item?.value !== undefined ? item.value : item
+          );
+          pairs.push({ col: lastColName, val: list, isInArray: true });
+          lastColName = "";
+        } else if (lastColName && Array.isArray(chunk?.value)) {
+          pairs.push({ col: lastColName, val: chunk.value, isInArray: true });
+          lastColName = "";
         } else if (
           lastColName &&
           (chunk?.constructor?.name === "Param" ||
-            (chunk?.value !== undefined && !Array.isArray(chunk.value) && typeof chunk.value !== "object"))
+            (chunk?.value !== undefined && typeof chunk.value !== "object"))
         ) {
           pairs.push({ col: lastColName, val: chunk.value });
           lastColName = "";
         }
       }
 
-            if (pairs.length > 0) {
-        return pairs.every(({ col, val }) => {
+      if (pairs.length > 0) {
+        return pairs.every(({ col, val, isInArray }: any) => {
           const valInRow =
             row[col] !== undefined
               ? row[col]
               : row[camelCase(col)] !== undefined
               ? row[camelCase(col)]
               : row[snakeCase(col)];
+          if (isInArray && Array.isArray(val)) {
+            return val.includes(valInRow) || val.some((v: any) => v == valInRow);
+          }
           return valInRow === val || valInRow == val;
         });
       }

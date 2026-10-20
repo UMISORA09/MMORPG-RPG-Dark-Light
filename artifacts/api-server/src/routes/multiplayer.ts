@@ -264,8 +264,8 @@ export interface PartyGroup {
   dungeonDifficulty?: "normal" | "hard" | "nightmare";
 }
 
-const parties = new Map<string, PartyGroup>();
-const playerPartyMap = new Map<number, string>();
+export const parties = new Map<string, PartyGroup>();
+export const playerPartyMap = new Map<number, string>();
 
 router.get("/party/:characterId", (req, res): void => {
   const characterId = Number(req.params.characterId);

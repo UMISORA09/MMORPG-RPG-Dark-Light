@@ -61700,16 +61700,29 @@ function createMemoryDb() {
       const pairs = [];
       for (let i = 0; i < allChunks.length; i++) {
         const chunk = allChunks[i];
-        if (chunk?.name && typeof chunk.name === "string" && !Array.isArray(chunk.value)) {
+        if (!chunk || chunk?.constructor?.name === "StringChunk") continue;
+        if (chunk?.name && typeof chunk.name === "string") {
           lastColName = chunk.name;
-        } else if (lastColName && (chunk?.constructor?.name === "Param" || chunk?.value !== void 0 && !Array.isArray(chunk.value) && typeof chunk.value !== "object")) {
+        } else if (lastColName && Array.isArray(chunk)) {
+          const list = chunk.map(
+            (item) => item?.constructor?.name === "Param" || item?.value !== void 0 ? item.value : item
+          );
+          pairs.push({ col: lastColName, val: list, isInArray: true });
+          lastColName = "";
+        } else if (lastColName && Array.isArray(chunk?.value)) {
+          pairs.push({ col: lastColName, val: chunk.value, isInArray: true });
+          lastColName = "";
+        } else if (lastColName && (chunk?.constructor?.name === "Param" || chunk?.value !== void 0 && typeof chunk.value !== "object")) {
           pairs.push({ col: lastColName, val: chunk.value });
           lastColName = "";
         }
       }
       if (pairs.length > 0) {
-        return pairs.every(({ col, val }) => {
+        return pairs.every(({ col, val, isInArray }) => {
           const valInRow = row[col] !== void 0 ? row[col] : row[camelCase(col)] !== void 0 ? row[camelCase(col)] : row[snakeCase(col)];
+          if (isInArray && Array.isArray(val)) {
+            return val.includes(valInRow) || val.some((v) => v == valInRow);
+          }
           return valInRow === val || valInRow == val;
         });
       }
@@ -64591,7 +64604,7 @@ function getExpForLevel2(level) {
 var characters_default = router4;
 
 // src/routes/battle.ts
-var import_express5 = __toESM(require_express2(), 1);
+var import_express6 = __toESM(require_express2(), 1);
 
 // src/rules/combatRules.ts
 function calculateDamage(attackerAtk, defenderDef, options) {
@@ -64683,6 +64696,296 @@ function getStatsForLevel3(classId, level) {
   };
 }
 
+// src/routes/multiplayer.ts
+var import_express5 = __toESM(require_express2(), 1);
+var router5 = (0, import_express5.Router)();
+var activePlayers = /* @__PURE__ */ new Map();
+var AI_ADVENTURERS = [
+  {
+    characterId: 9001,
+    name: "LongKiem_Vip",
+    classId: "fighter",
+    level: 14,
+    gender: "male",
+    posX: -5,
+    posZ: -3,
+    facing: 0,
+    facingLeft: false,
+    animState: "IDLE",
+    enhanceLevel: 10,
+    hp: 750,
+    maxHp: 750,
+    chatBubble: "Ai \u0111i s\u0103n Boss H\u1EAFc Long kh\xF4ng?",
+    chatTime: Date.now(),
+    zoneId: "SAFE_VILLAGE",
+    serverId: "s1_long_vuong",
+    lastHeartbeat: Date.now(),
+    isBot: true
+  },
+  {
+    characterId: 9002,
+    name: "BangTam_Nu",
+    classId: "assassin",
+    level: 12,
+    gender: "female",
+    posX: 12,
+    posZ: -5,
+    facing: 1.5,
+    facingLeft: true,
+    animState: "IDLE",
+    enhanceLevel: 8,
+    hp: 420,
+    maxHp: 420,
+    chatBubble: "V\u1EEBa ch\u1EBF t\u1EA1o \u0111\u01B0\u1EE3c Song \u0110ao Epic n\xE8!",
+    chatTime: Date.now() - 3e3,
+    zoneId: "SAFE_VILLAGE",
+    serverId: "s1_long_vuong",
+    lastHeartbeat: Date.now(),
+    isBot: true
+  },
+  {
+    characterId: 9003,
+    name: "ThienXa_99",
+    classId: "gunner",
+    level: 11,
+    gender: "male",
+    posX: -15,
+    posZ: -10,
+    facing: -1.2,
+    facingLeft: true,
+    animState: "IDLE",
+    enhanceLevel: 7,
+    hp: 450,
+    maxHp: 450,
+    chatBubble: "\u0110ang c\xE0y Slime l\xE0m nhi\u1EC7m v\u1EE5 Q2...",
+    chatTime: Date.now() - 6e3,
+    zoneId: "WILDERNESS",
+    serverId: "s1_long_vuong",
+    lastHeartbeat: Date.now(),
+    isBot: true
+  },
+  {
+    characterId: 9004,
+    name: "HoVe_KimCang",
+    classId: "tank",
+    level: 15,
+    gender: "male",
+    posX: 0,
+    posZ: -40,
+    facing: 3.14,
+    facingLeft: false,
+    animState: "IDLE",
+    enhanceLevel: 13,
+    hp: 1200,
+    maxHp: 1200,
+    chatBubble: "C\u1EA7n tuy\u1EC3n DPS c\u1EE9ng v\xE0o Hang \u0110\u1ED9ng \xC1c M\u1ED9ng!",
+    chatTime: Date.now() - 8e3,
+    zoneId: "BOSS_ALTAR",
+    serverId: "s1_long_vuong",
+    lastHeartbeat: Date.now(),
+    isBot: true
+  }
+];
+setInterval(() => {
+  const now = Date.now();
+  for (const [id, player] of activePlayers.entries()) {
+    if (now - player.lastHeartbeat > 12e3) {
+      activePlayers.delete(id);
+    }
+  }
+  const t = now * 1e-3;
+  AI_ADVENTURERS[0].posX = -5 + Math.cos(t * 0.5) * 3;
+  AI_ADVENTURERS[0].posZ = -3 + Math.sin(t * 0.5) * 3;
+  AI_ADVENTURERS[1].posX = 12 + Math.sin(t * 0.4) * 2;
+  AI_ADVENTURERS[2].posX = -25 + Math.sin(t * 0.6) * 4;
+  AI_ADVENTURERS[2].posZ = -14 + Math.cos(t * 0.6) * 3;
+}, 3e3);
+router5.post("/multiplayer/sync", (req, res) => {
+  const {
+    characterId,
+    name,
+    classId,
+    level,
+    gender = "male",
+    posX = 0,
+    posZ = 0,
+    facing = 0,
+    facingLeft = false,
+    animState = "IDLE",
+    enhanceLevel = 0,
+    hp = 500,
+    maxHp = 500,
+    chatBubble = null,
+    zoneId = "SAFE_VILLAGE",
+    serverId = "s1_long_vuong",
+    hairStyle,
+    hairColor,
+    outfitId,
+    auraIds,
+    isMounted,
+    mountId,
+    petId
+  } = req.body;
+  if (!characterId) {
+    res.status(400).json({ error: "Thi\u1EBFu characterId" });
+    return;
+  }
+  const now = Date.now();
+  const existing = activePlayers.get(characterId);
+  const updatedBubble = chatBubble ?? (existing?.chatBubble && now - (existing.chatTime || 0) < 6e3 ? existing.chatBubble : null);
+  activePlayers.set(characterId, {
+    characterId,
+    name,
+    classId,
+    level,
+    gender,
+    posX,
+    posZ,
+    facing,
+    facingLeft,
+    animState,
+    enhanceLevel,
+    hp,
+    maxHp,
+    chatBubble: updatedBubble,
+    chatTime: chatBubble ? now : existing?.chatTime || now,
+    zoneId,
+    serverId,
+    lastHeartbeat: now,
+    hairStyle,
+    hairColor,
+    outfitId,
+    auraIds,
+    isMounted,
+    mountId,
+    petId
+  });
+  const othersInZone = [];
+  const MAX_AOI_DIST_SQ = 50 * 50;
+  for (const [id, other] of activePlayers.entries()) {
+    if (id !== characterId && other.serverId === serverId && other.zoneId === zoneId) {
+      const dx = (other.posX || 0) - (posX || 0);
+      const dz = (other.posZ || 0) - (posZ || 0);
+      if (dx * dx + dz * dz <= MAX_AOI_DIST_SQ) {
+        othersInZone.push(other);
+      }
+    }
+  }
+  for (const bot of AI_ADVENTURERS) {
+    if (bot.zoneId === zoneId) {
+      const dx = (bot.posX || 0) - (posX || 0);
+      const dz = (bot.posZ || 0) - (posZ || 0);
+      if (dx * dx + dz * dz <= MAX_AOI_DIST_SQ) {
+        othersInZone.push(bot);
+      }
+    }
+  }
+  res.status(200).json({
+    success: true,
+    players: othersInZone,
+    serverTime: now,
+    totalOnline: activePlayers.size + AI_ADVENTURERS.length
+  });
+});
+var parties = /* @__PURE__ */ new Map();
+var playerPartyMap = /* @__PURE__ */ new Map();
+router5.get("/party/:characterId", (req, res) => {
+  const characterId = Number(req.params.characterId);
+  const partyId = playerPartyMap.get(characterId);
+  if (!partyId || !parties.has(partyId)) {
+    res.status(200).json({ hasParty: false, party: null });
+    return;
+  }
+  res.status(200).json({
+    hasParty: true,
+    party: parties.get(partyId)
+  });
+});
+router5.post("/party/create", requireAuth, (req, res) => {
+  const { characterId, name, classId, level, gender = "male", hp = 500, maxHp = 500 } = req.body;
+  if (!characterId) {
+    res.status(400).json({ error: "Thi\u1EBFu characterId" });
+    return;
+  }
+  const oldPartyId = playerPartyMap.get(characterId);
+  if (oldPartyId && parties.has(oldPartyId)) {
+    const oldParty = parties.get(oldPartyId);
+    oldParty.members = oldParty.members.filter((m) => m.characterId !== characterId);
+    if (oldParty.members.length === 0) parties.delete(oldPartyId);
+  }
+  const partyId = `party_${characterId}_${Date.now().toString(36)}`;
+  const leaderMember = {
+    characterId,
+    name,
+    classId,
+    level,
+    gender,
+    hp,
+    maxHp,
+    isLeader: true
+  };
+  const newParty = {
+    id: partyId,
+    leaderId: characterId,
+    leaderName: name,
+    members: [leaderMember]
+  };
+  parties.set(partyId, newParty);
+  playerPartyMap.set(characterId, partyId);
+  res.status(200).json({
+    success: true,
+    message: "T\u1EA1o t\u1ED5 \u0111\u1ED9i th\xE0nh c\xF4ng! To\xE0n \u0111\u1ED9i nh\u1EADn Buff: +15% EXP & +10% L\u1EF1c Chi\u1EBFn.",
+    party: newParty
+  });
+});
+router5.post("/party/invite-bot", requireAuth, (req, res) => {
+  const { characterId, botType = "tank" } = req.body;
+  const partyId = playerPartyMap.get(characterId);
+  if (!partyId || !parties.has(partyId)) {
+    res.status(400).json({ error: "B\u1EA1n ch\u01B0a c\xF3 t\u1ED5 \u0111\u1ED9i \u0111\u1EC3 m\u1EDDi \u0111\u1ED3ng h\xE0nh!" });
+    return;
+  }
+  const party = parties.get(partyId);
+  if (party.members.length >= 4) {
+    res.status(400).json({ error: "T\u1ED5 \u0111\u1ED9i \u0111\xE3 \u0111\u1EA7y (t\u1ED1i \u0111a 4 th\xE0nh vi\xEAn)!" });
+    return;
+  }
+  const botId = 8e3 + party.members.length;
+  const botName = botType === "tank" ? "H\u1ED9 V\u1EC7 Thanh Long" : "Th\xE1nh N\u1EEF Tr\u1ECB Li\u1EC7u";
+  const botClass = botType === "tank" ? "tank" : "gunner";
+  const companion = {
+    characterId: botId,
+    name: botName,
+    classId: botClass,
+    level: 12,
+    gender: "female",
+    hp: 850,
+    maxHp: 850,
+    isLeader: false,
+    isBot: true
+  };
+  party.members.push(companion);
+  res.status(200).json({
+    success: true,
+    message: `\u0110\xE3 chi\xEAu m\u1ED9 H\u1ED9 V\u1EC7 \u0111\u1ED3ng h\xE0nh ${botName} v\xE0o t\u1ED5 \u0111\u1ED9i!`,
+    party
+  });
+});
+router5.post("/party/leave", requireAuth, (req, res) => {
+  const { characterId } = req.body;
+  const partyId = playerPartyMap.get(characterId);
+  if (partyId && parties.has(partyId)) {
+    const party = parties.get(partyId);
+    party.members = party.members.filter((m) => m.characterId !== characterId);
+    if (party.members.length === 0 || party.leaderId === characterId) {
+      parties.delete(partyId);
+    }
+    playerPartyMap.delete(characterId);
+  }
+  res.status(200).json({ success: true, message: "\u0110\xE3 r\u1EDDi kh\u1ECFi t\u1ED5 \u0111\u1ED9i." });
+});
+var multiplayer_default = router5;
+
 // src/services/CombatService.ts
 var CombatService = class {
   static async getMonster(monsterId) {
@@ -64696,7 +64999,9 @@ var CombatService = class {
         eq(charactersTable.userId, input.userId)
       )).limit(1);
       if (!character) throw new Error("Kh\xF4ng t\xECm th\u1EA5y nh\xE2n v\u1EADt ho\u1EB7c kh\xF4ng c\xF3 quy\u1EC1n chi\u1EBFn \u0111\u1EA5u");
-      const progression = calculateLevelProgression(character.experience, character.level, input.expGained);
+      const inParty = playerPartyMap.has(input.characterId);
+      const effectiveExp = inParty && input.expGained > 0 ? Math.round(input.expGained * 1.15) : input.expGained;
+      const progression = calculateLevelProgression(character.experience, character.level, effectiveExp);
       const levelStats = getStatsForLevel3(character.classId, progression.newLevel);
       const [updatedBase] = await tx.update(charactersTable).set({
         level: progression.newLevel,
@@ -64722,21 +65027,23 @@ var CombatService = class {
         monsterId: input.monsterId,
         monsterName: input.monsterName,
         victory: input.victory,
-        expGained: input.expGained,
+        expGained: effectiveExp,
         goldGained: input.goldGained
       });
       return {
         character: updatedCharacter,
         newLevel: progression.newLevel,
         leveledUp: progression.leveledUp,
-        expToNextLevel: progression.expToNextLevel
+        expToNextLevel: progression.expToNextLevel,
+        expGained: effectiveExp,
+        partyBuffActive: inParty
       };
     });
   }
 };
 
 // src/routes/battle.ts
-var router5 = (0, import_express5.Router)();
+var router6 = (0, import_express6.Router)();
 var lastBattleTimestamp = /* @__PURE__ */ new Map();
 function simulateBattle(playerAtk, playerDef, playerHp, playerSpd, monsterAtk, monsterDef, monsterHp, classId) {
   const rounds = [];
@@ -64784,7 +65091,7 @@ function simulateBattle(playerAtk, playerDef, playerHp, playerSpd, monsterAtk, m
   }
   return { rounds, victory: mHp <= 0 };
 }
-router5.post("/characters/:characterId/battle", requireAuth, async (req, res) => {
+router6.post("/characters/:characterId/battle", requireAuth, async (req, res) => {
   const characterId = parseInt(req.params.characterId);
   if (isNaN(characterId)) {
     return res.status(400).json({ error: "ID kh\xF4ng h\u1EE3p l\u1EC7" });
@@ -64807,6 +65114,9 @@ router5.post("/characters/:characterId/battle", requireAuth, async (req, res) =>
     return res.status(429).json({ error: "Thao t\xE1c chi\u1EBFn \u0111\u1EA5u qu\xE1 nhanh. Vui l\xF2ng th\u1EED l\u1EA1i sau gi\xE2y l\xE1t." });
   }
   lastBattleTimestamp.set(characterId, now);
+  res.on("finish", () => {
+    lastBattleTimestamp.set(characterId, Date.now());
+  });
   await ensureItemCatalog();
   const effectiveCharacter = await toCharacterResponse(character);
   const monsterReward = await getMonster(monsterId);
@@ -64874,10 +65184,10 @@ router5.post("/characters/:characterId/battle", requireAuth, async (req, res) =>
     }
   });
 });
-var battle_default = router5;
+var battle_default = router6;
 
 // src/routes/encounters.ts
-var import_express6 = __toESM(require_express2(), 1);
+var import_express7 = __toESM(require_express2(), 1);
 
 // src/encounters/encounterService.ts
 import crypto3 from "node:crypto";
@@ -65331,7 +65641,11 @@ var EncounterService = class {
     let expGained = 0;
     let goldGained = 0;
     if (isVictory) {
-      expGained = monsterReward.expReward;
+      let baseExp = monsterReward.expReward;
+      if (playerPartyMap.has(encounter.characterId)) {
+        baseExp = Math.round(baseExp * 1.15);
+      }
+      expGained = baseExp;
       goldGained = monsterReward.goldReward;
     }
     const engine = this.activeEngines.get(encounterId);
@@ -65409,8 +65723,8 @@ var EncounterService = class {
 };
 
 // src/routes/encounters.ts
-var router6 = (0, import_express6.Router)();
-router6.post("/characters/:characterId/encounters", requireAuth, async (req, res) => {
+var router7 = (0, import_express7.Router)();
+router7.post("/characters/:characterId/encounters", requireAuth, async (req, res) => {
   const characterId = parseInt(req.params.characterId);
   if (isNaN(characterId)) {
     return res.status(400).json({ error: "ID nh\xE2n v\u1EADt kh\xF4ng h\u1EE3p l\u1EC7" });
@@ -65435,7 +65749,7 @@ router6.post("/characters/:characterId/encounters", requireAuth, async (req, res
     return res.status(status).json({ error: err.message || "L\u1ED7i m\xE1y ch\u1EE7" });
   }
 });
-router6.get("/characters/:characterId/encounters/:encounterId", requireAuth, async (req, res) => {
+router7.get("/characters/:characterId/encounters/:encounterId", requireAuth, async (req, res) => {
   const characterId = parseInt(req.params.characterId);
   const encounterId = req.params.encounterId;
   if (isNaN(characterId) || !encounterId) {
@@ -65449,7 +65763,7 @@ router6.get("/characters/:characterId/encounters/:encounterId", requireAuth, asy
     return res.status(status).json({ error: err.message || "L\u1ED7i m\xE1y ch\u1EE7" });
   }
 });
-router6.post("/characters/:characterId/encounters/:encounterId/abort", requireAuth, async (req, res) => {
+router7.post("/characters/:characterId/encounters/:encounterId/abort", requireAuth, async (req, res) => {
   const characterId = parseInt(req.params.characterId);
   const encounterId = req.params.encounterId;
   if (isNaN(characterId) || !encounterId) {
@@ -65463,12 +65777,12 @@ router6.post("/characters/:characterId/encounters/:encounterId/abort", requireAu
     return res.status(status).json({ error: err.message || "L\u1ED7i m\xE1y ch\u1EE7" });
   }
 });
-var encounters_default = router6;
+var encounters_default = router7;
 
 // src/routes/leaderboard.ts
-var import_express7 = __toESM(require_express2(), 1);
-var router7 = (0, import_express7.Router)();
-router7.get("/leaderboard", async (_req, res) => {
+var import_express8 = __toESM(require_express2(), 1);
+var router8 = (0, import_express8.Router)();
+router8.get("/leaderboard", async (_req, res) => {
   const characters = await db.select({
     id: charactersTable.id,
     name: charactersTable.name,
@@ -65494,10 +65808,10 @@ router7.get("/leaderboard", async (_req, res) => {
   );
   return res.status(200).json(result);
 });
-var leaderboard_default = router7;
+var leaderboard_default = router8;
 
 // src/routes/inventory.ts
-var import_express8 = __toESM(require_express2(), 1);
+var import_express9 = __toESM(require_express2(), 1);
 
 // src/services/LootService.ts
 var LootService = class {
@@ -65682,14 +65996,14 @@ var LootService = class {
 };
 
 // src/routes/inventory.ts
-var router8 = (0, import_express8.Router)();
+var router9 = (0, import_express9.Router)();
 function withExperienceToNextLevel(character) {
   return {
     ...character,
     experienceToNextLevel: getExpForLevel(character.level)
   };
 }
-router8.get("/characters/:characterId/inventory", requireAuth, async (req, res) => {
+router9.get("/characters/:characterId/inventory", requireAuth, async (req, res) => {
   const userId = req.session.userId;
   const params = GetInventoryParams.safeParse(req.params);
   if (!params.success) {
@@ -65706,7 +66020,7 @@ router8.get("/characters/:characterId/inventory", requireAuth, async (req, res) 
   const parsed = GetInventoryResponse.safeParse(rawList);
   res.status(200).json(parsed.success ? parsed.data : rawList);
 });
-router8.post("/characters/:characterId/inventory/:itemId/equip", requireAuth, async (req, res) => {
+router9.post("/characters/:characterId/inventory/:itemId/equip", requireAuth, async (req, res) => {
   const userId = req.session.userId;
   const params = EquipItemParams.safeParse(req.params);
   if (!params.success) {
@@ -65744,7 +66058,7 @@ router8.post("/characters/:characterId/inventory/:itemId/equip", requireAuth, as
     )
   );
 });
-router8.post("/characters/:characterId/inventory/:itemId/unequip", requireAuth, async (req, res) => {
+router9.post("/characters/:characterId/inventory/:itemId/unequip", requireAuth, async (req, res) => {
   const userId = req.session.userId;
   const params = UnequipItemParams.safeParse(req.params);
   if (!params.success) {
@@ -65782,7 +66096,7 @@ router8.post("/characters/:characterId/inventory/:itemId/unequip", requireAuth, 
     )
   );
 });
-router8.post("/characters/:characterId/inventory/unlock-slot", requireAuth, async (req, res) => {
+router9.post("/characters/:characterId/inventory/unlock-slot", requireAuth, async (req, res) => {
   const userId = req.session.userId;
   const characterId = parseInt(req.params.characterId);
   if (isNaN(characterId)) {
@@ -65815,7 +66129,7 @@ router8.post("/characters/:characterId/inventory/unlock-slot", requireAuth, asyn
     character: withExperienceToNextLevel(await toCharacterResponse(updatedChar))
   });
 });
-router8.post("/characters/:characterId/inventory/sort", requireAuth, async (req, res) => {
+router9.post("/characters/:characterId/inventory/sort", requireAuth, async (req, res) => {
   const userId = req.session.userId;
   const characterId = parseInt(req.params.characterId);
   if (isNaN(characterId)) {
@@ -65890,7 +66204,7 @@ router8.post("/characters/:characterId/inventory/sort", requireAuth, async (req,
   const rawList = await listInventory(characterId);
   res.status(200).json(rawList);
 });
-router8.post("/characters/:characterId/inventory/:itemId/sell", requireAuth, async (req, res) => {
+router9.post("/characters/:characterId/inventory/:itemId/sell", requireAuth, async (req, res) => {
   const userId = req.session.userId;
   const characterId = parseInt(req.params.characterId);
   const itemId = req.params.itemId;
@@ -65943,7 +66257,7 @@ router8.post("/characters/:characterId/inventory/:itemId/sell", requireAuth, asy
     character: withExperienceToNextLevel(await toCharacterResponse(updatedCharacter || character))
   });
 });
-router8.post("/characters/:characterId/inventory/:ownershipId/enhance", requireAuth, async (req, res) => {
+router9.post("/characters/:characterId/inventory/:ownershipId/enhance", requireAuth, async (req, res) => {
   const params = InventoryActionParams.safeParse(req.params);
   if (!params.success) {
     res.status(400).json({ error: "Tham s\u1ED1 c\u01B0\u1EDDng h\xF3a kh\xF4ng h\u1EE3p l\u1EC7" });
@@ -65973,7 +66287,7 @@ router8.post("/characters/:characterId/inventory/:ownershipId/enhance", requireA
     throw error40;
   }
 });
-router8.post("/characters/:characterId/inventory/:ownershipId/use", requireAuth, async (req, res) => {
+router9.post("/characters/:characterId/inventory/:ownershipId/use", requireAuth, async (req, res) => {
   const params = InventoryActionParams.safeParse(req.params);
   if (!params.success) {
     res.status(400).json({ error: "Tham s\u1ED1 s\u1EED d\u1EE5ng v\u1EADt ph\u1EA9m kh\xF4ng h\u1EE3p l\u1EC7" });
@@ -66003,7 +66317,7 @@ router8.post("/characters/:characterId/inventory/:ownershipId/use", requireAuth,
     throw error40;
   }
 });
-router8.post("/characters/:characterId/loot", requireAuth, async (req, res) => {
+router9.post("/characters/:characterId/loot", requireAuth, async (req, res) => {
   const userId = req.session.userId;
   const characterId = parseInt(req.params.characterId);
   if (isNaN(characterId)) {
@@ -66062,7 +66376,7 @@ router8.post("/characters/:characterId/loot", requireAuth, async (req, res) => {
     res.status(500).json({ error: error40.message || "L\u1ED7i nh\u1EB7t v\u1EADt ph\u1EA9m" });
   }
 });
-router8.post("/characters/:characterId/loot/:dropId", requireAuth, async (req, res) => {
+router9.post("/characters/:characterId/loot/:dropId", requireAuth, async (req, res) => {
   const userId = req.session.userId;
   const characterId = parseInt(req.params.characterId);
   const dropId = req.params.dropId;
@@ -66117,7 +66431,7 @@ router8.post("/characters/:characterId/loot/:dropId", requireAuth, async (req, r
     res.status(500).json({ error: error40.message || "L\u1ED7i nh\u1EB7t v\u1EADt ph\u1EA9m" });
   }
 });
-router8.post("/characters/:characterId/open-chest", requireAuth, async (req, res) => {
+router9.post("/characters/:characterId/open-chest", requireAuth, async (req, res) => {
   const userId = req.session.userId;
   const characterId = parseInt(req.params.characterId);
   if (isNaN(characterId)) {
@@ -66152,7 +66466,7 @@ router8.post("/characters/:characterId/open-chest", requireAuth, async (req, res
     characterLevel: character.level
   });
 });
-router8.post("/characters/:characterId/inventory/swap-slots", requireAuth, async (req, res) => {
+router9.post("/characters/:characterId/inventory/swap-slots", requireAuth, async (req, res) => {
   const userId = req.session.userId;
   const characterId = parseInt(req.params.characterId);
   const { fromSlot, toSlot } = req.body;
@@ -66196,26 +66510,26 @@ router8.post("/characters/:characterId/inventory/swap-slots", requireAuth, async
   const rawList = await listInventory(characterId);
   res.status(200).json({ success: true, inventory: rawList });
 });
-var inventory_default = router8;
+var inventory_default = router9;
 
 // src/routes/shop.ts
-var import_express9 = __toESM(require_express2(), 1);
-var router9 = (0, import_express9.Router)();
+var import_express10 = __toESM(require_express2(), 1);
+var router10 = (0, import_express10.Router)();
 function withExperienceToNextLevel2(character) {
   return {
     ...character,
     experienceToNextLevel: getExpForLevel(character.level)
   };
 }
-router9.get("/items", async (_req, res) => {
+router10.get("/items", async (_req, res) => {
   const items = await getCatalogItems();
   res.status(200).json(GetItemsResponse.parse(items));
 });
-router9.get("/shop/items", async (_req, res) => {
+router10.get("/shop/items", async (_req, res) => {
   const items = await getCatalogItems();
   res.status(200).json(GetItemsResponse.parse(items));
 });
-router9.post("/characters/:characterId/inventory/:itemId/buy", requireAuth, async (req, res) => {
+router10.post("/characters/:characterId/inventory/:itemId/buy", requireAuth, async (req, res) => {
   const userId = req.session.userId;
   const params = BuyItemParams.safeParse(req.params);
   if (!params.success) {
@@ -66279,11 +66593,11 @@ router9.post("/characters/:characterId/inventory/:itemId/buy", requireAuth, asyn
   };
   res.status(201).json(BuyItemResponse.parse(response));
 });
-var shop_default = router9;
+var shop_default = router10;
 
 // src/routes/community.ts
-var import_express10 = __toESM(require_express2(), 1);
-var router10 = (0, import_express10.Router)();
+var import_express11 = __toESM(require_express2(), 1);
+var router11 = (0, import_express11.Router)();
 async function validateServer(serverId) {
   await ensureServerCatalog();
   const [server] = await db.select().from(serversTable).where(eq(serversTable.id, serverId)).limit(1);
@@ -66296,7 +66610,7 @@ async function validateOptionalCharacter(userId, characterId, serverId) {
   if (serverId && character.serverId !== serverId) return { character: void 0, error: "Nh\xE2n v\u1EADt kh\xF4ng thu\u1ED9c m\xE1y ch\u1EE7 \u0111\xE3 ch\u1ECDn" };
   return { character, error: null };
 }
-router10.get("/community/posts", requireAuth, async (req, res) => {
+router11.get("/community/posts", requireAuth, async (req, res) => {
   const parsed = CommunityListQuery.safeParse(req.query);
   if (!parsed.success) return res.status(400).json({ error: "B\u1ED9 l\u1ECDc di\u1EC5n \u0111\xE0n kh\xF4ng h\u1EE3p l\u1EC7" });
   const filters = [];
@@ -66306,7 +66620,7 @@ router10.get("/community/posts", requireAuth, async (req, res) => {
   const posts = filters.length ? await query.where(and(...filters)).orderBy(desc(forumPostsTable.createdAt)).limit(parsed.data.limit) : await query.orderBy(desc(forumPostsTable.createdAt)).limit(parsed.data.limit);
   return res.status(200).json(posts);
 });
-router10.post("/community/posts", requireAuth, async (req, res) => {
+router11.post("/community/posts", requireAuth, async (req, res) => {
   const parsed = CreateForumPostBody.safeParse(req.body);
   if (!parsed.success) return res.status(400).json({ error: "N\u1ED9i dung b\xE0i vi\u1EBFt kh\xF4ng h\u1EE3p l\u1EC7" });
   const userId = req.session.userId;
@@ -66326,7 +66640,7 @@ router10.post("/community/posts", requireAuth, async (req, res) => {
   }).returning();
   return res.status(201).json(post);
 });
-router10.post("/community/posts/:postId/like", requireAuth, async (req, res) => {
+router11.post("/community/posts/:postId/like", requireAuth, async (req, res) => {
   const params = ForumPostParams.safeParse(req.params);
   const body = ForumLikeBody.safeParse(req.body);
   if (!params.success || !body.success) return res.status(400).json({ error: "Thao t\xE1c th\xEDch kh\xF4ng h\u1EE3p l\u1EC7" });
@@ -66338,7 +66652,7 @@ router10.post("/community/posts/:postId/like", requireAuth, async (req, res) => 
   const [updated] = await db.update(forumPostsTable).set({ likes: nextLikes, updatedAt: /* @__PURE__ */ new Date() }).where(eq(forumPostsTable.id, post.id)).returning();
   return res.status(200).json({ postId: post.id, liked: body.data.liked, likesCount: nextLikes.length, post: updated });
 });
-router10.get("/community/posts/:postId/comments", requireAuth, async (req, res) => {
+router11.get("/community/posts/:postId/comments", requireAuth, async (req, res) => {
   const params = ForumPostParams.safeParse(req.params);
   if (!params.success) return res.status(400).json({ error: "ID b\xE0i vi\u1EBFt kh\xF4ng h\u1EE3p l\u1EC7" });
   const [post] = await db.select({ id: forumPostsTable.id }).from(forumPostsTable).where(eq(forumPostsTable.id, params.data.postId)).limit(1);
@@ -66346,7 +66660,7 @@ router10.get("/community/posts/:postId/comments", requireAuth, async (req, res) 
   const comments = await db.select().from(forumCommentsTable).where(eq(forumCommentsTable.postId, post.id)).orderBy(desc(forumCommentsTable.createdAt)).limit(100);
   return res.status(200).json(comments);
 });
-router10.post("/community/posts/:postId/comments", requireAuth, async (req, res) => {
+router11.post("/community/posts/:postId/comments", requireAuth, async (req, res) => {
   const params = ForumPostParams.safeParse(req.params);
   const body = ForumCommentBody.safeParse(req.body);
   if (!params.success || !body.success) return res.status(400).json({ error: "B\xECnh lu\u1EADn kh\xF4ng h\u1EE3p l\u1EC7" });
@@ -66359,7 +66673,7 @@ router10.post("/community/posts/:postId/comments", requireAuth, async (req, res)
   }).returning();
   return res.status(201).json(comment);
 });
-router10.get("/community/chats", requireAuth, async (req, res) => {
+router11.get("/community/chats", requireAuth, async (req, res) => {
   const parsed = CommunityListQuery.safeParse(req.query);
   if (!parsed.success) return res.status(400).json({ error: "B\u1ED9 l\u1ECDc chat kh\xF4ng h\u1EE3p l\u1EC7" });
   const filters = [];
@@ -66369,7 +66683,7 @@ router10.get("/community/chats", requireAuth, async (req, res) => {
   const messages = filters.length ? await query.where(and(...filters)).orderBy(desc(worldChatsTable.createdAt)).limit(parsed.data.limit) : await query.orderBy(desc(worldChatsTable.createdAt)).limit(parsed.data.limit);
   return res.status(200).json(messages.reverse());
 });
-router10.post("/community/chats", requireAuth, async (req, res) => {
+router11.post("/community/chats", requireAuth, async (req, res) => {
   const parsed = CreateWorldChatBody.safeParse(req.body);
   if (!parsed.success) return res.status(400).json({ error: "Tin nh\u1EAFn kh\xF4ng h\u1EE3p l\u1EC7" });
   const userId = req.session.userId;
@@ -66388,12 +66702,12 @@ router10.post("/community/chats", requireAuth, async (req, res) => {
   }).returning();
   return res.status(201).json(message);
 });
-var community_default = router10;
+var community_default = router11;
 
 // src/routes/quests.ts
-var import_express11 = __toESM(require_express2(), 1);
-var router11 = (0, import_express11.Router)();
-router11.get("/characters/:characterId/quests", requireAuth, async (req, res) => {
+var import_express12 = __toESM(require_express2(), 1);
+var router12 = (0, import_express12.Router)();
+router12.get("/characters/:characterId/quests", requireAuth, async (req, res) => {
   const characterId = Number(req.params.characterId);
   const userId = req.session.userId;
   const [character] = await db.select().from(charactersTable).where(and(eq(charactersTable.id, characterId), eq(charactersTable.userId, userId))).limit(1);
@@ -66431,7 +66745,7 @@ router11.get("/characters/:characterId/quests", requireAuth, async (req, res) =>
   });
   res.status(200).json(result);
 });
-router11.post("/characters/:characterId/quests/:questId/accept", requireAuth, async (req, res) => {
+router12.post("/characters/:characterId/quests/:questId/accept", requireAuth, async (req, res) => {
   const characterId = Number(req.params.characterId);
   const questId = req.params.questId;
   const userId = req.session.userId;
@@ -66474,7 +66788,7 @@ router11.post("/characters/:characterId/quests/:questId/accept", requireAuth, as
     message: isTalkNPC ? "\u0110\xE3 tr\xF2 chuy\u1EC7n th\xE0nh c\xF4ng! H\xE3y nh\u1EADn ph\u1EA7n th\u01B0\u1EDFng." : "\u0110\xE3 ti\u1EBFp nh\u1EADn nhi\u1EC7m v\u1EE5 th\xE0nh c\xF4ng!"
   });
 });
-router11.post("/characters/:characterId/quests/progress", requireAuth, async (req, res) => {
+router12.post("/characters/:characterId/quests/progress", requireAuth, async (req, res) => {
   const characterId = Number(req.params.characterId);
   const userId = req.session.userId;
   const { objectiveType, targetId, count = 1 } = req.body;
@@ -66524,7 +66838,7 @@ router11.post("/characters/:characterId/quests/progress", requireAuth, async (re
   }
   res.status(200).json({ success: true, updatedQuests });
 });
-router11.post("/characters/:characterId/quests/:questId/claim", requireAuth, async (req, res) => {
+router12.post("/characters/:characterId/quests/:questId/claim", requireAuth, async (req, res) => {
   const characterId = Number(req.params.characterId);
   const questId = req.params.questId;
   const userId = req.session.userId;
@@ -66621,11 +66935,11 @@ router11.post("/characters/:characterId/quests/:questId/claim", requireAuth, asy
     }
   });
 });
-var quests_default = router11;
+var quests_default = router12;
 
 // src/routes/blacksmith.ts
-var import_express12 = __toESM(require_express2(), 1);
-var router12 = (0, import_express12.Router)();
+var import_express13 = __toESM(require_express2(), 1);
+var router13 = (0, import_express13.Router)();
 function getEnhanceSuccessRate(currentLevel) {
   if (currentLevel < 5) return 1;
   if (currentLevel === 5) return 0.75;
@@ -66645,7 +66959,7 @@ function getEnhanceStonesCost(currentLevel) {
   if (currentLevel < 10) return 2;
   return 4;
 }
-router12.post("/characters/:characterId/blacksmith/enhance", requireAuth, async (req, res) => {
+router13.post("/characters/:characterId/blacksmith/enhance", requireAuth, async (req, res) => {
   const characterId = Number(req.params.characterId);
   const userId = req.session.userId;
   const { ownershipId, useProtection = false } = req.body;
@@ -66698,12 +67012,6 @@ router12.post("/characters/:characterId/blacksmith/enhance", requireAuth, async 
     res.status(400).json({ error: `C\u1EA7n ${stoneCost} \u0110\xE1 C\u01B0\u1EDDng H\xF3a Tinh Khi\u1EBFt!` });
     return;
   }
-  await db.update(charactersTable).set({ gold: character.gold - goldCost }).where(eq(charactersTable.id, characterId));
-  if (stoneItem.quantity <= stoneCost) {
-    await db.delete(characterItemsTable).where(eq(characterItemsTable.id, stoneItem.id));
-  } else {
-    await db.update(characterItemsTable).set({ quantity: stoneItem.quantity - stoneCost }).where(eq(characterItemsTable.id, stoneItem.id));
-  }
   let protectionUsed = false;
   let protectionCharmItem = null;
   if (curLevel >= 10 && useProtection) {
@@ -66717,14 +67025,22 @@ router12.post("/characters/:characterId/blacksmith/enhance", requireAuth, async 
     if (charm && charm.quantity > 0) {
       protectionCharmItem = charm;
       protectionUsed = true;
-      if (charm.quantity <= 1) {
-        await db.delete(characterItemsTable).where(eq(characterItemsTable.id, charm.id));
-      } else {
-        await db.update(characterItemsTable).set({ quantity: charm.quantity - 1 }).where(eq(characterItemsTable.id, charm.id));
-      }
     } else {
       res.status(400).json({ error: "B\u1EA1n kh\xF4ng c\xF3 B\xF9a B\u1EA3o H\u1ED9 C\u01B0\u1EDDng H\xF3a trong t\xFAi \u0111\u1ED3!" });
       return;
+    }
+  }
+  await db.update(charactersTable).set({ gold: character.gold - goldCost }).where(eq(charactersTable.id, characterId));
+  if (stoneItem.quantity <= stoneCost) {
+    await db.delete(characterItemsTable).where(eq(characterItemsTable.id, stoneItem.id));
+  } else {
+    await db.update(characterItemsTable).set({ quantity: stoneItem.quantity - stoneCost }).where(eq(characterItemsTable.id, stoneItem.id));
+  }
+  if (protectionUsed && protectionCharmItem) {
+    if (protectionCharmItem.quantity <= 1) {
+      await db.delete(characterItemsTable).where(eq(characterItemsTable.id, protectionCharmItem.id));
+    } else {
+      await db.update(characterItemsTable).set({ quantity: protectionCharmItem.quantity - 1 }).where(eq(characterItemsTable.id, protectionCharmItem.id));
     }
   }
   const successRate = getEnhanceSuccessRate(curLevel);
@@ -66786,7 +67102,7 @@ router12.post("/characters/:characterId/blacksmith/enhance", requireAuth, async 
     message: isSuccess ? `\u{1F389} Ch\xFAc m\u1EEBng! C\u01B0\u1EDDng h\xF3a th\xE0nh c\xF4ng l\xEAn +${newEnhanceLevel}!` : failureReason
   });
 });
-router12.post("/characters/:characterId/blacksmith/dismantle", requireAuth, async (req, res) => {
+router13.post("/characters/:characterId/blacksmith/dismantle", requireAuth, async (req, res) => {
   const characterId = Number(req.params.characterId);
   const userId = req.session.userId;
   const { ownershipIds } = req.body;
@@ -66946,10 +67262,10 @@ var CRAFT_RECIPES = [
     ]
   }
 ];
-router12.get("/blacksmith/recipes", (_req, res) => {
+router13.get("/blacksmith/recipes", (_req, res) => {
   res.status(200).json(CRAFT_RECIPES);
 });
-router12.post("/characters/:characterId/blacksmith/craft", requireAuth, async (req, res) => {
+router13.post("/characters/:characterId/blacksmith/craft", requireAuth, async (req, res) => {
   const characterId = Number(req.params.characterId);
   const userId = req.session.userId;
   const { recipeId } = req.body;
@@ -67042,7 +67358,7 @@ router12.post("/characters/:characterId/blacksmith/craft", requireAuth, async (r
     message: `\u{1F389} Ch\xFAc m\u1EEBng! Ch\u1EBF t\u1EA1o th\xE0nh c\xF4ng ${recipe.name}!`
   });
 });
-router12.post("/characters/:characterId/blacksmith/socket", requireAuth, async (req, res) => {
+router13.post("/characters/:characterId/blacksmith/socket", requireAuth, async (req, res) => {
   const characterId = Number(req.params.characterId);
   const userId = req.session.userId;
   const { ownershipId, socketIndex, gemOwnershipId } = req.body;
@@ -67115,7 +67431,7 @@ router12.post("/characters/:characterId/blacksmith/socket", requireAuth, async (
     inventory: updatedInv
   });
 });
-router12.post("/characters/:characterId/blacksmith/unsocket", requireAuth, async (req, res) => {
+router13.post("/characters/:characterId/blacksmith/unsocket", requireAuth, async (req, res) => {
   const characterId = Number(req.params.characterId);
   const userId = req.session.userId;
   const { ownershipId, socketIndex } = req.body;
@@ -67157,7 +67473,7 @@ router12.post("/characters/:characterId/blacksmith/unsocket", requireAuth, async
     inventory: updatedInv
   });
 });
-router12.post("/characters/:characterId/blacksmith/fuse-gems", requireAuth, async (req, res) => {
+router13.post("/characters/:characterId/blacksmith/fuse-gems", requireAuth, async (req, res) => {
   const characterId = Number(req.params.characterId);
   const userId = req.session.userId;
   const { gemType, fromLevel } = req.body;
@@ -67210,7 +67526,7 @@ router12.post("/characters/:characterId/blacksmith/fuse-gems", requireAuth, asyn
     inventory: updatedInv
   });
 });
-router12.post("/characters/:characterId/blacksmith/reforge", requireAuth, async (req, res) => {
+router13.post("/characters/:characterId/blacksmith/reforge", requireAuth, async (req, res) => {
   const characterId = Number(req.params.characterId);
   const userId = req.session.userId;
   const { ownershipId, lockedIndexes = [] } = req.body;
@@ -67303,297 +67619,7 @@ router12.post("/characters/:characterId/blacksmith/reforge", requireAuth, async 
     inventory: updatedInv
   });
 });
-var blacksmith_default = router12;
-
-// src/routes/multiplayer.ts
-var import_express13 = __toESM(require_express2(), 1);
-var router13 = (0, import_express13.Router)();
-var activePlayers = /* @__PURE__ */ new Map();
-var AI_ADVENTURERS = [
-  {
-    characterId: 9001,
-    name: "LongKiem_Vip",
-    classId: "fighter",
-    level: 14,
-    gender: "male",
-    posX: -5,
-    posZ: -3,
-    facing: 0,
-    facingLeft: false,
-    animState: "IDLE",
-    enhanceLevel: 10,
-    hp: 750,
-    maxHp: 750,
-    chatBubble: "Ai \u0111i s\u0103n Boss H\u1EAFc Long kh\xF4ng?",
-    chatTime: Date.now(),
-    zoneId: "SAFE_VILLAGE",
-    serverId: "s1_long_vuong",
-    lastHeartbeat: Date.now(),
-    isBot: true
-  },
-  {
-    characterId: 9002,
-    name: "BangTam_Nu",
-    classId: "assassin",
-    level: 12,
-    gender: "female",
-    posX: 12,
-    posZ: -5,
-    facing: 1.5,
-    facingLeft: true,
-    animState: "IDLE",
-    enhanceLevel: 8,
-    hp: 420,
-    maxHp: 420,
-    chatBubble: "V\u1EEBa ch\u1EBF t\u1EA1o \u0111\u01B0\u1EE3c Song \u0110ao Epic n\xE8!",
-    chatTime: Date.now() - 3e3,
-    zoneId: "SAFE_VILLAGE",
-    serverId: "s1_long_vuong",
-    lastHeartbeat: Date.now(),
-    isBot: true
-  },
-  {
-    characterId: 9003,
-    name: "ThienXa_99",
-    classId: "gunner",
-    level: 11,
-    gender: "male",
-    posX: -15,
-    posZ: -10,
-    facing: -1.2,
-    facingLeft: true,
-    animState: "IDLE",
-    enhanceLevel: 7,
-    hp: 450,
-    maxHp: 450,
-    chatBubble: "\u0110ang c\xE0y Slime l\xE0m nhi\u1EC7m v\u1EE5 Q2...",
-    chatTime: Date.now() - 6e3,
-    zoneId: "WILDERNESS",
-    serverId: "s1_long_vuong",
-    lastHeartbeat: Date.now(),
-    isBot: true
-  },
-  {
-    characterId: 9004,
-    name: "HoVe_KimCang",
-    classId: "tank",
-    level: 15,
-    gender: "male",
-    posX: 0,
-    posZ: -40,
-    facing: 3.14,
-    facingLeft: false,
-    animState: "IDLE",
-    enhanceLevel: 13,
-    hp: 1200,
-    maxHp: 1200,
-    chatBubble: "C\u1EA7n tuy\u1EC3n DPS c\u1EE9ng v\xE0o Hang \u0110\u1ED9ng \xC1c M\u1ED9ng!",
-    chatTime: Date.now() - 8e3,
-    zoneId: "BOSS_ALTAR",
-    serverId: "s1_long_vuong",
-    lastHeartbeat: Date.now(),
-    isBot: true
-  }
-];
-setInterval(() => {
-  const now = Date.now();
-  for (const [id, player] of activePlayers.entries()) {
-    if (now - player.lastHeartbeat > 12e3) {
-      activePlayers.delete(id);
-    }
-  }
-  const t = now * 1e-3;
-  AI_ADVENTURERS[0].posX = -5 + Math.cos(t * 0.5) * 3;
-  AI_ADVENTURERS[0].posZ = -3 + Math.sin(t * 0.5) * 3;
-  AI_ADVENTURERS[1].posX = 12 + Math.sin(t * 0.4) * 2;
-  AI_ADVENTURERS[2].posX = -25 + Math.sin(t * 0.6) * 4;
-  AI_ADVENTURERS[2].posZ = -14 + Math.cos(t * 0.6) * 3;
-}, 3e3);
-router13.post("/multiplayer/sync", (req, res) => {
-  const {
-    characterId,
-    name,
-    classId,
-    level,
-    gender = "male",
-    posX = 0,
-    posZ = 0,
-    facing = 0,
-    facingLeft = false,
-    animState = "IDLE",
-    enhanceLevel = 0,
-    hp = 500,
-    maxHp = 500,
-    chatBubble = null,
-    zoneId = "SAFE_VILLAGE",
-    serverId = "s1_long_vuong",
-    hairStyle,
-    hairColor,
-    outfitId,
-    auraIds,
-    isMounted,
-    mountId,
-    petId
-  } = req.body;
-  if (!characterId) {
-    res.status(400).json({ error: "Thi\u1EBFu characterId" });
-    return;
-  }
-  const now = Date.now();
-  const existing = activePlayers.get(characterId);
-  const updatedBubble = chatBubble ?? (existing?.chatBubble && now - (existing.chatTime || 0) < 6e3 ? existing.chatBubble : null);
-  activePlayers.set(characterId, {
-    characterId,
-    name,
-    classId,
-    level,
-    gender,
-    posX,
-    posZ,
-    facing,
-    facingLeft,
-    animState,
-    enhanceLevel,
-    hp,
-    maxHp,
-    chatBubble: updatedBubble,
-    chatTime: chatBubble ? now : existing?.chatTime || now,
-    zoneId,
-    serverId,
-    lastHeartbeat: now,
-    hairStyle,
-    hairColor,
-    outfitId,
-    auraIds,
-    isMounted,
-    mountId,
-    petId
-  });
-  const othersInZone = [];
-  const MAX_AOI_DIST_SQ = 50 * 50;
-  for (const [id, other] of activePlayers.entries()) {
-    if (id !== characterId && other.serverId === serverId && other.zoneId === zoneId) {
-      const dx = (other.posX || 0) - (posX || 0);
-      const dz = (other.posZ || 0) - (posZ || 0);
-      if (dx * dx + dz * dz <= MAX_AOI_DIST_SQ) {
-        othersInZone.push(other);
-      }
-    }
-  }
-  for (const bot of AI_ADVENTURERS) {
-    if (bot.zoneId === zoneId) {
-      const dx = (bot.posX || 0) - (posX || 0);
-      const dz = (bot.posZ || 0) - (posZ || 0);
-      if (dx * dx + dz * dz <= MAX_AOI_DIST_SQ) {
-        othersInZone.push(bot);
-      }
-    }
-  }
-  res.status(200).json({
-    success: true,
-    players: othersInZone,
-    serverTime: now,
-    totalOnline: activePlayers.size + AI_ADVENTURERS.length
-  });
-});
-var parties = /* @__PURE__ */ new Map();
-var playerPartyMap = /* @__PURE__ */ new Map();
-router13.get("/party/:characterId", (req, res) => {
-  const characterId = Number(req.params.characterId);
-  const partyId = playerPartyMap.get(characterId);
-  if (!partyId || !parties.has(partyId)) {
-    res.status(200).json({ hasParty: false, party: null });
-    return;
-  }
-  res.status(200).json({
-    hasParty: true,
-    party: parties.get(partyId)
-  });
-});
-router13.post("/party/create", requireAuth, (req, res) => {
-  const { characterId, name, classId, level, gender = "male", hp = 500, maxHp = 500 } = req.body;
-  if (!characterId) {
-    res.status(400).json({ error: "Thi\u1EBFu characterId" });
-    return;
-  }
-  const oldPartyId = playerPartyMap.get(characterId);
-  if (oldPartyId && parties.has(oldPartyId)) {
-    const oldParty = parties.get(oldPartyId);
-    oldParty.members = oldParty.members.filter((m) => m.characterId !== characterId);
-    if (oldParty.members.length === 0) parties.delete(oldPartyId);
-  }
-  const partyId = `party_${characterId}_${Date.now().toString(36)}`;
-  const leaderMember = {
-    characterId,
-    name,
-    classId,
-    level,
-    gender,
-    hp,
-    maxHp,
-    isLeader: true
-  };
-  const newParty = {
-    id: partyId,
-    leaderId: characterId,
-    leaderName: name,
-    members: [leaderMember]
-  };
-  parties.set(partyId, newParty);
-  playerPartyMap.set(characterId, partyId);
-  res.status(200).json({
-    success: true,
-    message: "T\u1EA1o t\u1ED5 \u0111\u1ED9i th\xE0nh c\xF4ng! To\xE0n \u0111\u1ED9i nh\u1EADn Buff: +15% EXP & +10% L\u1EF1c Chi\u1EBFn.",
-    party: newParty
-  });
-});
-router13.post("/party/invite-bot", requireAuth, (req, res) => {
-  const { characterId, botType = "tank" } = req.body;
-  const partyId = playerPartyMap.get(characterId);
-  if (!partyId || !parties.has(partyId)) {
-    res.status(400).json({ error: "B\u1EA1n ch\u01B0a c\xF3 t\u1ED5 \u0111\u1ED9i \u0111\u1EC3 m\u1EDDi \u0111\u1ED3ng h\xE0nh!" });
-    return;
-  }
-  const party = parties.get(partyId);
-  if (party.members.length >= 4) {
-    res.status(400).json({ error: "T\u1ED5 \u0111\u1ED9i \u0111\xE3 \u0111\u1EA7y (t\u1ED1i \u0111a 4 th\xE0nh vi\xEAn)!" });
-    return;
-  }
-  const botId = 8e3 + party.members.length;
-  const botName = botType === "tank" ? "H\u1ED9 V\u1EC7 Thanh Long" : "Th\xE1nh N\u1EEF Tr\u1ECB Li\u1EC7u";
-  const botClass = botType === "tank" ? "tank" : "gunner";
-  const companion = {
-    characterId: botId,
-    name: botName,
-    classId: botClass,
-    level: 12,
-    gender: "female",
-    hp: 850,
-    maxHp: 850,
-    isLeader: false,
-    isBot: true
-  };
-  party.members.push(companion);
-  res.status(200).json({
-    success: true,
-    message: `\u0110\xE3 chi\xEAu m\u1ED9 H\u1ED9 V\u1EC7 \u0111\u1ED3ng h\xE0nh ${botName} v\xE0o t\u1ED5 \u0111\u1ED9i!`,
-    party
-  });
-});
-router13.post("/party/leave", requireAuth, (req, res) => {
-  const { characterId } = req.body;
-  const partyId = playerPartyMap.get(characterId);
-  if (partyId && parties.has(partyId)) {
-    const party = parties.get(partyId);
-    party.members = party.members.filter((m) => m.characterId !== characterId);
-    if (party.members.length === 0 || party.leaderId === characterId) {
-      parties.delete(partyId);
-    }
-    playerPartyMap.delete(characterId);
-  }
-  res.status(200).json({ success: true, message: "\u0110\xE3 r\u1EDDi kh\u1ECFi t\u1ED5 \u0111\u1ED9i." });
-});
-var multiplayer_default = router13;
+var blacksmith_default = router13;
 
 // src/routes/endgame.ts
 var import_express14 = __toESM(require_express2(), 1);
@@ -67675,11 +67701,47 @@ function getArenaRank(honorPoints) {
   }
   return rank;
 }
+var BOT_OPPONENT_RATINGS = {
+  champ_1: 400,
+  // Chiến Vương Huyết Lôi (Bạc II)
+  champ_2: 850,
+  // Bóng Ma Đoạt Mệnh (Vàng III)
+  champ_3: 1850,
+  // Thần Khiên Kim Cang (Kim Cương)
+  "Chi\u1EBFn V\u01B0\u01A1ng Huy\u1EBFt L\xF4i": 400,
+  "B\xF3ng Ma \u0110o\u1EA1t M\u1EC7nh": 850,
+  "Th\u1EA7n Khi\xEAn Kim Cang": 1850,
+  "H\u01B0 Kh\xF4ng Ki\u1EBFm Kh\xE1ch": 800,
+  // Test phase 5 gladiator
+  "Chi\u1EBFn Binh \u1EA2o M\u1ED9ng": 400,
+  "\u1EA2o \u1EA2nh": 400
+};
+function calculateEloRatingChange(playerRating, opponentRating, victory) {
+  const pRating = Math.max(0, playerRating);
+  const oRating = Math.max(0, opponentRating);
+  const exponent = (oRating - pRating) / 400;
+  const expectedScore = 1 / (1 + Math.pow(10, exponent));
+  let pointChange = 0;
+  if (victory) {
+    const kWin = 35;
+    const rawDelta = Math.round(kWin * (1 - expectedScore));
+    pointChange = Math.max(16, Math.min(35, rawDelta));
+  } else {
+    const kLoss = 24;
+    const rawLoss = Math.round(kLoss * expectedScore);
+    const penalty = Math.max(12, Math.min(24, rawLoss));
+    pointChange = -penalty;
+  }
+  return { pointChange, expectedScore };
+}
 var pvpMatchRateLimits = /* @__PURE__ */ new Map();
-router14.post("/characters/:characterId/pvp/match", requireAuth, async (req, res) => {
-  const characterId = Number(req.params.characterId);
+async function handlePvPMatchRequest(req, res, characterId) {
   const userId = req.session.userId;
-  const { opponentName, victory = true } = req.body;
+  const { opponentId, opponentName, victory = true } = req.body;
+  if (!characterId || isNaN(characterId)) {
+    res.status(400).json({ error: "Thi\u1EBFu m\xE3 nh\xE2n v\u1EADt (characterId)" });
+    return;
+  }
   const now = Date.now();
   const rateLimit = pvpMatchRateLimits.get(characterId);
   if (!rateLimit || now > rateLimit.resetAt) {
@@ -67700,12 +67762,33 @@ router14.post("/characters/:characterId/pvp/match", requireAuth, async (req, res
     res.status(400).json({ error: "Nh\xE2n v\u1EADt \u0111ang t\u1EED tr\u1EADn, kh\xF4ng th\u1EC3 ti\u1EBFp t\u1EE5c thi \u0111\u1EA5u \u0110\u1EA5u Tr\u01B0\u1EDDng." });
     return;
   }
-  const pointChange = victory ? 35 : 10;
-  const newPoints = Math.max(0, Number(character.honorPoints || 0) + pointChange);
+  let opponentRating = Number(req.body.opponentRating);
+  if (isNaN(opponentRating) || opponentRating <= 0) {
+    if (opponentId && BOT_OPPONENT_RATINGS[String(opponentId)]) {
+      opponentRating = BOT_OPPONENT_RATINGS[String(opponentId)];
+    } else if (opponentName && BOT_OPPONENT_RATINGS[String(opponentName)]) {
+      opponentRating = BOT_OPPONENT_RATINGS[String(opponentName)];
+    } else if (opponentId && !isNaN(Number(opponentId))) {
+      try {
+        const [oppChar] = await db.select({ honorPoints: charactersTable.honorPoints }).from(charactersTable).where(eq(charactersTable.id, Number(opponentId))).limit(1);
+        if (oppChar) {
+          opponentRating = Number(oppChar.honorPoints || 0);
+        }
+      } catch {
+      }
+    }
+  }
+  if (isNaN(opponentRating) || opponentRating <= 0) {
+    opponentRating = Math.max(400, Number(character.honorPoints || 0));
+  }
+  const prevPoints = Number(character.honorPoints || 0);
+  const isVictory = Boolean(victory);
+  const { pointChange } = calculateEloRatingChange(prevPoints, opponentRating, isVictory);
+  const newPoints = Math.max(0, prevPoints + pointChange);
   const currentRankInfo = getArenaRank(newPoints);
   const prevRank = character.arenaRank || "\u0110\u1ED3ng IV";
   let newTitle = character.title;
-  if (currentRankInfo.name !== prevRank && victory) {
+  if (currentRankInfo.name !== prevRank) {
     newTitle = currentRankInfo.title;
   }
   await db.update(charactersTable).set({
@@ -67713,18 +67796,98 @@ router14.post("/characters/:characterId/pvp/match", requireAuth, async (req, res
     arenaRank: currentRankInfo.name,
     title: newTitle
   }).where(eq(charactersTable.id, characterId));
+  const resolvedOpponentName = opponentName || "Cao Th\u1EE7 \u1EA2o M\u1ED9ng";
+  const isRankUp = newPoints > prevPoints && currentRankInfo.name !== prevRank;
+  const isRankDown = newPoints < prevPoints && currentRankInfo.name !== prevRank;
   res.status(200).json({
     success: true,
-    victory,
-    opponentName: opponentName || "Cao Th\u1EE7 \u1EA2o M\u1ED9ng",
+    victory: isVictory,
+    opponentName: resolvedOpponentName,
     pointsGained: pointChange,
+    honorAwarded: pointChange,
+    oldRating: prevPoints,
+    newRating: newPoints,
     honorPoints: newPoints,
     arenaRank: currentRankInfo.name,
+    rankTitle: currentRankInfo.title,
     title: newTitle,
-    isRankUp: currentRankInfo.name !== prevRank,
-    message: victory ? `\u{1F389} Chi\u1EBFn th\u1EAFng vinh quang tr\u01B0\u1EDBc ${opponentName}! Nh\u1EADn +${pointChange} \u0110i\u1EC3m Danh V\u1ECDng!` : `\u26A0\uFE0F Quy\u1EBFt \u0111\u1EA5u th\u1EA5t b\u1EA1i tr\u01B0\u1EDBc ${opponentName}. Nh\u1EADn +${pointChange} \u0110i\u1EC3m Kh\xEDch L\u1EC7.`
+    isRankUp,
+    isRankDown,
+    message: isVictory ? `\u{1F389} Chi\u1EBFn th\u1EAFng vinh quang tr\u01B0\u1EDBc ${resolvedOpponentName}! Nh\u1EADn +${pointChange} \u0110i\u1EC3m Danh V\u1ECDng!` : `\u26A0\uFE0F Quy\u1EBFt \u0111\u1EA5u th\u1EA5t b\u1EA1i tr\u01B0\u1EDBc ${resolvedOpponentName}. Tr\u1EEB ${Math.abs(pointChange)} \u0110i\u1EC3m Danh V\u1ECDng.`
   });
+}
+router14.post("/characters/:characterId/pvp/match", requireAuth, async (req, res) => {
+  const characterId = Number(req.params.characterId);
+  await handlePvPMatchRequest(req, res, characterId);
 });
+router14.post("/endgame/pvp/match", requireAuth, async (req, res) => {
+  const characterId = Number(req.body?.characterId || req.params?.characterId);
+  await handlePvPMatchRequest(req, res, characterId);
+});
+router14.post("/pvp/match", requireAuth, async (req, res) => {
+  const characterId = Number(req.body?.characterId || req.params?.characterId);
+  await handlePvPMatchRequest(req, res, characterId);
+});
+async function handlePvPLeaderboardRequest(req, res) {
+  const limit = Math.min(100, Math.max(1, Number(req.query.limit) || 20));
+  const topCharacters = await db.select({
+    id: charactersTable.id,
+    name: charactersTable.name,
+    className: charactersTable.className,
+    classId: charactersTable.classId,
+    level: charactersTable.level,
+    combatPower: charactersTable.combatPower,
+    honorPoints: charactersTable.honorPoints,
+    arenaRank: charactersTable.arenaRank,
+    title: charactersTable.title,
+    kills: charactersTable.kills,
+    deaths: charactersTable.deaths,
+    userId: charactersTable.userId
+  }).from(charactersTable).orderBy(desc(charactersTable.honorPoints), desc(charactersTable.combatPower)).limit(limit);
+  topCharacters.sort((a, b) => {
+    const diff = (Number(b.honorPoints) || 0) - (Number(a.honorPoints) || 0);
+    if (diff !== 0) return diff;
+    return (Number(b.combatPower) || 0) - (Number(a.combatPower) || 0);
+  });
+  const leaderboard = await Promise.all(
+    topCharacters.map(async (c, idx) => {
+      let username = "V\xF4 Danh";
+      if (c.userId) {
+        try {
+          const [u] = await db.select({ username: usersTable.username }).from(usersTable).where(eq(usersTable.id, c.userId)).limit(1);
+          if (u?.username) username = u.username;
+        } catch {
+        }
+      }
+      const rankInfo = getArenaRank(Number(c.honorPoints || 0));
+      return {
+        rank: idx + 1,
+        characterId: c.id,
+        characterName: c.name,
+        name: c.name,
+        className: c.className,
+        classId: c.classId,
+        level: c.level,
+        combatPower: c.combatPower,
+        honorPoints: c.honorPoints,
+        rating: c.honorPoints,
+        arenaRank: c.arenaRank || rankInfo.name,
+        rankTitle: rankInfo.title,
+        title: c.title || rankInfo.title,
+        kills: c.kills,
+        deaths: c.deaths,
+        username
+      };
+    })
+  );
+  res.status(200).json({
+    success: true,
+    total: leaderboard.length,
+    leaderboard
+  });
+}
+router14.get("/endgame/pvp/leaderboard", handlePvPLeaderboardRequest);
+router14.get("/pvp/leaderboard", handlePvPLeaderboardRequest);
 router14.post("/characters/:characterId/gm/action", requireAuth, requireGMOrAdmin, async (req, res) => {
   const characterId = Number(req.params.characterId);
   const userId = req.session.userId;
@@ -68424,6 +68587,14 @@ var dungeonLeaderboard = [
     difficulty: "hard",
     clearTimeSeconds: 115,
     clearedAt: new Date(Date.now() - 36e5 * 24).toISOString()
+  },
+  {
+    rank: 4,
+    characterId: 9005,
+    characterName: "SatThu_VoAnh",
+    difficulty: "normal",
+    clearTimeSeconds: 84,
+    clearedAt: new Date(Date.now() - 36e5 * 36).toISOString()
   }
 ];
 setInterval(() => {
@@ -68434,14 +68605,79 @@ setInterval(() => {
     }
   }
 }, 6e4);
+router18.use((_req, res, next) => {
+  res.header("Access-Control-Allow-Credentials", "true");
+  next();
+});
+function getDungeonMonsters(room, difficulty) {
+  if (room === 1) {
+    if (difficulty === "nightmare") {
+      return [
+        { id: 1, name: "H\u1EAFc Long Ti\u1EC1n Phong", hp: 1600, maxHp: 1600, isBoss: false },
+        { id: 2, name: "K\u1EF5 S\u0129 Di\u1EC7t Vong", hp: 1850, maxHp: 1850, isBoss: false },
+        { id: 3, name: "H\u1EAFc \xC1m Vu S\u01B0", hp: 1500, maxHp: 1500, isBoss: false },
+        { id: 4, name: "Th\u1ED1ng L\u0129nh D\u1EA1 Qu\u1EF7", hp: 2200, maxHp: 2200, isBoss: false }
+      ];
+    }
+    if (difficulty === "hard") {
+      return [
+        { id: 1, name: "Chi\u1EBFn Binh Orc C\u1ED5", hp: 750, maxHp: 750, isBoss: false },
+        { id: 2, name: "K\u1EF5 S\u0129 X\u01B0\u01A1ng H\u1EAFc \xC1m", hp: 820, maxHp: 820, isBoss: false },
+        { id: 3, name: "Chi\u1EBFn Binh Orc Cu\u1ED3ng N\u1ED9", hp: 950, maxHp: 950, isBoss: false },
+        { id: 4, name: "Ph\xE1p S\u01B0 X\u01B0\u01A1ng Tri\u1EC7u H\u1ED3i", hp: 780, maxHp: 780, isBoss: false }
+      ];
+    }
+    return [
+      { id: 1, name: "Y\xEAu Tinh \u0110ao Ph\u1EE7", hp: 320, maxHp: 320, isBoss: false },
+      { id: 2, name: "Slime \u0110\u1ECF Bi\u1EBFn D\u1ECB", hp: 260, maxHp: 260, isBoss: false },
+      { id: 3, name: "Y\xEAu Tinh Cung Th\u1EE7", hp: 290, maxHp: 290, isBoss: false },
+      { id: 4, name: "Slime Ch\xFAa Kh\u1ED5ng L\u1ED3", hp: 480, maxHp: 480, isBoss: false }
+    ];
+  }
+  if (room === 2) {
+    if (difficulty === "nightmare") {
+      return [
+        { id: 11, name: "K\u1EF5 S\u0129 Di\u1EC7t Vong Tinh Anh", hp: 3200, maxHp: 3200, isBoss: false },
+        { id: 12, name: "Chi\u1EBFn T\u01B0\u1EDBng Vong H\u1ED3n", hp: 3500, maxHp: 3500, isBoss: false },
+        { id: 13, name: "\xC1c Ma Th\xE2m Uy\xEAn", hp: 4200, maxHp: 4200, isBoss: false }
+      ];
+    }
+    if (difficulty === "hard") {
+      return [
+        { id: 11, name: "Chi\u1EBFn Binh Orc C\u1ED5 Tinh Anh", hp: 1400, maxHp: 1400, isBoss: false },
+        { id: 12, name: "K\u1EF5 S\u0129 H\u1EAFc \xC1m Tinh Anh", hp: 1650, maxHp: 1650, isBoss: false },
+        { id: 13, name: "Ph\xE1p S\u01B0 X\u01B0\u01A1ng H\u1EAFc \xC1m", hp: 1300, maxHp: 1300, isBoss: false }
+      ];
+    }
+    return [
+      { id: 11, name: "Chi\u1EBFn Binh Orc Tinh Anh", hp: 650, maxHp: 650, isBoss: false },
+      { id: 12, name: "K\u1EF5 S\u0129 X\u01B0\u01A1ng Tinh Anh", hp: 700, maxHp: 700, isBoss: false },
+      { id: 13, name: "Th\u1EE3 S\u0103n Goblin Tinh Nhu\u1EC7", hp: 580, maxHp: 580, isBoss: false }
+    ];
+  }
+  return [
+    {
+      id: 99,
+      name: difficulty === "nightmare" ? "H\u1EAFc Long V\u01B0\u01A1ng Vi\u1EC5n C\u1ED5 (Nightmare Boss)" : "H\u1EAFc Long V\u01B0\u01A1ng Vi\u1EC5n C\u1ED5",
+      hp: difficulty === "nightmare" ? 18e3 : difficulty === "hard" ? 9500 : 4500,
+      maxHp: difficulty === "nightmare" ? 18e3 : difficulty === "hard" ? 9500 : 4500,
+      isBoss: true
+    }
+  ];
+}
 router18.post("/dungeon/enter", requireAuth, async (req, res) => {
-  const userId = req.session.userId;
+  const userId = Number(req.authUserId || req.session?.userId);
   const { characterId, difficulty = "normal" } = req.body;
   if (!characterId) {
     res.status(400).json({ error: "Thi\u1EBFu ID nh\xE2n v\u1EADt" });
     return;
   }
-  const [character] = await db.select().from(charactersTable).where(and(eq(charactersTable.id, characterId), eq(charactersTable.userId, userId))).limit(1);
+  const parsedCharId = Number(characterId);
+  if (!parsedCharId || isNaN(parsedCharId)) {
+    res.status(400).json({ error: "ID nh\xE2n v\u1EADt kh\xF4ng h\u1EE3p l\u1EC7" });
+    return;
+  }
+  const [character] = await db.select().from(charactersTable).where(and(eq(charactersTable.id, parsedCharId), eq(charactersTable.userId, userId))).limit(1);
   if (!character) {
     res.status(404).json({ error: "Kh\xF4ng t\xECm th\u1EA5y nh\xE2n v\u1EADt ho\u1EB7c kh\xF4ng c\xF3 quy\u1EC1n s\u1EDF h\u1EEFu" });
     return;
@@ -68458,10 +68694,10 @@ router18.post("/dungeon/enter", requireAuth, async (req, res) => {
     });
     return;
   }
-  const instanceId = `dungeon_${characterId}_${Date.now().toString(36)}`;
+  const instanceId = `dungeon_${parsedCharId}_${Date.now().toString(36)}`;
   const instance = {
     instanceId,
-    characterId,
+    characterId: parsedCharId,
     userId,
     characterName: character.name,
     difficulty,
@@ -68472,27 +68708,35 @@ router18.post("/dungeon/enter", requireAuth, async (req, res) => {
     cleared: false
   };
   activeDungeonInstances.set(instanceId, instance);
+  const room1Monsters = getDungeonMonsters(1, difficulty);
   res.status(200).json({
     success: true,
     message: `\u{1F3F0} \u0110\xE3 t\u1EA1o ph\xF2ng ph\xF3 b\u1EA3n c\xF4 l\u1EADp c\u1EA5p \u0111\u1ED9 ${difficulty.toUpperCase()}!`,
     instance,
+    instanceId,
+    currentRoom: 1,
+    totalRooms: 3,
+    difficulty,
+    startTime: instance.startTime,
+    monsters: room1Monsters,
+    monstersCount: room1Monsters.length,
     roomDetails: {
       room: 1,
       name: "Ph\xF2ng 1: Ti\u1EC1n \u0110\u1ED3n Qu\xE1i V\u1EADt",
-      description: "Ti\xEAu di\u1EC7t to\xE0n b\u1ED9 b\u1EA7y Slime & Goblin \u0111\u1EC3 m\u1EDF phong \u1EA5n c\u1EEDa ph\xF2ng ti\u1EBFp theo.",
-      monstersCount: 4
+      description: "Ti\xEAu di\u1EC7t to\xE0n b\u1ED9 b\u1EA7y Y\xEAu Tinh & Slime \u0111\u1EC3 m\u1EDF phong \u1EA5n c\u1EEDa ph\xF2ng ti\u1EBFp theo.",
+      monstersCount: room1Monsters.length
     }
   });
 });
 router18.post("/dungeon/:instanceId/clear-room", requireAuth, async (req, res) => {
   const { instanceId } = req.params;
-  const userId = req.session.userId;
+  const userId = Number(req.authUserId || req.session?.userId);
   const instance = activeDungeonInstances.get(instanceId);
   if (!instance) {
     res.status(404).json({ error: "Ph\xF3 b\u1EA3n kh\xF4ng t\u1ED3n t\u1EA1i ho\u1EB7c \u0111\xE3 h\u1EBFt h\u1EA1n" });
     return;
   }
-  if (instance.userId !== userId) {
+  if (Number(instance.userId) !== userId && req.authUser?.role !== "ADMIN") {
     res.status(403).json({ error: "T\u1EEB ch\u1ED1i truy c\u1EADp: B\u1EA1n kh\xF4ng thu\u1ED9c ph\xF3 b\u1EA3n n\xE0y" });
     return;
   }
@@ -68502,21 +68746,26 @@ router18.post("/dungeon/:instanceId/clear-room", requireAuth, async (req, res) =
   }
   if (instance.currentRoom < instance.totalRooms) {
     instance.currentRoom += 1;
+    const isFinalRoom = instance.currentRoom === instance.totalRooms;
+    const nextMonsters = getDungeonMonsters(instance.currentRoom, instance.difficulty);
     const nextRoomDetails = instance.currentRoom === 2 ? {
       room: 2,
       name: "Ph\xF2ng 2: H\u1EBBm N\xFAi Qu\xE1i Tinh Anh",
       description: "H\u1EA1 g\u1EE5c Chi\u1EBFn Binh Orc & K\u1EF5 S\u0129 H\u1EAFc \xC1m Tinh Anh \u0111\u1EC3 m\u1EDF c\u1ED5ng c\u1EA5m \u0111\u1ECBa.",
-      monstersCount: 3
+      monstersCount: nextMonsters.length
     } : {
       room: 3,
       name: "Ph\xF2ng 3: Cung \u0110i\u1EC7n H\u1EAFc Long V\u01B0\u01A1ng (Boss Room)",
       description: "\u0110\u1EA1i chi\u1EBFn Boss H\u1EAFc Long V\u01B0\u01A1ng t\u1ED1i th\u01B0\u1EE3ng!",
-      monstersCount: 1
+      monstersCount: nextMonsters.length
     };
     res.status(200).json({
       success: true,
       currentRoom: instance.currentRoom,
-      isFinalRoom: instance.currentRoom === instance.totalRooms,
+      nextRoom: instance.currentRoom,
+      isFinalRoom,
+      cleared: false,
+      monsters: nextMonsters,
       roomDetails: nextRoomDetails,
       message: `\u{1F513} \u0110\xE3 m\u1EDF phong \u1EA5n! Ti\u1EBFn v\xE0o ${nextRoomDetails.name}.`
     });
@@ -68532,11 +68781,19 @@ router18.post("/dungeon/:instanceId/clear-room", requireAuth, async (req, res) =
   };
   const reward = rewardsByDiff[instance.difficulty] || rewardsByDiff.normal;
   const [character] = await db.select().from(charactersTable).where(eq(charactersTable.id, instance.characterId)).limit(1);
+  let updatedChar = null;
   if (character) {
+    const newGold = Math.max(0, Number(character.gold || 0) + Number(reward.gold));
+    const newExp = Math.max(0, Number(character.experience || 0) + Number(reward.exp));
     await db.update(charactersTable).set({
-      gold: character.gold + reward.gold,
-      experience: character.experience + reward.exp
+      gold: newGold,
+      experience: newExp
     }).where(eq(charactersTable.id, instance.characterId));
+    try {
+      updatedChar = await recalculateCharacterStats(instance.characterId);
+    } catch {
+      updatedChar = { ...character, gold: newGold, experience: newExp };
+    }
   }
   const newEntry = {
     rank: 0,
@@ -68551,23 +68808,75 @@ router18.post("/dungeon/:instanceId/clear-room", requireAuth, async (req, res) =
   dungeonLeaderboard.forEach((item, idx) => {
     item.rank = idx + 1;
   });
-  if (dungeonLeaderboard.length > 20) {
-    dungeonLeaderboard.length = 20;
+  if (dungeonLeaderboard.length > 50) {
+    dungeonLeaderboard.length = 50;
   }
-  const updatedChar = await recalculateCharacterStats(instance.characterId);
   res.status(200).json({
     success: true,
     cleared: true,
+    currentRoom: instance.currentRoom,
+    nextRoom: null,
     clearTimeSeconds,
-    rewards: reward,
+    rewards: {
+      exp: reward.exp,
+      gold: reward.gold,
+      stones: reward.stones,
+      items: [
+        {
+          id: "dungeon_reward_chest",
+          name: instance.difficulty === "nightmare" ? "Long Th\u1EA7n Ki\u1EBFm (Legendary)" : instance.difficulty === "hard" ? "Ho\xE0ng Gi\xE1p Long T\u1ED9c (Epic)" : "\u0110\u1ED3 Hi\u1EBFm (Rare)",
+          rarity: instance.difficulty === "nightmare" ? "legendary" : instance.difficulty === "hard" ? "epic" : "rare",
+          count: 1
+        }
+      ]
+    },
     character: updatedChar,
     message: `\u{1F389} CHINH PH\u1EE4C TH\xC0NH C\xD4NG HANG \u0110\u1ED8NG PH\xD3 B\u1EA2N! Th\u1EDDi gian: ${clearTimeSeconds} gi\xE2y. Nh\u1EADn +${reward.exp} EXP, +${reward.gold} V\xE0ng, +${reward.stones} \u0110\xE1 C\u01B0\u1EDDng H\xF3a!`
   });
 });
-router18.get("/dungeon/leaderboard", (_req, res) => {
+router18.get("/dungeon/leaderboard", (req, res) => {
+  const { difficulty } = req.query;
+  let list = dungeonLeaderboard;
+  if (difficulty && typeof difficulty === "string" && difficulty !== "all") {
+    list = list.filter((item) => item.difficulty === difficulty);
+  }
   res.status(200).json({
     success: true,
-    leaderboard: dungeonLeaderboard.slice(0, 10)
+    leaderboard: list.slice(0, 20)
+  });
+});
+router18.get("/dungeon/active", requireAuth, async (req, res) => {
+  const userId = Number(req.authUserId || req.session?.userId);
+  const characterId = req.query.characterId ? Number(req.query.characterId) : null;
+  for (const inst of activeDungeonInstances.values()) {
+    if (Number(inst.userId) === userId && (!characterId || Number(inst.characterId) === characterId) && !inst.cleared) {
+      res.status(200).json({
+        success: true,
+        instance: inst
+      });
+      return;
+    }
+  }
+  res.status(200).json({
+    success: true,
+    instance: null
+  });
+});
+router18.get("/dungeon/:instanceId", requireAuth, async (req, res) => {
+  const { instanceId } = req.params;
+  const userId = Number(req.authUserId || req.session?.userId);
+  const instance = activeDungeonInstances.get(instanceId);
+  if (!instance) {
+    res.status(404).json({ error: "Ph\xF3 b\u1EA3n kh\xF4ng t\u1ED3n t\u1EA1i ho\u1EB7c \u0111\xE3 h\u1EBFt h\u1EA1n" });
+    return;
+  }
+  if (Number(instance.userId) !== userId && req.authUser?.role !== "ADMIN") {
+    res.status(403).json({ error: "T\u1EEB ch\u1ED1i truy c\u1EADp: B\u1EA1n kh\xF4ng thu\u1ED9c ph\xF3 b\u1EA3n n\xE0y" });
+    return;
+  }
+  res.status(200).json({
+    success: true,
+    instance
   });
 });
 var dungeon_default = router18;

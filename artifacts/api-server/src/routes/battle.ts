@@ -114,6 +114,9 @@ router.post("/characters/:characterId/battle", requireAuth, async (req, res) => 
     return res.status(429).json({ error: "Thao tác chiến đấu quá nhanh. Vui lòng thử lại sau giây lát." });
   }
   lastBattleTimestamp.set(characterId, now);
+  res.on("finish", () => {
+    lastBattleTimestamp.set(characterId, Date.now());
+  });
 
   await ensureItemCatalog();
   const effectiveCharacter = await toCharacterResponse(character);

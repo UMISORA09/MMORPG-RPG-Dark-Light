@@ -84,7 +84,8 @@ export const PvPCombatArena = memo(function PvPCombatArena() {
       setAnimState("attack1");
 
       const enemyAtk = (pvpOpponent?.combatPower || 1000) * 0.05 + 20;
-      const finalDmg = Math.round(enemyAtk * (0.85 + Math.random() * 0.3));
+      const rawDamage = Math.round(enemyAtk * (0.85 + Math.random() * 0.3));
+      const finalDmg = Math.max(1, Math.round(rawDamage * 0.60));
       dealPvPDamageToPlayer(finalDmg);
       addFloatingText(`-${finalDmg}`, playerPosition.clone().add(new THREE.Vector3(0, 2.2, 0)), "#ef4444");
       playCombatSFX("blade_slash", 0.4);
@@ -97,7 +98,8 @@ export const PvPCombatArena = memo(function PvPCombatArena() {
     // Check Player Attack Hitting Opponent
     if (isAttacking && playerHitCooldown.current <= 0 && distToPlayer <= 2.6) {
       playerHitCooldown.current = 0.35;
-      const dealtDmg = Math.round(playerAtk * (1.1 + Math.random() * 0.4));
+      const rawDamage = Math.round(playerAtk * (1.1 + Math.random() * 0.4));
+      const dealtDmg = Math.max(1, Math.round(rawDamage * 0.60));
       dealPvPDamageToOpponent(dealtDmg);
       addFloatingText(`-${dealtDmg}`, opponentPos.current.clone().add(new THREE.Vector3(0, 2.4, 0)), "#38bdf8");
       playCombatSFX("heavy_slam", 0.4);
@@ -118,13 +120,15 @@ export const PvPCombatArena = memo(function PvPCombatArena() {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
+          opponentId: pvpOpponent?.id || "champ_1",
           opponentName: pvpOpponent?.name || "Chiến Binh Ảo Mộng",
+          opponentRating: pvpOpponent?.combatPower || 1000,
           victory,
         }),
       })
         .then((res) => res.json())
         .then((data) => {
-          if (data?.honorPoints) {
+          if (data?.honorPoints !== undefined) {
             useGameWorldStore.setState({
               honorPoints: data.honorPoints,
               arenaRank: data.arenaRank,
@@ -214,7 +218,7 @@ export const PvPCombatArena = memo(function PvPCombatArena() {
                 {pvpResult === "VICTORY" ? "🏆 CHIẾN THẮNG TUYỆT ĐỐI!" : "☠️ THẤT BẠI QUYẾT ĐẤU!"}
               </span>
               <p className="text-xs text-slate-300 font-mono">
-                {pvpResult === "VICTORY" ? "+35 Điểm Danh Vọng • Thăng Hạng Đấu Trường" : "+10 Điểm Khích Lệ"}
+                {pvpResult === "VICTORY" ? "+ Điểm Danh Vọng • Thăng Hạng Đấu Trường" : "- Điểm Danh Vọng • Trừ Điểm Xếp Hạng"}
               </p>
               <button
                 onClick={closePvPArena}

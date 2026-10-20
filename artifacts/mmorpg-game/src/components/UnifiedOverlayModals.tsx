@@ -15,6 +15,7 @@ import { BattleReportModal } from "@/ui/modals/BattleReportModal";
 import { AchievementsModal } from "@/ui/modals/AchievementsModal";
 import { DailyLoginModal } from "@/ui/modals/DailyLoginModal";
 import { WorldAtlasModal } from "@/ui/modals/WorldAtlasModal";
+import { PartyModal } from "@/ui/modals/PartyModal";
 import { LoadingTransitionScreen } from "@/ui/transition/LoadingTransitionScreen";
 import { PlayerDeathRespawnModal } from "./PlayerDeathRespawnModal";
 import {
@@ -47,7 +48,7 @@ import {
   Minimize2,
 } from "lucide-react";
 
-interface UnifiedOverlayModalsProps {
+export interface UnifiedOverlayModalsProps {
   character: Character;
 }
 
@@ -211,6 +212,14 @@ export const UnifiedOverlayModals = memo(function UnifiedOverlayModals({
 
       {/* 4. Ranked 1v1 PvP Arena Matchmaking */}
       {activeModal === "pvpArena" && <PvPArenaModal />}
+
+      {/* 4.1 Party System & Companion Bots (Alt+P) */}
+      {activeModal === "party" && (
+        <PartyModal
+          characterId={character.id}
+          onClose={closeActiveModal}
+        />
+      )}
 
       {/* 5. Character Inventory Dual Window */}
       {activeModal === "inventory" && (

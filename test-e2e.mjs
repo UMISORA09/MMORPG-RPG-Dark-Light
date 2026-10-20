@@ -1,7 +1,26 @@
 // Automated End-to-End Verification Test Suite
 import http from "node:http";
 
-const BASE_URL = "http://127.0.0.1:8080";
+let BASE_URL = process.env.BASE_URL || (process.env.PORT ? `http://127.0.0.1:${process.env.PORT}` : "http://127.0.0.1:3000");
+
+async function detectActiveServer() {
+  if (process.env.BASE_URL) return process.env.BASE_URL;
+  if (process.env.PORT) return `http://127.0.0.1:${process.env.PORT}`;
+  const candidatePorts = [3000, 3001];
+  for (const p of candidatePorts) {
+    try {
+      const isUp = await new Promise((resolve) => {
+        const testReq = http.get(`http://127.0.0.1:${p}/api/healthz`, { timeout: 350 }, (res) => {
+          resolve(res.statusCode === 200);
+        });
+        testReq.on("error", () => resolve(false));
+        testReq.on("timeout", () => { testReq.destroy(); resolve(false); });
+      });
+      if (isUp) return `http://127.0.0.1:${p}`;
+    } catch {}
+  }
+  return "http://127.0.0.1:3000";
+}
 
 function request(path, options = {}, body = null) {
   return new Promise((resolve, reject) => {
@@ -39,8 +58,10 @@ function request(path, options = {}, body = null) {
 }
 
 async function runTests() {
+  BASE_URL = await detectActiveServer();
   console.log("====================================================");
   console.log("🎮 AUTOMATED E2E TEST: 2.5D MMORPG COMBINED GAME");
+  console.log(`📡 Mục tiêu máy chủ: ${BASE_URL}`);
   console.log("====================================================\n");
 
   let cookie = "";
@@ -137,15 +158,16 @@ async function runTests() {
     process.exit(1);
   }
 
-  // Test 8: 3D Real-time Reward Sync
-  process.stdout.write("8. Kiểm tra Đồng Bộ Thưởng Đấu Trường 3D (/3d-reward)... ");
+  // Test 8: Authoritative Real-time Battle Reward Sync
+  await new Promise((resolve) => setTimeout(resolve, 550));
+  process.stdout.write("8. Kiểm tra Đồng Bộ Thưởng Chiến Đấu Server-Authoritative (/api/characters/:id/battle)... ");
   const syncRes = await request(
-    `/api/characters/${characterId}/3d-reward`,
+    `/api/characters/${characterId}/battle`,
     { method: "POST", headers: { Cookie: cookie } },
-    { expGained: 250, goldGained: 100, kills: 5 }
+    { monsterId: "slime", mode: "realtime" }
   );
   if (syncRes.status === 200 && syncRes.data.character) {
-    console.log(`✅ PASS (Cấp mới: ${syncRes.data.character.level}, Vàng: ${syncRes.data.character.gold}, Kills: ${syncRes.data.character.kills})`);
+    console.log(`✅ PASS (Kết quả: ${syncRes.data.victory ? "Chiến Thắng 🏆" : "Thất Bại"}, Cấp mới: ${syncRes.data.character.level}, Vàng: ${syncRes.data.character.gold}, Kills: ${syncRes.data.character.kills})`);
   } else {
     console.error("❌ FAILED:", syncRes);
     process.exit(1);
