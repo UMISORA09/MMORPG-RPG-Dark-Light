@@ -91,6 +91,7 @@ interface ItemData {
   name: string;
   type: string;
   category: string;
+  equipSlot?: string;
   rarity: string;
   hpBoost: number;
   atkBoost: number;
@@ -115,6 +116,23 @@ export default function AdminDashboardScreen() {
   const [activeTab, setActiveTab] = useState<"overview" | "users" | "characters" | "items" | "db">("overview");
   const [loading, setLoading] = useState(false);
   const [stats, setStats] = useState<StatsData | null>(null);
+
+  // Non-blocking custom Dark Fantasy Confirmation Dialog (Eliminates INP blockage)
+  const [confirmDialog, setConfirmDialog] = useState<{
+    open: boolean;
+    title: string;
+    description: string;
+    confirmText?: string;
+    confirmVariant?: "cyan" | "danger";
+    onConfirm: () => void | Promise<void>;
+  }>({
+    open: false,
+    title: "",
+    description: "",
+    confirmText: "Xác Nhận",
+    confirmVariant: "cyan",
+    onConfirm: () => {},
+  });
 
   // Users state
   const [users, setUsers] = useState<UserData[]>([]);
@@ -312,18 +330,26 @@ export default function AdminDashboardScreen() {
   };
 
   // Handle Delete User
-  const handleDeleteUser = async (id: number, username: string) => {
-    if (!window.confirm(`Bạn có chắc chắn muốn xóa tài khoản "${username}" và toàn bộ nhân vật liên quan?`)) return;
-    try {
-      const res = await fetch(`/api/admin/users/${id}`, { method: "DELETE" });
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.error);
-      toast({ title: "Đã xóa", description: data.message });
-      fetchUsers();
-      fetchStats();
-    } catch (err: any) {
-      toast({ title: "Lỗi", description: err.message, variant: "destructive" });
-    }
+  const handleDeleteUser = (id: number, username: string) => {
+    setConfirmDialog({
+      open: true,
+      title: "Xóa Tài Khoản",
+      description: `Bạn có chắc chắn muốn xóa tài khoản "${username}" và toàn bộ nhân vật liên quan? Hành động này không thể hoàn tác.`,
+      confirmText: "Xác Nhận Xóa",
+      confirmVariant: "danger",
+      onConfirm: async () => {
+        try {
+          const res = await fetch(`/api/admin/users/${id}`, { method: "DELETE" });
+          const data = await res.json();
+          if (!res.ok) throw new Error(data.error);
+          toast({ title: "Đã xóa", description: data.message });
+          fetchUsers();
+          fetchStats();
+        } catch (err: any) {
+          toast({ title: "Lỗi", description: err.message, variant: "destructive" });
+        }
+      },
+    });
   };
 
   // Handle Save Character
@@ -357,18 +383,26 @@ export default function AdminDashboardScreen() {
   };
 
   // Handle Delete Character
-  const handleDeleteCharacter = async (id: number, name: string) => {
-    if (!window.confirm(`Bạn có chắc chắn muốn xóa nhân vật "${name}"?`)) return;
-    try {
-      const res = await fetch(`/api/admin/characters/${id}`, { method: "DELETE" });
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.error);
-      toast({ title: "Đã xóa", description: data.message });
-      fetchCharacters();
-      fetchStats();
-    } catch (err: any) {
-      toast({ title: "Lỗi", description: err.message, variant: "destructive" });
-    }
+  const handleDeleteCharacter = (id: number, name: string) => {
+    setConfirmDialog({
+      open: true,
+      title: "Xóa Nhân Vật",
+      description: `Bạn có chắc chắn muốn xóa nhân vật "${name}"? Toàn bộ trang bị và dữ liệu sẽ bị xóa vĩnh viễn.`,
+      confirmText: "Xác Nhận Xóa",
+      confirmVariant: "danger",
+      onConfirm: async () => {
+        try {
+          const res = await fetch(`/api/admin/characters/${id}`, { method: "DELETE" });
+          const data = await res.json();
+          if (!res.ok) throw new Error(data.error);
+          toast({ title: "Đã xóa", description: data.message });
+          fetchCharacters();
+          fetchStats();
+        } catch (err: any) {
+          toast({ title: "Lỗi", description: err.message, variant: "destructive" });
+        }
+      },
+    });
   };
 
   // Handle Grant Item to Character
@@ -453,52 +487,76 @@ export default function AdminDashboardScreen() {
   };
 
   // Handle Delete Item from Catalog
-  const handleDeleteItem = async (id: string, name: string) => {
-    if (!window.confirm(`Bạn có chắc chắn muốn xóa vật phẩm "${name}" (${id}) khỏi danh mục toàn game?`)) return;
-    try {
-      const res = await fetch(`/api/admin/items/${id}`, { method: "DELETE" });
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.error);
-      toast({ title: "Đã xóa", description: data.message });
-      fetchItems();
-      fetchStats();
-    } catch (err: any) {
-      toast({ title: "Lỗi", description: err.message, variant: "destructive" });
-    }
+  const handleDeleteItem = (id: string, name: string) => {
+    setConfirmDialog({
+      open: true,
+      title: "Xóa Vật Phẩm",
+      description: `Bạn có chắc chắn muốn xóa vật phẩm "${name}" (${id}) khỏi danh mục toàn game?`,
+      confirmText: "Xác Nhận Xóa",
+      confirmVariant: "danger",
+      onConfirm: async () => {
+        try {
+          const res = await fetch(`/api/admin/items/${id}`, { method: "DELETE" });
+          const data = await res.json();
+          if (!res.ok) throw new Error(data.error);
+          toast({ title: "Đã xóa", description: data.message });
+          fetchItems();
+          fetchStats();
+        } catch (err: any) {
+          toast({ title: "Lỗi", description: err.message, variant: "destructive" });
+        }
+      },
+    });
   };
 
-  // Handle Reseed Database
-  const handleReseed = async () => {
-    if (!window.confirm("Bạn có chắc chắn muốn nạp lại danh mục vật phẩm, quái vật, máy chủ và nhiệm vụ mẫu?")) return;
-    setLoading(true);
-    try {
-      const res = await fetch("/api/admin/db/reset-seed", { method: "POST" });
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.error);
-      toast({ title: "Thành công", description: data.message });
-      fetchStats();
-      fetchTables();
-    } catch (err: any) {
-      toast({ title: "Lỗi", description: err.message, variant: "destructive" });
-    } finally {
-      setLoading(false);
-    }
+  // Handle Reseed Database (Non-blocking: solves INP blockage)
+  const handleReseed = () => {
+    setConfirmDialog({
+      open: true,
+      title: "Nạp Lại Seed Dữ Liệu",
+      description: "Bạn có chắc chắn muốn nạp lại danh mục vật phẩm, quái vật, máy chủ và nhiệm vụ mẫu? Toàn bộ danh mục game sẽ được cập nhật.",
+      confirmText: "Nạp Lại Ngay",
+      confirmVariant: "cyan",
+      onConfirm: async () => {
+        setLoading(true);
+        try {
+          const res = await fetch("/api/admin/db/reset-seed", { method: "POST" });
+          const data = await res.json();
+          if (!res.ok) throw new Error(data.error);
+          toast({ title: "Thành công", description: data.message });
+          fetchStats();
+          fetchTables();
+        } catch (err: any) {
+          toast({ title: "Lỗi", description: err.message, variant: "destructive" });
+        } finally {
+          setLoading(false);
+        }
+      },
+    });
   };
 
   // Handle Delete Row from Raw Table
-  const handleDeleteRow = async (tableName: string, id: any) => {
-    if (!window.confirm(`Xóa bản ghi ID ${id} khỏi bảng ${tableName}?`)) return;
-    try {
-      const res = await fetch(`/api/admin/tables/${tableName}/${id}`, { method: "DELETE" });
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.error);
-      toast({ title: "Đã xóa", description: data.message });
-      fetchTableRows(tableName);
-      fetchStats();
-      fetchTables();
-    } catch (err: any) {
-      toast({ title: "Lỗi", description: err.message, variant: "destructive" });
-    }
+  const handleDeleteRow = (tableName: string, id: any) => {
+    setConfirmDialog({
+      open: true,
+      title: "Xóa Bản Ghi",
+      description: `Bạn có chắc chắn muốn xóa bản ghi ID ${id} khỏi bảng ${tableName}?`,
+      confirmText: "Xác Nhận Xóa",
+      confirmVariant: "danger",
+      onConfirm: async () => {
+        try {
+          const res = await fetch(`/api/admin/tables/${tableName}/${id}`, { method: "DELETE" });
+          const data = await res.json();
+          if (!res.ok) throw new Error(data.error);
+          toast({ title: "Đã xóa", description: data.message });
+          fetchTableRows(tableName);
+          fetchStats();
+          fetchTables();
+        } catch (err: any) {
+          toast({ title: "Lỗi", description: err.message, variant: "destructive" });
+        }
+      },
+    });
   };
 
   // Filtered lists
@@ -1846,6 +1904,61 @@ export default function AdminDashboardScreen() {
                   className="px-5 py-2 rounded-full bg-[#28c3e1] hover:brightness-110 text-[#1c161a] text-xs font-black uppercase tracking-wider shadow-[0_0_15px_rgba(40,195,225,0.4)]"
                 >
                   Lưu Vật Phẩm
+                </button>
+              </div>
+            </motion.div>
+          </div>
+        )}
+
+        {/* NON-BLOCKING CONFIRMATION MODAL (Eliminates INP blockage) */}
+        {confirmDialog.open && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm">
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95, y: 10 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.95, y: 10 }}
+              className="w-full max-w-md p-6 rounded-3xl bg-[#342a2b] border border-[#5d4648] shadow-[0_25px_70px_rgba(0,0,0,0.7)] text-left flex flex-col gap-4"
+            >
+              <div className="flex items-center gap-3">
+                <div className={`w-10 h-10 rounded-2xl flex items-center justify-center ${
+                  confirmDialog.confirmVariant === "danger"
+                    ? "bg-rose-500/20 text-rose-400 border border-rose-500/40"
+                    : "bg-[#28c3e1]/20 text-[#28c3e1] border border-[#28c3e1]/40"
+                }`}>
+                  <AlertCircle className="w-5 h-5" />
+                </div>
+                <div>
+                  <h3 className="text-base font-bold text-white">{confirmDialog.title}</h3>
+                  <p className="text-xs text-[#8e7a7c]">Xác nhận thao tác quản trị</p>
+                </div>
+              </div>
+
+              <p className="text-xs text-gray-300 leading-relaxed bg-[#4a383a]/60 p-3.5 rounded-xl border border-[#5d4648]/60">
+                {confirmDialog.description}
+              </p>
+
+              <div className="flex items-center justify-end gap-3 pt-2">
+                <button
+                  type="button"
+                  onClick={() => setConfirmDialog((prev) => ({ ...prev, open: false }))}
+                  className="px-4 py-2 rounded-full bg-[#4a383a] hover:bg-[#5d4648] text-xs font-bold text-gray-300 transition-colors"
+                >
+                  Hủy Bỏ
+                </button>
+                <button
+                  type="button"
+                  onClick={async () => {
+                    const action = confirmDialog.onConfirm;
+                    setConfirmDialog((prev) => ({ ...prev, open: false }));
+                    if (action) await action();
+                  }}
+                  className={`px-5 py-2 rounded-full text-xs font-black uppercase tracking-wider transition-all flex items-center gap-2 ${
+                    confirmDialog.confirmVariant === "danger"
+                      ? "bg-rose-600 hover:bg-rose-500 text-white shadow-[0_0_15px_rgba(225,29,72,0.4)]"
+                      : "bg-[#28c3e1] hover:brightness-110 text-[#1c161a] shadow-[0_0_15px_rgba(40,195,225,0.4)]"
+                  }`}
+                >
+                  {confirmDialog.confirmText || "Xác Nhận"}
                 </button>
               </div>
             </motion.div>
