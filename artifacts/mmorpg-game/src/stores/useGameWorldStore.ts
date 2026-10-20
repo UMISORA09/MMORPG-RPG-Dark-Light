@@ -911,7 +911,8 @@ export const useGameWorldStore = create<GameWorldState>((set, get) => ({
       }
 
       // Sync backend
-      fetch("/api/characters/1/quests/progress", {
+      const syncCharId = s.activeCharacterId || 1;
+      fetch(`/api/characters/${syncCharId}/quests/progress`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ objectiveType, targetId, count }),

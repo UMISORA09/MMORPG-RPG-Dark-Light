@@ -22,6 +22,7 @@ export const PvPCombatArena = memo(function PvPCombatArena() {
   const playerStr = useGameWorldStore((s) => s.playerStr);
   const playerLevel = useGameWorldStore((s) => s.playerLevel);
   const addFloatingText = useGameWorldStore((s) => s.addFloatingText);
+  const activeCharacterId = useGameWorldStore((s) => s.activeCharacterId) || 1;
 
   const isAttacking = playerAnimState.startsWith("attack") || playerAnimState === "air_attack";
   const playerAtk = (playerStr || 15) * 2.5 + (playerLevel || 1) * 4;
@@ -113,7 +114,7 @@ export const PvPCombatArena = memo(function PvPCombatArena() {
       hasReportedResult.current = true;
       const victory = pvpResult === "VICTORY";
 
-      fetch("/api/characters/1/pvp/match", {
+      fetch(`/api/characters/${activeCharacterId}/pvp/match`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({

@@ -68,7 +68,7 @@ export const BlacksmithModal = memo(function BlacksmithModal() {
     playCombatSFX("heavy_slam", 0.5);
 
     try {
-      const res = await fetch("/api/characters/1/blacksmith/enhance", {
+      const res = await fetch(`/api/characters/${activeCharacterId}/blacksmith/enhance`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ ownershipId: selectedGear.id }),
@@ -105,7 +105,7 @@ export const BlacksmithModal = memo(function BlacksmithModal() {
     playCombatSFX("heavy_slam", 0.4);
 
     try {
-      const res = await fetch("/api/characters/1/blacksmith/dismantle", {
+      const res = await fetch(`/api/characters/${activeCharacterId}/blacksmith/dismantle`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ ownershipIds: selectedDismantleIds }),
@@ -141,7 +141,7 @@ export const BlacksmithModal = memo(function BlacksmithModal() {
     playCombatSFX("heavy_slam", 0.5);
 
     try {
-      const res = await fetch("/api/characters/1/blacksmith/craft", {
+      const res = await fetch(`/api/characters/${activeCharacterId}/blacksmith/craft`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ recipeId }),

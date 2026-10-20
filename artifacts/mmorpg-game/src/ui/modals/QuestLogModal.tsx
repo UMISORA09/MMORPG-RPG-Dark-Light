@@ -9,6 +9,7 @@ export const QuestLogModal = memo(function QuestLogModal() {
   const setTrackedQuest = useGameWorldStore((s) => s.setTrackedQuest);
   const addFloatingText = useGameWorldStore((s) => s.addFloatingText);
   const playerPosition = useGameWorldStore((s) => s.playerPosition);
+  const activeCharacterId = useGameWorldStore((s) => s.activeCharacterId) || 1;
 
   const [quests, setQuests] = useState<any[]>([]);
   const [loading, setLoading] = useState(false);
@@ -17,7 +18,7 @@ export const QuestLogModal = memo(function QuestLogModal() {
   const fetchQuests = async () => {
     try {
       setLoading(true);
-      const res = await fetch("/api/characters/1/quests");
+      const res = await fetch(`/api/characters/${activeCharacterId}/quests`);
       if (res.ok) {
         const data = await res.json();
         setQuests(data);
@@ -44,7 +45,7 @@ export const QuestLogModal = memo(function QuestLogModal() {
   const handleAccept = async (questId: string) => {
     playCombatSFX("holy_bell", 0.4);
     try {
-      const res = await fetch(`/api/characters/1/quests/${questId}/accept`, { method: "POST" });
+      const res = await fetch(`/api/characters/${activeCharacterId}/quests/${questId}/accept`, { method: "POST" });
       if (res.ok) {
         addFloatingText("📜 Đã Tiếp Nhận Nhiệm Vụ!", playerPosition.clone(), "#00f2ff");
         await fetchQuests();
@@ -57,7 +58,7 @@ export const QuestLogModal = memo(function QuestLogModal() {
   const handleClaim = async (questId: string) => {
     playCombatSFX("level_up_fanfare", 0.6);
     try {
-      const res = await fetch(`/api/characters/1/quests/${questId}/claim`, { method: "POST" });
+      const res = await fetch(`/api/characters/${activeCharacterId}/quests/${questId}/claim`, { method: "POST" });
       if (res.ok) {
         addFloatingText("🎉 Hoàn Thành Nhiệm Vụ — Nhận Mưa Vàng & EXP!", playerPosition.clone(), "#fbbf24");
         await fetchQuests();
