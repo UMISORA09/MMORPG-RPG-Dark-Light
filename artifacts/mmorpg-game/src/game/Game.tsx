@@ -77,7 +77,7 @@ const Game = memo(function Game({ onLogout }: GameProps) {
       <Canvas
         ref={canvasRef}
         shadows
-        dpr={[1, 1.5]}
+        dpr={[1, 1.25]}
         gl={{
           powerPreference: "high-performance",
           antialias: false,
@@ -127,7 +127,6 @@ const Game = memo(function Game({ onLogout }: GameProps) {
         <CanvasErrorBoundary name="WorldEventLayer">
           <WorldEventManager />
         </CanvasErrorBoundary>
-        <Stars />
       </Canvas>
 
       {/* ── 2D Unified HUD Overlay ── */}

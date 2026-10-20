@@ -10,9 +10,9 @@ import { useFrame } from "@react-three/fiber";
 import { useGameWorldStore } from "@/stores/useGameWorldStore";
 import { playCombatSFX } from "@/audio/CombatSoundSynth";
 
-const RAIN_COUNT = 2400;
-const STARDUST_COUNT = 160;
-const FOG_COUNT = 320;
+const RAIN_COUNT = 300;
+const STARDUST_COUNT = 40;
+const FOG_COUNT = 60;
 
 export const DynamicWeatherSystem = memo(function DynamicWeatherSystem() {
   const weather = useGameWorldStore((s) => s.weather);

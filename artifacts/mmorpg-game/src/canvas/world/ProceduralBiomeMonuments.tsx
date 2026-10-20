@@ -50,14 +50,10 @@ export const ProceduralBiomeMonuments = memo(function ProceduralBiomeMonuments({
 // ==============================================================================
 function VillageExpandedPlaza3D() {
   const bellRef = useRef<THREE.Mesh>(null);
-  const waterRef = useRef<THREE.Mesh>(null);
 
   useFrame((state) => {
     if (bellRef.current) {
       bellRef.current.rotation.z = Math.sin(state.clock.elapsedTime * 1.5) * 0.08;
-    }
-    if (waterRef.current) {
-      waterRef.current.position.y = 1.1 + Math.sin(state.clock.elapsedTime * 3) * 0.05;
     }
   });
 
@@ -94,30 +90,7 @@ function VillageExpandedPlaza3D() {
         ))}
       </group>
 
-      {/* ── 1.2 ĐÀI PHUN NƯỚC THẦN THÁNH (Trung Tâm Làng x = 0, z = 0) ── */}
-      <group position={[0, 0, 0]}>
-        {/* Basin Base */}
-        <mesh position={[0, 0.4, 0]} receiveShadow>
-          <cylinderGeometry args={[4.2, 4.6, 0.8, 24]} />
-          <meshStandardMaterial color="#334155" roughness={0.6} />
-        </mesh>
-        {/* Inner Water Mesh */}
-        <mesh position={[0, 0.75, 0]} rotation={[-Math.PI / 2, 0, 0]}>
-          <circleGeometry args={[3.8, 24]} />
-          <meshStandardMaterial color="#0284c7" roughness={0.1} metalness={0.2} transparent opacity={0.85} />
-        </mesh>
-        {/* Central Fountain Tier */}
-        <mesh position={[0, 1.4, 0]}>
-          <cylinderGeometry args={[1.6, 1.2, 1.2, 16]} />
-          <meshStandardMaterial color="#475569" />
-        </mesh>
-        {/* Floating Water Spout Orb */}
-        <mesh ref={waterRef} position={[0, 2.2, 0]}>
-          <sphereGeometry args={[0.55, 16, 16]} />
-          <meshBasicMaterial color="#38bdf8" />
-        </mesh>
-        <pointLight color="#38bdf8" intensity={1.5} distance={9} position={[0, 2.5, 0]} />
-      </group>
+      {/* ── 1.2 KHU VỰC HỒI SINH TRUNG TÂM (Respawn Plaza - Thoáng đãng không vật cản) ── */}
 
       {/* ── 1.3 THÁP CHUÔNG CỔ (Phía Đông x = 28, z = 12) ── */}
       <group position={[28, 0, 12]}>

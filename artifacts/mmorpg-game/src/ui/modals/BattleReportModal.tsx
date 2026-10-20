@@ -76,9 +76,11 @@ export const BattleReportModal = memo(function BattleReportModal({
     }
   );
 
+  const isDead = useGameWorldStore((s) => s.isDead);
+
   const logs = Array.isArray(rawLogs) ? rawLogs : [];
 
-  if (!isOpen) return null;
+  if (!isOpen || isDead) return null;
 
   const isVictory = battleReport ? battleReport.victory : true;
 

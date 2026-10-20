@@ -21,13 +21,7 @@ export type ObstacleCollider =
       depth: number;
     };
 
-// ── 1. Central Dragon Healing Fountain ──
-const CENTRAL_FOUNTAIN: ObstacleCollider = {
-  type: "cylinder",
-  x: 0,
-  z: 0,
-  radius: 3.4,
-};
+// ── 1. Village Center Open Respawn Plaza (Collision-free) ──
 
 // ── 2. Village Dark Fantasy Wooden Houses (Solid Box Colliders) ──
 export const VILLAGE_HOUSES: ObstacleCollider[] = [

@@ -1604,18 +1604,22 @@ export const useGameWorldStore = create<GameWorldState>((set, get) => ({
 
       playCombatSFX("heavy_slam", 0.6);
 
-      // Show Defeat Card
-      get().openBattleReport({
-        victory: false,
-        monsterName: "Quái Vật Đại Lục / Boss",
-        monsterLevel: s.playerLevel,
-        isBoss: false,
-        totalDamageDealt: s.currentFightDamageDealt,
-        critHits: s.currentFightCritHits,
-        durationSeconds: Math.max(1, Math.round((Date.now() - s.currentFightStartTime) / 1000)),
-        expGained: 0,
-        goldGained: 0,
-        drops: [],
+      // Record Defeat Report for Unified Death Modal
+      set({
+        battleReport: {
+          victory: false,
+          monsterName: "Quái Vật Đại Lục / Boss",
+          monsterLevel: s.playerLevel,
+          isBoss: false,
+          totalDamageDealt: s.currentFightDamageDealt,
+          critHits: s.currentFightCritHits,
+          durationSeconds: Math.max(1, Math.round((Date.now() - s.currentFightStartTime) / 1000)),
+          expGained: 0,
+          goldGained: 0,
+          drops: [],
+          timestamp: Date.now(),
+        },
+        battleReportOpen: false,
       });
 
       if (s.onPlayerDefeatedCallback) {

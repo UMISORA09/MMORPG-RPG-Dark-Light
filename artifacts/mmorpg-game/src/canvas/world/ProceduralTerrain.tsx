@@ -165,7 +165,7 @@ export const ProceduralTerrain = memo(function ProceduralTerrain() {
 
   return (
     <mesh receiveShadow position={[0, -0.01, 0]} rotation={[-Math.PI / 2, 0, 0]}>
-      <planeGeometry args={[180, 180, 64, 64]} />
+      <planeGeometry args={[180, 180, 2, 2]} />
       <shaderMaterial
         ref={materialRef}
         vertexShader={TERRAIN_VERTEX_SHADER}

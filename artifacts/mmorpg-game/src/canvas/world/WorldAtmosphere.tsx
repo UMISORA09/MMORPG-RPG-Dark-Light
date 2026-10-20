@@ -15,13 +15,13 @@ export const WorldAtmosphere = memo(function WorldAtmosphere() {
         intensity={1.8}
         color="#fffbeb"
         castShadow
-        shadow-mapSize={[1024, 1024]}
+        shadow-mapSize={[512, 512]}
         shadow-camera-near={1}
-        shadow-camera-far={140}
-        shadow-camera-left={-75}
-        shadow-camera-right={75}
-        shadow-camera-top={75}
-        shadow-camera-bottom={-75}
+        shadow-camera-far={120}
+        shadow-camera-left={-45}
+        shadow-camera-right={45}
+        shadow-camera-top={45}
+        shadow-camera-bottom={-45}
         shadow-bias={-0.0005}
       />
 
@@ -36,10 +36,10 @@ export const WorldAtmosphere = memo(function WorldAtmosphere() {
       <ambientLight color="#ffffff" intensity={1.4} />
       <hemisphereLight args={["#8ae65c", "#fef3c7", 0.65]} />
 
-      {/* ── Ambient Magic Particles Across Biomes ── */}
+      {/* ── Ambient Magic Particles Across Biomes (Optimized) ── */}
       {/* Safe Village Zone (Radiant Cyan & Gold stardust) */}
       <Sparkles
-        count={50}
+        count={18}
         scale={[32, 10, 32]}
         position={[0, 3.5, 0]}
         color="#00f2ff"
@@ -48,7 +48,7 @@ export const WorldAtmosphere = memo(function WorldAtmosphere() {
         opacity={0.6}
       />
       <Sparkles
-        count={30}
+        count={10}
         scale={[24, 8, 24]}
         position={[0, 2.5, 0]}
         color="#fbbf24"
@@ -59,7 +59,7 @@ export const WorldAtmosphere = memo(function WorldAtmosphere() {
 
       {/* Wilderness Zone (Deep Purple Night Mist) */}
       <Sparkles
-        count={70}
+        count={24}
         scale={[90, 8, 90]}
         position={[0, 3, 0]}
         color="#a855f7"
@@ -70,7 +70,7 @@ export const WorldAtmosphere = memo(function WorldAtmosphere() {
 
       {/* Boss Raid Altar (Molten Fiery Ash & Cinders) */}
       <Sparkles
-        count={65}
+        count={20}
         scale={[40, 12, 40]}
         position={[0, 5, -70]}
         color="#ff3366"
@@ -79,7 +79,7 @@ export const WorldAtmosphere = memo(function WorldAtmosphere() {
         opacity={0.75}
       />
       <Sparkles
-        count={45}
+        count={15}
         scale={[36, 10, 36]}
         position={[0, 4, -70]}
         color="#ffaa00"
