@@ -65271,8 +65271,8 @@ function simulateBattle(playerAtk, playerDef, playerHp, playerSpd, monsterAtk, m
       isCritical
     });
   }
-  const victory = mHp <= 0 && pHp > 0;
-  return { rounds, victory, finalPlayerHp: pHp };
+  const victory2 = mHp <= 0 && pHp > 0;
+  return { rounds, victory: victory2, finalPlayerHp: pHp };
 }
 router6.post("/characters/:characterId/battle", requireAuth, async (req, res) => {
   const characterId = parseInt(req.params.characterId);
@@ -65317,7 +65317,7 @@ router6.post("/characters/:characterId/battle", requireAuth, async (req, res) =>
     rawMonster.hp,
     character.classId
   );
-  let victory = simResult.victory;
+  let victory2 = simResult.victory;
   let rounds = simResult.rounds;
   let finalPlayerHp = simResult.finalPlayerHp;
   const metrics = req.body?.metrics;
@@ -65343,7 +65343,7 @@ router6.post("/characters/:characterId/battle", requireAuth, async (req, res) =>
     const isDamageValid = dmgDealt >= rawMonster.hp;
     const isPlayerAlive = finalPlayerHp > 0;
     if (isDamageValid && isDurationValid && isPlayerAlive) {
-      victory = true;
+      victory2 = true;
       rounds = [
         {
           round: 1,
@@ -65356,7 +65356,7 @@ router6.post("/characters/:characterId/battle", requireAuth, async (req, res) =>
         }
       ];
     } else {
-      victory = false;
+      victory2 = false;
       finalPlayerHp = 0;
       rounds = [
         {
@@ -65373,7 +65373,7 @@ router6.post("/characters/:characterId/battle", requireAuth, async (req, res) =>
   }
   let expGained = 0;
   let goldGained = 0;
-  if (victory) {
+  if (victory2) {
     expGained = monsterReward.expReward;
     goldGained = monsterReward.goldReward;
   } else {
@@ -65386,13 +65386,13 @@ router6.post("/characters/:characterId/battle", requireAuth, async (req, res) =>
     characterId,
     monsterId,
     monsterName: monsterReward.name,
-    victory,
+    victory: victory2,
     expGained,
     goldGained,
     playerFinalHp: finalPlayerHp
   });
   return res.status(200).json({
-    victory,
+    victory: victory2,
     rounds,
     expGained,
     goldGained,
@@ -67854,6 +67854,11 @@ router14.post("/characters/:characterId/allocate-stats", requireAuth, async (req
     res.status(400).json({ error: "S\u1ED1 \u0111i\u1EC3m ph\xE2n b\u1ED5 ph\u1EA3i l\u1EDBn h\u01A1n 0" });
     return;
   }
+  const playerHpPct = req.body.playerHpPercent !== void 0 ? Number(req.body.playerHpPercent) : null;
+  if (Boolean(victory) && playerHpPct !== null && playerHpPct <= 0) {
+    res.status(400).json({ error: "Kh\xF4ng th\u1EC3 ghi nh\u1EADn chi\u1EBFn th\u1EAFng khi l\u01B0\u1EE3ng m\xE1u b\u1EA3n th\xE2n b\u1EB1ng 0." });
+    return;
+  }
   const [character] = await db.select().from(charactersTable).where(and(eq(charactersTable.id, characterId), eq(charactersTable.userId, userId))).limit(1);
   if (!character) {
     res.status(404).json({ error: "Kh\xF4ng t\xECm th\u1EA5y nh\xE2n v\u1EADt ho\u1EB7c kh\xF4ng c\xF3 quy\u1EC1n s\u1EDF h\u1EEFu" });
@@ -67937,13 +67942,13 @@ var BOT_OPPONENT_RATINGS = {
   "Chi\u1EBFn Binh \u1EA2o M\u1ED9ng": 400,
   "\u1EA2o \u1EA2nh": 400
 };
-function calculateEloRatingChange(playerRating, opponentRating, victory) {
+function calculateEloRatingChange(playerRating, opponentRating, victory2) {
   const pRating = Math.max(0, playerRating);
   const oRating = Math.max(0, opponentRating);
   const exponent = (oRating - pRating) / 400;
   const expectedScore = 1 / (1 + Math.pow(10, exponent));
   let pointChange = 0;
-  if (victory) {
+  if (victory2) {
     const kWin = 35;
     const rawDelta = Math.round(kWin * (1 - expectedScore));
     pointChange = Math.max(16, Math.min(35, rawDelta));
@@ -67958,7 +67963,7 @@ function calculateEloRatingChange(playerRating, opponentRating, victory) {
 var pvpMatchRateLimits = /* @__PURE__ */ new Map();
 async function handlePvPMatchRequest(req, res, characterId) {
   const userId = req.session.userId;
-  const { opponentId, opponentName, victory = true } = req.body;
+  const { opponentId, opponentName, victory: victory2 = true } = req.body;
   if (!characterId || isNaN(characterId)) {
     res.status(400).json({ error: "Thi\u1EBFu m\xE3 nh\xE2n v\u1EADt (characterId)" });
     return;
@@ -67973,6 +67978,11 @@ async function handlePvPMatchRequest(req, res, characterId) {
       return;
     }
     rateLimit.count++;
+  }
+  const playerHpPct = req.body.playerHpPercent !== void 0 ? Number(req.body.playerHpPercent) : null;
+  if (Boolean(victory2) && playerHpPct !== null && playerHpPct <= 0) {
+    res.status(400).json({ error: "Kh\xF4ng th\u1EC3 ghi nh\u1EADn chi\u1EBFn th\u1EAFng khi l\u01B0\u1EE3ng m\xE1u b\u1EA3n th\xE2n b\u1EB1ng 0." });
+    return;
   }
   const [character] = await db.select().from(charactersTable).where(and(eq(charactersTable.id, characterId), eq(charactersTable.userId, userId))).limit(1);
   if (!character) {
@@ -68003,7 +68013,7 @@ async function handlePvPMatchRequest(req, res, characterId) {
     opponentRating = Math.max(400, Number(character.honorPoints || 0));
   }
   const prevPoints = Number(character.honorPoints || 0);
-  const isVictory = Boolean(victory);
+  const isVictory = Boolean(victory2);
   const { pointChange } = calculateEloRatingChange(prevPoints, opponentRating, isVictory);
   const newPoints = Math.max(0, prevPoints + pointChange);
   const currentRankInfo = getArenaRank(newPoints);
@@ -69098,6 +69108,22 @@ router18.get("/dungeon/:instanceId", requireAuth, async (req, res) => {
   res.status(200).json({
     success: true,
     instance
+  });
+});
+router18.post("/dungeon/:instanceId/abandon", requireAuth, async (req, res) => {
+  const { instanceId } = req.params;
+  const userId = Number(req.authUserId || req.session?.userId);
+  const instance = activeDungeonInstances.get(instanceId);
+  if (instance) {
+    if (Number(instance.userId) !== userId && req.authUser?.role !== "ADMIN") {
+      res.status(403).json({ error: "T\u1EEB ch\u1ED1i truy c\u1EADp: B\u1EA1n kh\xF4ng thu\u1ED9c ph\xF3 b\u1EA3n n\xE0y" });
+      return;
+    }
+    activeDungeonInstances.delete(instanceId);
+  }
+  res.status(200).json({
+    success: true,
+    message: "\u0110\xE3 r\u1EDDi kh\u1ECFi ph\xF3 b\u1EA3n v\xE0 d\u1ECDn d\u1EB9p t\xE0i nguy\xEAn th\xE0nh c\xF4ng."
   });
 });
 var dungeon_default = router18;

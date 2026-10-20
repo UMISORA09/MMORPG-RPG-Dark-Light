@@ -432,4 +432,25 @@ router.get("/dungeon/:instanceId", requireAuth, async (req, res): Promise<void> 
   });
 });
 
+// ── 6. RỜI KHỎI PHÓ BẢN & DỌN DẸP INSTANCE (ABANDON DUNGEON) ──
+router.post("/dungeon/:instanceId/abandon", requireAuth, async (req, res): Promise<void> => {
+  const { instanceId } = req.params;
+  const userId = Number((req as any).authUserId || req.session?.userId);
+
+  const instance = activeDungeonInstances.get(instanceId);
+  if (instance) {
+    if (Number(instance.userId) !== userId && (req as any).authUser?.role !== "ADMIN") {
+      res.status(403).json({ error: "Từ chối truy cập: Bạn không thuộc phó bản này" });
+      return;
+    }
+    activeDungeonInstances.delete(instanceId);
+  }
+
+  res.status(200).json({
+    success: true,
+    message: "Đã rời khỏi phó bản và dọn dẹp tài nguyên thành công.",
+  });
+});
+
 export default router;
+

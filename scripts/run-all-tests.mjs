@@ -51,7 +51,7 @@ const TEST_SUITES = [
   {
     id: 5,
     name: "PvP Arena & Dungeon Instances",
-    script: "scratch/test-phase5-pvp-dungeon.mjs",
+    script: "scripts/test-phase5-pvp-dungeon.mjs",
     description: "Ranked PvP honor/ELO, 3-room isolated dungeon progression & clear",
   },
   {
