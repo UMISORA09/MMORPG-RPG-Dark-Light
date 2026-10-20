@@ -188,11 +188,71 @@ export default function AdminDashboardScreen() {
   const [tables, setTables] = useState<TableInfo[]>([]);
   const [selectedTable, setSelectedTable] = useState("users");
   const [tableRows, setTableRows] = useState<any[]>([]);
+  const [authStatus, setAuthStatus] = useState<"checking" | "authorized" | "unauthorized" | "forbidden">("checking");
+  const [authErrorMsg, setAuthErrorMsg] = useState("");
+
+  const adminFetch = async (url: string, init?: RequestInit): Promise<Response> => {
+    const token = typeof window !== "undefined" ? (localStorage.getItem("clb_token") || localStorage.getItem("token")) : null;
+    const gmSecret = typeof window !== "undefined" ? localStorage.getItem("clb_gm_secret") : null;
+
+    const headers: Record<string, string> = {
+      ...(init?.headers as Record<string, string> || {}),
+    };
+
+    if (token) {
+      headers["Authorization"] = `Bearer ${token}`;
+    }
+    if (gmSecret) {
+      headers["x-gm-secret"] = gmSecret;
+    }
+
+    try {
+      const res = await fetch(url, {
+        ...init,
+        credentials: "include",
+        headers,
+      });
+
+      if (res.status === 401) {
+        setAuthStatus("unauthorized");
+        setAuthErrorMsg("Phiên đăng nhập không hợp lệ hoặc chưa đăng nhập.");
+        setStats(null);
+        setUsers([]);
+        setCharacters([]);
+        setItems([]);
+        setTables([]);
+        setTableRows([]);
+        return res;
+      }
+
+      if (res.status === 403) {
+        setAuthStatus("forbidden");
+        setAuthErrorMsg("Từ chối truy cập: Tài khoản không có quyền Quản trị viên (ADMIN).");
+        setStats(null);
+        setUsers([]);
+        setCharacters([]);
+        setItems([]);
+        setTables([]);
+        setTableRows([]);
+        return res;
+      }
+
+      if (res.ok && authStatus !== "authorized") {
+        setAuthStatus("authorized");
+      }
+
+      return res;
+    } catch (err: any) {
+      throw err;
+    }
+  };
+
+
 
   // Fetch Stats
   const fetchStats = async () => {
     try {
-      const res = await fetch("/api/admin/stats");
+      const res = await adminFetch("/api/admin/stats");
       if (res.ok) {
         const data = await res.json();
         setStats(data);
@@ -206,7 +266,7 @@ export default function AdminDashboardScreen() {
   const fetchUsers = async () => {
     setLoading(true);
     try {
-      const res = await fetch("/api/admin/users");
+      const res = await adminFetch("/api/admin/users");
       if (res.ok) {
         const data = await res.json();
         setUsers(data);
@@ -222,7 +282,7 @@ export default function AdminDashboardScreen() {
   const fetchCharacters = async () => {
     setLoading(true);
     try {
-      const res = await fetch("/api/admin/characters");
+      const res = await adminFetch("/api/admin/characters");
       if (res.ok) {
         const data = await res.json();
         setCharacters(data);
@@ -238,7 +298,7 @@ export default function AdminDashboardScreen() {
   const fetchItems = async () => {
     setLoading(true);
     try {
-      const res = await fetch("/api/admin/items");
+      const res = await adminFetch("/api/admin/items");
       if (res.ok) {
         const data = await res.json();
         setItems(data);
@@ -253,7 +313,7 @@ export default function AdminDashboardScreen() {
   // Fetch Tables
   const fetchTables = async () => {
     try {
-      const res = await fetch("/api/admin/tables");
+      const res = await adminFetch("/api/admin/tables");
       if (res.ok) {
         const data = await res.json();
         setTables(data);
@@ -267,7 +327,7 @@ export default function AdminDashboardScreen() {
   const fetchTableRows = async (tableName: string) => {
     setLoading(true);
     try {
-      const res = await fetch(`/api/admin/tables/${tableName}?limit=50`);
+      const res = await adminFetch(`/api/admin/tables/${tableName}?limit=50`);
       if (res.ok) {
         const data = await res.json();
         setTableRows(data.rows || []);
@@ -303,7 +363,7 @@ export default function AdminDashboardScreen() {
           toast({ title: "Lỗi", description: "Vui lòng nhập mật khẩu", variant: "destructive" });
           return;
         }
-        const res = await fetch("/api/admin/users", {
+        const res = await adminFetch("/api/admin/users", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify(userForm),
@@ -312,7 +372,7 @@ export default function AdminDashboardScreen() {
         if (!res.ok) throw new Error(data.error);
         toast({ title: "Thành công", description: `Đã tạo tài khoản ${userForm.username}!` });
       } else if (userModal.data) {
-        const res = await fetch(`/api/admin/users/${userModal.data.id}`, {
+        const res = await adminFetch(`/api/admin/users/${userModal.data.id}`, {
           method: "PUT",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify(userForm),
@@ -339,7 +399,7 @@ export default function AdminDashboardScreen() {
       confirmVariant: "danger",
       onConfirm: async () => {
         try {
-          const res = await fetch(`/api/admin/users/${id}`, { method: "DELETE" });
+          const res = await adminFetch(`/api/admin/users/${id}`, { method: "DELETE" });
           const data = await res.json();
           if (!res.ok) throw new Error(data.error);
           toast({ title: "Đã xóa", description: data.message });
@@ -356,7 +416,7 @@ export default function AdminDashboardScreen() {
   const handleSaveCharacter = async () => {
     try {
       if (charModal.mode === "create") {
-        const res = await fetch("/api/admin/characters", {
+        const res = await adminFetch("/api/admin/characters", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify(charForm),
@@ -365,7 +425,7 @@ export default function AdminDashboardScreen() {
         if (!res.ok) throw new Error(data.error);
         toast({ title: "Thành công", description: "Đã tạo nhân vật mới!" });
       } else if (charModal.data) {
-        const res = await fetch(`/api/admin/characters/${charModal.data.id}`, {
+        const res = await adminFetch(`/api/admin/characters/${charModal.data.id}`, {
           method: "PUT",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify(charForm),
@@ -392,7 +452,7 @@ export default function AdminDashboardScreen() {
       confirmVariant: "danger",
       onConfirm: async () => {
         try {
-          const res = await fetch(`/api/admin/characters/${id}`, { method: "DELETE" });
+          const res = await adminFetch(`/api/admin/characters/${id}`, { method: "DELETE" });
           const data = await res.json();
           if (!res.ok) throw new Error(data.error);
           toast({ title: "Đã xóa", description: data.message });
@@ -412,7 +472,7 @@ export default function AdminDashboardScreen() {
       return;
     }
     try {
-      const res = await fetch(`/api/admin/characters/${charModal.data.id}/grant-item`, {
+      const res = await adminFetch(`/api/admin/characters/${charModal.data.id}/grant-item`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(grantForm),
@@ -429,7 +489,7 @@ export default function AdminDashboardScreen() {
   // Handle View Character Inventory
   const handleOpenInventory = async (c: CharacterData) => {
     try {
-      const res = await fetch(`/api/admin/characters/${c.id}/items`);
+      const res = await adminFetch(`/api/admin/characters/${c.id}/items`);
       if (res.ok) {
         const items = await res.json();
         setCharItemsModal({ open: true, char: c, items });
@@ -442,7 +502,7 @@ export default function AdminDashboardScreen() {
   // Handle Delete Item from Character Bag
   const handleDeleteCharItem = async (characterItemId: number) => {
     try {
-      const res = await fetch(`/api/admin/character-items/${characterItemId}`, { method: "DELETE" });
+      const res = await adminFetch(`/api/admin/character-items/${characterItemId}`, { method: "DELETE" });
       if (res.ok) {
         toast({ title: "Đã xóa", description: "Đã xóa vật phẩm khỏi kho đồ!" });
         if (charItemsModal.char) handleOpenInventory(charItemsModal.char);
@@ -460,7 +520,7 @@ export default function AdminDashboardScreen() {
     }
     try {
       if (itemModal.mode === "create") {
-        const res = await fetch("/api/admin/items", {
+        const res = await adminFetch("/api/admin/items", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify(itemForm),
@@ -469,7 +529,7 @@ export default function AdminDashboardScreen() {
         if (!res.ok) throw new Error(data.error);
         toast({ title: "Thành công", description: "Đã thêm vật phẩm mới vào danh mục!" });
       } else if (itemModal.data) {
-        const res = await fetch(`/api/admin/items/${itemModal.data.id}`, {
+        const res = await adminFetch(`/api/admin/items/${itemModal.data.id}`, {
           method: "PUT",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify(itemForm),
@@ -496,7 +556,7 @@ export default function AdminDashboardScreen() {
       confirmVariant: "danger",
       onConfirm: async () => {
         try {
-          const res = await fetch(`/api/admin/items/${id}`, { method: "DELETE" });
+          const res = await adminFetch(`/api/admin/items/${id}`, { method: "DELETE" });
           const data = await res.json();
           if (!res.ok) throw new Error(data.error);
           toast({ title: "Đã xóa", description: data.message });
@@ -520,7 +580,7 @@ export default function AdminDashboardScreen() {
       onConfirm: async () => {
         setLoading(true);
         try {
-          const res = await fetch("/api/admin/db/reset-seed", { method: "POST" });
+          const res = await adminFetch("/api/admin/db/reset-seed", { method: "POST" });
           const data = await res.json();
           if (!res.ok) throw new Error(data.error);
           toast({ title: "Thành công", description: data.message });
@@ -545,7 +605,7 @@ export default function AdminDashboardScreen() {
       confirmVariant: "danger",
       onConfirm: async () => {
         try {
-          const res = await fetch(`/api/admin/tables/${tableName}/${id}`, { method: "DELETE" });
+          const res = await adminFetch(`/api/admin/tables/${tableName}/${id}`, { method: "DELETE" });
           const data = await res.json();
           if (!res.ok) throw new Error(data.error);
           toast({ title: "Đã xóa", description: data.message });
@@ -593,6 +653,71 @@ export default function AdminDashboardScreen() {
         return <span className="px-2 py-0.5 rounded text-[11px] font-bold bg-gray-500/20 text-gray-300 border border-gray-500/40">Cơ Bản</span>;
     }
   };
+  if (authStatus === "checking" && !stats) {
+    return (
+      <div className="min-h-screen w-full bg-[#1c161a] text-white flex flex-col items-center justify-center font-sans select-none">
+        <div className="w-16 h-16 rounded-2xl bg-[#28c3e1]/10 border border-[#28c3e1]/30 flex items-center justify-center text-[#28c3e1] animate-spin mb-4">
+          <RefreshCw className="w-8 h-8" />
+        </div>
+        <h2 className="text-xl font-bold tracking-wide">Đang xác thực quyền Quản trị viên...</h2>
+        <p className="text-sm text-[#8e7a7c] mt-2">Vui lòng chờ trong giây lát</p>
+      </div>
+    );
+  }
+
+  if (authStatus === "unauthorized") {
+    return (
+      <div className="min-h-screen w-full bg-[#1c161a] text-white flex flex-col items-center justify-center font-sans p-6 select-none">
+        <div className="max-w-md w-full bg-[#2a2022] border border-[#5d4648] rounded-2xl p-8 text-center shadow-2xl">
+          <div className="w-16 h-16 rounded-full bg-amber-500/10 border border-amber-500/30 flex items-center justify-center text-amber-400 mx-auto mb-4">
+            <KeyRound className="w-8 h-8" />
+          </div>
+          <h2 className="text-2xl font-black text-amber-400 mb-2">Yêu Cầu Đăng Nhập</h2>
+          <p className="text-sm text-[#a49193] mb-6">
+            Bạn chưa đăng nhập hoặc phiên làm việc đã kết thúc. Vui lòng đăng nhập với tài khoản Quản trị viên (ADMIN) để truy cập Bảng Quản Trị.
+          </p>
+          <button
+            onClick={() => setLocation("/")}
+            className="w-full py-3 rounded-xl bg-[#28c3e1] hover:brightness-110 text-[#1c161a] font-black text-sm uppercase tracking-wider transition-all"
+          >
+            Đến Trang Đăng Nhập
+          </button>
+        </div>
+      </div>
+    );
+  }
+
+  if (authStatus === "forbidden") {
+    return (
+      <div className="min-h-screen w-full bg-[#1c161a] text-white flex flex-col items-center justify-center font-sans p-6 select-none">
+        <div className="max-w-md w-full bg-[#2a2022] border border-rose-500/40 rounded-2xl p-8 text-center shadow-2xl">
+          <div className="w-16 h-16 rounded-full bg-rose-500/10 border border-rose-500/30 flex items-center justify-center text-rose-400 mx-auto mb-4">
+            <AlertCircle className="w-8 h-8" />
+          </div>
+          <h2 className="text-2xl font-black text-rose-400 mb-2">403 — Từ Chối Truy Cập</h2>
+          <p className="text-sm text-[#a49193] mb-6">
+            Tài khoản hiện tại của bạn không có đặc quyền Quản trị viên (ADMIN). Khu vực này chỉ dành riêng cho Ban Quản Trị hệ thống máy chủ Chiến Long Bí Sử.
+          </p>
+          <div className="flex flex-col gap-3">
+            <button
+              onClick={() => setLocation("/characters")}
+              className="w-full py-3 rounded-xl bg-[#4a383a] hover:bg-[#5d4648] text-white font-bold text-sm transition-all"
+            >
+              Quay Về Sảnh Nhân Vật
+            </button>
+            <button
+              onClick={() => setLocation("/game")}
+              className="w-full py-3 rounded-xl bg-[#28c3e1] hover:brightness-110 text-[#1c161a] font-black text-sm uppercase tracking-wider transition-all"
+            >
+              Tiếp Tục Vào Game
+            </button>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+
 
   return (
     <div className="min-h-screen w-full bg-[#1c161a] text-white flex flex-col font-sans select-none overflow-x-hidden">

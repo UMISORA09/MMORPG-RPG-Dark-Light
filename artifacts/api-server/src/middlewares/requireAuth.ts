@@ -68,6 +68,17 @@ export async function requireAuth(req: any, res: any, next: any): Promise<void> 
  * Ngăn chặn tuyệt đối người dùng thông thường gọi các lệnh GM hoặc tự cấp tài nguyên.
  */
 export async function requireGMOrAdmin(req: any, res: any, next: any): Promise<void> {
+  const gmSecret = process.env.GM_SECRET_KEY;
+  const headerSecret = req.headers?.["x-gm-secret"];
+  const isSecretAuthorized = Boolean(gmSecret && headerSecret && headerSecret === gmSecret);
+
+  if (isSecretAuthorized) {
+    if (!req.authUser) {
+      req.authUser = { id: 0, username: "System_GM", role: "GM" };
+    }
+    return next();
+  }
+
   const user = await extractAuthUser(req);
   if (!user) {
     if (req.session?.destroy) {
@@ -77,14 +88,53 @@ export async function requireGMOrAdmin(req: any, res: any, next: any): Promise<v
     return;
   }
 
-  const gmSecret = process.env.GM_SECRET_KEY;
-  const headerSecret = req.headers?.["x-gm-secret"];
-  const isSecretAuthorized = Boolean(gmSecret && headerSecret && headerSecret === gmSecret);
   const userRole = (user.role || "PLAYER").toUpperCase();
 
-  if (userRole !== "ADMIN" && userRole !== "GM" && !isSecretAuthorized) {
+  if (userRole !== "ADMIN" && userRole !== "GM") {
     res.status(403).json({
       error: "Yêu cầu quyền Quản trị viên (GM/Admin). Bạn không được phép sử dụng lệnh này.",
+    });
+    return;
+  }
+
+  next();
+}
+
+/**
+ * Middleware phân quyền tối cao dành cho Admin Dashboard và các thao tác hệ thống lõi.
+ * Chỉ cho phép người dùng có role = 'ADMIN' hoặc header secret GM/Admin hợp lệ.
+ * Deny-by-default: Anonymous nhận 401, tài khoản PLAYER hoặc role khác nhận 403.
+ */
+export async function requireAdmin(req: any, res: any, next: any): Promise<void> {
+  const gmSecret = process.env.GM_SECRET_KEY;
+  const adminSecret = process.env.ADMIN_SECRET_KEY;
+  const headerSecret = req.headers?.["x-gm-secret"] || req.headers?.["x-admin-secret"];
+  const isSecretAuthorized = Boolean(
+    (gmSecret && headerSecret && headerSecret === gmSecret) ||
+    (adminSecret && headerSecret && headerSecret === adminSecret)
+  );
+
+  if (isSecretAuthorized) {
+    if (!req.authUser) {
+      req.authUser = { id: 0, username: "System_Admin", role: "ADMIN" };
+    }
+    return next();
+  }
+
+  const user = await extractAuthUser(req);
+  if (!user) {
+    if (req.session?.destroy) {
+      req.session.destroy(() => undefined);
+    }
+    res.status(401).json({ error: "Chưa đăng nhập. Vui lòng đăng nhập với tài khoản Quản trị viên." });
+    return;
+  }
+
+  const userRole = (user.role || "PLAYER").toUpperCase();
+
+  if (userRole !== "ADMIN") {
+    res.status(403).json({
+      error: "Yêu cầu quyền Quản trị viên tối cao (ADMIN). Bạn không được phép truy cập khu vực này.",
     });
     return;
   }

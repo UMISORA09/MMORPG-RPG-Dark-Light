@@ -1,3 +1,4 @@
+import { requireAdmin } from "../middlewares/requireAuth";
 import { Router } from "express";
 import bcrypt from "bcryptjs";
 import {
@@ -19,6 +20,9 @@ import { getDeterministicUserId } from "./auth";
 import { CHARACTER_CLASSES, getStatsForLevel } from "../data/classes";
 
 const router = Router();
+
+// Áp dụng RBAC deny-by-default cho toàn bộ Admin Router (P0 Security)
+router.use("/admin", requireAdmin);
 
 // ==========================================
 // 1. STATS & SYSTEM HEALTH
@@ -69,6 +73,7 @@ router.get("/admin/users", async (_req, res) => {
       return {
         id: u.id,
         username: u.username,
+        role: u.role || "PLAYER",
         forumTitle: u.forumTitle,
         selectedRegion: u.selectedRegion,
         selectedServerId: u.selectedServerId,
@@ -493,7 +498,13 @@ router.get("/admin/tables/:tableName", async (req, res) => {
     const limit = Math.min(parseInt(req.query.limit as string || "50", 10), 200);
 
     let rows: any[] = [];
-    if (tableName === "users") rows = await db.select().from(usersTable).limit(limit);
+    if (tableName === "users") {
+      const rawUsers = await db.select().from(usersTable).limit(limit);
+      rows = (rawUsers as any[]).map((u: any) => {
+        const { passwordHash, ...safeUser } = u;
+        return safeUser;
+      });
+    }
     else if (tableName === "characters") rows = await db.select().from(charactersTable).limit(limit);
     else if (tableName === "items") rows = await db.select().from(itemsTable).limit(limit);
     else if (tableName === "character_items") rows = await db.select().from(characterItemsTable).limit(limit);

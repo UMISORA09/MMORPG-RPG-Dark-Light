@@ -62372,6 +62372,15 @@ async function requireAuth(req, res, next) {
   next();
 }
 async function requireGMOrAdmin(req, res, next) {
+  const gmSecret = process.env.GM_SECRET_KEY;
+  const headerSecret = req.headers?.["x-gm-secret"];
+  const isSecretAuthorized = Boolean(gmSecret && headerSecret && headerSecret === gmSecret);
+  if (isSecretAuthorized) {
+    if (!req.authUser) {
+      req.authUser = { id: 0, username: "System_GM", role: "GM" };
+    }
+    return next();
+  }
   const user = await extractAuthUser(req);
   if (!user) {
     if (req.session?.destroy) {
@@ -62380,13 +62389,40 @@ async function requireGMOrAdmin(req, res, next) {
     res.status(401).json({ error: "Ch\u01B0a \u0111\u0103ng nh\u1EADp" });
     return;
   }
-  const gmSecret = process.env.GM_SECRET_KEY;
-  const headerSecret = req.headers?.["x-gm-secret"];
-  const isSecretAuthorized = Boolean(gmSecret && headerSecret && headerSecret === gmSecret);
   const userRole = (user.role || "PLAYER").toUpperCase();
-  if (userRole !== "ADMIN" && userRole !== "GM" && !isSecretAuthorized) {
+  if (userRole !== "ADMIN" && userRole !== "GM") {
     res.status(403).json({
       error: "Y\xEAu c\u1EA7u quy\u1EC1n Qu\u1EA3n tr\u1ECB vi\xEAn (GM/Admin). B\u1EA1n kh\xF4ng \u0111\u01B0\u1EE3c ph\xE9p s\u1EED d\u1EE5ng l\u1EC7nh n\xE0y."
+    });
+    return;
+  }
+  next();
+}
+async function requireAdmin(req, res, next) {
+  const gmSecret = process.env.GM_SECRET_KEY;
+  const adminSecret = process.env.ADMIN_SECRET_KEY;
+  const headerSecret = req.headers?.["x-gm-secret"] || req.headers?.["x-admin-secret"];
+  const isSecretAuthorized = Boolean(
+    gmSecret && headerSecret && headerSecret === gmSecret || adminSecret && headerSecret && headerSecret === adminSecret
+  );
+  if (isSecretAuthorized) {
+    if (!req.authUser) {
+      req.authUser = { id: 0, username: "System_Admin", role: "ADMIN" };
+    }
+    return next();
+  }
+  const user = await extractAuthUser(req);
+  if (!user) {
+    if (req.session?.destroy) {
+      req.session.destroy(() => void 0);
+    }
+    res.status(401).json({ error: "Ch\u01B0a \u0111\u0103ng nh\u1EADp. Vui l\xF2ng \u0111\u0103ng nh\u1EADp v\u1EDBi t\xE0i kho\u1EA3n Qu\u1EA3n tr\u1ECB vi\xEAn." });
+    return;
+  }
+  const userRole = (user.role || "PLAYER").toUpperCase();
+  if (userRole !== "ADMIN") {
+    res.status(403).json({
+      error: "Y\xEAu c\u1EA7u quy\u1EC1n Qu\u1EA3n tr\u1ECB vi\xEAn t\u1ED1i cao (ADMIN). B\u1EA1n kh\xF4ng \u0111\u01B0\u1EE3c ph\xE9p truy c\u1EADp khu v\u1EF1c n\xE0y."
     });
     return;
   }
@@ -68987,6 +69023,7 @@ var dungeon_default = router18;
 // src/routes/admin.ts
 var import_express19 = __toESM(require_express2(), 1);
 var router19 = (0, import_express19.Router)();
+router19.use("/admin", requireAdmin);
 router19.get("/admin/stats", async (_req, res) => {
   try {
     const [usersCount, charactersCount, itemsCount, monstersCount, serversCount, questsCount, characterItemsCount] = await Promise.all([
@@ -69027,6 +69064,7 @@ router19.get("/admin/users", async (_req, res) => {
       return {
         id: u.id,
         username: u.username,
+        role: u.role || "PLAYER",
         forumTitle: u.forumTitle,
         selectedRegion: u.selectedRegion,
         selectedServerId: u.selectedServerId,
@@ -69408,8 +69446,13 @@ router19.get("/admin/tables/:tableName", async (req, res) => {
     const { tableName } = req.params;
     const limit = Math.min(parseInt(req.query.limit || "50", 10), 200);
     let rows = [];
-    if (tableName === "users") rows = await db.select().from(usersTable).limit(limit);
-    else if (tableName === "characters") rows = await db.select().from(charactersTable).limit(limit);
+    if (tableName === "users") {
+      const rawUsers = await db.select().from(usersTable).limit(limit);
+      rows = rawUsers.map((u) => {
+        const { passwordHash, ...safeUser } = u;
+        return safeUser;
+      });
+    } else if (tableName === "characters") rows = await db.select().from(charactersTable).limit(limit);
     else if (tableName === "items") rows = await db.select().from(itemsTable).limit(limit);
     else if (tableName === "character_items") rows = await db.select().from(characterItemsTable).limit(limit);
     else if (tableName === "monsters") rows = await db.select().from(monstersTable).limit(limit);

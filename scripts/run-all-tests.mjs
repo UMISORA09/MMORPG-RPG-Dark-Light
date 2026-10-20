@@ -10,6 +10,7 @@
  * 5. PvP Arena & Dungeon Instances (scratch/test-phase5-pvp-dungeon.mjs)
  * 6. RPG Economy & Progression (scratch/test-phase6-economy.mjs)
  * 7. Encounter Rules & Lifecycle (scripts/test-encounter.mjs)
+ * 8. Admin Security & RBAC Guard (scripts/test-admin-security.mjs)
  */
 
 import { spawn } from "node:child_process";
@@ -66,6 +67,12 @@ const TEST_SUITES = [
     description: "Shared combat formulas, 403 reward lock, authoritative level-up",
     needsServerBridge: true,
   },
+  {
+    id: 8,
+    name: "Admin Security & RBAC Guard",
+    script: "scripts/test-admin-security.mjs",
+    description: "RBAC deny-by-default, 401 unauth, 403 player block, zero passwordHash leak",
+  },
 ];
 
 function runProcess(cmd, args, options = {}) {
@@ -80,169 +87,39 @@ function runProcess(cmd, args, options = {}) {
     let stdout = "";
     let stderr = "";
 
-    child.stdout.on("data", (data) => {
-      stdout += data.toString();
-    });
+    if (child.stdout) {
+      child.stdout.on("data", (chunk) => {
+        stdout += chunk.toString();
+      });
+    }
 
-    child.stderr.on("data", (data) => {
-      stderr += data.toString();
-    });
+    if (child.stderr) {
+      child.stderr.on("data", (chunk) => {
+        stderr += chunk.toString();
+      });
+    }
 
     child.on("close", (code) => {
-      const durationMs = Date.now() - start;
       resolve({
-        code,
+        code: code ?? 1,
         stdout,
         stderr,
-        durationMs,
+        duration: ((Date.now() - start) / 1000).toFixed(2),
       });
     });
 
     child.on("error", (err) => {
-      const durationMs = Date.now() - start;
       resolve({
         code: 1,
         stdout,
-        stderr: err.message,
-        durationMs,
+        stderr: stderr + "\n" + err.message,
+        duration: ((Date.now() - start) / 1000).toFixed(2),
       });
     });
   });
 }
 
-/**
- * Creates an authoritative ephemeral server bridge for Encounter tests
- * providing authoritative Slime reward state (25 EXP, 10 Gold) as specified
- * in TECHNICAL_SPEC_ENCOUNTER.md.
- */
-async function startEncounterServerBridge() {
-  let encounterChar = null;
-  const encounterLogs = [];
-
-  const server = http.createServer((req, res) => {
-    const url = req.url || "";
-
-    // Authoritative battle endpoint handling for encounter test verification
-    if (req.method === "POST" && url.includes("/battle") && !url.includes("battle-log")) {
-      let body = "";
-      req.on("data", (chunk) => (body += chunk));
-      req.on("end", () => {
-        let parsed = {};
-        try {
-          parsed = JSON.parse(body);
-        } catch {}
-
-        if (parsed.monsterId === "slime") {
-          if (!encounterChar) {
-            encounterChar = {
-              level: 1,
-              experience: 0,
-              gold: 100,
-              kills: 0,
-              maxHp: 120,
-              hp: 120,
-              atk: 10,
-              def: 4,
-              spd: 10,
-            };
-          }
-          encounterChar.kills += 1;
-          encounterChar.gold += 10;
-          encounterChar.experience += 25;
-
-          let leveledUp = false;
-          if (encounterChar.experience >= 100) {
-            encounterChar.experience -= 100;
-            encounterChar.level = 2;
-            encounterChar.maxHp = 135;
-            encounterChar.hp = 135;
-            encounterChar.atk = 13;
-            encounterChar.def = 6;
-            leveledUp = true;
-          }
-
-          const logEntry = {
-            characterId: 1,
-            monsterId: "slime",
-            monsterName: "Slime Đầm Lầy",
-            victory: true,
-            expGained: 25,
-            goldGained: 10,
-            createdAt: new Date().toISOString(),
-          };
-          encounterLogs.unshift(logEntry);
-
-          res.writeHead(200, { "Content-Type": "application/json" });
-          res.end(
-            JSON.stringify({
-              victory: true,
-              rounds: [
-                {
-                  round: 1,
-                  playerHp: encounterChar.hp,
-                  monsterHp: 0,
-                  playerDmg: 85,
-                  monsterDmg: 0,
-                  playerAction: "Trảm sát trong không gian 2.5D Real-Time",
-                  isCritical: false,
-                },
-              ],
-              expGained: 25,
-              goldGained: 10,
-              leveledUp,
-              newLevel: leveledUp ? encounterChar.level : null,
-              character: {
-                ...encounterChar,
-                experienceToNextLevel: encounterChar.level === 2 ? 150 : 100,
-              },
-            })
-          );
-          return;
-        }
-
-        // Forward other battle requests to standard handler
-        return handler(req, res);
-      });
-      return;
-    }
-
-    // Authoritative battle log history query
-    if (req.method === "GET" && url.includes("/battle-log") && encounterLogs.length > 0) {
-      res.writeHead(200, { "Content-Type": "application/json" });
-      res.end(JSON.stringify(encounterLogs));
-      return;
-    }
-
-    // Authoritative character reload query
-    if (req.method === "GET" && /\/characters\/\d+$/.test(url.split("?")[0]) && encounterChar) {
-      res.writeHead(200, { "Content-Type": "application/json" });
-      res.end(
-        JSON.stringify({
-          id: 50,
-          name: "LongKiếm_Test",
-          classId: "fighter",
-          className: "Chiến Binh",
-          ...encounterChar,
-          experienceToNextLevel: encounterChar.level === 2 ? 150 : 100,
-        })
-      );
-      return;
-    }
-
-    // Forward all other requests to standard Vercel serverless handler
-    handler(req, res);
-  });
-
-  await new Promise((resolve) => server.listen(0, resolve));
-  const port = server.address().port;
-  return {
-    server,
-    port,
-    apiBase: `http://127.0.0.1:${port}/api`,
-  };
-}
-
-async function runAllTests() {
+async function main() {
   console.log("══════════════════════════════════════════════════════════════════════════");
   console.log("🚀 CHIẾN LONG BÁ — UNIFIED TEST RUNNER (ALL INTEGRATED SUITES)");
   console.log(`📅 Execution Time: ${new Date().toISOString()}`);
@@ -253,85 +130,84 @@ async function runAllTests() {
   const results = [];
   let allPassed = true;
 
-  for (const suite of TEST_SUITES) {
-    process.stdout.write(`[${suite.id}/${TEST_SUITES.length}] Đang chạy: ${suite.name} (${suite.script})... `);
+  // Start background ephemeral server bridge if needed for scripts that expect an active server
+  const sharedServer = http.createServer((req, res) => {
+    handler(req, res);
+  });
+  await new Promise((resolve) => sharedServer.listen(0, resolve));
+  const sharedPort = sharedServer.address().port;
 
-    let bridge = null;
-    const env = { ...process.env };
+  try {
+    for (const suite of TEST_SUITES) {
+      process.stdout.write(`[${suite.id}/${TEST_SUITES.length}] Đang chạy: ${suite.name} (${suite.script})... `);
 
-    if (suite.needsServerBridge) {
-      bridge = await startEncounterServerBridge();
-      env.API_BASE = bridge.apiBase;
-    }
+      const env = {
+        ...process.env,
+        TEST_SERVER_PORT: String(sharedPort),
+        PORT: String(sharedPort),
+        NODE_ENV: "test",
+      };
 
-    try {
       const res = await runProcess("node", [suite.script], { env });
-      const passed = res.code === 0;
 
-      if (passed) {
-        console.log(`✅ PASS (${(res.durationMs / 1000).toFixed(2)}s)`);
+      if (res.code === 0) {
+        console.log(`✅ PASS (${res.duration}s)`);
+        results.push({
+          id: suite.id,
+          name: suite.name,
+          script: suite.script,
+          status: "PASS",
+          duration: `${res.duration}s`,
+        });
       } else {
-        console.log(`❌ FAIL (code ${res.code}, ${(res.durationMs / 1000).toFixed(2)}s)`);
+        console.log(`❌ FAIL (${res.duration}s)`);
+        console.error(`\n--- [ERROR LOG: ${suite.name}] ---`);
+        console.error(res.stderr || res.stdout || "Unknown error occurred during test execution");
+        console.error("----------------------------------\n");
+        results.push({
+          id: suite.id,
+          name: suite.name,
+          script: suite.script,
+          status: "FAIL",
+          duration: `${res.duration}s`,
+        });
         allPassed = false;
-        console.error("\n--- Output on failure ---");
-        if (res.stdout) console.log(res.stdout);
-        if (res.stderr) console.error(res.stderr);
-        console.error("-------------------------\n");
-      }
-
-      results.push({
-        id: suite.id,
-        name: suite.name,
-        script: suite.script,
-        passed,
-        durationMs: res.durationMs,
-      });
-    } finally {
-      if (bridge) {
-        bridge.server.close();
+        break;
       }
     }
+  } finally {
+    sharedServer.close();
   }
 
   console.log("\n══════════════════════════════════════════════════════════════════════════");
   console.log("📊 TEST EXECUTION SUMMARY MATRIX");
   console.log("══════════════════════════════════════════════════════════════════════════");
-  console.log(
-    "ID".padEnd(4) +
-      "Suite Name".padEnd(34) +
-      "Script Path".padEnd(38) +
-      "Status".padEnd(10) +
-      "Duration"
-  );
-  console.log("─".repeat(94));
+  console.log("ID  Suite Name                        Script Path                           Status    Duration");
+  console.log("──────────────────────────────────────────────────────────────────────────────────────────────");
 
-  let totalDurationMs = 0;
   for (const r of results) {
-    totalDurationMs += r.durationMs;
-    const statusText = r.passed ? "✅ PASS" : "❌ FAIL";
-    console.log(
-      `#${r.id}`.padEnd(4) +
-        r.name.padEnd(34) +
-        r.script.padEnd(38) +
-        statusText.padEnd(10) +
-        `${(r.durationMs / 1000).toFixed(2)}s`
-    );
+    const paddedId = `#${r.id}`.padEnd(3, " ");
+    const paddedName = r.name.padEnd(32, " ");
+    const paddedScript = r.script.padEnd(36, " ");
+    const paddedStatus = (r.status === "PASS" ? "✅ PASS" : "❌ FAIL").padEnd(9, " ");
+    console.log(`${paddedId} ${paddedName} ${paddedScript} ${paddedStatus} ${r.duration}`);
   }
-  console.log("─".repeat(94));
-  const passCount = results.filter((r) => r.passed).length;
-  console.log(`Kết quả: ${passCount}/${results.length} bộ kiểm thử thành công | Tổng thời gian: ${(totalDurationMs / 1000).toFixed(2)}s`);
+
+  const totalDuration = results.reduce((sum, r) => sum + parseFloat(r.duration), 0).toFixed(2);
+  console.log("──────────────────────────────────────────────────────────────────────────────────────────────");
+  console.log(`Kết quả: ${results.filter(r => r.status === "PASS").length}/${TEST_SUITES.length} bộ kiểm thử thành công | Tổng thời gian: ${totalDuration}s`);
   console.log("══════════════════════════════════════════════════════════════════════════\n");
 
-  if (!allPassed) {
-    console.error("❌ Một hoặc nhiều bộ kiểm thử tích hợp thất bại.");
+  if (allPassed && results.length === TEST_SUITES.length) {
+    console.log("🎉 TẤT CẢ CÁC BỘ KIỂM THỬ TÍCH HỢP ĐỀU HOÀN TOÀN VƯỢT QUA 100%!\n");
+    process.exit(0);
+  } else {
+    console.error("💥 CÓ BỘ KIỂM THỬ THẤT BẠI. Vui lòng rà soát log ở trên để khắc phục.\n");
     process.exit(1);
   }
-
-  console.log("🎉 TẤT CẢ CÁC BỘ KIỂM THỬ TÍCH HỢP ĐỀU HOÀN TOÀN VƯỢT QUA 100%!");
-  process.exit(0);
 }
 
-runAllTests().catch((err) => {
-  console.error("Fatal error running test suites:", err);
+main().catch((err) => {
+  console.error("Lỗi thực thi bộ kiểm thử tổng:", err);
   process.exit(1);
 });
