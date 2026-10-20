@@ -196,7 +196,7 @@ router.get("/market/listings", async (req, res): Promise<void> => {
 router.post("/market/buy/:id", requireAuth, async (req, res): Promise<void> => {
   const listingId = Number(req.params.id);
   const userId = req.session.userId!;
-  const { buyerCharacterId } = req.body;
+  const buyerCharacterId = req.body.buyerCharacterId || req.body.characterId;
 
   if (!buyerCharacterId) {
     res.status(400).json({ error: "Thiếu buyerCharacterId" });
@@ -338,6 +338,17 @@ router.post("/market/sell", requireAuth, async (req, res): Promise<void> => {
 
       if (!char) throw new Error("Không tìm thấy nhân vật sở hữu");
 
+      // Phí niêm yết sàn 2% (chống spam / chống chuyển vàng ảo)
+      const listingFee = Math.max(1, Math.floor(price * 0.02));
+      if (char.gold < listingFee) {
+        throw new Error(`Bạn không đủ Vàng để trả phí niêm yết 2% (Cần ${listingFee} Vàng, hiện có ${char.gold} Vàng)`);
+      }
+
+      await tx
+        .update(charactersTable)
+        .set({ gold: char.gold - listingFee })
+        .where(eq(charactersTable.id, char.id));
+
       const [itemRow] = await tx
         .select({
           owned: characterItemsTable,
@@ -349,7 +360,10 @@ router.post("/market/sell", requireAuth, async (req, res): Promise<void> => {
         .limit(1);
 
       if (!itemRow) throw new Error("Vật phẩm không có trong túi đồ");
-      if (itemRow.owned.equipped) throw new Error("Không thể bán trang bị đang mặc trên người. Hãy tháo ra trước!");
+      const owned = itemRow.owned || itemRow;
+      const item = itemRow.item || itemRow;
+
+      if (owned.equipped) throw new Error("Không thể bán trang bị đang mặc trên người. Hãy tháo ra trước!");
 
       // Đăng bán vào marketListingsTable
       const [listing] = await tx
@@ -358,25 +372,25 @@ router.post("/market/sell", requireAuth, async (req, res): Promise<void> => {
           sellerCharacterId: char.id,
           sellerName: char.name,
           sellerServerId: char.serverId || "server-1",
-          itemId: itemRow.owned.itemId,
-          itemName: itemRow.item.name,
-          itemCategory: itemRow.item.category,
-          itemType: itemRow.item.type,
-          itemEquipSlot: itemRow.item.equipSlot,
-          itemRarity: itemRow.owned.rarity || itemRow.item.rarity,
-          enhanceLevel: itemRow.owned.enhanceLevel,
-          bonusCombatPower: itemRow.owned.bonusCombatPower,
-          miraclePassive1: itemRow.owned.miraclePassive1,
-          miraclePassive2: itemRow.owned.miraclePassive2,
-          socketsJson: itemRow.owned.socketsJson,
-          reforgeStatsJson: itemRow.owned.reforgeStatsJson,
+          itemId: owned.itemId || item.id,
+          itemName: item.name || owned.itemName || "Vật phẩm",
+          itemCategory: item.category || "equipment",
+          itemType: item.type || "weapon",
+          itemEquipSlot: item.equipSlot || "none",
+          itemRarity: owned.rarity || item.rarity || "common",
+          enhanceLevel: owned.enhanceLevel || 0,
+          bonusCombatPower: owned.bonusCombatPower || 0,
+          miraclePassive1: owned.miraclePassive1 || null,
+          miraclePassive2: owned.miraclePassive2 || null,
+          socketsJson: owned.socketsJson || null,
+          reforgeStatsJson: owned.reforgeStatsJson || null,
           priceGold: price,
           status: "ACTIVE",
         })
         .returning();
 
       // Xóa vật phẩm khỏi túi đồ người bán
-      await tx.delete(characterItemsTable).where(eq(characterItemsTable.id, itemRow.owned.id));
+      await tx.delete(characterItemsTable).where(eq(characterItemsTable.id, owned.id));
 
       return listing;
     });

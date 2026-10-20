@@ -26,6 +26,13 @@ export interface RemotePlayerState {
   serverId: string;
   lastHeartbeat: number;
   isBot?: boolean;
+  hairStyle?: string;
+  hairColor?: string;
+  outfitId?: string;
+  auraIds?: string;
+  isMounted?: boolean;
+  mountId?: string;
+  petId?: string;
 }
 
 const activePlayers = new Map<number, RemotePlayerState>();
@@ -155,6 +162,13 @@ router.post("/multiplayer/sync", (req, res): void => {
     chatBubble = null,
     zoneId = "SAFE_VILLAGE",
     serverId = "s1_long_vuong",
+    hairStyle,
+    hairColor,
+    outfitId,
+    auraIds,
+    isMounted,
+    mountId,
+    petId,
   } = req.body;
 
   if (!characterId) {
@@ -185,21 +199,37 @@ router.post("/multiplayer/sync", (req, res): void => {
     zoneId,
     serverId,
     lastHeartbeat: now,
+    hairStyle,
+    hairColor,
+    outfitId,
+    auraIds,
+    isMounted,
+    mountId,
+    petId,
   });
 
-  // Lấy các người chơi khác cùng serverId và cùng zoneId
+  // Lấy các người chơi khác cùng serverId và cùng zoneId với Area of Interest (AOI <= 50m)
   const othersInZone: RemotePlayerState[] = [];
+  const MAX_AOI_DIST_SQ = 50 * 50; // Bán kính nhìn thấy 50 units
 
   for (const [id, other] of activePlayers.entries()) {
     if (id !== characterId && other.serverId === serverId && other.zoneId === zoneId) {
-      othersInZone.push(other);
+      const dx = (other.posX || 0) - (posX || 0);
+      const dz = (other.posZ || 0) - (posZ || 0);
+      if (dx * dx + dz * dz <= MAX_AOI_DIST_SQ) {
+        othersInZone.push(other);
+      }
     }
   }
 
-  // Thêm AI Adventurers cùng server và zone
+  // Thêm AI Adventurers cùng server và zone trong AOI
   for (const bot of AI_ADVENTURERS) {
     if (bot.zoneId === zoneId) {
-      othersInZone.push(bot);
+      const dx = (bot.posX || 0) - (posX || 0);
+      const dz = (bot.posZ || 0) - (posZ || 0);
+      if (dx * dx + dz * dz <= MAX_AOI_DIST_SQ) {
+        othersInZone.push(bot);
+      }
     }
   }
 

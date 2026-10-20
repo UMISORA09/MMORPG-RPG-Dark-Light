@@ -36,6 +36,8 @@ export class CombatService {
         def: levelStats.def,
         spd: levelStats.spd,
         gold: character.gold + input.goldGained,
+        unallocatedStatPoints: (character.unallocatedStatPoints || 0) + progression.statPointsGained,
+        skillPoints: (character.skillPoints || 0) + progression.skillPointsGained,
         kills: character.kills + (input.victory ? 1 : 0),
         deaths: character.deaths + (input.victory ? 0 : 1),
       }).where(and(

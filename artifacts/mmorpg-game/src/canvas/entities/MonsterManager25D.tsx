@@ -66,7 +66,9 @@ interface MonsterInstance {
   staggerGauge: number;
   staggerMax: number;
   staggerTimer: number;
-  phase: 1 | 2;
+  phase: 1 | 2 | 3;
+  bossCombatTimer: number;
+  isBerserkEnraged?: boolean;
   currentPattern: MonsterAttackPattern | null;
   currentTelegraphId: number | null;
 
@@ -303,6 +305,8 @@ export const MonsterManager25D = memo(function MonsterManager25D() {
         staggerMax: Math.round(bp.staggerThreshold * (isElite ? 2.5 : isBoss ? 3.5 : 1.0)),
         staggerTimer: 0,
         phase: 1,
+        bossCombatTimer: 0,
+        isBerserkEnraged: false,
         currentPattern: null,
         currentTelegraphId: null,
         hitFlashTimer: 0,
@@ -598,6 +602,12 @@ export const MonsterManager25D = memo(function MonsterManager25D() {
           const hitRadius = m.isBoss ? 2.5 : (m.scale || 1.0) * 1.4;
 
           if (dist <= hitRadius) {
+            if (m.aiState === "RETURNING_HOME") {
+              addFloatingText("🛡️ MIỄN NHIỄM (RESET)", m.currentPos.clone().add(new THREE.Vector3(0, 2.2, 0)), "#94a3b8");
+              b.lifetime = -1;
+              bulletsCleaned = true;
+              break;
+            }
             // Check Level Suppression: High Level Monsters have +25% evasion against lower level players
             const isSuppressedMob = m.level > playerLevel + 2;
             if (isSuppressedMob && Math.random() < 0.25) {
@@ -694,7 +704,23 @@ export const MonsterManager25D = memo(function MonsterManager25D() {
         sl.hitMonsterIds = new Set<number>();
       }
 
+      if (sl.isTaunt) {
+        const tauntRadius = sl.tauntRadius || 8.5;
+        for (const other of monsters) {
+          if (!other.isAlive) continue;
+          if (other.currentPos.distanceTo(playerPos) <= tauntRadius) {
+            if (other.aiState === "PATROL" || other.aiState === "IDLE") {
+              other.aiState = "AGGRO_CHASE";
+              other.attackCooldown = Math.min(other.attackCooldown, 0.4);
+              addFloatingText("🛡️ KHIÊU KHÍCH (TAUNT)!", other.currentPos.clone().add(new THREE.Vector3(0, 2.2, 0)), "#fbbf24");
+            }
+          }
+        }
+      }
+
       for (const m of monsters) {
+        if (!m.isAlive) continue;
+        if (m.aiState === "RETURNING_HOME") continue;
         if (!m.isAlive) continue;
         if (sl.hitMonsterIds.has(m.id)) continue; // Mỗi quái chỉ dính sát thương 1 lần trên 1 nhát chém
 
@@ -889,6 +915,19 @@ export const MonsterManager25D = memo(function MonsterManager25D() {
         playCombatSFX("laser_pew", 0.4);
       }
 
+      // Boss Enrage Timer: Sau 3 phút (180s) giao tranh liên tục, Boss vào trạng thái Berserk (+200% ATK)
+      if (m.isBoss && (m.aiState === "AGGRO_CHASE" || m.aiState === "TELEGRAPH_WINDUP")) {
+        m.bossCombatTimer = (m.bossCombatTimer || 0) + dt;
+        if (m.bossCombatTimer >= 180 && !m.isBerserkEnraged) {
+          m.isBerserkEnraged = true;
+          m.atk = Math.round(m.atk * 3.0); // +200% ATK
+          m.eliteAuraColor = "#dc2626";
+          addFloatingText("⚠️ BOSS ENRAGED! ATK +200%!", m.currentPos.clone().add(new THREE.Vector3(0, 4.2, 0)), "#ff0000");
+          playCombatSFX("dragon_roar", 1.0);
+          setBossRaidState({ isEnraged: true });
+        }
+      }
+
       // Boss Territory Advantage: 1% Max HP auto-heal per second in Boss Altar or Dungeon
       if (m.isBoss && (currentZone === "BOSS_ALTAR" || currentZone === "DUNGEON") && m.hp < m.maxHp) {
         m.territoryHealAcc = (m.territoryHealAcc || 0) + m.maxHp * 0.01 * dt;
@@ -965,7 +1004,7 @@ export const MonsterManager25D = memo(function MonsterManager25D() {
           m.facingLeft = chaseDir.x < -0.05;
 
           // 1. Quái Tinh Anh & Boss: Kiểm tra tung chiêu đặc biệt có báo vùng đỏ (Red Telegraph)
-          const specialSkills = m.isBoss && m.phase === 2 && m.typeConfig?.phase2Skills && m.typeConfig.phase2Skills.length > 0
+          const specialSkills = m.isBoss && m.phase >= 2 && m.typeConfig?.phase2Skills && m.typeConfig.phase2Skills.length > 0
             ? [...m.typeConfig.phase2Skills, ...m.typeConfig.specialSkills]
             : m.typeConfig?.specialSkills || [];
 
@@ -977,8 +1016,10 @@ export const MonsterManager25D = memo(function MonsterManager25D() {
               m.aiState = "TELEGRAPH_WINDUP";
               m.state = "attack";
 
-              const duration = m.isBoss && m.phase === 2
-                ? Math.round(chosenSkill.telegraphDurationMs * 0.7)
+              const duration = m.isBoss && m.phase === 3
+                ? Math.round(chosenSkill.telegraphDurationMs * 0.6)
+                : m.isBoss && m.phase === 2
+                ? Math.round(chosenSkill.telegraphDurationMs * 0.75)
                 : chosenSkill.telegraphDurationMs;
 
               const zoneId = nextTelegraphId++;
@@ -1005,7 +1046,7 @@ export const MonsterManager25D = memo(function MonsterManager25D() {
               const pattern: MonsterAttackPattern = {
                 id: chosenSkill.id,
                 name: chosenSkill.name,
-                telegraphShape: chosenSkill.telegraphShape,
+                shape: chosenSkill.telegraphShape,
                 range: chosenSkill.range,
                 radiusOrWidth: chosenSkill.radiusOrWidth,
                 angleDeg: chosenSkill.angleDeg || 75,
@@ -1146,11 +1187,14 @@ export const MonsterManager25D = memo(function MonsterManager25D() {
             m.hasBarrier = false;
             m.barrierHp = 0;
             m.isEnraged = false;
+            m.phase = 1;
+            m.bossCombatTimer = 0;
+            m.isBerserkEnraged = false;
             m.aiState = "PATROL";
             m.state = "idle";
-            addFloatingText("💚 HỒI ĐẦY MÁU", m.spawnPos.clone().add(new THREE.Vector3(0, 2.2, 0)), "#22c55e");
+            addFloatingText("💚 HỒI ĐẦY MÁU (RESET)", m.spawnPos.clone().add(new THREE.Vector3(0, 2.2, 0)), "#22c55e");
             if (m.isBoss) {
-              setBossRaidState({ health: m.maxHp, stagger: 0, castingSpell: null });
+              setBossRaidState({ health: m.maxHp, stagger: 0, castingSpell: null, phase: 1, isEnraged: false });
             }
           } else {
             retDir.normalize();
@@ -1259,20 +1303,46 @@ export const MonsterManager25D = memo(function MonsterManager25D() {
       }
     }
 
-    // 2. Boss Phase 2 Enrage Check (HP <= 50%)
-    if (m.isBoss && m.phase === 1 && m.hp <= m.maxHp * 0.5) {
-      m.phase = 2;
-      playCombatSFX("dragon_roar", 0.7);
+    // 2. Boss Multi-Phase Mechanics (Phase 1: 100-70%, Phase 2: 70-30%, Phase 3: 30-0%)
+    if (m.isBoss) {
+      // Phase 2 (HP <= 70%) - Triệu hồi quái đệ (Adds) & mở khóa chiêu thức diện rộng mới
+      if (m.phase === 1 && m.hp <= m.maxHp * 0.70) {
+        m.phase = 2;
+        playCombatSFX("dragon_roar", 0.85);
+        addFloatingText(
+          "🔥 PHASE 2 (70% HP): TRIỆU HỒI QUÁI ĐỆ!",
+          m.currentPos.clone().add(new THREE.Vector3(0, 3.5, 0)),
+          "#f59e0b"
+        );
+        const offsets = [new THREE.Vector3(-3.5, 0, 2.5), new THREE.Vector3(3.5, 0, -2.5)];
+        offsets.forEach((offset) => {
+          const deadMob = monstersRef.current.find((o) => !o.isAlive && !o.isBoss);
+          if (deadMob) {
+            deadMob.isAlive = true;
+            deadMob.hp = deadMob.maxHp;
+            deadMob.currentPos.copy(m.currentPos).add(offset);
+            deadMob.spawnPos.copy(deadMob.currentPos);
+            deadMob.aiState = "AGGRO_CHASE";
+            deadMob.state = "run";
+            addFloatingText("🐺 QUÁI ĐỆ HỘ GIÁ!", deadMob.currentPos.clone().add(new THREE.Vector3(0, 2.0, 0)), "#fbbf24");
+          }
+        });
+        setBossRaidState({ phase: 2 });
+      }
 
-      addFloatingText(
-        `🔥 CUỒNG NỘ! PHASE 2 KÍCH HOẠT!`,
-        m.currentPos.clone().add(new THREE.Vector3(0, 3.5, 0)),
-        "#ef4444"
-      );
-
-      setBossRaidState({
-        phase: 2,
-      });
+      // Phase 3 (HP <= 30%) - Tối thượng cuồng bạo: Tốc độ ra đòn tăng vọt, AOE liên tục
+      if (m.phase === 2 && m.hp <= m.maxHp * 0.30) {
+        m.phase = 3;
+        m.atk = Math.round(m.atk * 1.35);
+        m.eliteAuraColor = "#dc2626";
+        playCombatSFX("dragon_roar", 1.0);
+        addFloatingText(
+          "⚡ PHASE 3 (30% HP): CUỒNG SÁT LIÊN TỤC (TỐC ĐÁNH +40%)!",
+          m.currentPos.clone().add(new THREE.Vector3(0, 4.0, 0)),
+          "#ef4444"
+        );
+        setBossRaidState({ phase: 3 });
+      }
     }
   };
 
@@ -1316,23 +1386,27 @@ export const MonsterManager25D = memo(function MonsterManager25D() {
             entry.rarity === "rare" ? "#00f2ff" : "#ffffff";
           const dropIcon =
             entry.category === "pill" ? "💊" :
-            entry.category === "treasure" ? "💎" :
-            entry.category === "gear" ? "⚔️" : "📦";
+            entry.category === "chest" ? "💎" :
+            entry.category === "equipment" ? "⚔️" : "📦";
           const angle = Math.random() * Math.PI * 2;
           const speed = 2.0 + Math.random() * 3.0;
 
           specificDrops.push({
             id: `drop_${m.id}_${entry.itemId}_${Date.now()}_${Math.random().toString(36).substring(2, 6)}`,
+            itemId: entry.itemId,
             name: `${entry.name}${qty > 1 ? ` x${qty}` : ""}`,
-            rarity: entry.rarity as any,
-            type: entry.category === "pill" ? "potion" : entry.category === "gear" ? "weapon" : "accessory",
+            rarity: (entry.rarity === "uncommon" ? "rare" : entry.rarity) as any,
+            type: entry.category === "pill" ? "potion" : entry.category === "equipment" ? "weapon" : "accessory",
             icon: dropIcon,
             color: dropColor,
             statText: `Phần thưởng từ ${m.name}`,
             position: [m.currentPos.x, 0.5, m.currentPos.z],
             velocity: [Math.cos(angle) * speed, 5.0 + Math.random() * 3.0, Math.sin(angle) * speed],
             lifetime: 25.0,
-            goldValue: entry.rarity === "legendary" ? 200 : entry.rarity === "epic" ? 100 : 25,
+            value: entry.rarity === "legendary" ? 200 : entry.rarity === "epic" ? 100 : 25,
+            quantity: qty,
+            bounceCount: 0,
+            isGrounded: false,
           });
         }
       }
@@ -1620,7 +1694,7 @@ export const MonsterManager25D = memo(function MonsterManager25D() {
         >
           <div
             className="font-black text-sm drop-shadow-[0_2px_8px_rgba(0,0,0,0.95)] whitespace-nowrap select-none"
-            style={{ color: ft.color, opacity: Math.max(0, ft.opacity) }}
+            style={{ color: ft.color, opacity: Math.max(0, ft.opacity ?? 1) }}
           >
             {ft.text}
           </div>

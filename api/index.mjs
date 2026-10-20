@@ -20700,27 +20700,27 @@ var require_router = __commonJS({
     var slice = Array.prototype.slice;
     var flatten = Array.prototype.flat;
     var methods = METHODS.map((method) => method.toLowerCase());
-    module.exports = Router19;
+    module.exports = Router20;
     module.exports.Route = Route;
-    function Router19(options) {
-      if (!(this instanceof Router19)) {
-        return new Router19(options);
+    function Router20(options) {
+      if (!(this instanceof Router20)) {
+        return new Router20(options);
       }
       const opts = options || {};
-      function router19(req, res, next) {
-        router19.handle(req, res, next);
+      function router20(req, res, next) {
+        router20.handle(req, res, next);
       }
-      Object.setPrototypeOf(router19, this);
-      router19.caseSensitive = opts.caseSensitive;
-      router19.mergeParams = opts.mergeParams;
-      router19.params = {};
-      router19.strict = opts.strict;
-      router19.stack = [];
-      return router19;
+      Object.setPrototypeOf(router20, this);
+      router20.caseSensitive = opts.caseSensitive;
+      router20.mergeParams = opts.mergeParams;
+      router20.params = {};
+      router20.strict = opts.strict;
+      router20.stack = [];
+      return router20;
     }
-    Router19.prototype = function() {
+    Router20.prototype = function() {
     };
-    Router19.prototype.param = function param(name, fn) {
+    Router20.prototype.param = function param(name, fn) {
       if (!name) {
         throw new TypeError("argument name is required");
       }
@@ -20740,7 +20740,7 @@ var require_router = __commonJS({
       params.push(fn);
       return this;
     };
-    Router19.prototype.handle = function handle(req, res, callback) {
+    Router20.prototype.handle = function handle(req, res, callback) {
       if (!callback) {
         throw new TypeError("argument callback is required");
       }
@@ -20867,7 +20867,7 @@ var require_router = __commonJS({
         }
       }
     };
-    Router19.prototype.use = function use(handler2) {
+    Router20.prototype.use = function use(handler2) {
       let offset = 0;
       let path3 = "/";
       if (typeof handler2 !== "function") {
@@ -20900,7 +20900,7 @@ var require_router = __commonJS({
       }
       return this;
     };
-    Router19.prototype.route = function route(path3) {
+    Router20.prototype.route = function route(path3) {
       const route2 = new Route(path3);
       const layer = new Layer(path3, {
         sensitive: this.caseSensitive,
@@ -20915,7 +20915,7 @@ var require_router = __commonJS({
       return route2;
     };
     methods.concat("all").forEach(function(method) {
-      Router19.prototype[method] = function(path3) {
+      Router20.prototype[method] = function(path3) {
         const route = this.route(path3);
         route[method].apply(route, slice.call(arguments, 1));
         return this;
@@ -21098,13 +21098,13 @@ var require_application = __commonJS({
     var compileTrust = require_utils3().compileTrust;
     var resolve = __require("node:path").resolve;
     var once = require_once();
-    var Router19 = require_router();
+    var Router20 = require_router();
     var slice = Array.prototype.slice;
     var flatten = Array.prototype.flat;
     var app2 = exports = module.exports = {};
     var trustProxyDefaultSymbol = "@@symbol:trust_proxy_default";
     app2.init = function init() {
-      var router19 = null;
+      var router20 = null;
       this.cache = /* @__PURE__ */ Object.create(null);
       this.engines = /* @__PURE__ */ Object.create(null);
       this.settings = /* @__PURE__ */ Object.create(null);
@@ -21113,13 +21113,13 @@ var require_application = __commonJS({
         configurable: true,
         enumerable: true,
         get: function getrouter() {
-          if (router19 === null) {
-            router19 = new Router19({
+          if (router20 === null) {
+            router20 = new Router20({
               caseSensitive: this.enabled("case sensitive routing"),
               strict: this.enabled("strict routing")
             });
           }
-          return router19;
+          return router20;
         }
       });
     };
@@ -21190,15 +21190,15 @@ var require_application = __commonJS({
       if (fns.length === 0) {
         throw new TypeError("app.use() requires a middleware function");
       }
-      var router19 = this.router;
+      var router20 = this.router;
       fns.forEach(function(fn2) {
         if (!fn2 || !fn2.handle || !fn2.set) {
-          return router19.use(path3, fn2);
+          return router20.use(path3, fn2);
         }
         debug(".use app under %s", path3);
         fn2.mountpath = path3;
         fn2.parent = this;
-        router19.use(path3, function mounted_app(req, res, next) {
+        router20.use(path3, function mounted_app(req, res, next) {
           var orig = req.app;
           fn2.handle(req, res, function(err) {
             Object.setPrototypeOf(req, orig.request);
@@ -23783,7 +23783,7 @@ var require_express = __commonJS({
     var EventEmitter = __require("node:events").EventEmitter;
     var mixin = require_merge_descriptors();
     var proto = require_application();
-    var Router19 = require_router();
+    var Router20 = require_router();
     var req = require_request();
     var res = require_response();
     exports = module.exports = createApplication;
@@ -23805,8 +23805,8 @@ var require_express = __commonJS({
     exports.application = proto;
     exports.request = req;
     exports.response = res;
-    exports.Route = Router19.Route;
-    exports.Router = Router19;
+    exports.Route = Router20.Route;
+    exports.Router = Router20;
     exports.json = bodyParser.json;
     exports.raw = bodyParser.raw;
     exports.static = require_serve_static();
@@ -28202,7 +28202,7 @@ var require_pino = __commonJS({
     function pinoBundlerAbsolutePath(p) {
       try {
         const path3 = __require("path");
-        const outputDir = "C:\\Cassavas\\Game2.5D\\api";
+        const outputDir = "C:\\Users\\Asus\\Downloads\\MMORPG-RPG-Dark-Light\\api";
         return path3.resolve(outputDir, p.replace(/^\.\//, ""));
       } catch (e) {
         const f = new Function("p", "return new URL(p, import.meta.url).pathname");
@@ -35657,7 +35657,7 @@ var require_connect_pg_simple = __commonJS({
 });
 
 // src/app.ts
-var import_express19 = __toESM(require_express2(), 1);
+var import_express20 = __toESM(require_express2(), 1);
 var import_cors = __toESM(require_lib3(), 1);
 var import_pino_http = __toESM(require_logger(), 1);
 var import_express_session = __toESM(require_express_session(), 1);
@@ -35667,7 +35667,7 @@ import path2 from "node:path";
 import fs2 from "node:fs";
 
 // src/routes/index.ts
-var import_express18 = __toESM(require_express2(), 1);
+var import_express19 = __toESM(require_express2(), 1);
 
 // src/routes/health.ts
 var import_express = __toESM(require_express2(), 1);
@@ -60180,10 +60180,12 @@ __export(schema_exports, {
   encountersTable: () => encountersTable,
   forumCommentsTable: () => forumCommentsTable,
   forumPostsTable: () => forumPostsTable,
+  gmAuditLogsTable: () => gmAuditLogsTable,
   insertBattleLogSchema: () => insertBattleLogSchema,
   insertCharacterItemSchema: () => insertCharacterItemSchema,
   insertCharacterSchema: () => insertCharacterSchema,
   insertEncounterSchema: () => insertEncounterSchema,
+  insertGmAuditLogSchema: () => insertGmAuditLogSchema,
   insertItemSchema: () => insertItemSchema,
   insertMarketListingSchema: () => insertMarketListingSchema,
   insertRewardGrantSchema: () => insertRewardGrantSchema,
@@ -60450,6 +60452,7 @@ var usersTable = pgTable("users", {
   id: serial("id").primaryKey(),
   username: text("username").notNull().unique(),
   passwordHash: text("password_hash").notNull(),
+  role: text("role").notNull().default("PLAYER"),
   forumTitle: text("forum_title").notNull().default("T\xE2n Th\u1EE7 Long T\u1ED9c"),
   selectedRegion: text("selected_region").notNull().default("VN"),
   selectedServerId: text("selected_server_id").notNull().default("s1_long_vuong"),
@@ -60838,6 +60841,21 @@ var marketListingsTable = pgTable("market_listings", {
 var insertMarketListingSchema = createInsertSchema(marketListingsTable).omit({
   id: true,
   listedAt: true
+});
+
+// ../../lib/db/src/schema/gmAuditLogs.ts
+var gmAuditLogsTable = pgTable("gm_audit_logs", {
+  id: serial("id").primaryKey(),
+  userId: integer2("user_id").notNull(),
+  characterId: integer2("character_id"),
+  action: text("action").notNull(),
+  payloadJson: text("payload_json"),
+  ipAddress: text("ip_address"),
+  createdAt: timestamp("created_at").defaultNow().notNull()
+});
+var insertGmAuditLogSchema = createInsertSchema(gmAuditLogsTable).omit({
+  id: true,
+  createdAt: true
 });
 
 // ../../lib/db/src/seed-data.ts
@@ -61505,7 +61523,8 @@ var memoryStore = {
   world_chats: [],
   quests: [],
   character_quests: [],
-  market_listings: []
+  market_listings: [],
+  gm_audit_logs: []
 };
 var autoIncrement = {
   users: 1,
@@ -61514,7 +61533,8 @@ var autoIncrement = {
   battle_logs: 1,
   forum_posts: 1,
   world_chats: 1,
-  market_listings: 100
+  market_listings: 100,
+  gm_audit_logs: 1
 };
 var STORE_FILE = path.join(
   process.env.VERCEL ? "/tmp" : process.env.APPDATA || process.cwd(),
@@ -61557,6 +61577,7 @@ async function wipeAllAccountsAndUserData() {
   memoryStore.forum_comments = [];
   memoryStore.world_chats = [];
   memoryStore.market_listings = [];
+  memoryStore.gm_audit_logs = [];
   autoIncrement.users = 1;
   autoIncrement.characters = 1;
   autoIncrement.character_items = 1;
@@ -61564,6 +61585,7 @@ async function wipeAllAccountsAndUserData() {
   autoIncrement.forum_posts = 1;
   autoIncrement.world_chats = 1;
   autoIncrement.market_listings = 100;
+  autoIncrement.gm_audit_logs = 1;
   try {
     if (fs.existsSync(STORE_FILE)) {
       fs.unlinkSync(STORE_FILE);
@@ -61585,7 +61607,8 @@ async function wipeAllAccountsAndUserData() {
           forum_posts, 
           forum_comments, 
           world_chats, 
-          market_listings 
+          market_listings,
+          gm_audit_logs
         CASCADE;
       `);
     } catch (e) {
@@ -61621,7 +61644,10 @@ function createMemoryDb() {
     if (name.includes("server")) return memoryStore.servers;
     if (name.includes("encounter")) return memoryStore.encounters;
     if (name.includes("character_item")) return memoryStore.character_items;
+    if (name.includes("character_quest")) return memoryStore.character_quests;
+    if (name.includes("quest")) return memoryStore.quests;
     if (name.includes("market_listing")) return memoryStore.market_listings;
+    if (name.includes("gm_audit_log")) return memoryStore.gm_audit_logs;
     if (name.includes("character")) return memoryStore.characters;
     if (name.includes("user")) return memoryStore.users;
     if (name.includes("item")) return memoryStore.items;
@@ -61638,11 +61664,17 @@ function createMemoryDb() {
     if (data === memoryStore.forum_comments) return "forum_comments";
     if (data === memoryStore.world_chats) return "world_chats";
     if (data === memoryStore.market_listings) return "market_listings";
+    if (data === memoryStore.quests) return "quests";
+    if (data === memoryStore.character_quests) return "character_quests";
+    if (data === memoryStore.gm_audit_logs) return "gm_audit_logs";
     return null;
   };
   const matchesPredicate = (row, predicate) => {
     if (!predicate) return true;
     if (typeof predicate === "function") return predicate(row);
+    if (typeof predicate === "object" && !predicate.queryChunks && !predicate.left) {
+      return Object.entries(predicate).every(([k, v]) => row[k] === v || row[k] == v);
+    }
     if (predicate.left && predicate.right !== void 0) {
       const colName = predicate.left.name || predicate.left.key;
       const targetVal = predicate.right?.value !== void 0 ? predicate.right.value : predicate.right;
@@ -61652,49 +61684,35 @@ function createMemoryDb() {
       }
     }
     if (Array.isArray(predicate.queryChunks)) {
-      const subConditions = [];
-      const extractSubs = (arr) => {
-        for (const item of arr) {
-          if (!item || typeof item !== "object") continue;
-          if (item.left && item.right !== void 0) {
-            subConditions.push(item);
-          } else if (Array.isArray(item.queryChunks)) {
-            let foundName = "";
-            let foundVal = void 0;
-            for (const sub of item.queryChunks) {
-              if (sub?.name && typeof sub.name === "string") foundName = sub.name;
-              else if (sub?.constructor?.name === "Param" || sub?.value !== void 0 && !Array.isArray(sub.value) && typeof sub.value !== "object") {
-                foundVal = sub.value;
-              }
-            }
-            if (foundName && foundVal !== void 0) {
-              subConditions.push({ left: { name: foundName }, right: foundVal });
-            } else {
-              extractSubs(item.queryChunks);
-            }
+      const allChunks = [];
+      const flatten = (chunks) => {
+        for (const c of chunks) {
+          if (!c) continue;
+          if (Array.isArray(c.queryChunks)) {
+            flatten(c.queryChunks);
+          } else {
+            allChunks.push(c);
           }
         }
       };
-      extractSubs(predicate.queryChunks);
-      if (subConditions.length > 0) {
-        return subConditions.every((sub) => matchesPredicate(row, sub));
-      }
-      let colName = "";
-      let targetVal = void 0;
-      for (const chunk of predicate.queryChunks) {
-        if (chunk?.name && typeof chunk.name === "string") {
-          colName = chunk.name;
-        } else if (chunk?.constructor?.name === "Param" || chunk?.value !== void 0 && !Array.isArray(chunk.value) && typeof chunk.value !== "object") {
-          targetVal = chunk.value;
+      flatten(predicate.queryChunks);
+      let lastColName = "";
+      const pairs = [];
+      for (let i = 0; i < allChunks.length; i++) {
+        const chunk = allChunks[i];
+        if (chunk?.name && typeof chunk.name === "string" && !Array.isArray(chunk.value)) {
+          lastColName = chunk.name;
+        } else if (lastColName && (chunk?.constructor?.name === "Param" || chunk?.value !== void 0 && !Array.isArray(chunk.value) && typeof chunk.value !== "object")) {
+          pairs.push({ col: lastColName, val: chunk.value });
+          lastColName = "";
         }
       }
-      if (colName && targetVal !== void 0) {
-        const valInRow = row[colName] !== void 0 ? row[colName] : row[camelCase(colName)] !== void 0 ? row[camelCase(colName)] : row[snakeCase(colName)];
-        return valInRow === targetVal || valInRow == targetVal;
+      if (pairs.length > 0) {
+        return pairs.every(({ col, val }) => {
+          const valInRow = row[col] !== void 0 ? row[col] : row[camelCase(col)] !== void 0 ? row[camelCase(col)] : row[snakeCase(col)];
+          return valInRow === val || valInRow == val;
+        });
       }
-    }
-    if (typeof predicate === "object") {
-      return Object.entries(predicate).every(([k, v]) => row[k] === v || row[k] == v);
     }
     return true;
   };
@@ -61912,6 +61930,7 @@ async function initDatabase() {
           created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP NOT NULL
         );
 
+        ALTER TABLE users ADD COLUMN IF NOT EXISTS role TEXT DEFAULT 'PLAYER' NOT NULL;
         ALTER TABLE users ADD COLUMN IF NOT EXISTS forum_title TEXT DEFAULT 'T\xE2n Th\u1EE7 Long T\u1ED9c' NOT NULL;
         ALTER TABLE users ADD COLUMN IF NOT EXISTS selected_region TEXT DEFAULT 'VN' NOT NULL;
         ALTER TABLE users ADD COLUMN IF NOT EXISTS selected_server_id TEXT DEFAULT 's1_long_vuong' NOT NULL;
@@ -62081,6 +62100,17 @@ async function initDatabase() {
         );
         CREATE INDEX IF NOT EXISTS "IDX_session_expire" ON user_sessions ("expire");
 
+        CREATE TABLE IF NOT EXISTS gm_audit_logs (
+          id SERIAL PRIMARY KEY,
+          user_id INTEGER NOT NULL,
+          character_id INTEGER,
+          action TEXT NOT NULL,
+          payload_json TEXT,
+          ip_address TEXT,
+          created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP NOT NULL
+        );
+        CREATE INDEX IF NOT EXISTS gm_audit_logs_user_id_idx ON gm_audit_logs(user_id);
+
         CREATE TABLE IF NOT EXISTS servers (
           id TEXT PRIMARY KEY, name TEXT NOT NULL, region TEXT NOT NULL,
           status TEXT DEFAULT 'GOOD' NOT NULL, exp_multiplier INTEGER DEFAULT 1 NOT NULL,
@@ -62186,22 +62216,7 @@ async function initDatabase() {
         CREATE INDEX IF NOT EXISTS forum_comments_user_id_idx ON forum_comments(user_id);
         CREATE INDEX IF NOT EXISTS forum_comments_character_id_idx ON forum_comments(character_id);
 
-        DO $$
-        DECLARE fk RECORD;
-        BEGIN
-          FOR fk IN
-            SELECT conrelid::regclass AS table_name, conname
-            FROM pg_constraint
-            WHERE contype = 'f'
-              AND conrelid IN (
-                SELECT oid FROM pg_class
-                WHERE relname IN ('characters', 'character_items', 'battle_logs', 'encounters', 'reward_grants')
-                  AND relnamespace = current_schema()::regnamespace
-              )
-          LOOP
-            EXECUTE format('ALTER TABLE %s DROP CONSTRAINT %I', fk.table_name, fk.conname);
-          END LOOP;
-        END $$;
+        -- B\u1EA3o to\xE0n to\xE0n v\u1EB9n d\u1EEF li\u1EC7u: Gi\u1EEF nguy\xEAn Foreign Key constraints
       `);
       for (const item of SEED_ITEMS) {
         await pool.query(`
@@ -62293,21 +62308,7 @@ async function extractAuthUser(req) {
   if (!Number.isInteger(userId) || userId <= 0) {
     return null;
   }
-  let [user] = await db.select().from(usersTable).where(eq(usersTable.id, userId)).limit(1);
-  if (!user && tokenData) {
-    try {
-      const inserted = await db.insert(usersTable).values({
-        id: tokenData.id,
-        username: tokenData.username || `Hero_${tokenData.id}`,
-        passwordHash: "stateless_token_auth",
-        selectedRegion: tokenData.selectedRegion || "VN",
-        selectedServerId: tokenData.selectedServerId || "s1_long_vuong"
-      }).returning();
-      user = inserted[0];
-    } catch {
-      [user] = await db.select().from(usersTable).where(eq(usersTable.id, userId)).limit(1);
-    }
-  }
+  const [user] = await db.select().from(usersTable).where(eq(usersTable.id, userId)).limit(1);
   if (!user) {
     return null;
   }
@@ -62326,6 +62327,27 @@ async function requireAuth(req, res, next) {
       req.session.destroy(() => void 0);
     }
     res.status(401).json({ error: "Ch\u01B0a \u0111\u0103ng nh\u1EADp" });
+    return;
+  }
+  next();
+}
+async function requireGMOrAdmin(req, res, next) {
+  const user = await extractAuthUser(req);
+  if (!user) {
+    if (req.session?.destroy) {
+      req.session.destroy(() => void 0);
+    }
+    res.status(401).json({ error: "Ch\u01B0a \u0111\u0103ng nh\u1EADp" });
+    return;
+  }
+  const gmSecret = process.env.GM_SECRET_KEY;
+  const headerSecret = req.headers?.["x-gm-secret"];
+  const isSecretAuthorized = Boolean(gmSecret && headerSecret && headerSecret === gmSecret);
+  const userRole = (user.role || "PLAYER").toUpperCase();
+  if (userRole !== "ADMIN" && userRole !== "GM" && !isSecretAuthorized) {
+    res.status(403).json({
+      error: "Y\xEAu c\u1EA7u quy\u1EC1n Qu\u1EA3n tr\u1ECB vi\xEAn (GM/Admin). B\u1EA1n kh\xF4ng \u0111\u01B0\u1EE3c ph\xE9p s\u1EED d\u1EE5ng l\u1EC7nh n\xE0y."
+    });
     return;
   }
   next();
@@ -63196,7 +63218,14 @@ async function ensureMonsterCatalog() {
 }
 async function getMonster(monsterId) {
   await ensureMonsterCatalog();
-  const [monster] = await db.select().from(monstersTable).where(eq(monstersTable.id, monsterId)).limit(1);
+  const aliasMap = {
+    slime_swamp: "slime",
+    wolf_wild: "wolf",
+    goblin_scout: "goblin",
+    dragon_boss: "black_dragon_king"
+  };
+  const resolvedId = aliasMap[monsterId] || monsterId;
+  const [monster] = await db.select().from(monstersTable).where(eq(monstersTable.id, resolvedId)).limit(1);
   return monster;
 }
 async function getCatalogMonsters() {
@@ -63215,6 +63244,20 @@ async function ensureServerCatalog() {
 
 // src/routes/auth.ts
 var router2 = (0, import_express2.Router)();
+var authRateLimits = /* @__PURE__ */ new Map();
+function checkAuthRateLimit(ip) {
+  const now = Date.now();
+  const entry = authRateLimits.get(ip);
+  if (!entry || now > entry.resetAt) {
+    authRateLimits.set(ip, { count: 1, resetAt: now + 6e4 });
+    return true;
+  }
+  if (entry.count >= 15) {
+    return false;
+  }
+  entry.count++;
+  return true;
+}
 var handleSetServer = async (req, res) => {
   const parsed = SetServerBody.safeParse(req.body);
   if (!parsed.success) return res.status(400).json({ error: "V\xF9ng ho\u1EB7c m\xE1y ch\u1EE7 kh\xF4ng h\u1EE3p l\u1EC7" });
@@ -63255,32 +63298,30 @@ function getDeterministicUserId(username) {
   return Math.abs(hash2) % 2e9 + 1;
 }
 router2.post("/auth/register", async (req, res) => {
+  const clientIp = req.ip || req.socket.remoteAddress || "unknown";
+  if (!checkAuthRateLimit(clientIp)) {
+    return res.status(429).json({ error: "Qu\xE1 nhi\u1EC1u y\xEAu c\u1EA7u \u0111\u0103ng k\xFD. Vui l\xF2ng th\u1EED l\u1EA1i sau 1 ph\xFAt." });
+  }
   const parsed = RegisterBody.safeParse(req.body);
   if (!parsed.success) {
     return res.status(400).json({ error: "T\xEAn \u0111\u0103ng nh\u1EADp v\xE0 m\u1EADt kh\u1EA9u kh\xF4ng h\u1EE3p l\u1EC7" });
   }
   const { username, password } = parsed.data;
   const cleanUsername = username.trim();
-  let [user] = await db.select().from(usersTable).where(eq(usersTable.username, cleanUsername)).limit(1);
-  if (user) {
-    if (!isPostgres) {
-      const passwordHash = await bcryptjs_default.hash(password, 10);
-      await db.update(usersTable).set({ passwordHash }).where(eq(usersTable.id, user.id));
-    } else {
-      return res.status(409).json({ error: "T\xEAn \u0111\u0103ng nh\u1EADp \u0111\xE3 t\u1ED3n t\u1EA1i. Vui l\xF2ng ch\u1ECDn t\xEAn kh\xE1c." });
-    }
-  } else {
-    const userId = getDeterministicUserId(cleanUsername);
-    const passwordHash = await bcryptjs_default.hash(password, 10);
-    const [inserted] = await db.insert(usersTable).values({
-      id: userId,
-      username: cleanUsername,
-      passwordHash,
-      selectedRegion: "VN",
-      selectedServerId: "s1_long_vuong"
-    }).returning();
-    user = inserted;
+  const [existingUser] = await db.select().from(usersTable).where(eq(usersTable.username, cleanUsername)).limit(1);
+  if (existingUser) {
+    return res.status(409).json({ error: "T\xEAn \u0111\u0103ng nh\u1EADp \u0111\xE3 t\u1ED3n t\u1EA1i. Vui l\xF2ng ch\u1ECDn t\xEAn kh\xE1c." });
   }
+  const userId = getDeterministicUserId(cleanUsername);
+  const passwordHash = await bcryptjs_default.hash(password, 10);
+  const [user] = await db.insert(usersTable).values({
+    id: userId,
+    username: cleanUsername,
+    passwordHash,
+    role: "PLAYER",
+    selectedRegion: "VN",
+    selectedServerId: "s1_long_vuong"
+  }).returning();
   if (req.session) {
     req.session.userId = user.id;
   }
@@ -63302,6 +63343,7 @@ router2.post("/auth/register", async (req, res) => {
     user: {
       id: user.id,
       username: user.username,
+      role: user.role || "PLAYER",
       createdAt: user.createdAt,
       selectedRegion: user.selectedRegion,
       selectedServerId: user.selectedServerId,
@@ -63310,38 +63352,23 @@ router2.post("/auth/register", async (req, res) => {
   });
 });
 router2.post("/auth/login", async (req, res) => {
+  const clientIp = req.ip || req.socket.remoteAddress || "unknown";
+  if (!checkAuthRateLimit(clientIp)) {
+    return res.status(429).json({ error: "Qu\xE1 nhi\u1EC1u l\u1EA7n th\u1EED \u0111\u0103ng nh\u1EADp. Vui l\xF2ng \u0111\u1EE3i 1 ph\xFAt tr\u01B0\u1EDBc khi th\u1EED l\u1EA1i." });
+  }
   const parsed = LoginBody.safeParse(req.body);
   if (!parsed.success) {
     return res.status(400).json({ error: "D\u1EEF li\u1EC7u kh\xF4ng h\u1EE3p l\u1EC7" });
   }
   const { username, password } = parsed.data;
   const cleanUsername = username.trim();
-  let [user] = await db.select().from(usersTable).where(eq(usersTable.username, cleanUsername)).limit(1);
+  const [user] = await db.select().from(usersTable).where(eq(usersTable.username, cleanUsername)).limit(1);
   if (!user) {
-    if (!isPostgres) {
-      const userId = getDeterministicUserId(cleanUsername);
-      const passwordHash = await bcryptjs_default.hash(password, 10);
-      const [inserted] = await db.insert(usersTable).values({
-        id: userId,
-        username: cleanUsername,
-        passwordHash,
-        selectedRegion: "VN",
-        selectedServerId: "s1_long_vuong"
-      }).returning();
-      user = inserted;
-    } else {
-      return res.status(401).json({ error: "T\xEAn \u0111\u0103ng nh\u1EADp ho\u1EB7c m\u1EADt kh\u1EA9u kh\xF4ng ch\xEDnh x\xE1c." });
-    }
-  } else {
-    const valid = await bcryptjs_default.compare(password, user.passwordHash);
-    if (!valid) {
-      if (!isPostgres) {
-        const passwordHash = await bcryptjs_default.hash(password, 10);
-        await db.update(usersTable).set({ passwordHash }).where(eq(usersTable.id, user.id));
-      } else {
-        return res.status(401).json({ error: "T\xEAn \u0111\u0103ng nh\u1EADp ho\u1EB7c m\u1EADt kh\u1EA9u kh\xF4ng ch\xEDnh x\xE1c." });
-      }
-    }
+    return res.status(401).json({ error: "T\xEAn \u0111\u0103ng nh\u1EADp ho\u1EB7c m\u1EADt kh\u1EA9u kh\xF4ng ch\xEDnh x\xE1c." });
+  }
+  const valid = await bcryptjs_default.compare(password, user.passwordHash);
+  if (!valid) {
+    return res.status(401).json({ error: "T\xEAn \u0111\u0103ng nh\u1EADp ho\u1EB7c m\u1EADt kh\u1EA9u kh\xF4ng ch\xEDnh x\xE1c." });
   }
   if (req.session) {
     req.session.userId = user.id;
@@ -63364,9 +63391,11 @@ router2.post("/auth/login", async (req, res) => {
     user: {
       id: user.id,
       username: user.username,
+      role: user.role || "PLAYER",
       createdAt: user.createdAt,
       selectedRegion: user.selectedRegion,
-      selectedServerId: user.selectedServerId
+      selectedServerId: user.selectedServerId,
+      lastCharacterId: user.lastCharacterId ?? null
     }
   });
 });
@@ -63386,6 +63415,7 @@ var handleGetMe = async (req, res) => {
   return res.status(200).json({
     id: user.id,
     username: user.username,
+    role: user.role || "PLAYER",
     createdAt: user.createdAt,
     selectedRegion: user.selectedRegion,
     selectedServerId: user.selectedServerId,
@@ -63395,7 +63425,22 @@ var handleGetMe = async (req, res) => {
 router2.get("/auth/me", handleGetMe);
 router2.get("/users/me", handleGetMe);
 router2.get("/api/users/me", handleGetMe);
-var handleResetAllAccounts = async (_req, res) => {
+var handleResetAllAccounts = async (req, res) => {
+  const isProduction2 = process.env.NODE_ENV === "production" || Boolean(process.env.VERCEL);
+  if (isProduction2) {
+    return res.status(403).json({
+      success: false,
+      error: "B\u1EA2O V\u1EC6 PRODUCTION: Endpoint \u0111\u1EB7t l\u1EA1i database \u0111\xE3 b\u1ECB v\xF4 hi\u1EC7u h\xF3a an to\xE0n."
+    });
+  }
+  const adminSecret = process.env.ADMIN_SECRET_KEY;
+  const providedSecret = req.headers?.["x-admin-secret"] || req.body?.adminSecret;
+  if (!adminSecret || providedSecret !== adminSecret) {
+    return res.status(403).json({
+      success: false,
+      error: "T\u1EEB ch\u1ED1i truy c\u1EADp: Y\xEAu c\u1EA7u kh\xF3a b\u1EA3o m\u1EADt Qu\u1EA3n tr\u1ECB vi\xEAn (ADMIN_SECRET_KEY) h\u1EE3p l\u1EC7."
+    });
+  }
   try {
     await wipeAllAccountsAndUserData();
     return res.status(200).json({
@@ -63512,6 +63557,12 @@ var CharacterPersistenceService = class {
         throw new InventoryRuleError("Kh\xF4ng t\xECm th\u1EA5y nh\xE2n v\u1EADt ho\u1EB7c kh\xF4ng c\xF3 quy\u1EC1n s\u1EDF h\u1EEFu.", 404);
       }
       const currentRev = Number(existingChar.revision || 1);
+      if (payload.revision !== void 0 && Number(payload.revision) < currentRev) {
+        throw new InventoryRuleError(
+          `Xung \u0111\u1ED9t phi\xEAn b\u1EA3n d\u1EEF li\u1EC7u (Optimistic Concurrency Conflict): M\xE1y ch\u1EE7 \u0111ang \u1EDF rev ${currentRev}, d\u1EEF li\u1EC7u g\u1EEDi l\xEAn \u1EDF rev ${payload.revision}. Vui l\xF2ng \u0111\u1ED3ng b\u1ED9 l\u1EA1i tr\u1EA1ng th\xE1i.`,
+          409
+        );
+      }
       const clientRev = payload.revision !== void 0 ? Number(payload.revision) : currentRev;
       const nextRev = Math.max(currentRev, clientRev) + 1;
       const unlockedSlots = payload.unlockedSlots ? Math.min(30, Math.max(15, Number(payload.unlockedSlots))) : Number(existingChar.unlockedSlots || 18);
@@ -64104,13 +64155,14 @@ var router4 = (0, import_express4.Router)();
 router4.post("/characters/sync", requireAuth, async (req, res) => {
   const characters = Array.isArray(req.body.characters) ? req.body.characters : [];
   const restored = [];
+  const userId = req.session.userId;
   for (const c of characters) {
     if (!c || !c.name || !c.classId) continue;
     const existing = await db.select().from(charactersTable).where(eq(charactersTable.id, c.id)).limit(1);
     if (existing.length === 0) {
       const [inserted] = await db.insert(charactersTable).values({
         id: c.id,
-        userId: req.session.userId,
+        userId,
         serverId: c.serverId || "s1_long_vuong",
         name: c.name,
         classId: c.classId,
@@ -64138,14 +64190,14 @@ router4.post("/characters/sync", requireAuth, async (req, res) => {
         combatPower: c.combatPower || 500
       }).returning();
       restored.push(inserted);
-    } else {
-      await db.update(charactersTable).set({ userId: req.session.userId }).where(eq(charactersTable.id, c.id));
-      restored.push({ ...existing[0], userId: req.session.userId });
+    } else if (existing[0].userId === userId) {
+      restored.push(existing[0]);
     }
   }
   return res.status(200).json({ success: true, count: restored.length, characters: restored });
 });
 router4.get("/characters", requireAuth, async (req, res) => {
+  const userId = req.session.userId;
   if (req.headers["x-clb-client-characters"]) {
     try {
       const decoded = decodeURIComponent(req.headers["x-clb-client-characters"]);
@@ -64157,7 +64209,7 @@ router4.get("/characters", requireAuth, async (req, res) => {
           if (!exists2) {
             await db.insert(charactersTable).values({
               id: c.id,
-              userId: req.session.userId,
+              userId,
               serverId: c.serverId || "s1_long_vuong",
               name: c.name,
               classId: c.classId || "fighter",
@@ -64178,15 +64230,13 @@ router4.get("/characters", requireAuth, async (req, res) => {
               unlockedSlots: c.unlockedSlots || 15,
               combatPower: c.combatPower || 500
             });
-          } else {
-            await db.update(charactersTable).set({ userId: req.session.userId }).where(eq(charactersTable.id, c.id));
           }
         }
       }
     } catch {
     }
   }
-  const characters = await db.select().from(charactersTable).where(eq(charactersTable.userId, req.session.userId)).orderBy(desc(charactersTable.createdAt));
+  const characters = await db.select().from(charactersTable).where(eq(charactersTable.userId, userId)).orderBy(desc(charactersTable.createdAt));
   await ensureItemCatalog();
   const expToNext = await Promise.all(
     characters.map(async (character) => {
@@ -64269,7 +64319,8 @@ router4.post("/characters", requireAuth, async (req, res) => {
     deaths: 0,
     unallocatedStatPoints: 5,
     unlockedSlots: 15,
-    combatPower
+    combatPower,
+    revision: 1
   }).returning();
   await db.update(usersTable).set({ lastCharacterId: character.id }).where(eq(usersTable.id, req.session.userId));
   return res.status(201).json({
@@ -64288,7 +64339,7 @@ router4.post("/characters/roll-destiny", requireAuth, async (req, res) => {
     return res.status(404).json({ error: "Kh\xF4ng t\xECm th\u1EA5y nh\xE2n v\u1EADt" });
   }
   if (char2.userId !== req.session.userId) {
-    return res.status(403).json({ error: "B\u1EA1n kh\xF4ng s\u1EDF h\u1EEFu nh\xE2n v\u1EADt n\xE0y" });
+    return res.status(403).json({ error: "T\u1EEB ch\u1ED1i truy c\u1EADp: B\u1EA1n kh\xF4ng s\u1EDF h\u1EEFu nh\xE2n v\u1EADt n\xE0y" });
   }
   if (char2.destinyRolled) {
     return res.status(400).json({ error: "B\u1EA1n ch\u1EC9 \u0111\u01B0\u1EE3c x\xFAc x\u1EAFc Thi\xEAn M\u1EC7nh m\u1ED9t l\u1EA7n duy nh\u1EA5t!" });
@@ -64317,7 +64368,7 @@ router4.post("/characters/:id/roll-destiny", requireAuth, async (req, res) => {
     return res.status(404).json({ error: "Kh\xF4ng t\xECm th\u1EA5y nh\xE2n v\u1EADt" });
   }
   if (char2.userId !== req.session.userId) {
-    return res.status(403).json({ error: "B\u1EA1n kh\xF4ng s\u1EDF h\u1EEFu nh\xE2n v\u1EADt n\xE0y" });
+    return res.status(403).json({ error: "T\u1EEB ch\u1ED1i truy c\u1EADp: B\u1EA1n kh\xF4ng s\u1EDF h\u1EEFu nh\xE2n v\u1EADt n\xE0y" });
   }
   if (char2.destinyRolled) {
     return res.status(400).json({ error: "B\u1EA1n ch\u1EC9 \u0111\u01B0\u1EE3c x\xFAc x\u1EAFc Thi\xEAn M\u1EC7nh m\u1ED9t l\u1EA7n duy nh\u1EA5t!" });
@@ -64341,77 +64392,12 @@ router4.get("/characters/:characterId", requireAuth, async (req, res) => {
   if (isNaN(characterId)) {
     return res.status(400).json({ error: "ID kh\xF4ng h\u1EE3p l\u1EC7" });
   }
-  let [character] = await db.select().from(charactersTable).where(eq(charactersTable.id, characterId)).limit(1);
-  if (character && character.userId !== req.session.userId) {
-    await db.update(charactersTable).set({ userId: req.session.userId }).where(eq(charactersTable.id, characterId));
-    character.userId = req.session.userId;
-  }
-  if (!character && req.headers["x-clb-client-characters"]) {
-    try {
-      const decoded = decodeURIComponent(req.headers["x-clb-client-characters"]);
-      const clientChars = JSON.parse(decoded);
-      const matched = Array.isArray(clientChars) ? clientChars.find((c) => c.id === characterId) : null;
-      if (matched) {
-        const [inserted] = await db.insert(charactersTable).values({
-          id: matched.id,
-          userId: req.session.userId,
-          serverId: matched.serverId || "s1_long_vuong",
-          name: matched.name,
-          classId: matched.classId || "fighter",
-          className: matched.className || "Ki\u1EBFm Kh\xE1ch",
-          gender: matched.gender || "male",
-          level: matched.level || 1,
-          experience: matched.experience || 0,
-          hp: matched.hp || 100,
-          maxHp: matched.maxHp || 100,
-          mp: matched.mp || 100,
-          maxMp: matched.maxMp || 100,
-          atk: matched.atk || 20,
-          def: matched.def || 10,
-          spd: matched.spd || 10,
-          gold: matched.gold || 100,
-          kills: matched.kills || 0,
-          deaths: matched.deaths || 0,
-          unlockedSlots: matched.unlockedSlots || 15,
-          combatPower: matched.combatPower || 500
-        }).returning();
-        character = inserted;
-      }
-    } catch {
-    }
-  }
+  const [character] = await db.select().from(charactersTable).where(eq(charactersTable.id, characterId)).limit(1);
   if (!character) {
-    const [userChar] = await db.select().from(charactersTable).where(eq(charactersTable.userId, req.session.userId)).limit(1);
-    if (userChar) {
-      character = userChar;
-    }
+    return res.status(404).json({ error: "Kh\xF4ng t\xECm th\u1EA5y nh\xE2n v\u1EADt" });
   }
-  if (!character) {
-    const stats = getStatsForLevel("fighter", 1);
-    const [fallbackChar] = await db.insert(charactersTable).values({
-      id: characterId > 0 ? characterId : 1,
-      userId: req.session.userId,
-      serverId: "s1_long_vuong",
-      name: `Anh H\xF9ng #${characterId > 0 ? characterId : 1}`,
-      classId: "fighter",
-      className: "Ki\u1EBFm Kh\xE1ch",
-      gender: "male",
-      level: 1,
-      experience: 0,
-      hp: stats.hp,
-      maxHp: stats.hp,
-      mp: 200,
-      maxMp: 200,
-      atk: stats.atk,
-      def: stats.def,
-      spd: stats.spd,
-      gold: 100,
-      kills: 0,
-      deaths: 0,
-      unlockedSlots: 15,
-      combatPower: 500
-    }).returning();
-    character = fallbackChar;
+  if (character.userId !== req.session.userId) {
+    return res.status(403).json({ error: "T\u1EEB ch\u1ED1i truy c\u1EADp: B\u1EA1n kh\xF4ng ph\u1EA3i ch\u1EE7 s\u1EDF h\u1EEFu c\u1EE7a nh\xE2n v\u1EADt n\xE0y." });
   }
   await ensureItemCatalog();
   return res.status(200).json({
@@ -64424,34 +64410,14 @@ var handleCharacterAutoSave = async (req, res) => {
   if (isNaN(characterId)) {
     return res.status(400).json({ error: "ID kh\xF4ng h\u1EE3p l\u1EC7" });
   }
-  let [character] = await db.select().from(charactersTable).where(eq(charactersTable.id, characterId)).limit(1);
-  const body = req.body || {};
+  const [character] = await db.select().from(charactersTable).where(eq(charactersTable.id, characterId)).limit(1);
   if (!character) {
-    const [inserted] = await db.insert(charactersTable).values({
-      id: characterId,
-      userId: req.session.userId,
-      serverId: body.serverId || "s1_long_vuong",
-      name: body.name || `Anh H\xF9ng #${characterId}`,
-      classId: body.classId || "fighter",
-      className: body.className || "Ki\u1EBFm Kh\xE1ch",
-      gender: body.gender || "male",
-      level: typeof body.level === "number" ? body.level : 1,
-      experience: typeof body.experience === "number" ? body.experience : 0,
-      hp: typeof body.hp === "number" ? body.hp : 100,
-      maxHp: typeof body.maxHp === "number" ? body.maxHp : 100,
-      mp: typeof body.mp === "number" ? body.mp : 100,
-      maxMp: typeof body.maxMp === "number" ? body.maxMp : 100,
-      atk: typeof body.atk === "number" ? body.atk : 20,
-      def: typeof body.def === "number" ? body.def : 10,
-      spd: typeof body.spd === "number" ? body.spd : 10,
-      gold: typeof body.gold === "number" ? body.gold : 100,
-      kills: typeof body.kills === "number" ? body.kills : 0,
-      deaths: 0,
-      unlockedSlots: typeof body.unlockedSlots === "number" ? body.unlockedSlots : 15,
-      combatPower: 500
-    }).returning();
-    character = inserted;
+    return res.status(404).json({ error: "Kh\xF4ng t\xECm th\u1EA5y nh\xE2n v\u1EADt \u0111\u1EC3 l\u01B0u" });
   }
+  if (character.userId !== req.session.userId) {
+    return res.status(403).json({ error: "T\u1EEB ch\u1ED1i truy c\u1EADp: B\u1EA1n kh\xF4ng c\xF3 quy\u1EC1n l\u01B0u d\u1EEF li\u1EC7u cho nh\xE2n v\u1EADt n\xE0y." });
+  }
+  const body = req.body || {};
   const updateData = {};
   if (typeof body.hp === "number") updateData.hp = Math.max(0, Math.round(body.hp));
   if (typeof body.maxHp === "number" && body.maxHp > 0) updateData.maxHp = Math.round(body.maxHp);
@@ -64476,7 +64442,7 @@ var handleCharacterAutoSave = async (req, res) => {
     await db.update(charactersTable).set(updateData).where(eq(charactersTable.id, characterId));
   }
   await db.update(usersTable).set({ lastCharacterId: characterId }).where(eq(usersTable.id, req.session.userId));
-  const updatedChar = await toCharacterResponse(character);
+  const updatedChar = await toCharacterResponse({ ...character, ...updateData });
   return res.status(200).json({
     success: true,
     savedAt: (/* @__PURE__ */ new Date()).toISOString(),
@@ -64494,9 +64460,12 @@ var handleAllocateStats = async (req, res) => {
   if (isNaN(characterId)) {
     return res.status(400).json({ error: "ID kh\xF4ng h\u1EE3p l\u1EC7" });
   }
-  let [character] = await db.select().from(charactersTable).where(eq(charactersTable.id, characterId)).limit(1);
+  const [character] = await db.select().from(charactersTable).where(eq(charactersTable.id, characterId)).limit(1);
   if (!character) {
     return res.status(404).json({ error: "Kh\xF4ng t\xECm th\u1EA5y nh\xE2n v\u1EADt" });
+  }
+  if (character.userId !== req.session.userId) {
+    return res.status(403).json({ error: "T\u1EEB ch\u1ED1i truy c\u1EADp: B\u1EA1n kh\xF4ng c\xF3 quy\u1EC1n ph\xE2n b\u1ED5 ch\u1EC9 s\u1ED1 cho nh\xE2n v\u1EADt n\xE0y." });
   }
   const body = req.body || {};
   const addStr = Math.max(0, Number(body.str ?? 0));
@@ -64505,12 +64474,16 @@ var handleAllocateStats = async (req, res) => {
   const addLuk = Math.max(0, Number(body.luk ?? 0));
   const addVit = Math.max(0, Number(body.vit ?? 0));
   const totalAllocated = addStr + addDex + addInt + addLuk + addVit;
-  let newStatPoints = character.unallocatedStatPoints;
-  if (typeof body.statPoints === "number") {
-    newStatPoints = Math.max(0, Math.round(body.statPoints));
-  } else {
-    newStatPoints = Math.max(0, character.unallocatedStatPoints - totalAllocated);
+  if (totalAllocated <= 0) {
+    return res.status(400).json({ error: "S\u1ED1 \u0111i\u1EC3m c\u1EA7n ph\xE2n b\u1ED5 ph\u1EA3i l\u1EDBn h\u01A1n 0" });
   }
+  const currentAvailablePoints = Number(character.unallocatedStatPoints || 0);
+  if (totalAllocated > currentAvailablePoints) {
+    return res.status(400).json({
+      error: `Kh\xF4ng \u0111\u1EE7 \u0111i\u1EC3m ti\u1EC1m n\u0103ng! C\u1EA7n ${totalAllocated} \u0111i\u1EC3m nh\u01B0ng ch\u1EC9 c\xF2n ${currentAvailablePoints} \u0111i\u1EC3m.`
+    });
+  }
+  const newStatPoints = currentAvailablePoints - totalAllocated;
   const baseCls = CHARACTER_CLASSES.find((c) => c.id === character.classId) || CHARACTER_CLASSES[0];
   const newStr = (character.str || baseCls.baseStr || 8) + addStr;
   const newDex = (character.dex || baseCls.baseDex || 5) + addDex;
@@ -64544,15 +64517,15 @@ router4.get("/characters/:characterId/battle-log", requireAuth, async (req, res)
   if (isNaN(characterId)) {
     return res.status(400).json({ error: "ID kh\xF4ng h\u1EE3p l\u1EC7" });
   }
-  const character = await getCharacterForUser(characterId, req.session.userId);
-  if (!character) return res.status(404).json({ error: "Kh\xF4ng t\xECm th\u1EA5y nh\xE2n v\u1EADt" });
+  const [character] = await db.select({ id: charactersTable.id }).from(charactersTable).where(and(eq(charactersTable.id, characterId), eq(charactersTable.userId, req.session.userId))).limit(1);
+  if (!character) return res.status(404).json({ error: "Kh\xF4ng t\xECm th\u1EA5y nh\xE2n v\u1EADt ho\u1EB7c kh\xF4ng c\xF3 quy\u1EC1n truy c\u1EADp" });
   const logs = await db.select().from(battleLogsTable).where(eq(battleLogsTable.characterId, characterId)).orderBy(desc(battleLogsTable.createdAt)).limit(20);
   return res.status(200).json(logs);
 });
 router4.post("/characters/:characterId/3d-reward", requireAuth, async (_req, res) => {
   return res.status(403).json({
     error: "L\u1ED7i b\u1EA3o m\u1EADt: Kh\xF4ng ch\u1EA5p nh\u1EADn ph\u1EA7n th\u01B0\u1EDFng client t\u1EF1 khai b\xE1o.",
-    message: "Endpoint /3d-reward \u0111\xE3 b\u1ECB kh\xF3a. M\u1ECDi ti\u1EBFn tr\xECnh ph\u1EA3i \u0111\u01B0\u1EE3c server x\xE1c th\u1EF1c qua POST /characters/:characterId/battle."
+    message: "Endpoint /3d-reward \u0111\xE3 b\u1ECB kh\xF3a. M\u1ECDi ti\u1EBFn tr\xECnh ph\u1EA3i \u0111\u01B0\u1EE3c server x\xE1c th\u1EF1c qua POST /characters/:characterId/battle ho\u1EB7c Encounters."
   });
 });
 var handleFullSync = async (req, res) => {
@@ -64715,6 +64688,8 @@ var CombatService = class {
         def: levelStats.def,
         spd: levelStats.spd,
         gold: character.gold + input.goldGained,
+        unallocatedStatPoints: (character.unallocatedStatPoints || 0) + progression.statPointsGained,
+        skillPoints: (character.skillPoints || 0) + progression.skillPointsGained,
         kills: character.kills + (input.victory ? 1 : 0),
         deaths: character.deaths + (input.victory ? 0 : 1)
       }).where(and(
@@ -64743,6 +64718,7 @@ var CombatService = class {
 
 // src/routes/battle.ts
 var router5 = (0, import_express5.Router)();
+var lastBattleTimestamp = /* @__PURE__ */ new Map();
 function simulateBattle(playerAtk, playerDef, playerHp, playerSpd, monsterAtk, monsterDef, monsterHp, classId) {
   const rounds = [];
   let pHp = playerHp;
@@ -64803,6 +64779,15 @@ router5.post("/characters/:characterId/battle", requireAuth, async (req, res) =>
   if (!character || character.userId !== req.session.userId) {
     return res.status(404).json({ error: "Kh\xF4ng t\xECm th\u1EA5y nh\xE2n v\u1EADt" });
   }
+  if (character.hp <= 0) {
+    return res.status(400).json({ error: "Nh\xE2n v\u1EADt \u0111ang t\u1EED tr\u1EADn, kh\xF4ng th\u1EC3 ti\u1EBFp t\u1EE5c chi\u1EBFn \u0111\u1EA5u." });
+  }
+  const now = Date.now();
+  const lastTime = lastBattleTimestamp.get(characterId) || 0;
+  if (now - lastTime < 450) {
+    return res.status(429).json({ error: "Thao t\xE1c chi\u1EBFn \u0111\u1EA5u qu\xE1 nhanh. Vui l\xF2ng th\u1EED l\u1EA1i sau gi\xE2y l\xE1t." });
+  }
+  lastBattleTimestamp.set(characterId, now);
   await ensureItemCatalog();
   const effectiveCharacter = await toCharacterResponse(character);
   const monsterReward = await getMonster(monsterId);
@@ -67052,7 +67037,11 @@ router12.post("/characters/:characterId/blacksmith/socket", requireAuth, async (
     res.status(404).json({ error: "Kh\xF4ng t\xECm th\u1EA5y trang b\u1ECB" });
     return;
   }
-  const rarity = (gear.rarity || "common").toLowerCase();
+  let rarity = (gear.rarity || "common").toLowerCase();
+  if (rarity === "common") {
+    const [it] = await db.select().from(itemsTable).where(eq(itemsTable.id, gear.itemId)).limit(1);
+    if (it?.rarity) rarity = it.rarity.toLowerCase();
+  }
   const maxSockets = rarity === "miracle" || rarity === "legendary" ? 3 : rarity === "epic" ? 2 : rarity === "rare" ? 1 : 0;
   if (maxSockets <= 0) {
     res.status(400).json({ error: "Trang b\u1ECB ph\u1EA9m ch\u1EA5t Rare tr\u1EDF l\xEAn m\u1EDBi c\xF3 l\u1ED7 kh\u1EA3m ng\u1ECDc!" });
@@ -67418,7 +67407,14 @@ router13.post("/multiplayer/sync", (req, res) => {
     maxHp = 500,
     chatBubble = null,
     zoneId = "SAFE_VILLAGE",
-    serverId = "s1_long_vuong"
+    serverId = "s1_long_vuong",
+    hairStyle,
+    hairColor,
+    outfitId,
+    auraIds,
+    isMounted,
+    mountId,
+    petId
   } = req.body;
   if (!characterId) {
     res.status(400).json({ error: "Thi\u1EBFu characterId" });
@@ -67445,17 +67441,33 @@ router13.post("/multiplayer/sync", (req, res) => {
     chatTime: chatBubble ? now : existing?.chatTime || now,
     zoneId,
     serverId,
-    lastHeartbeat: now
+    lastHeartbeat: now,
+    hairStyle,
+    hairColor,
+    outfitId,
+    auraIds,
+    isMounted,
+    mountId,
+    petId
   });
   const othersInZone = [];
+  const MAX_AOI_DIST_SQ = 50 * 50;
   for (const [id, other] of activePlayers.entries()) {
     if (id !== characterId && other.serverId === serverId && other.zoneId === zoneId) {
-      othersInZone.push(other);
+      const dx = (other.posX || 0) - (posX || 0);
+      const dz = (other.posZ || 0) - (posZ || 0);
+      if (dx * dx + dz * dz <= MAX_AOI_DIST_SQ) {
+        othersInZone.push(other);
+      }
     }
   }
   for (const bot of AI_ADVENTURERS) {
     if (bot.zoneId === zoneId) {
-      othersInZone.push(bot);
+      const dx = (bot.posX || 0) - (posX || 0);
+      const dz = (bot.posZ || 0) - (posZ || 0);
+      if (dx * dx + dz * dz <= MAX_AOI_DIST_SQ) {
+        othersInZone.push(bot);
+      }
     }
   }
   res.status(200).json({
@@ -67578,7 +67590,7 @@ router14.post("/characters/:characterId/allocate-stats", requireAuth, async (req
   }
   const [character] = await db.select().from(charactersTable).where(and(eq(charactersTable.id, characterId), eq(charactersTable.userId, userId))).limit(1);
   if (!character) {
-    res.status(404).json({ error: "Kh\xF4ng t\xECm th\u1EA5y nh\xE2n v\u1EADt" });
+    res.status(404).json({ error: "Kh\xF4ng t\xECm th\u1EA5y nh\xE2n v\u1EADt ho\u1EB7c kh\xF4ng c\xF3 quy\u1EC1n s\u1EDF h\u1EEFu" });
     return;
   }
   const availablePoints = Number(character.unallocatedStatPoints || 0);
@@ -67644,13 +67656,29 @@ function getArenaRank(honorPoints) {
   }
   return rank;
 }
+var pvpMatchRateLimits = /* @__PURE__ */ new Map();
 router14.post("/characters/:characterId/pvp/match", requireAuth, async (req, res) => {
   const characterId = Number(req.params.characterId);
   const userId = req.session.userId;
   const { opponentName, victory = true } = req.body;
+  const now = Date.now();
+  const rateLimit = pvpMatchRateLimits.get(characterId);
+  if (!rateLimit || now > rateLimit.resetAt) {
+    pvpMatchRateLimits.set(characterId, { count: 1, resetAt: now + 6e4 });
+  } else {
+    if (rateLimit.count >= 10) {
+      res.status(429).json({ error: "Thao t\xE1c qu\xE1 nhanh. Vui l\xF2ng ngh\u1EC9 gi\u1EEFa c\xE1c tr\u1EADn \u0111\u1EA5u PvP." });
+      return;
+    }
+    rateLimit.count++;
+  }
   const [character] = await db.select().from(charactersTable).where(and(eq(charactersTable.id, characterId), eq(charactersTable.userId, userId))).limit(1);
   if (!character) {
-    res.status(404).json({ error: "Kh\xF4ng t\xECm th\u1EA5y nh\xE2n v\u1EADt" });
+    res.status(404).json({ error: "Kh\xF4ng t\xECm th\u1EA5y nh\xE2n v\u1EADt ho\u1EB7c kh\xF4ng c\xF3 quy\u1EC1n s\u1EDF h\u1EEFu" });
+    return;
+  }
+  if (character.hp <= 0) {
+    res.status(400).json({ error: "Nh\xE2n v\u1EADt \u0111ang t\u1EED tr\u1EADn, kh\xF4ng th\u1EC3 ti\u1EBFp t\u1EE5c thi \u0111\u1EA5u \u0110\u1EA5u Tr\u01B0\u1EDDng." });
     return;
   }
   const pointChange = victory ? 35 : 10;
@@ -67678,14 +67706,25 @@ router14.post("/characters/:characterId/pvp/match", requireAuth, async (req, res
     message: victory ? `\u{1F389} Chi\u1EBFn th\u1EAFng vinh quang tr\u01B0\u1EDBc ${opponentName}! Nh\u1EADn +${pointChange} \u0110i\u1EC3m Danh V\u1ECDng!` : `\u26A0\uFE0F Quy\u1EBFt \u0111\u1EA5u th\u1EA5t b\u1EA1i tr\u01B0\u1EDBc ${opponentName}. Nh\u1EADn +${pointChange} \u0110i\u1EC3m Kh\xEDch L\u1EC7.`
   });
 });
-router14.post("/characters/:characterId/gm/action", requireAuth, async (req, res) => {
+router14.post("/characters/:characterId/gm/action", requireAuth, requireGMOrAdmin, async (req, res) => {
   const characterId = Number(req.params.characterId);
   const userId = req.session.userId;
   const { action } = req.body;
   const [character] = await db.select().from(charactersTable).where(and(eq(charactersTable.id, characterId), eq(charactersTable.userId, userId))).limit(1);
   if (!character) {
-    res.status(404).json({ error: "Kh\xF4ng t\xECm th\u1EA5y nh\xE2n v\u1EADt" });
+    res.status(404).json({ error: "Kh\xF4ng t\xECm th\u1EA5y nh\xE2n v\u1EADt ho\u1EB7c kh\xF4ng c\xF3 quy\u1EC1n s\u1EDF h\u1EEFu" });
     return;
+  }
+  try {
+    await db.insert(gmAuditLogsTable).values({
+      userId,
+      characterId,
+      action: String(action || "unknown"),
+      payloadJson: JSON.stringify(req.body || {}),
+      ipAddress: req.ip || req.socket.remoteAddress || "unknown"
+    });
+  } catch (logErr) {
+    console.warn("[GM Audit Log] Kh\xF4ng th\u1EC3 ghi audit log:", logErr);
   }
   if (action === "set_level") {
     const targetLevel = Math.min(999, Math.max(1, Number(req.body.level) || 1));
@@ -67969,7 +68008,7 @@ router15.get("/market/listings", async (req, res) => {
 router15.post("/market/buy/:id", requireAuth, async (req, res) => {
   const listingId = Number(req.params.id);
   const userId = req.session.userId;
-  const { buyerCharacterId } = req.body;
+  const buyerCharacterId = req.body.buyerCharacterId || req.body.characterId;
   if (!buyerCharacterId) {
     res.status(400).json({ error: "Thi\u1EBFu buyerCharacterId" });
     return;
@@ -68049,32 +68088,39 @@ router15.post("/market/sell", requireAuth, async (req, res) => {
     const result = await db.transaction(async (tx) => {
       const [char2] = await tx.select().from(charactersTable).where(and(eq(charactersTable.id, Number(characterId)), eq(charactersTable.userId, userId))).limit(1);
       if (!char2) throw new Error("Kh\xF4ng t\xECm th\u1EA5y nh\xE2n v\u1EADt s\u1EDF h\u1EEFu");
+      const listingFee = Math.max(1, Math.floor(price * 0.02));
+      if (char2.gold < listingFee) {
+        throw new Error(`B\u1EA1n kh\xF4ng \u0111\u1EE7 V\xE0ng \u0111\u1EC3 tr\u1EA3 ph\xED ni\xEAm y\u1EBFt 2% (C\u1EA7n ${listingFee} V\xE0ng, hi\u1EC7n c\xF3 ${char2.gold} V\xE0ng)`);
+      }
+      await tx.update(charactersTable).set({ gold: char2.gold - listingFee }).where(eq(charactersTable.id, char2.id));
       const [itemRow] = await tx.select({
         owned: characterItemsTable,
         item: itemsTable
       }).from(characterItemsTable).innerJoin(itemsTable, eq(characterItemsTable.itemId, itemsTable.id)).where(and(eq(characterItemsTable.id, Number(ownershipId)), eq(characterItemsTable.characterId, char2.id))).limit(1);
       if (!itemRow) throw new Error("V\u1EADt ph\u1EA9m kh\xF4ng c\xF3 trong t\xFAi \u0111\u1ED3");
-      if (itemRow.owned.equipped) throw new Error("Kh\xF4ng th\u1EC3 b\xE1n trang b\u1ECB \u0111ang m\u1EB7c tr\xEAn ng\u01B0\u1EDDi. H\xE3y th\xE1o ra tr\u01B0\u1EDBc!");
+      const owned = itemRow.owned || itemRow;
+      const item = itemRow.item || itemRow;
+      if (owned.equipped) throw new Error("Kh\xF4ng th\u1EC3 b\xE1n trang b\u1ECB \u0111ang m\u1EB7c tr\xEAn ng\u01B0\u1EDDi. H\xE3y th\xE1o ra tr\u01B0\u1EDBc!");
       const [listing] = await tx.insert(marketListingsTable).values({
         sellerCharacterId: char2.id,
         sellerName: char2.name,
         sellerServerId: char2.serverId || "server-1",
-        itemId: itemRow.owned.itemId,
-        itemName: itemRow.item.name,
-        itemCategory: itemRow.item.category,
-        itemType: itemRow.item.type,
-        itemEquipSlot: itemRow.item.equipSlot,
-        itemRarity: itemRow.owned.rarity || itemRow.item.rarity,
-        enhanceLevel: itemRow.owned.enhanceLevel,
-        bonusCombatPower: itemRow.owned.bonusCombatPower,
-        miraclePassive1: itemRow.owned.miraclePassive1,
-        miraclePassive2: itemRow.owned.miraclePassive2,
-        socketsJson: itemRow.owned.socketsJson,
-        reforgeStatsJson: itemRow.owned.reforgeStatsJson,
+        itemId: owned.itemId || item.id,
+        itemName: item.name || owned.itemName || "V\u1EADt ph\u1EA9m",
+        itemCategory: item.category || "equipment",
+        itemType: item.type || "weapon",
+        itemEquipSlot: item.equipSlot || "none",
+        itemRarity: owned.rarity || item.rarity || "common",
+        enhanceLevel: owned.enhanceLevel || 0,
+        bonusCombatPower: owned.bonusCombatPower || 0,
+        miraclePassive1: owned.miraclePassive1 || null,
+        miraclePassive2: owned.miraclePassive2 || null,
+        socketsJson: owned.socketsJson || null,
+        reforgeStatsJson: owned.reforgeStatsJson || null,
         priceGold: price,
         status: "ACTIVE"
       }).returning();
-      await tx.delete(characterItemsTable).where(eq(characterItemsTable.id, itemRow.owned.id));
+      await tx.delete(characterItemsTable).where(eq(characterItemsTable.id, owned.id));
       return listing;
     });
     const updatedInv = await listInventory(Number(characterId));
@@ -68331,26 +68377,203 @@ router17.post("/characters/:characterId/codex/claim", requireAuth, async (req, r
 });
 var codex_default = router17;
 
-// src/routes/index.ts
+// src/routes/dungeon.ts
+var import_express18 = __toESM(require_express2(), 1);
 var router18 = (0, import_express18.Router)();
-router18.use(health_default);
-router18.use(auth_default);
-router18.use(classes_default);
-router18.use(characters_default);
-router18.use(battle_default);
-router18.use(encounters_default);
-router18.use(leaderboard_default);
-router18.use(inventory_default);
-router18.use(shop_default);
-router18.use(community_default);
-router18.use(quests_default);
-router18.use(blacksmith_default);
-router18.use(multiplayer_default);
-router18.use(endgame_default);
-router18.use(market_default);
-router18.use(talents_default);
-router18.use(codex_default);
-var routes_default = router18;
+var activeDungeonInstances = /* @__PURE__ */ new Map();
+var dungeonLeaderboard = [
+  {
+    rank: 1,
+    characterId: 9001,
+    characterName: "LongKiem_Vip",
+    difficulty: "nightmare",
+    clearTimeSeconds: 142,
+    clearedAt: new Date(Date.now() - 36e5 * 5).toISOString()
+  },
+  {
+    rank: 2,
+    characterId: 9002,
+    characterName: "BangTam_Nu",
+    difficulty: "nightmare",
+    clearTimeSeconds: 168,
+    clearedAt: new Date(Date.now() - 36e5 * 12).toISOString()
+  },
+  {
+    rank: 3,
+    characterId: 9004,
+    characterName: "HoVe_KimCang",
+    difficulty: "hard",
+    clearTimeSeconds: 115,
+    clearedAt: new Date(Date.now() - 36e5 * 24).toISOString()
+  }
+];
+setInterval(() => {
+  const now = Date.now();
+  for (const [id, inst] of activeDungeonInstances.entries()) {
+    if (now - inst.startTime > 2 * 3600 * 1e3) {
+      activeDungeonInstances.delete(id);
+    }
+  }
+}, 6e4);
+router18.post("/dungeon/enter", requireAuth, async (req, res) => {
+  const userId = req.session.userId;
+  const { characterId, difficulty = "normal" } = req.body;
+  if (!characterId) {
+    res.status(400).json({ error: "Thi\u1EBFu ID nh\xE2n v\u1EADt" });
+    return;
+  }
+  const [character] = await db.select().from(charactersTable).where(and(eq(charactersTable.id, characterId), eq(charactersTable.userId, userId))).limit(1);
+  if (!character) {
+    res.status(404).json({ error: "Kh\xF4ng t\xECm th\u1EA5y nh\xE2n v\u1EADt ho\u1EB7c kh\xF4ng c\xF3 quy\u1EC1n s\u1EDF h\u1EEFu" });
+    return;
+  }
+  const minLevels = {
+    normal: 1,
+    hard: 10,
+    nightmare: 20
+  };
+  const reqLevel = minLevels[difficulty] || 1;
+  if (character.level < reqLevel) {
+    res.status(400).json({
+      error: `C\u1EA5p \u0111\u1ED9 kh\xF4ng \u0111\u1EE7! Ch\u1EBF \u0111\u1ED9 ${difficulty.toUpperCase()} y\xEAu c\u1EA7u \u0111\u1EA1t t\u1ED1i thi\u1EC3u C\u1EA5p ${reqLevel}.`
+    });
+    return;
+  }
+  const instanceId = `dungeon_${characterId}_${Date.now().toString(36)}`;
+  const instance = {
+    instanceId,
+    characterId,
+    userId,
+    characterName: character.name,
+    difficulty,
+    currentRoom: 1,
+    totalRooms: 3,
+    startTime: Date.now(),
+    revivesRemaining: difficulty === "nightmare" ? 3 : 5,
+    cleared: false
+  };
+  activeDungeonInstances.set(instanceId, instance);
+  res.status(200).json({
+    success: true,
+    message: `\u{1F3F0} \u0110\xE3 t\u1EA1o ph\xF2ng ph\xF3 b\u1EA3n c\xF4 l\u1EADp c\u1EA5p \u0111\u1ED9 ${difficulty.toUpperCase()}!`,
+    instance,
+    roomDetails: {
+      room: 1,
+      name: "Ph\xF2ng 1: Ti\u1EC1n \u0110\u1ED3n Qu\xE1i V\u1EADt",
+      description: "Ti\xEAu di\u1EC7t to\xE0n b\u1ED9 b\u1EA7y Slime & Goblin \u0111\u1EC3 m\u1EDF phong \u1EA5n c\u1EEDa ph\xF2ng ti\u1EBFp theo.",
+      monstersCount: 4
+    }
+  });
+});
+router18.post("/dungeon/:instanceId/clear-room", requireAuth, async (req, res) => {
+  const { instanceId } = req.params;
+  const userId = req.session.userId;
+  const instance = activeDungeonInstances.get(instanceId);
+  if (!instance) {
+    res.status(404).json({ error: "Ph\xF3 b\u1EA3n kh\xF4ng t\u1ED3n t\u1EA1i ho\u1EB7c \u0111\xE3 h\u1EBFt h\u1EA1n" });
+    return;
+  }
+  if (instance.userId !== userId) {
+    res.status(403).json({ error: "T\u1EEB ch\u1ED1i truy c\u1EADp: B\u1EA1n kh\xF4ng thu\u1ED9c ph\xF3 b\u1EA3n n\xE0y" });
+    return;
+  }
+  if (instance.cleared) {
+    res.status(400).json({ error: "Ph\xF3 b\u1EA3n n\xE0y \u0111\xE3 \u0111\u01B0\u1EE3c chinh ph\u1EE5c ho\xE0n t\u1EA5t!" });
+    return;
+  }
+  if (instance.currentRoom < instance.totalRooms) {
+    instance.currentRoom += 1;
+    const nextRoomDetails = instance.currentRoom === 2 ? {
+      room: 2,
+      name: "Ph\xF2ng 2: H\u1EBBm N\xFAi Qu\xE1i Tinh Anh",
+      description: "H\u1EA1 g\u1EE5c Chi\u1EBFn Binh Orc & K\u1EF5 S\u0129 H\u1EAFc \xC1m Tinh Anh \u0111\u1EC3 m\u1EDF c\u1ED5ng c\u1EA5m \u0111\u1ECBa.",
+      monstersCount: 3
+    } : {
+      room: 3,
+      name: "Ph\xF2ng 3: Cung \u0110i\u1EC7n H\u1EAFc Long V\u01B0\u01A1ng (Boss Room)",
+      description: "\u0110\u1EA1i chi\u1EBFn Boss H\u1EAFc Long V\u01B0\u01A1ng t\u1ED1i th\u01B0\u1EE3ng!",
+      monstersCount: 1
+    };
+    res.status(200).json({
+      success: true,
+      currentRoom: instance.currentRoom,
+      isFinalRoom: instance.currentRoom === instance.totalRooms,
+      roomDetails: nextRoomDetails,
+      message: `\u{1F513} \u0110\xE3 m\u1EDF phong \u1EA5n! Ti\u1EBFn v\xE0o ${nextRoomDetails.name}.`
+    });
+    return;
+  }
+  instance.cleared = true;
+  const clearTimeSeconds = Math.max(1, Math.round((Date.now() - instance.startTime) / 1e3));
+  instance.clearTimeSeconds = clearTimeSeconds;
+  const rewardsByDiff = {
+    normal: { exp: 350, gold: 180, stones: 2 },
+    hard: { exp: 1200, gold: 650, stones: 5 },
+    nightmare: { exp: 4500, gold: 2400, stones: 12 }
+  };
+  const reward = rewardsByDiff[instance.difficulty] || rewardsByDiff.normal;
+  const [character] = await db.select().from(charactersTable).where(eq(charactersTable.id, instance.characterId)).limit(1);
+  if (character) {
+    await db.update(charactersTable).set({
+      gold: character.gold + reward.gold,
+      experience: character.experience + reward.exp
+    }).where(eq(charactersTable.id, instance.characterId));
+  }
+  const newEntry = {
+    rank: 0,
+    characterId: instance.characterId,
+    characterName: instance.characterName,
+    difficulty: instance.difficulty,
+    clearTimeSeconds,
+    clearedAt: (/* @__PURE__ */ new Date()).toISOString()
+  };
+  dungeonLeaderboard.push(newEntry);
+  dungeonLeaderboard.sort((a, b) => a.clearTimeSeconds - b.clearTimeSeconds);
+  dungeonLeaderboard.forEach((item, idx) => {
+    item.rank = idx + 1;
+  });
+  if (dungeonLeaderboard.length > 20) {
+    dungeonLeaderboard.length = 20;
+  }
+  const updatedChar = await recalculateCharacterStats(instance.characterId);
+  res.status(200).json({
+    success: true,
+    cleared: true,
+    clearTimeSeconds,
+    rewards: reward,
+    character: updatedChar,
+    message: `\u{1F389} CHINH PH\u1EE4C TH\xC0NH C\xD4NG HANG \u0110\u1ED8NG PH\xD3 B\u1EA2N! Th\u1EDDi gian: ${clearTimeSeconds} gi\xE2y. Nh\u1EADn +${reward.exp} EXP, +${reward.gold} V\xE0ng, +${reward.stones} \u0110\xE1 C\u01B0\u1EDDng H\xF3a!`
+  });
+});
+router18.get("/dungeon/leaderboard", (_req, res) => {
+  res.status(200).json({
+    success: true,
+    leaderboard: dungeonLeaderboard.slice(0, 10)
+  });
+});
+var dungeon_default = router18;
+
+// src/routes/index.ts
+var router19 = (0, import_express19.Router)();
+router19.use(health_default);
+router19.use(auth_default);
+router19.use(classes_default);
+router19.use(characters_default);
+router19.use(battle_default);
+router19.use(encounters_default);
+router19.use(leaderboard_default);
+router19.use(inventory_default);
+router19.use(shop_default);
+router19.use(community_default);
+router19.use(quests_default);
+router19.use(blacksmith_default);
+router19.use(multiplayer_default);
+router19.use(endgame_default);
+router19.use(market_default);
+router19.use(talents_default);
+router19.use(codex_default);
+router19.use(dungeon_default);
+var routes_default = router19;
 
 // src/lib/logger.ts
 var import_pino = __toESM(require_pino(), 1);
@@ -68371,7 +68594,7 @@ var logger = (0, import_pino.default)({
 });
 
 // src/app.ts
-var app = (0, import_express19.default)();
+var app = (0, import_express20.default)();
 app.set("trust proxy", 1);
 app.use(
   (0, import_pino_http.default)({
@@ -68398,8 +68621,8 @@ app.use(
     credentials: true
   })
 );
-app.use(import_express19.default.json());
-app.use(import_express19.default.urlencoded({ extended: true }));
+app.use(import_express20.default.json());
+app.use(import_express20.default.urlencoded({ extended: true }));
 app.use((0, import_cookie_parser.default)());
 var sessionStore;
 if (isPostgres && pool) {
@@ -68432,8 +68655,8 @@ var sessionMiddleware = (0, import_express_session.default)({
 });
 app.use(sessionMiddleware);
 app.use("/api", routes_default);
-app.use("/assets/exported", import_express19.default.static(path2.resolve(process.cwd(), "assets/exported")));
-app.use("/game-sandbox", import_express19.default.static(path2.resolve(process.cwd(), "game")));
+app.use("/assets/exported", import_express20.default.static(path2.resolve(process.cwd(), "assets/exported")));
+app.use("/game-sandbox", import_express20.default.static(path2.resolve(process.cwd(), "game")));
 var potentialStaticPaths = [
   path2.resolve(process.cwd(), "artifacts/mmorpg-game/dist/public"),
   path2.resolve(process.cwd(), "dist/public"),
@@ -68444,7 +68667,7 @@ var potentialStaticPaths = [
 var staticDir = potentialStaticPaths.find((p) => fs2.existsSync(p));
 if (staticDir) {
   logger.info({ staticDir }, "Serving static frontend assets");
-  app.use(import_express19.default.static(staticDir));
+  app.use(import_express20.default.static(staticDir));
   app.use((req, res, next) => {
     if (req.path.startsWith("/api")) return next();
     res.sendFile(path2.join(staticDir, "index.html"));

@@ -17,6 +17,7 @@ export const MultiplayerSyncManager = memo(function MultiplayerSyncManager() {
   const overheadChatBubble = useGameWorldStore((s) => s.overheadChatBubble);
   const remotePlayers = useGameWorldStore((s) => s.remotePlayers);
   const setRemotePlayers = useGameWorldStore((s) => s.setRemotePlayers);
+  const activeCharacterId = useGameWorldStore((s) => s.activeCharacterId);
 
   const lastSyncTime = useRef(0);
 
@@ -30,12 +31,15 @@ export const MultiplayerSyncManager = memo(function MultiplayerSyncManager() {
       if (now - lastSyncTime.current < 200) return;
       lastSyncTime.current = now;
 
+      const targetId = activeCharacterId || Number(localStorage.getItem("selectedCharacterId")) || 1;
+      const store = useGameWorldStore.getState();
+
       try {
         const res = await fetch("/api/multiplayer/sync", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
-            characterId: 1, // local player identifier
+            characterId: targetId,
             name: playerName,
             classId: playerClassId,
             level: playerLevel,
@@ -51,6 +55,13 @@ export const MultiplayerSyncManager = memo(function MultiplayerSyncManager() {
             chatBubble: overheadChatBubble,
             zoneId: currentZone,
             serverId: "s1_long_vuong",
+            hairStyle: store.playerHairStyle || "phong_van",
+            hairColor: store.playerHairColor || "#1e1e1e",
+            outfitId: store.playerOutfitId || "basic",
+            auraIds: store.playerAuraIds || "[]",
+            isMounted: store.isMounted || false,
+            mountId: store.activeMountId || "",
+            petId: store.petActive ? store.petType : "",
           }),
         });
 

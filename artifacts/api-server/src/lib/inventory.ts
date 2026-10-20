@@ -263,8 +263,15 @@ export async function ensureMonsterCatalog(): Promise<void> {
 
 export async function getMonster(monsterId: string) {
   await ensureMonsterCatalog();
+  const aliasMap: Record<string, string> = {
+    slime_swamp: "slime",
+    wolf_wild: "wolf",
+    goblin_scout: "goblin",
+    dragon_boss: "black_dragon_king",
+  };
+  const resolvedId = aliasMap[monsterId] || monsterId;
   const [monster] = await db.select().from(monstersTable)
-    .where(eq(monstersTable.id, monsterId)).limit(1);
+    .where(eq(monstersTable.id, resolvedId)).limit(1);
   return monster;
 }
 

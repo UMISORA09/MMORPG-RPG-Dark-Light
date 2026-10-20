@@ -1,6 +1,6 @@
 import { Router } from "express";
 import bcrypt from "bcryptjs";
-import { db, isPostgres, usersTable, serversTable, wipeAllAccountsAndUserData } from "@workspace/db";
+import { db, usersTable, serversTable, wipeAllAccountsAndUserData } from "@workspace/db";
 import { eq } from "drizzle-orm";
 import { RegisterBody, LoginBody, SetServerBody } from "@workspace/api-zod";
 import { requireAuth, extractAuthUser } from "../middlewares/requireAuth";
@@ -14,6 +14,22 @@ declare module "express-session" {
 }
 
 const router = Router();
+
+// In-memory rate limiting cho endpoint xác thực (tối đa 15 yêu cầu / phút trên mỗi IP)
+const authRateLimits = new Map<string, { count: number; resetAt: number }>();
+function checkAuthRateLimit(ip: string): boolean {
+  const now = Date.now();
+  const entry = authRateLimits.get(ip);
+  if (!entry || now > entry.resetAt) {
+    authRateLimits.set(ip, { count: 1, resetAt: now + 60000 });
+    return true;
+  }
+  if (entry.count >= 15) {
+    return false;
+  }
+  entry.count++;
+  return true;
+}
 
 const handleSetServer = async (req: any, res: any) => {
   const parsed = SetServerBody.safeParse(req.body);
@@ -68,6 +84,11 @@ export function getDeterministicUserId(username: string): number {
 }
 
 router.post("/auth/register", async (req, res) => {
+  const clientIp = req.ip || req.socket.remoteAddress || "unknown";
+  if (!checkAuthRateLimit(clientIp)) {
+    return res.status(429).json({ error: "Quá nhiều yêu cầu đăng ký. Vui lòng thử lại sau 1 phút." });
+  }
+
   const parsed = RegisterBody.safeParse(req.body);
   if (!parsed.success) {
     return res.status(400).json({ error: "Tên đăng nhập và mật khẩu không hợp lệ" });
@@ -76,35 +97,29 @@ router.post("/auth/register", async (req, res) => {
   const { username, password } = parsed.data;
   const cleanUsername = username.trim();
 
-  let [user] = await db
+  const [existingUser] = await db
     .select()
     .from(usersTable)
     .where(eq(usersTable.username, cleanUsername))
     .limit(1);
 
-  if (user) {
-    if (!isPostgres) {
-      // In serverless standalone mode, gracefully log in and refresh password
-      const passwordHash = await bcrypt.hash(password, 10);
-      await db.update(usersTable).set({ passwordHash }).where(eq(usersTable.id, user.id));
-    } else {
-      return res.status(409).json({ error: "Tên đăng nhập đã tồn tại. Vui lòng chọn tên khác." });
-    }
-  } else {
-    const userId = getDeterministicUserId(cleanUsername);
-    const passwordHash = await bcrypt.hash(password, 10);
-    const [inserted] = await db
-      .insert(usersTable)
-      .values({
-        id: userId,
-        username: cleanUsername,
-        passwordHash,
-        selectedRegion: "VN",
-        selectedServerId: "s1_long_vuong",
-      })
-      .returning();
-    user = inserted;
+  if (existingUser) {
+    return res.status(409).json({ error: "Tên đăng nhập đã tồn tại. Vui lòng chọn tên khác." });
   }
+
+  const userId = getDeterministicUserId(cleanUsername);
+  const passwordHash = await bcrypt.hash(password, 10);
+  const [user] = await db
+    .insert(usersTable)
+    .values({
+      id: userId,
+      username: cleanUsername,
+      passwordHash,
+      role: "PLAYER",
+      selectedRegion: "VN",
+      selectedServerId: "s1_long_vuong",
+    })
+    .returning();
 
   if (req.session) {
     req.session.userId = user.id;
@@ -130,6 +145,7 @@ router.post("/auth/register", async (req, res) => {
     user: {
       id: user.id,
       username: user.username,
+      role: user.role || "PLAYER",
       createdAt: user.createdAt,
       selectedRegion: user.selectedRegion,
       selectedServerId: user.selectedServerId,
@@ -139,6 +155,11 @@ router.post("/auth/register", async (req, res) => {
 });
 
 router.post("/auth/login", async (req, res) => {
+  const clientIp = req.ip || req.socket.remoteAddress || "unknown";
+  if (!checkAuthRateLimit(clientIp)) {
+    return res.status(429).json({ error: "Quá nhiều lần thử đăng nhập. Vui lòng đợi 1 phút trước khi thử lại." });
+  }
+
   const parsed = LoginBody.safeParse(req.body);
   if (!parsed.success) {
     return res.status(400).json({ error: "Dữ liệu không hợp lệ" });
@@ -147,42 +168,19 @@ router.post("/auth/login", async (req, res) => {
   const { username, password } = parsed.data;
   const cleanUsername = username.trim();
 
-  let [user] = await db
+  const [user] = await db
     .select()
     .from(usersTable)
     .where(eq(usersTable.username, cleanUsername))
     .limit(1);
 
   if (!user) {
-    if (!isPostgres) {
-      // Auto-provision user with deterministic ID so user ID is 100% consistent across all lambdas
-      const userId = getDeterministicUserId(cleanUsername);
-      const passwordHash = await bcrypt.hash(password, 10);
-      const [inserted] = await db
-        .insert(usersTable)
-        .values({
-          id: userId,
-          username: cleanUsername,
-          passwordHash,
-          selectedRegion: "VN",
-          selectedServerId: "s1_long_vuong",
-        })
-        .returning();
-      user = inserted;
-    } else {
-      return res.status(401).json({ error: "Tên đăng nhập hoặc mật khẩu không chính xác." });
-    }
-  } else {
-    const valid = await bcrypt.compare(password, user.passwordHash);
-    if (!valid) {
-      if (!isPostgres) {
-        // Sync password in memory mode so user is never locked out
-        const passwordHash = await bcrypt.hash(password, 10);
-        await db.update(usersTable).set({ passwordHash }).where(eq(usersTable.id, user.id));
-      } else {
-        return res.status(401).json({ error: "Tên đăng nhập hoặc mật khẩu không chính xác." });
-      }
-    }
+    return res.status(401).json({ error: "Tên đăng nhập hoặc mật khẩu không chính xác." });
+  }
+
+  const valid = await bcrypt.compare(password, user.passwordHash);
+  if (!valid) {
+    return res.status(401).json({ error: "Tên đăng nhập hoặc mật khẩu không chính xác." });
   }
 
   if (req.session) {
@@ -209,9 +207,11 @@ router.post("/auth/login", async (req, res) => {
     user: {
       id: user.id,
       username: user.username,
+      role: user.role || "PLAYER",
       createdAt: user.createdAt,
       selectedRegion: user.selectedRegion,
       selectedServerId: user.selectedServerId,
+      lastCharacterId: user.lastCharacterId ?? null,
     },
   });
 });
@@ -233,6 +233,7 @@ const handleGetMe = async (req: any, res: any) => {
   return res.status(200).json({
     id: user.id,
     username: user.username,
+    role: user.role || "PLAYER",
     createdAt: user.createdAt,
     selectedRegion: user.selectedRegion,
     selectedServerId: user.selectedServerId,
@@ -244,7 +245,31 @@ router.get("/auth/me", handleGetMe);
 router.get("/users/me", handleGetMe);
 router.get("/api/users/me", handleGetMe);
 
-const handleResetAllAccounts = async (_req: any, res: any) => {
+/**
+ * Endpoint nguy hiểm: Xóa toàn bộ database và tài khoản
+ * Bảo vệ:
+ * 1. Tuyệt đối vô hiệu hóa trên Production / Vercel.
+ * 2. Ngay cả ở môi trường phát triển cục bộ, bắt buộc phải có ADMIN_SECRET_KEY hợp lệ.
+ */
+const handleResetAllAccounts = async (req: any, res: any) => {
+  const isProduction = process.env.NODE_ENV === "production" || Boolean(process.env.VERCEL);
+  if (isProduction) {
+    return res.status(403).json({
+      success: false,
+      error: "BẢO VỆ PRODUCTION: Endpoint đặt lại database đã bị vô hiệu hóa an toàn.",
+    });
+  }
+
+  const adminSecret = process.env.ADMIN_SECRET_KEY;
+  const providedSecret = req.headers?.["x-admin-secret"] || req.body?.adminSecret;
+
+  if (!adminSecret || providedSecret !== adminSecret) {
+    return res.status(403).json({
+      success: false,
+      error: "Từ chối truy cập: Yêu cầu khóa bảo mật Quản trị viên (ADMIN_SECRET_KEY) hợp lệ.",
+    });
+  }
+
   try {
     await wipeAllAccountsAndUserData();
     return res.status(200).json({

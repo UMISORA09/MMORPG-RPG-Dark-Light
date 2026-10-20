@@ -28,36 +28,14 @@ export async function extractAuthUser(req: any): Promise<any | null> {
     return null;
   }
 
-  let [user] = await db
+  const [user] = await db
     .select()
     .from(usersTable)
     .where(eq(usersTable.id, userId))
     .limit(1);
 
-  // If running in In-Memory / Standalone mode on serverless and user was not found:
-  // Automatically restore user record from the verified token
-  if (!user && tokenData) {
-    try {
-      const inserted = await db
-        .insert(usersTable)
-        .values({
-          id: tokenData.id,
-          username: tokenData.username || `Hero_${tokenData.id}`,
-          passwordHash: "stateless_token_auth",
-          selectedRegion: tokenData.selectedRegion || "VN",
-          selectedServerId: tokenData.selectedServerId || "s1_long_vuong",
-        })
-        .returning();
-      user = inserted[0];
-    } catch {
-      [user] = await db
-        .select()
-        .from(usersTable)
-        .where(eq(usersTable.id, userId))
-        .limit(1);
-    }
-  }
-
+  // Bảo đảm an toàn: Tuyệt đối KHÔNG tự tạo lại tài khoản đã bị xóa dựa trên token cũ!
+  // Nếu tài khoản không còn trong database, token/session coi như vô hiệu.
   if (!user) {
     return null;
   }
@@ -82,5 +60,34 @@ export async function requireAuth(req: any, res: any, next: any): Promise<void> 
     res.status(401).json({ error: "Chưa đăng nhập" });
     return;
   }
+  next();
+}
+
+/**
+ * Middleware phân quyền nghiêm ngặt dành cho các thao tác quản trị GM/Admin.
+ * Ngăn chặn tuyệt đối người dùng thông thường gọi các lệnh GM hoặc tự cấp tài nguyên.
+ */
+export async function requireGMOrAdmin(req: any, res: any, next: any): Promise<void> {
+  const user = await extractAuthUser(req);
+  if (!user) {
+    if (req.session?.destroy) {
+      req.session.destroy(() => undefined);
+    }
+    res.status(401).json({ error: "Chưa đăng nhập" });
+    return;
+  }
+
+  const gmSecret = process.env.GM_SECRET_KEY;
+  const headerSecret = req.headers?.["x-gm-secret"];
+  const isSecretAuthorized = Boolean(gmSecret && headerSecret && headerSecret === gmSecret);
+  const userRole = (user.role || "PLAYER").toUpperCase();
+
+  if (userRole !== "ADMIN" && userRole !== "GM" && !isSecretAuthorized) {
+    res.status(403).json({
+      error: "Yêu cầu quyền Quản trị viên (GM/Admin). Bạn không được phép sử dụng lệnh này.",
+    });
+    return;
+  }
+
   next();
 }

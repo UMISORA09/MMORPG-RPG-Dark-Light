@@ -178,8 +178,14 @@ export class CharacterPersistenceService {
         throw new InventoryRuleError("Không tìm thấy nhân vật hoặc không có quyền sở hữu.", 404);
       }
 
-      // 2. Concurrency Revision Check
+      // 2. Concurrency Revision Check (Optimistic Concurrency Control)
       const currentRev = Number(existingChar.revision || 1);
+      if (payload.revision !== undefined && Number(payload.revision) < currentRev) {
+        throw new InventoryRuleError(
+          `Xung đột phiên bản dữ liệu (Optimistic Concurrency Conflict): Máy chủ đang ở rev ${currentRev}, dữ liệu gửi lên ở rev ${payload.revision}. Vui lòng đồng bộ lại trạng thái.`,
+          409
+        );
+      }
       const clientRev = payload.revision !== undefined ? Number(payload.revision) : currentRev;
       const nextRev = Math.max(currentRev, clientRev) + 1;
 

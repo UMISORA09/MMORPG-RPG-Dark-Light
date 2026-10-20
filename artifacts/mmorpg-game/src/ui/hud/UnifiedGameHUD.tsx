@@ -37,6 +37,7 @@ export const UnifiedGameHUD = memo(function UnifiedGameHUD({
   const bossMaxHealth = useGameWorldStore((s) => s.bossMaxHealth);
   const bossActive = useGameWorldStore((s) => s.bossActive);
   const bossPhase = useGameWorldStore((s) => s.bossPhase);
+  const bossIsEnraged = useGameWorldStore((s) => s.bossIsEnraged);
   const bossStagger = useGameWorldStore((s) => s.bossStagger);
   const bossIsStaggered = useGameWorldStore((s) => s.bossIsStaggered);
   const bossCastingSpell = useGameWorldStore((s) => s.bossCastingSpell);
@@ -125,8 +126,18 @@ export const UnifiedGameHUD = memo(function UnifiedGameHUD({
                   <span>🐉</span>
                   <span className="truncate">{bossName}</span>
                   {bossPhase === 2 && (
-                    <span className="px-1.5 py-0.2 rounded bg-red-600 text-white font-mono text-[9px] animate-pulse">
-                      PHASE 2: CUỒNG NỘ
+                    <span className="px-1.5 py-0.2 rounded bg-amber-600 text-white font-mono text-[9px] animate-pulse">
+                      PHASE 2: TRIỆU HỒI
+                    </span>
+                  )}
+                  {bossPhase === 3 && (
+                    <span className="px-1.5 py-0.2 rounded bg-rose-600 text-white font-mono text-[9px] animate-pulse">
+                      PHASE 3: CUỒNG SÁT
+                    </span>
+                  )}
+                  {bossIsEnraged && (
+                    <span className="px-1.5 py-0.2 rounded bg-red-700 text-yellow-200 font-mono text-[9px] font-black animate-bounce border border-yellow-400">
+                      ⚠️ BERSERK ENRAGED!
                     </span>
                   )}
                 </span>

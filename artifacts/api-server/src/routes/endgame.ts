@@ -4,9 +4,9 @@ import {
   db,
   charactersTable,
   characterItemsTable,
-  itemsTable,
+  gmAuditLogsTable,
 } from "@workspace/db";
-import { requireAuth } from "../middlewares/requireAuth";
+import { requireAuth, requireGMOrAdmin } from "../middlewares/requireAuth";
 import { recalculateCharacterStats } from "../services/CharacterInventoryService";
 
 const router = Router();
@@ -32,7 +32,7 @@ router.post("/characters/:characterId/allocate-stats", requireAuth, async (req, 
     .limit(1);
 
   if (!character) {
-    res.status(404).json({ error: "Không tìm thấy nhân vật" });
+    res.status(404).json({ error: "Không tìm thấy nhân vật hoặc không có quyền sở hữu" });
     return;
   }
 
@@ -114,10 +114,26 @@ function getArenaRank(honorPoints: number) {
   return rank;
 }
 
+// In-memory rate limiting cho trận đấu PvP (tối đa 10 trận / phút / nhân vật)
+const pvpMatchRateLimits = new Map<number, { count: number; resetAt: number }>();
+
 router.post("/characters/:characterId/pvp/match", requireAuth, async (req, res): Promise<void> => {
   const characterId = Number(req.params.characterId);
   const userId = req.session.userId!;
   const { opponentName, victory = true } = req.body;
+
+  // Chống spam kết quả PvP giả mạo
+  const now = Date.now();
+  const rateLimit = pvpMatchRateLimits.get(characterId);
+  if (!rateLimit || now > rateLimit.resetAt) {
+    pvpMatchRateLimits.set(characterId, { count: 1, resetAt: now + 60000 });
+  } else {
+    if (rateLimit.count >= 10) {
+      res.status(429).json({ error: "Thao tác quá nhanh. Vui lòng nghỉ giữa các trận đấu PvP." });
+      return;
+    }
+    rateLimit.count++;
+  }
 
   const [character] = await db
     .select()
@@ -126,7 +142,12 @@ router.post("/characters/:characterId/pvp/match", requireAuth, async (req, res):
     .limit(1);
 
   if (!character) {
-    res.status(404).json({ error: "Không tìm thấy nhân vật" });
+    res.status(404).json({ error: "Không tìm thấy nhân vật hoặc không có quyền sở hữu" });
+    return;
+  }
+
+  if (character.hp <= 0) {
+    res.status(400).json({ error: "Nhân vật đang tử trận, không thể tiếp tục thi đấu Đấu Trường." });
     return;
   }
 
@@ -165,9 +186,9 @@ router.post("/characters/:characterId/pvp/match", requireAuth, async (req, res):
 });
 
 // ==============================================================================
-// 3. GM ADMIN PANEL COMMANDS (Vũ Khí Trình Diễn Đồ Án)
+// 3. GM ADMIN PANEL COMMANDS (Yêu cầu quyền GM/Admin thực sự)
 // ==============================================================================
-router.post("/characters/:characterId/gm/action", requireAuth, async (req, res): Promise<void> => {
+router.post("/characters/:characterId/gm/action", requireAuth, requireGMOrAdmin, async (req, res): Promise<void> => {
   const characterId = Number(req.params.characterId);
   const userId = req.session.userId!;
   const { action } = req.body;
@@ -179,8 +200,21 @@ router.post("/characters/:characterId/gm/action", requireAuth, async (req, res):
     .limit(1);
 
   if (!character) {
-    res.status(404).json({ error: "Không tìm thấy nhân vật" });
+    res.status(404).json({ error: "Không tìm thấy nhân vật hoặc không có quyền sở hữu" });
     return;
+  }
+
+  // Ghi Audit Log vào hệ thống nhật ký GM
+  try {
+    await db.insert(gmAuditLogsTable).values({
+      userId,
+      characterId,
+      action: String(action || "unknown"),
+      payloadJson: JSON.stringify(req.body || {}),
+      ipAddress: req.ip || req.socket.remoteAddress || "unknown",
+    });
+  } catch (logErr) {
+    console.warn("[GM Audit Log] Không thể ghi audit log:", logErr);
   }
 
   // 0. Set Level trực tiếp (Lv.500 / Lv.999)
@@ -335,4 +369,3 @@ router.post("/characters/:characterId/gm/action", requireAuth, async (req, res):
 });
 
 export default router;
-

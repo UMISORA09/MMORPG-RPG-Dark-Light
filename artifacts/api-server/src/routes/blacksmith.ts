@@ -628,7 +628,11 @@ router.post("/characters/:characterId/blacksmith/socket", requireAuth, async (re
     return;
   }
 
-  const rarity = (gear.rarity || "common").toLowerCase();
+  let rarity = (gear.rarity || "common").toLowerCase();
+  if (rarity === "common") {
+    const [it] = await db.select().from(itemsTable).where(eq(itemsTable.id, gear.itemId)).limit(1);
+    if (it?.rarity) rarity = it.rarity.toLowerCase();
+  }
   const maxSockets = rarity === "miracle" || rarity === "legendary" ? 3 : rarity === "epic" ? 2 : rarity === "rare" ? 1 : 0;
   if (maxSockets <= 0) {
     res.status(400).json({ error: "Trang bị phẩm chất Rare trở lên mới có lỗ khảm ngọc!" });

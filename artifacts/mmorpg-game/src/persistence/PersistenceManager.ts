@@ -87,6 +87,7 @@ const WAL_PREFIX = "clb_wal_snapshot_";
 let heartbeatTimer: ReturnType<typeof setInterval> | null = null;
 let lastSyncedSnapshotStr = "";
 let listenersInitialized = false;
+let isSyncing = false;
 
 export class PersistenceManager {
   /**

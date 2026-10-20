@@ -13,6 +13,8 @@ import { CombatService } from "../services/CombatService";
 
 const router = Router();
 
+const lastBattleTimestamp = new Map<number, number>();
+
 function simulateBattle(
   playerAtk: number,
   playerDef: number,
@@ -101,6 +103,17 @@ router.post("/characters/:characterId/battle", requireAuth, async (req, res) => 
   if (!character || character.userId !== req.session.userId) {
     return res.status(404).json({ error: "Không tìm thấy nhân vật" });
   }
+
+  if (character.hp <= 0) {
+    return res.status(400).json({ error: "Nhân vật đang tử trận, không thể tiếp tục chiến đấu." });
+  }
+
+  const now = Date.now();
+  const lastTime = lastBattleTimestamp.get(characterId) || 0;
+  if (now - lastTime < 450) {
+    return res.status(429).json({ error: "Thao tác chiến đấu quá nhanh. Vui lòng thử lại sau giây lát." });
+  }
+  lastBattleTimestamp.set(characterId, now);
 
   await ensureItemCatalog();
   const effectiveCharacter = await toCharacterResponse(character);

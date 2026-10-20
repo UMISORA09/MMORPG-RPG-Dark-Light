@@ -6,6 +6,7 @@ export const usersTable = pgTable("users", {
   id: serial("id").primaryKey(),
   username: text("username").notNull().unique(),
   passwordHash: text("password_hash").notNull(),
+  role: text("role").notNull().default("PLAYER"),
   forumTitle: text("forum_title").notNull().default("Tân Thủ Long Tộc"),
   selectedRegion: text("selected_region").notNull().default("VN"),
   selectedServerId: text("selected_server_id").notNull().default("s1_long_vuong"),

@@ -43,6 +43,7 @@ export const GMAdminPanel = memo(function GMAdminPanel() {
   const setUnallocatedStatPoints = useGameWorldStore((s) => s.setUnallocatedStatPoints);
   const unallocatedStatPoints = useGameWorldStore((s) => s.unallocatedStatPoints);
   const setZone = useGameWorldStore((s) => s.setZone);
+  const activeCharId = useGameWorldStore((s) => (s as any).characterId || (s as any).activeCharacterId || 1);
 
   const [loadingAction, setLoadingAction] = useState<string | null>(null);
   const [statusFeedback, setStatusFeedback] = useState<string | null>(null);
@@ -86,11 +87,16 @@ export const GMAdminPanel = memo(function GMAdminPanel() {
       );
       showFeedback(`Nhân vật đã thăng cấp trực tiếp lên Lv.${targetLevel} (+${bonusStats} Điểm Tiềm Năng)!`);
 
-      await fetch("/api/characters/1/gm/action", {
+      const gmRes = await fetch(`/api/characters/${activeCharId}/gm/action`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ action: "set_level", level: targetLevel }),
-      }).catch(() => {});
+      }).catch(() => null);
+      if (gmRes && !gmRes.ok) {
+        const errData = await gmRes.json().catch(() => ({}));
+        showFeedback(errData.error || "Lệnh GM bị từ chối: Yêu cầu quyền Quản trị viên (GM/Admin)!");
+        return;
+      }
     } finally {
       setLoadingAction(null);
     }
@@ -121,11 +127,16 @@ export const GMAdminPanel = memo(function GMAdminPanel() {
       showFeedback("Đã cấp +10 Cấp và 50 Điểm Tiềm Năng vào nhân vật!");
 
       // Call API server
-      await fetch("/api/characters/1/gm/action", {
+      const gmRes = await fetch(`/api/characters/${activeCharId}/gm/action`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ action: "add_levels" }),
-      }).catch(() => {});
+      }).catch(() => null);
+      if (gmRes && !gmRes.ok) {
+        const errData = await gmRes.json().catch(() => ({}));
+        showFeedback(errData.error || "Lệnh GM bị từ chối: Yêu cầu quyền Quản trị viên (GM/Admin)!");
+        return;
+      }
     } finally {
       setLoadingAction(null);
     }
@@ -140,11 +151,16 @@ export const GMAdminPanel = memo(function GMAdminPanel() {
       addFloatingText("🪙 +50,000 VÀNG & ĐÁ CƯỜNG HÓA!", playerPosition.clone().add(new THREE.Vector3(0, 2.5, 0)), "#f59e0b");
       showFeedback("Đã cấp +50,000 Vàng vào tài khoản!");
 
-      await fetch("/api/characters/1/gm/action", {
+      const gmRes = await fetch(`/api/characters/${activeCharId}/gm/action`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ action: "add_gold_stones" }),
-      }).catch(() => {});
+      }).catch(() => null);
+      if (gmRes && !gmRes.ok) {
+        const errData = await gmRes.json().catch(() => ({}));
+        showFeedback(errData.error || "Lệnh GM bị từ chối: Yêu cầu quyền Quản trị viên (GM/Admin)!");
+        return;
+      }
     } finally {
       setLoadingAction(null);
     }
@@ -192,11 +208,16 @@ export const GMAdminPanel = memo(function GMAdminPanel() {
       addFloatingText("🎁 RƯƠNG HOÀNG KIM ĐÃ RƠI DƯỚI CHÂN!", playerPosition.clone().add(new THREE.Vector3(0, 2.5, 0)), "#ffaa00");
       showFeedback("Rương Thần Binh Hoàng Kim đã xuất hiện ngay cạnh bạn!");
 
-      await fetch("/api/characters/1/gm/action", {
+      const gmRes = await fetch(`/api/characters/${activeCharId}/gm/action`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ action: "spawn_legendary" }),
-      }).catch(() => {});
+      }).catch(() => null);
+      if (gmRes && !gmRes.ok) {
+        const errData = await gmRes.json().catch(() => ({}));
+        showFeedback(errData.error || "Lệnh GM bị từ chối: Yêu cầu quyền Quản trị viên (GM/Admin)!");
+        return;
+      }
     } finally {
       setLoadingAction(null);
     }
@@ -265,11 +286,16 @@ export const GMAdminPanel = memo(function GMAdminPanel() {
       addFloatingText("🔥 VŨ KHÍ CƯỜNG HÓA +15 (RỒNG LỬA TỐI THƯỢNG)!", playerPosition.clone().add(new THREE.Vector3(0, 2.8, 0)), "#ffaa00");
       showFeedback("Vũ khí đã đạt +15 Thần Cấp, kích hoạt Aura Rồng Lửa!");
 
-      await fetch("/api/characters/1/gm/action", {
+      const gmRes = await fetch(`/api/characters/${activeCharId}/gm/action`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ action: "enhance_max" }),
-      }).catch(() => {});
+      }).catch(() => null);
+      if (gmRes && !gmRes.ok) {
+        const errData = await gmRes.json().catch(() => ({}));
+        showFeedback(errData.error || "Lệnh GM bị từ chối: Yêu cầu quyền Quản trị viên (GM/Admin)!");
+        return;
+      }
     } finally {
       setLoadingAction(null);
     }

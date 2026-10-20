@@ -51,6 +51,7 @@ export interface CharacterInventoryItem {
   classId?: string;
   requiredClass?: string;
   runesJson?: string;
+  slotIndex?: number;
 }
 
 export interface FloatingTextItem {
@@ -60,6 +61,7 @@ export interface FloatingTextItem {
   color: string;
   lifetime: number;
   maxLifetime: number;
+  opacity?: number;
 }
 
 export interface BulletProjectile {
@@ -87,6 +89,8 @@ export interface SlashEffect {
   fanAngleDeg?: number; // e.g. 75 degrees (60-90 deg)
   damage?: number;
   hitMonsterIds?: Set<number>;
+  isTaunt?: boolean;
+  tauntRadius?: number;
 }
 
 export interface AfterimageGhost {
@@ -233,7 +237,8 @@ export interface GameWorldState {
   bossHealth: number;
   bossMaxHealth: number;
   bossActive: boolean;
-  bossPhase: 1 | 2;
+  bossPhase: 1 | 2 | 3;
+  bossIsEnraged: boolean;
   bossStagger: number; // 0 to 100%
   bossIsStaggered: boolean;
   bossCastingSpell: string | null;
@@ -479,7 +484,8 @@ export interface GameWorldState {
     maxHealth?: number;
     stagger?: number;
     isStaggered?: boolean;
-    phase?: 1 | 2;
+    phase?: 1 | 2 | 3;
+    isEnraged?: boolean;
     castingSpell?: string | null;
     castingTimer?: number;
   }) => void;
@@ -689,6 +695,7 @@ export const useGameWorldStore = create<GameWorldState>((set, get) => ({
   bossMaxHealth: 1500,
   bossActive: false,
   bossPhase: 1,
+  bossIsEnraged: false,
   bossStagger: 0,
   bossIsStaggered: false,
   bossCastingSpell: null,
@@ -2080,7 +2087,8 @@ export const useGameWorldStore = create<GameWorldState>((set, get) => ({
         isFromMonster: false,
       });
     } else {
-      const isCone = skill.targetImpact.hitShape === "CONE_FRONT" || skill.targetImpact.hitShape === "ARC_SWEEP";
+      const isTaunt = (skill as any).crowdControl?.type === "TAUNT" || skill.targetImpact?.crowdControl?.type === "TAUNT" || skill.id === "tank_aegis_sanctuary";
+      const isCone = (skill.targetImpact.hitShape as string) === "CONE_FRONT" || (skill.targetImpact.hitShape as string) === "ARC_SWEEP" || (skill.targetImpact.hitShape as string) === "CONE_120";
       s.addSlashEffect({
         id: nextSlashId++,
         position: newPos.clone().add(forwardVec.clone().multiplyScalar(1.5)).add(new THREE.Vector3(0, 0.9, 0)),
@@ -2092,6 +2100,8 @@ export const useGameWorldStore = create<GameWorldState>((set, get) => ({
         directionVec: forwardVec.clone(),
         fanAngleDeg: 80, // Within 60-90° range
         damage: skillDmg,
+        isTaunt,
+        tauntRadius: 8.5,
       });
     }
 
@@ -2293,6 +2303,7 @@ export const useGameWorldStore = create<GameWorldState>((set, get) => ({
       bossStagger: data.stagger !== undefined ? Math.max(0, Math.min(100, data.stagger)) : s.bossStagger,
       bossIsStaggered: data.isStaggered !== undefined ? data.isStaggered : s.bossIsStaggered,
       bossPhase: data.phase ?? s.bossPhase,
+      bossIsEnraged: data.isEnraged !== undefined ? data.isEnraged : s.bossIsEnraged,
       bossCastingSpell: data.castingSpell !== undefined ? data.castingSpell : s.bossCastingSpell,
       bossCastingTimer: data.castingTimer !== undefined ? data.castingTimer : s.bossCastingTimer,
     }));
