@@ -65015,20 +65015,33 @@ var CombatService = class {
       )).limit(1);
       if (!character) throw new Error("Kh\xF4ng t\xECm th\u1EA5y nh\xE2n v\u1EADt ho\u1EB7c kh\xF4ng c\xF3 quy\u1EC1n chi\u1EBFn \u0111\u1EA5u");
       const inParty = playerPartyMap.has(input.characterId);
-      const effectiveExp = inParty && input.expGained > 0 ? Math.round(input.expGained * 1.15) : input.expGained;
+      const effectiveExp = inParty && input.expGained > 0 && input.victory ? Math.round(input.expGained * 1.15) : input.victory ? input.expGained : 0;
+      const effectiveGold = input.victory ? input.goldGained : 0;
       const progression = calculateLevelProgression(character.experience, character.level, effectiveExp);
       const levelStats = getStatsForLevel3(character.classId, progression.newLevel);
+      let targetHp;
+      if (input.victory) {
+        if (progression.leveledUp) {
+          targetHp = levelStats.hp;
+        } else if (input.playerFinalHp !== void 0) {
+          targetHp = Math.min(levelStats.hp, Math.max(1, input.playerFinalHp));
+        } else {
+          targetHp = Math.max(1, character.hp);
+        }
+      } else {
+        targetHp = Math.max(1, Math.floor(character.maxHp * 0.2));
+      }
       const [updatedBase] = await tx.update(charactersTable).set({
         level: progression.newLevel,
         experience: progression.newExp,
         maxHp: levelStats.hp,
-        hp: Math.max(1, levelStats.hp),
+        hp: targetHp,
         atk: levelStats.atk,
         def: levelStats.def,
         spd: levelStats.spd,
-        gold: character.gold + input.goldGained,
-        unallocatedStatPoints: (character.unallocatedStatPoints || 0) + progression.statPointsGained,
-        skillPoints: (character.skillPoints || 0) + progression.skillPointsGained,
+        gold: character.gold + effectiveGold,
+        unallocatedStatPoints: (character.unallocatedStatPoints || 0) + (input.victory ? progression.statPointsGained : 0),
+        skillPoints: (character.skillPoints || 0) + (input.victory ? progression.skillPointsGained : 0),
         kills: character.kills + (input.victory ? 1 : 0),
         deaths: character.deaths + (input.victory ? 0 : 1)
       }).where(and(
@@ -65036,21 +65049,73 @@ var CombatService = class {
         eq(charactersTable.userId, input.userId)
       )).returning();
       if (!updatedBase) throw new Error("Kh\xF4ng th\u1EC3 ghi k\u1EBFt qu\u1EA3 chi\u1EBFn \u0111\u1EA5u");
+      const dropsGranted = [];
+      if (input.victory && input.dropItems !== false && input.monsterId) {
+        const [monster] = await tx.select().from(monstersTable).where(eq(monstersTable.id, input.monsterId)).limit(1);
+        if (monster && monster.dropTableJson) {
+          try {
+            const dropTable = JSON.parse(monster.dropTableJson);
+            if (Array.isArray(dropTable) && dropTable.length > 0) {
+              const existingItems = await tx.select({ slotIndex: characterItemsTable.slotIndex }).from(characterItemsTable).where(eq(characterItemsTable.characterId, input.characterId));
+              const takenSlots = new Set(existingItems.map((i) => i.slotIndex));
+              const maxSlots = character.unlockedSlots || 18;
+              for (const drop of dropTable) {
+                if (Math.random() * 100 < drop.chancePercent) {
+                  let freeSlot = null;
+                  for (let s = 0; s < maxSlots; s++) {
+                    if (!takenSlots.has(s)) {
+                      freeSlot = s;
+                      break;
+                    }
+                  }
+                  if (freeSlot !== null) {
+                    const [itemDef] = await tx.select().from(itemsTable).where(eq(itemsTable.id, drop.itemId)).limit(1);
+                    if (itemDef) {
+                      await tx.insert(characterItemsTable).values({
+                        characterId: input.characterId,
+                        itemId: itemDef.id,
+                        equipped: false,
+                        slotIndex: freeSlot,
+                        quantity: 1,
+                        enhanceLevel: 0,
+                        rarity: itemDef.rarity || "common"
+                      });
+                      takenSlots.add(freeSlot);
+                      dropsGranted.push({
+                        itemId: itemDef.id,
+                        name: itemDef.name,
+                        rarity: itemDef.rarity || "common",
+                        quantity: 1,
+                        slotIndex: freeSlot
+                      });
+                    }
+                  }
+                }
+              }
+            }
+          } catch {
+          }
+        }
+      }
       const updatedCharacter = await recalculateCharacterStats(input.characterId, tx);
       await tx.insert(battleLogsTable).values({
         characterId: input.characterId,
+        encounterId: input.encounterId || null,
         monsterId: input.monsterId,
         monsterName: input.monsterName,
         victory: input.victory,
         expGained: effectiveExp,
-        goldGained: input.goldGained
+        goldGained: effectiveGold
       });
       return {
         character: updatedCharacter,
         newLevel: progression.newLevel,
-        leveledUp: progression.leveledUp,
+        leveledUp: input.victory && progression.leveledUp,
         expToNextLevel: progression.expToNextLevel,
         expGained: effectiveExp,
+        goldGained: effectiveGold,
+        victory: input.victory,
+        drops: dropsGranted,
         partyBuffActive: inParty
       };
     });
@@ -65062,10 +65127,10 @@ var router6 = (0, import_express6.Router)();
 var lastBattleTimestamp = /* @__PURE__ */ new Map();
 function simulateBattle(playerAtk, playerDef, playerHp, playerSpd, monsterAtk, monsterDef, monsterHp, classId) {
   const rounds = [];
-  let pHp = playerHp;
-  let mHp = monsterHp;
+  let pHp = Math.max(1, playerHp);
+  let mHp = Math.max(1, monsterHp);
   let round = 0;
-  const MAX_ROUNDS = 20;
+  const MAX_ROUNDS = 50;
   const skills = {
     gunner: ["\u0110\u1EA1n Xuy\xEAn Gi\xE1p", "N\u1ED5 S\xFAng Li\xEAn Ho\xE0n", "T\xEAn L\u1EEDa H\u1EE7y Di\u1EC7t"],
     assassin: ["\u0110\xE2m T\u1EEB B\xF3ng T\u1ED1i", "\u0110\u1ED9c T\u1ED1", "L\u01B0\u1EE1i T\u1EED Th\u1EA7n"],
@@ -65077,11 +65142,11 @@ function simulateBattle(playerAtk, playerDef, playerHp, playerSpd, monsterAtk, m
     round++;
     const playerFirst = playerSpd >= monsterAtk / 2;
     const isCritical = Math.random() < 0.15;
-    let playerDmg = Math.max(1, playerAtk - monsterDef / 2);
+    let playerDmg = Math.max(1, playerAtk - Math.floor(monsterDef * 0.4));
     if (isCritical) playerDmg = Math.floor(playerDmg * 1.8);
-    playerDmg = Math.floor(playerDmg * (0.85 + Math.random() * 0.3));
-    let monsterDmg = Math.max(1, monsterAtk - playerDef / 2);
-    monsterDmg = Math.floor(monsterDmg * (0.85 + Math.random() * 0.3));
+    playerDmg = Math.max(1, Math.floor(playerDmg * (0.85 + Math.random() * 0.3)));
+    let monsterDmg = Math.max(1, monsterAtk - Math.floor(playerDef * 0.4));
+    monsterDmg = Math.max(1, Math.floor(monsterDmg * (0.85 + Math.random() * 0.3)));
     if (playerFirst) {
       mHp = Math.max(0, mHp - playerDmg);
       if (mHp > 0) {
@@ -65093,7 +65158,7 @@ function simulateBattle(playerAtk, playerDef, playerHp, playerSpd, monsterAtk, m
         mHp = Math.max(0, mHp - playerDmg);
       }
     }
-    const skillIdx = round % 3;
+    const skillIdx = (round - 1) % classSkills.length;
     rounds.push({
       round,
       playerHp: pHp,
@@ -65104,7 +65169,8 @@ function simulateBattle(playerAtk, playerDef, playerHp, playerSpd, monsterAtk, m
       isCritical
     });
   }
-  return { rounds, victory: mHp <= 0 };
+  const victory = mHp <= 0 && pHp > 0;
+  return { rounds, victory, finalPlayerHp: pHp };
 }
 router6.post("/characters/:characterId/battle", requireAuth, async (req, res) => {
   const characterId = parseInt(req.params.characterId);
@@ -65138,44 +65204,56 @@ router6.post("/characters/:characterId/battle", requireAuth, async (req, res) =>
   if (!monsterReward) {
     return res.status(400).json({ error: "Qu\xE1i v\u1EADt kh\xF4ng t\u1ED3n t\u1EA1i" });
   }
-  const mode = req.body?.mode || "realtime";
-  let victory = true;
-  let rounds = [];
+  const rawMonster = monsterReward;
+  const simResult = simulateBattle(
+    effectiveCharacter.atk,
+    effectiveCharacter.def,
+    effectiveCharacter.hp,
+    effectiveCharacter.spd,
+    rawMonster.atk,
+    rawMonster.def,
+    rawMonster.hp,
+    character.classId
+  );
+  let victory = simResult.victory;
+  let rounds = simResult.rounds;
+  let finalPlayerHp = simResult.finalPlayerHp;
+  const metrics = req.body?.metrics;
+  if (metrics && typeof metrics === "object") {
+    const duration3 = Number(metrics.durationSeconds) || 0;
+    const dmgDealt = Number(metrics.totalDamageDealt) || 0;
+    const hitsTaken = Number(metrics.hitsTaken) || 0;
+    const maxDps = Math.max(10, effectiveCharacter.atk * 8);
+    const minTimeRequired = rawMonster.hp / maxDps;
+    if (dmgDealt >= rawMonster.hp && duration3 >= minTimeRequired * 0.4 && effectiveCharacter.hp > 0) {
+      victory = true;
+      const dmgPerHit = Math.max(1, rawMonster.atk - Math.floor(effectiveCharacter.def * 0.4));
+      finalPlayerHp = Math.max(1, effectiveCharacter.hp - hitsTaken * dmgPerHit);
+      rounds = [
+        {
+          round: 1,
+          playerHp: finalPlayerHp,
+          monsterHp: 0,
+          playerDmg: dmgDealt,
+          monsterDmg: hitsTaken * dmgPerHit,
+          playerAction: "Tr\u1EA3m s\xE1t trong kh\xF4ng gian 2.5D Real-Time",
+          isCritical: false
+        }
+      ];
+    } else if (duration3 < minTimeRequired * 0.4 && rawMonster.hp > 500) {
+      victory = false;
+      finalPlayerHp = 0;
+    }
+  }
   let expGained = 0;
   let goldGained = 0;
-  if (mode === "simulate") {
-    const rawMonster = monsterReward;
-    const simResult = simulateBattle(
-      effectiveCharacter.atk,
-      effectiveCharacter.def,
-      effectiveCharacter.maxHp,
-      effectiveCharacter.spd,
-      rawMonster.atk,
-      rawMonster.def,
-      rawMonster.hp,
-      character.classId
-    );
-    rounds = simResult.rounds;
-    victory = simResult.victory;
-    if (victory) {
-      expGained = monsterReward.expReward;
-      goldGained = monsterReward.goldReward;
-    }
-  } else {
-    victory = true;
+  if (victory) {
     expGained = monsterReward.expReward;
     goldGained = monsterReward.goldReward;
-    rounds = [
-      {
-        round: 1,
-        playerHp: character.hp,
-        monsterHp: 0,
-        playerDmg: monsterReward.hp,
-        monsterDmg: 0,
-        playerAction: "Tr\u1EA3m s\xE1t trong kh\xF4ng gian 2.5D Real-Time",
-        isCritical: false
-      }
-    ];
+  } else {
+    expGained = 0;
+    goldGained = 0;
+    finalPlayerHp = 0;
   }
   const savedResult = await CombatService.persistBattleResult({
     userId: req.session.userId,
@@ -65184,13 +65262,15 @@ router6.post("/characters/:characterId/battle", requireAuth, async (req, res) =>
     monsterName: monsterReward.name,
     victory,
     expGained,
-    goldGained
+    goldGained,
+    playerFinalHp: finalPlayerHp
   });
   return res.status(200).json({
     victory,
     rounds,
     expGained,
     goldGained,
+    drops: savedResult.drops || [],
     leveledUp: savedResult.leveledUp,
     newLevel: savedResult.leveledUp ? savedResult.newLevel : null,
     character: {

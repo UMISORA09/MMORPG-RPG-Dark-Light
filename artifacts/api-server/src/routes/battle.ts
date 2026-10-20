@@ -4,7 +4,6 @@ import { eq } from "drizzle-orm";
 import { StartBattleBody } from "@workspace/api-zod";
 import {
   ensureItemCatalog,
-  ensureStarterInventory,
   getMonster,
   toCharacterResponse,
 } from "../lib/inventory";
@@ -26,10 +25,10 @@ function simulateBattle(
   classId: string
 ) {
   const rounds = [];
-  let pHp = playerHp;
-  let mHp = monsterHp;
+  let pHp = Math.max(1, playerHp);
+  let mHp = Math.max(1, monsterHp);
   let round = 0;
-  const MAX_ROUNDS = 20;
+  const MAX_ROUNDS = 50;
 
   const skills: Record<string, string[]> = {
     gunner: ["Đạn Xuyên Giáp", "Nổ Súng Liên Hoàn", "Tên Lửa Hủy Diệt"],
@@ -47,12 +46,12 @@ function simulateBattle(
     const playerFirst = playerSpd >= (monsterAtk / 2);
 
     const isCritical = Math.random() < 0.15;
-    let playerDmg = Math.max(1, playerAtk - monsterDef / 2);
+    let playerDmg = Math.max(1, playerAtk - Math.floor(monsterDef * 0.4));
     if (isCritical) playerDmg = Math.floor(playerDmg * 1.8);
-    playerDmg = Math.floor(playerDmg * (0.85 + Math.random() * 0.3));
+    playerDmg = Math.max(1, Math.floor(playerDmg * (0.85 + Math.random() * 0.3)));
 
-    let monsterDmg = Math.max(1, monsterAtk - playerDef / 2);
-    monsterDmg = Math.floor(monsterDmg * (0.85 + Math.random() * 0.3));
+    let monsterDmg = Math.max(1, monsterAtk - Math.floor(playerDef * 0.4));
+    monsterDmg = Math.max(1, Math.floor(monsterDmg * (0.85 + Math.random() * 0.3)));
 
     if (playerFirst) {
       mHp = Math.max(0, mHp - playerDmg);
@@ -66,7 +65,7 @@ function simulateBattle(
       }
     }
 
-    const skillIdx = round % 3;
+    const skillIdx = (round - 1) % classSkills.length;
     rounds.push({
       round,
       playerHp: pHp,
@@ -78,7 +77,8 @@ function simulateBattle(
     });
   }
 
-  return { rounds, victory: mHp <= 0 };
+  const victory = mHp <= 0 && pHp > 0;
+  return { rounds, victory, finalPlayerHp: pHp };
 }
 
 router.post("/characters/:characterId/battle", requireAuth, async (req, res) => {
@@ -126,49 +126,63 @@ router.post("/characters/:characterId/battle", requireAuth, async (req, res) => 
     return res.status(400).json({ error: "Quái vật không tồn tại" });
   }
 
-  const mode = (req.body?.mode as string) || "realtime";
-  let victory = true;
-  let rounds: any[] = [];
+  const rawMonster = monsterReward;
+  const simResult = simulateBattle(
+    effectiveCharacter.atk,
+    effectiveCharacter.def,
+    effectiveCharacter.hp,
+    effectiveCharacter.spd,
+    rawMonster.atk,
+    rawMonster.def,
+    rawMonster.hp,
+    character.classId
+  );
+
+  let victory = simResult.victory;
+  let rounds = simResult.rounds;
+  let finalPlayerHp = simResult.finalPlayerHp;
+
+  // Real-time combat verification: If client provides metrics from 2.5D combat
+  const metrics = req.body?.metrics;
+  if (metrics && typeof metrics === "object") {
+    const duration = Number(metrics.durationSeconds) || 0;
+    const dmgDealt = Number(metrics.totalDamageDealt) || 0;
+    const hitsTaken = Number(metrics.hitsTaken) || 0;
+
+    const maxDps = Math.max(10, effectiveCharacter.atk * 8);
+    const minTimeRequired = rawMonster.hp / maxDps;
+
+    if (dmgDealt >= rawMonster.hp && duration >= minTimeRequired * 0.4 && effectiveCharacter.hp > 0) {
+      victory = true;
+      const dmgPerHit = Math.max(1, rawMonster.atk - Math.floor(effectiveCharacter.def * 0.4));
+      finalPlayerHp = Math.max(1, effectiveCharacter.hp - hitsTaken * dmgPerHit);
+      rounds = [
+        {
+          round: 1,
+          playerHp: finalPlayerHp,
+          monsterHp: 0,
+          playerDmg: dmgDealt,
+          monsterDmg: hitsTaken * dmgPerHit,
+          playerAction: "Trảm sát trong không gian 2.5D Real-Time",
+          isCritical: false,
+        },
+      ];
+    } else if (duration < minTimeRequired * 0.4 && rawMonster.hp > 500) {
+      // Cheating attempt: claiming to defeat high-tier monster impossibly fast
+      victory = false;
+      finalPlayerHp = 0;
+    }
+  }
+
   let expGained = 0;
   let goldGained = 0;
-
-  if (mode === "simulate") {
-    // Chế độ mô phỏng theo lượt phụ (dành cho prototype/arena test nếu cần)
-    const rawMonster = monsterReward;
-    const simResult = simulateBattle(
-      effectiveCharacter.atk,
-      effectiveCharacter.def,
-      effectiveCharacter.maxHp,
-      effectiveCharacter.spd,
-      rawMonster.atk,
-      rawMonster.def,
-      rawMonster.hp,
-      character.classId
-    );
-    rounds = simResult.rounds;
-    victory = simResult.victory;
-    if (victory) {
-      expGained = monsterReward.expReward;
-      goldGained = monsterReward.goldReward;
-    }
-  } else {
-    // ── CHẾ ĐỘ CHÍNH: ACTION RPG 2.5D REALTIME AUTHORITATIVE PERSISTENCE ──
-    // Người chơi đã tiêu diệt quái vật trong không gian 2.5D thời gian thực.
-    // Kết quả là DUY NHẤT VÀ NHẤT QUÁN: Server xác thực và cấp phần thưởng chuẩn.
-    victory = true;
+  if (victory) {
     expGained = monsterReward.expReward;
     goldGained = monsterReward.goldReward;
-    rounds = [
-      {
-        round: 1,
-        playerHp: character.hp,
-        monsterHp: 0,
-        playerDmg: monsterReward.hp,
-        monsterDmg: 0,
-        playerAction: "Trảm sát trong không gian 2.5D Real-Time",
-        isCritical: false,
-      },
-    ];
+  } else {
+    expGained = 0;
+    goldGained = 0;
+    finalPlayerHp = 0;
   }
 
   const savedResult = await CombatService.persistBattleResult({
@@ -179,6 +193,7 @@ router.post("/characters/:characterId/battle", requireAuth, async (req, res) => 
     victory,
     expGained,
     goldGained,
+    playerFinalHp: finalPlayerHp,
   });
 
   return res.status(200).json({
@@ -186,6 +201,7 @@ router.post("/characters/:characterId/battle", requireAuth, async (req, res) => 
     rounds,
     expGained,
     goldGained,
+    drops: savedResult.drops || [],
     leveledUp: savedResult.leveledUp,
     newLevel: savedResult.leveledUp ? savedResult.newLevel : null,
     character: {
