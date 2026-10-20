@@ -7,7 +7,7 @@ import {
   itemsTable,
 } from "@workspace/db";
 import { recalculateCharacterStats, InventoryRuleError } from "./CharacterInventoryService";
-import { listInventory } from "../lib/inventory";
+import { listInventory, getItem } from "../lib/inventory";
 
 export interface FullSyncItemInput {
   id?: number | string;
@@ -302,6 +302,7 @@ export class CharacterPersistenceService {
       }
 
       // 5. Cập nhật thông số nhân vật trong charactersTable
+      // Server-authoritative progression fields (Gold, EXP, Level, Kills, Stats, Slots) are strictly protected
       const stringifyJson = (val: any, fallback = "") => {
         if (val === undefined) return undefined;
         if (typeof val === "string") return val;
@@ -312,63 +313,60 @@ export class CharacterPersistenceService {
         }
       };
 
-      const statPointsVal = payload.statPoints ?? payload.unallocatedStatPoints ?? existingChar.unallocatedStatPoints;
-
       const updateData: Record<string, any> = {
         revision: nextRev,
         lastSavedAt: new Date(),
-        unlockedSlots,
       };
 
-      if (payload.posX !== undefined) updateData.posX = Number(payload.posX);
-      if (payload.posZ !== undefined) updateData.posZ = Number(payload.posZ);
-      if (payload.facing !== undefined) updateData.facing = String(payload.facing);
-      if (payload.zoneId !== undefined) updateData.zoneId = String(payload.zoneId);
-      if (payload.isMounted !== undefined) updateData.isMounted = Boolean(payload.isMounted);
-      if (payload.activeMountId !== undefined) updateData.activeMountId = String(payload.activeMountId);
-      if (payload.activePetId !== undefined) updateData.activePetId = String(payload.activePetId);
-
-      if (payload.level !== undefined) updateData.level = Number(payload.level);
-      if (payload.experience !== undefined) updateData.experience = Number(payload.experience);
-      if (payload.gold !== undefined) updateData.gold = Number(payload.gold);
-      if (payload.hp !== undefined) updateData.hp = Math.max(0, Number(payload.hp));
-      if (payload.mp !== undefined) updateData.mp = Math.max(0, Number(payload.mp));
-
-      if (statPointsVal !== undefined) {
-        updateData.statPoints = Number(statPointsVal);
-        updateData.unallocatedStatPoints = Number(statPointsVal);
+      if (payload.posX !== undefined && Number.isFinite(Number(payload.posX))) {
+        updateData.posX = Math.min(10000, Math.max(-10000, Math.round(Number(payload.posX))));
       }
-      if (payload.skillPoints !== undefined) updateData.skillPoints = Number(payload.skillPoints);
-      if (payload.str !== undefined) updateData.str = Number(payload.str);
-      if (payload.dex !== undefined) updateData.dex = Number(payload.dex);
-      if (payload.intel !== undefined) updateData.intel = Number(payload.intel);
-      if (payload.luk !== undefined) updateData.luk = Number(payload.luk);
-      if (payload.vit !== undefined) updateData.vit = Number(payload.vit);
-      if (payload.rageGauge !== undefined) updateData.rageGauge = Math.min(100, Math.max(0, Number(payload.rageGauge)));
-      if (payload.awakeningTier !== undefined) updateData.awakeningTier = Math.min(3, Math.max(0, Number(payload.awakeningTier)));
+      if (payload.posZ !== undefined && Number.isFinite(Number(payload.posZ))) {
+        updateData.posZ = Math.min(10000, Math.max(-10000, Math.round(Number(payload.posZ))));
+      }
+      if (payload.facing !== undefined) updateData.facing = String(payload.facing);
+      if (payload.zoneId !== undefined && String(payload.zoneId).trim()) {
+        updateData.zoneId = String(payload.zoneId).trim().slice(0, 64);
+      }
+      if (payload.isMounted !== undefined) updateData.isMounted = Boolean(payload.isMounted);
+      if (payload.activeMountId !== undefined) updateData.activeMountId = String(payload.activeMountId).slice(0, 64);
+      if (payload.activePetId !== undefined) updateData.activePetId = String(payload.activePetId).slice(0, 64);
 
-      const talents = stringifyJson(payload.talentsJson);
-      if (talents !== undefined) updateData.talentsJson = talents;
-
-      const codex = stringifyJson(payload.codexUnlockedJson);
-      if (codex !== undefined) updateData.codexUnlockedJson = codex;
-
-      const autoCombat = stringifyJson(payload.autoCombatSettingsJson);
-      if (autoCombat !== undefined) updateData.autoCombatSettingsJson = autoCombat;
+      if (payload.hp !== undefined && !isNaN(Number(payload.hp))) {
+        updateData.hp = Math.min(Number(existingChar.maxHp || 100), Math.max(0, Math.round(Number(payload.hp))));
+      }
+      if (payload.mp !== undefined && !isNaN(Number(payload.mp))) {
+        updateData.mp = Math.min(Number(existingChar.maxMp || 100), Math.max(0, Math.round(Number(payload.mp))));
+      }
 
       const hotbar = stringifyJson(payload.hotbarConfigJson);
       if (hotbar !== undefined) updateData.hotbarConfigJson = hotbar;
 
-      const buffs = stringifyJson(payload.activeBuffsJson);
-      if (buffs !== undefined) updateData.activeBuffsJson = buffs;
+      const uiPref = stringifyJson(payload.uiPreferencesJson);
+      if (uiPref !== undefined) updateData.uiPreferencesJson = uiPref;
 
-      const ui = stringifyJson(payload.uiPreferencesJson);
-      if (ui !== undefined) updateData.uiPreferencesJson = ui;
+      const autoCombat = stringifyJson(payload.autoCombatSettingsJson);
+      if (autoCombat !== undefined) updateData.autoCombatSettingsJson = autoCombat;
 
-      await tx
+      // 🛡️ ATOMIC COMPARE-AND-SWAP: Chỉ cập nhật nếu revision hiện tại trong DB vẫn đúng là currentRev
+      const updatedChars = await tx
         .update(charactersTable)
         .set(updateData)
-        .where(eq(charactersTable.id, characterId));
+        .where(
+          and(
+            eq(charactersTable.id, characterId),
+            eq(charactersTable.userId, userId),
+            eq(charactersTable.revision, currentRev)
+          )
+        )
+        .returning();
+
+      if (!updatedChars || updatedChars.length === 0) {
+        throw new InventoryRuleError(
+          "Xung đột phiên bản đồng thời (Atomic CAS Collision): Dữ liệu nhân vật đã bị thay đổi bởi tiến trình khác.",
+          409
+        );
+      }
 
       // 6. Tính toán lại toàn bộ chỉ số nhân vật (Base + Items + Miracle + Enhance)
       const freshCharacter = await recalculateCharacterStats(characterId, tx);

@@ -63684,49 +63684,48 @@ var CharacterPersistenceService = class {
           return fallback;
         }
       };
-      const statPointsVal = payload.statPoints ?? payload.unallocatedStatPoints ?? existingChar.unallocatedStatPoints;
       const updateData = {
         revision: nextRev,
-        lastSavedAt: /* @__PURE__ */ new Date(),
-        unlockedSlots
+        lastSavedAt: /* @__PURE__ */ new Date()
       };
-      if (payload.posX !== void 0) updateData.posX = Number(payload.posX);
-      if (payload.posZ !== void 0) updateData.posZ = Number(payload.posZ);
-      if (payload.facing !== void 0) updateData.facing = String(payload.facing);
-      if (payload.zoneId !== void 0) updateData.zoneId = String(payload.zoneId);
-      if (payload.isMounted !== void 0) updateData.isMounted = Boolean(payload.isMounted);
-      if (payload.activeMountId !== void 0) updateData.activeMountId = String(payload.activeMountId);
-      if (payload.activePetId !== void 0) updateData.activePetId = String(payload.activePetId);
-      if (payload.level !== void 0) updateData.level = Number(payload.level);
-      if (payload.experience !== void 0) updateData.experience = Number(payload.experience);
-      if (payload.gold !== void 0) updateData.gold = Number(payload.gold);
-      if (payload.hp !== void 0) updateData.hp = Math.max(0, Number(payload.hp));
-      if (payload.mp !== void 0) updateData.mp = Math.max(0, Number(payload.mp));
-      if (statPointsVal !== void 0) {
-        updateData.statPoints = Number(statPointsVal);
-        updateData.unallocatedStatPoints = Number(statPointsVal);
+      if (payload.posX !== void 0 && Number.isFinite(Number(payload.posX))) {
+        updateData.posX = Math.min(1e4, Math.max(-1e4, Math.round(Number(payload.posX))));
       }
-      if (payload.skillPoints !== void 0) updateData.skillPoints = Number(payload.skillPoints);
-      if (payload.str !== void 0) updateData.str = Number(payload.str);
-      if (payload.dex !== void 0) updateData.dex = Number(payload.dex);
-      if (payload.intel !== void 0) updateData.intel = Number(payload.intel);
-      if (payload.luk !== void 0) updateData.luk = Number(payload.luk);
-      if (payload.vit !== void 0) updateData.vit = Number(payload.vit);
-      if (payload.rageGauge !== void 0) updateData.rageGauge = Math.min(100, Math.max(0, Number(payload.rageGauge)));
-      if (payload.awakeningTier !== void 0) updateData.awakeningTier = Math.min(3, Math.max(0, Number(payload.awakeningTier)));
-      const talents = stringifyJson(payload.talentsJson);
-      if (talents !== void 0) updateData.talentsJson = talents;
-      const codex = stringifyJson(payload.codexUnlockedJson);
-      if (codex !== void 0) updateData.codexUnlockedJson = codex;
-      const autoCombat = stringifyJson(payload.autoCombatSettingsJson);
-      if (autoCombat !== void 0) updateData.autoCombatSettingsJson = autoCombat;
+      if (payload.posZ !== void 0 && Number.isFinite(Number(payload.posZ))) {
+        updateData.posZ = Math.min(1e4, Math.max(-1e4, Math.round(Number(payload.posZ))));
+      }
+      if (payload.facing !== void 0) updateData.facing = String(payload.facing);
+      if (payload.zoneId !== void 0 && String(payload.zoneId).trim()) {
+        updateData.zoneId = String(payload.zoneId).trim().slice(0, 64);
+      }
+      if (payload.isMounted !== void 0) updateData.isMounted = Boolean(payload.isMounted);
+      if (payload.activeMountId !== void 0) updateData.activeMountId = String(payload.activeMountId).slice(0, 64);
+      if (payload.activePetId !== void 0) updateData.activePetId = String(payload.activePetId).slice(0, 64);
+      if (payload.hp !== void 0 && !isNaN(Number(payload.hp))) {
+        updateData.hp = Math.min(Number(existingChar.maxHp || 100), Math.max(0, Math.round(Number(payload.hp))));
+      }
+      if (payload.mp !== void 0 && !isNaN(Number(payload.mp))) {
+        updateData.mp = Math.min(Number(existingChar.maxMp || 100), Math.max(0, Math.round(Number(payload.mp))));
+      }
       const hotbar = stringifyJson(payload.hotbarConfigJson);
       if (hotbar !== void 0) updateData.hotbarConfigJson = hotbar;
-      const buffs = stringifyJson(payload.activeBuffsJson);
-      if (buffs !== void 0) updateData.activeBuffsJson = buffs;
-      const ui = stringifyJson(payload.uiPreferencesJson);
-      if (ui !== void 0) updateData.uiPreferencesJson = ui;
-      await tx.update(charactersTable).set(updateData).where(eq(charactersTable.id, characterId));
+      const uiPref = stringifyJson(payload.uiPreferencesJson);
+      if (uiPref !== void 0) updateData.uiPreferencesJson = uiPref;
+      const autoCombat = stringifyJson(payload.autoCombatSettingsJson);
+      if (autoCombat !== void 0) updateData.autoCombatSettingsJson = autoCombat;
+      const updatedChars = await tx.update(charactersTable).set(updateData).where(
+        and(
+          eq(charactersTable.id, characterId),
+          eq(charactersTable.userId, userId),
+          eq(charactersTable.revision, currentRev)
+        )
+      ).returning();
+      if (!updatedChars || updatedChars.length === 0) {
+        throw new InventoryRuleError(
+          "Xung \u0111\u1ED9t phi\xEAn b\u1EA3n \u0111\u1ED3ng th\u1EDDi (Atomic CAS Collision): D\u1EEF li\u1EC7u nh\xE2n v\u1EADt \u0111\xE3 b\u1ECB thay \u0111\u1ED5i b\u1EDFi ti\u1EBFn tr\xECnh kh\xE1c.",
+          409
+        );
+      }
       const freshCharacter = await recalculateCharacterStats(characterId, tx);
       const freshInventory = await listInventory(characterId, tx);
       return {
@@ -67963,7 +67962,7 @@ router14.post("/characters/:characterId/gm/action", requireAuth, requireGMOrAdmi
     });
     return;
   }
-  if (action === "add_gold_stones") {
+  if (action === "add_gold" || action === "add_gold_stones") {
     const newGold = character.gold + 5e4;
     await db.update(charactersTable).set({ gold: newGold }).where(eq(charactersTable.id, characterId));
     const [existing] = await db.select().from(characterItemsTable).where(

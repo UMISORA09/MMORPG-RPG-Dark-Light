@@ -452,7 +452,7 @@ router.post("/characters/:characterId/gm/action", requireAuth, requireGMOrAdmin,
   }
 
   // 2. Thêm 50,000 Vàng & 10 Đá Cường Hóa
-  if (action === "add_gold_stones") {
+  if (action === "add_gold" || action === "add_gold_stones") {
     const newGold = character.gold + 50000;
     await db.update(charactersTable).set({ gold: newGold }).where(eq(charactersTable.id, characterId));
 
