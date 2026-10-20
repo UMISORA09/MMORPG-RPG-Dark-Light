@@ -61868,17 +61868,38 @@ function createMemoryDb() {
   };
   return memoryDb;
 }
+function getPoolConfig(rawUrl) {
+  const isCloudDb = rawUrl.includes("supabase") || rawUrl.includes("neon") || rawUrl.includes("sslmode=require") || rawUrl.includes("pooler.supabase.com");
+  if (!isCloudDb) {
+    return {
+      connectionString: rawUrl,
+      connectionTimeoutMillis: 8e3,
+      idleTimeoutMillis: 3e4,
+      max: 10
+    };
+  }
+  let cleanUrl = rawUrl;
+  try {
+    const parsed = new URL(rawUrl);
+    parsed.searchParams.delete("sslmode");
+    cleanUrl = parsed.toString();
+  } catch {
+    cleanUrl = rawUrl.replace(/[?&]sslmode=[^&]+/g, "").replace(/\?&/, "?").replace(/\?$/, "");
+  }
+  return {
+    connectionString: cleanUrl,
+    connectionTimeoutMillis: 8e3,
+    idleTimeoutMillis: 3e4,
+    max: 10,
+    ssl: { rejectUnauthorized: false }
+  };
+}
 async function initDatabase() {
-  const dbUrl = process.env.DATABASE_URL;
+  const dbUrl = process.env.DATABASE_URL || process.env.POSTGRES_URL;
   if (dbUrl && dbUrl !== "memory" && !dbUrl.startsWith("sqlite")) {
     try {
       console.log("[DB] Connecting to PostgreSQL:", dbUrl.replace(/:[^:@]+@/, ":***@"));
-      pool = new Pool3({
-        connectionString: dbUrl,
-        connectionTimeoutMillis: 5e3,
-        idleTimeoutMillis: 3e4,
-        max: 10
-      });
+      pool = new Pool3(getPoolConfig(dbUrl));
       const client = await pool.connect();
       client.release();
       db = drizzle(pool, { schema: schema_exports });
@@ -62236,12 +62257,10 @@ async function initDatabase() {
   db = createMemoryDb();
   isPostgres = false;
 }
-if (process.env.DATABASE_URL && process.env.DATABASE_URL !== "memory") {
+var initialDbUrl = process.env.DATABASE_URL || process.env.POSTGRES_URL;
+if (initialDbUrl && initialDbUrl !== "memory" && !initialDbUrl.startsWith("sqlite")) {
   try {
-    pool = new Pool3({
-      connectionString: process.env.DATABASE_URL,
-      connectionTimeoutMillis: 5e3
-    });
+    pool = new Pool3(getPoolConfig(initialDbUrl));
     db = drizzle(pool, { schema: schema_exports });
     isPostgres = true;
   } catch {
@@ -68677,16 +68696,24 @@ var app_default = app;
 
 // src/vercel-handler.ts
 var isDbInitialized = false;
-async function handler(req, res) {
-  if (!isDbInitialized) {
-    try {
-      await initDatabase();
-      await seedDatabase();
-      isDbInitialized = true;
-    } catch (err) {
-      console.error("[Vercel Serverless] Database init warning:", err);
-    }
+var initPromise = null;
+async function ensureDb() {
+  if (isDbInitialized) return;
+  if (!initPromise) {
+    initPromise = (async () => {
+      try {
+        await initDatabase();
+        isDbInitialized = true;
+        seedDatabase().catch((e) => console.warn("[Vercel] Catalog seed deferred warning:", e));
+      } catch (err) {
+        console.error("[Vercel Serverless] Database init warning:", err);
+      }
+    })();
   }
+  return initPromise;
+}
+async function handler(req, res) {
+  await ensureDb();
   return app_default(req, res);
 }
 export {
