@@ -1,3 +1,4 @@
+import { usePersistenceStore } from "@/persistence/PersistenceManager";
 import { useEffect, useRef, useState, useCallback } from "react";
 import { useGameWorldStore } from "@/stores/useGameWorldStore";
 
@@ -154,9 +155,15 @@ export function useCharacterAutoSave(characterIdOverride?: number) {
           indicatorTimerRef.current = setTimeout(() => {
             setShowIndicator(false);
           }, 2200);
+        } else {
+          console.warn("[AutoSave] Máy chủ từ chối lưu tự động:", res.status);
+          setShowIndicator(false);
+          usePersistenceStore.getState().setStatus("error", undefined, "autosave_failed", `Lưu thất bại (${res.status})`);
         }
-      } catch (err) {
-        // Silent catch for graceful background auto-save degradation
+      } catch (err: any) {
+        console.warn("[AutoSave] Lỗi mạng khi lưu tự động:", err?.message);
+        setShowIndicator(false);
+        usePersistenceStore.getState().setStatus("error", undefined, "autosave_network_error", "Lỗi kết nối máy chủ");
       } finally {
         isSavingRef.current = false;
       }

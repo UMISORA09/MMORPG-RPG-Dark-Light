@@ -64451,30 +64451,46 @@ var handleCharacterAutoSave = async (req, res) => {
   }
   const body = req.body || {};
   const updateData = {};
-  if (typeof body.hp === "number") updateData.hp = Math.max(0, Math.round(body.hp));
-  if (typeof body.maxHp === "number" && body.maxHp > 0) updateData.maxHp = Math.round(body.maxHp);
-  if (typeof body.mp === "number") updateData.mp = Math.max(0, Math.round(body.mp));
-  if (typeof body.maxMp === "number" && body.maxMp > 0) updateData.maxMp = Math.round(body.maxMp);
-  if (typeof body.level === "number" && body.level >= 1) updateData.level = Math.round(body.level);
-  if (typeof body.experience === "number") updateData.experience = Math.max(0, Math.round(body.experience));
-  if (typeof body.gold === "number") updateData.gold = Math.max(0, Math.round(body.gold));
-  if (typeof body.kills === "number") updateData.kills = Math.max(0, Math.round(body.kills));
-  if (typeof body.posX === "number") updateData.posX = Math.round(body.posX);
-  if (typeof body.posZ === "number") updateData.posZ = Math.round(body.posZ);
-  if (typeof body.zoneId === "string" && body.zoneId.trim()) updateData.zoneId = body.zoneId.trim();
-  if (typeof body.str === "number") updateData.str = Math.round(body.str);
-  if (typeof body.dex === "number") updateData.dex = Math.round(body.dex);
-  if (typeof body.intel === "number") updateData.intel = Math.round(body.intel);
-  if (typeof body.luk === "number") updateData.luk = Math.round(body.luk);
-  if (typeof body.vit === "number") updateData.vit = Math.round(body.vit);
-  if (typeof body.unlockedSlots === "number") {
-    updateData.unlockedSlots = Math.min(30, Math.max(15, Math.round(body.unlockedSlots)));
+  if (typeof body.hp === "number" && !isNaN(body.hp)) {
+    updateData.hp = Math.min(Number(character.maxHp || 100), Math.max(0, Math.round(body.hp)));
   }
+  if (typeof body.mp === "number" && !isNaN(body.mp)) {
+    updateData.mp = Math.min(Number(character.maxMp || 100), Math.max(0, Math.round(body.mp)));
+  }
+  if (typeof body.posX === "number" && Number.isFinite(body.posX)) {
+    updateData.posX = Math.min(1e4, Math.max(-1e4, Math.round(body.posX)));
+  }
+  if (typeof body.posZ === "number" && Number.isFinite(body.posZ)) {
+    updateData.posZ = Math.min(1e4, Math.max(-1e4, Math.round(body.posZ)));
+  }
+  if (typeof body.facing === "string" && ["left", "right", "up", "down"].includes(body.facing)) {
+    updateData.facing = body.facing;
+  }
+  if (typeof body.zoneId === "string" && body.zoneId.trim() && body.zoneId.trim().length <= 64) {
+    updateData.zoneId = body.zoneId.trim();
+  }
+  if (typeof body.isMounted === "boolean") {
+    updateData.isMounted = body.isMounted;
+  }
+  if (typeof body.activeMountId === "string" && body.activeMountId.trim().length <= 64) {
+    updateData.activeMountId = body.activeMountId.trim();
+  }
+  if (typeof body.activePetId === "string" && body.activePetId.trim().length <= 64) {
+    updateData.activePetId = body.activePetId.trim();
+  }
+  if (body.uiPreferencesJson !== void 0) {
+    updateData.uiPreferencesJson = typeof body.uiPreferencesJson === "string" ? body.uiPreferencesJson : JSON.stringify(body.uiPreferencesJson);
+  }
+  if (body.hotbarConfigJson !== void 0) {
+    updateData.hotbarConfigJson = typeof body.hotbarConfigJson === "string" ? body.hotbarConfigJson : JSON.stringify(body.hotbarConfigJson);
+  }
+  updateData.lastSavedAt = /* @__PURE__ */ new Date();
   if (Object.keys(updateData).length > 0) {
     await db.update(charactersTable).set(updateData).where(eq(charactersTable.id, characterId));
   }
   await db.update(usersTable).set({ lastCharacterId: characterId }).where(eq(usersTable.id, req.session.userId));
-  const updatedChar = await toCharacterResponse({ ...character, ...updateData });
+  const [latestChar] = await db.select().from(charactersTable).where(eq(charactersTable.id, characterId)).limit(1);
+  const updatedChar = await toCharacterResponse(latestChar || { ...character, ...updateData });
   return res.status(200).json({
     success: true,
     savedAt: (/* @__PURE__ */ new Date()).toISOString(),
