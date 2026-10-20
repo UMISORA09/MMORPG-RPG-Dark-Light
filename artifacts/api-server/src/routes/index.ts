@@ -17,6 +17,7 @@ import marketRouter from "./market";
 import talentsRouter from "./talents";
 import codexRouter from "./codex";
 import dungeonRouter from "./dungeon";
+import adminRouter from "./admin";
 
 const router: IRouter = Router();
 
@@ -38,5 +39,6 @@ router.use(marketRouter);
 router.use(talentsRouter);
 router.use(codexRouter);
 router.use(dungeonRouter);
+router.use(adminRouter);
 
 export default router;

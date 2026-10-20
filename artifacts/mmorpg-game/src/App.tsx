@@ -6,6 +6,7 @@ import AuthScreen from '@/pages/AuthScreen';
 import CharacterSelectScreen from '@/pages/CharacterSelectScreen';
 import CommunityPortalScreen from '@/pages/CommunityPortalScreen';
 import GamePage from '@/pages/game';
+import AdminDashboardScreen from '@/pages/AdminDashboardScreen';
 import { Route, Switch, Router as WouterRouter } from 'wouter';
 
 const queryClient = new QueryClient({
@@ -27,6 +28,7 @@ function Router() {
       <Route path="/select-class" component={CharacterSelectScreen} />
       <Route path="/portal" component={CommunityPortalScreen} />
       <Route path="/game" component={GamePage} />
+      <Route path="/admin" component={AdminDashboardScreen} />
       <Route component={NotFound} />
     </Switch>
   );

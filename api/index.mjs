@@ -20700,27 +20700,27 @@ var require_router = __commonJS({
     var slice = Array.prototype.slice;
     var flatten = Array.prototype.flat;
     var methods = METHODS.map((method) => method.toLowerCase());
-    module.exports = Router20;
+    module.exports = Router21;
     module.exports.Route = Route;
-    function Router20(options) {
-      if (!(this instanceof Router20)) {
-        return new Router20(options);
+    function Router21(options) {
+      if (!(this instanceof Router21)) {
+        return new Router21(options);
       }
       const opts = options || {};
-      function router20(req, res, next) {
-        router20.handle(req, res, next);
+      function router21(req, res, next) {
+        router21.handle(req, res, next);
       }
-      Object.setPrototypeOf(router20, this);
-      router20.caseSensitive = opts.caseSensitive;
-      router20.mergeParams = opts.mergeParams;
-      router20.params = {};
-      router20.strict = opts.strict;
-      router20.stack = [];
-      return router20;
+      Object.setPrototypeOf(router21, this);
+      router21.caseSensitive = opts.caseSensitive;
+      router21.mergeParams = opts.mergeParams;
+      router21.params = {};
+      router21.strict = opts.strict;
+      router21.stack = [];
+      return router21;
     }
-    Router20.prototype = function() {
+    Router21.prototype = function() {
     };
-    Router20.prototype.param = function param(name, fn) {
+    Router21.prototype.param = function param(name, fn) {
       if (!name) {
         throw new TypeError("argument name is required");
       }
@@ -20740,7 +20740,7 @@ var require_router = __commonJS({
       params.push(fn);
       return this;
     };
-    Router20.prototype.handle = function handle(req, res, callback) {
+    Router21.prototype.handle = function handle(req, res, callback) {
       if (!callback) {
         throw new TypeError("argument callback is required");
       }
@@ -20867,7 +20867,7 @@ var require_router = __commonJS({
         }
       }
     };
-    Router20.prototype.use = function use(handler2) {
+    Router21.prototype.use = function use(handler2) {
       let offset = 0;
       let path3 = "/";
       if (typeof handler2 !== "function") {
@@ -20900,7 +20900,7 @@ var require_router = __commonJS({
       }
       return this;
     };
-    Router20.prototype.route = function route(path3) {
+    Router21.prototype.route = function route(path3) {
       const route2 = new Route(path3);
       const layer = new Layer(path3, {
         sensitive: this.caseSensitive,
@@ -20915,7 +20915,7 @@ var require_router = __commonJS({
       return route2;
     };
     methods.concat("all").forEach(function(method) {
-      Router20.prototype[method] = function(path3) {
+      Router21.prototype[method] = function(path3) {
         const route = this.route(path3);
         route[method].apply(route, slice.call(arguments, 1));
         return this;
@@ -21098,13 +21098,13 @@ var require_application = __commonJS({
     var compileTrust = require_utils3().compileTrust;
     var resolve = __require("node:path").resolve;
     var once = require_once();
-    var Router20 = require_router();
+    var Router21 = require_router();
     var slice = Array.prototype.slice;
     var flatten = Array.prototype.flat;
     var app2 = exports = module.exports = {};
     var trustProxyDefaultSymbol = "@@symbol:trust_proxy_default";
     app2.init = function init() {
-      var router20 = null;
+      var router21 = null;
       this.cache = /* @__PURE__ */ Object.create(null);
       this.engines = /* @__PURE__ */ Object.create(null);
       this.settings = /* @__PURE__ */ Object.create(null);
@@ -21113,13 +21113,13 @@ var require_application = __commonJS({
         configurable: true,
         enumerable: true,
         get: function getrouter() {
-          if (router20 === null) {
-            router20 = new Router20({
+          if (router21 === null) {
+            router21 = new Router21({
               caseSensitive: this.enabled("case sensitive routing"),
               strict: this.enabled("strict routing")
             });
           }
-          return router20;
+          return router21;
         }
       });
     };
@@ -21190,15 +21190,15 @@ var require_application = __commonJS({
       if (fns.length === 0) {
         throw new TypeError("app.use() requires a middleware function");
       }
-      var router20 = this.router;
+      var router21 = this.router;
       fns.forEach(function(fn2) {
         if (!fn2 || !fn2.handle || !fn2.set) {
-          return router20.use(path3, fn2);
+          return router21.use(path3, fn2);
         }
         debug(".use app under %s", path3);
         fn2.mountpath = path3;
         fn2.parent = this;
-        router20.use(path3, function mounted_app(req, res, next) {
+        router21.use(path3, function mounted_app(req, res, next) {
           var orig = req.app;
           fn2.handle(req, res, function(err) {
             Object.setPrototypeOf(req, orig.request);
@@ -23783,7 +23783,7 @@ var require_express = __commonJS({
     var EventEmitter = __require("node:events").EventEmitter;
     var mixin = require_merge_descriptors();
     var proto = require_application();
-    var Router20 = require_router();
+    var Router21 = require_router();
     var req = require_request();
     var res = require_response();
     exports = module.exports = createApplication;
@@ -23805,8 +23805,8 @@ var require_express = __commonJS({
     exports.application = proto;
     exports.request = req;
     exports.response = res;
-    exports.Route = Router20.Route;
-    exports.Router = Router20;
+    exports.Route = Router21.Route;
+    exports.Router = Router21;
     exports.json = bodyParser.json;
     exports.raw = bodyParser.raw;
     exports.static = require_serve_static();
@@ -34461,15 +34461,15 @@ var require_pg_pool = __commonJS({
       });
       return { callback: cb, result };
     }
-    function makeIdleListener(pool2, client) {
+    function makeIdleListener(pool3, client) {
       return function idleListener(err) {
         err.client = client;
         client.removeListener("error", idleListener);
         client.on("error", () => {
-          pool2.log("additional client error after disconnection due to error", err);
+          pool3.log("additional client error after disconnection due to error", err);
         });
-        pool2._remove(client);
-        pool2.emit("error", err, client);
+        pool3._remove(client);
+        pool3.emit("error", err, client);
       };
     }
     var Pool4 = class extends EventEmitter {
@@ -35657,7 +35657,7 @@ var require_connect_pg_simple = __commonJS({
 });
 
 // src/app.ts
-var import_express20 = __toESM(require_express2(), 1);
+var import_express21 = __toESM(require_express2(), 1);
 var import_cors = __toESM(require_lib3(), 1);
 var import_pino_http = __toESM(require_logger(), 1);
 var import_express_session = __toESM(require_express_session(), 1);
@@ -35667,7 +35667,7 @@ import path2 from "node:path";
 import fs2 from "node:fs";
 
 // src/routes/index.ts
-var import_express19 = __toESM(require_express2(), 1);
+var import_express20 = __toESM(require_express2(), 1);
 
 // src/routes/health.ts
 var import_express = __toESM(require_express2(), 1);
@@ -61479,21 +61479,29 @@ async function upsertById(table, idColumn, row) {
     await db.insert(table).values(row);
   }
 }
+async function batchInsertOrIgnore(table, idColumn, rows, chunkSize = 50) {
+  if (!rows || rows.length === 0) return;
+  if (isPostgres) {
+    for (let i = 0; i < rows.length; i += chunkSize) {
+      const chunk = rows.slice(i, i + chunkSize);
+      await db.insert(table).values(chunk).onConflictDoNothing();
+    }
+    return;
+  }
+  for (const row of rows) {
+    await upsertById(table, idColumn, row);
+  }
+}
 async function seedDatabase() {
   await initDatabase();
-  for (const server of SEED_SERVERS) {
-    await upsertById(serversTable, serversTable.id, server);
-  }
-  for (const item of SEED_ALL_ITEMS) {
-    await upsertById(itemsTable, itemsTable.id, item);
-  }
-  for (const monster of SEED_WORLD_MONSTERS) {
-    const { sortOrder: _sortOrder, ...row } = monster;
-    await upsertById(monstersTable, monstersTable.id, row);
-  }
-  for (const quest of SEED_QUESTS) {
-    await upsertById(questsTable, questsTable.id, quest);
-  }
+  await batchInsertOrIgnore(serversTable, serversTable.id, [...SEED_SERVERS]);
+  await batchInsertOrIgnore(itemsTable, itemsTable.id, [...SEED_ALL_ITEMS]);
+  const cleanMonsters = SEED_WORLD_MONSTERS.map((m) => {
+    const { sortOrder: _sortOrder, ...row } = m;
+    return row;
+  });
+  await batchInsertOrIgnore(monstersTable, monstersTable.id, cleanMonsters);
+  await batchInsertOrIgnore(questsTable, questsTable.id, [...SEED_QUESTS]);
   console.log(`[DB:SEED] Successfully initialized game catalogs: ${SEED_SERVERS.length} servers, ${SEED_ALL_ITEMS.length} items, ${SEED_WORLD_MONSTERS.length} monsters, ${SEED_QUESTS.length} quests.`);
 }
 if (process.argv[1] && /seed\.(ts|js|mjs)$/.test(process.argv[1])) {
@@ -64158,8 +64166,8 @@ function rollTier() {
 }
 function rollItemFromPool(type) {
   const tier = rollTier();
-  const pool2 = type === "talent" ? TALENT_POOL[tier] : AURA_POOL[tier];
-  const item = pool2[Math.floor(Math.random() * pool2.length)];
+  const pool3 = type === "talent" ? TALENT_POOL[tier] : AURA_POOL[tier];
+  const item = pool3[Math.floor(Math.random() * pool3.length)];
   return { ...item };
 }
 function rollFullDestiny() {
@@ -68976,27 +68984,493 @@ router18.get("/dungeon/:instanceId", requireAuth, async (req, res) => {
 });
 var dungeon_default = router18;
 
-// src/routes/index.ts
+// src/routes/admin.ts
+var import_express19 = __toESM(require_express2(), 1);
 var router19 = (0, import_express19.Router)();
-router19.use(health_default);
-router19.use(auth_default);
-router19.use(classes_default);
-router19.use(characters_default);
-router19.use(battle_default);
-router19.use(encounters_default);
-router19.use(leaderboard_default);
-router19.use(inventory_default);
-router19.use(shop_default);
-router19.use(community_default);
-router19.use(quests_default);
-router19.use(blacksmith_default);
-router19.use(multiplayer_default);
-router19.use(endgame_default);
-router19.use(market_default);
-router19.use(talents_default);
-router19.use(codex_default);
-router19.use(dungeon_default);
-var routes_default = router19;
+router19.get("/admin/stats", async (_req, res) => {
+  try {
+    const [usersCount, charactersCount, itemsCount, monstersCount, serversCount, questsCount, characterItemsCount] = await Promise.all([
+      db.select({ count: sql`count(*)` }).from(usersTable).then((r) => Number(r[0]?.count || 0)).catch(() => 0),
+      db.select({ count: sql`count(*)` }).from(charactersTable).then((r) => Number(r[0]?.count || 0)).catch(() => 0),
+      db.select({ count: sql`count(*)` }).from(itemsTable).then((r) => Number(r[0]?.count || 0)).catch(() => 0),
+      db.select({ count: sql`count(*)` }).from(monstersTable).then((r) => Number(r[0]?.count || 0)).catch(() => 0),
+      db.select({ count: sql`count(*)` }).from(serversTable).then((r) => Number(r[0]?.count || 0)).catch(() => 0),
+      db.select({ count: sql`count(*)` }).from(questsTable).then((r) => Number(r[0]?.count || 0)).catch(() => 0),
+      db.select({ count: sql`count(*)` }).from(characterItemsTable).then((r) => Number(r[0]?.count || 0)).catch(() => 0)
+    ]);
+    return res.json({
+      dbMode: isPostgres ? "PostgreSQL (Supabase Cloud)" : "In-Memory / Standalone Fallback",
+      isPostgres,
+      nodeEnv: process.env.NODE_ENV || "production",
+      uptimeSeconds: Math.floor(process.uptime()),
+      memoryUsage: process.memoryUsage(),
+      counts: {
+        users: usersCount,
+        characters: charactersCount,
+        items: itemsCount,
+        monsters: monstersCount,
+        servers: serversCount,
+        quests: questsCount,
+        characterItems: characterItemsCount
+      }
+    });
+  } catch (err) {
+    return res.status(500).json({ error: "L\u1ED7i l\u1EA5y th\u1ED1ng k\xEA: " + err.message });
+  }
+});
+router19.get("/admin/users", async (_req, res) => {
+  try {
+    const users = await db.select().from(usersTable).orderBy(desc(usersTable.createdAt));
+    const characters = await db.select().from(charactersTable);
+    const userList = users.map((u) => {
+      const userChars = characters.filter((c) => c.userId === u.id);
+      return {
+        id: u.id,
+        username: u.username,
+        forumTitle: u.forumTitle,
+        selectedRegion: u.selectedRegion,
+        selectedServerId: u.selectedServerId,
+        lastCharacterId: u.lastCharacterId,
+        createdAt: u.createdAt,
+        characterCount: userChars.length,
+        characters: userChars.map((c) => ({
+          id: c.id,
+          name: c.name,
+          className: c.className,
+          level: c.level,
+          gold: c.gold
+        }))
+      };
+    });
+    return res.json(userList);
+  } catch (err) {
+    return res.status(500).json({ error: "L\u1ED7i t\u1EA3i danh s\xE1ch ng\u01B0\u1EDDi ch\u01A1i: " + err.message });
+  }
+});
+router19.post("/admin/users", async (req, res) => {
+  try {
+    const { username, password, forumTitle, selectedRegion, selectedServerId } = req.body;
+    if (!username || !password) {
+      return res.status(400).json({ error: "T\xEAn \u0111\u0103ng nh\u1EADp v\xE0 m\u1EADt kh\u1EA9u kh\xF4ng \u0111\u01B0\u1EE3c \u0111\u1EC3 tr\u1ED1ng" });
+    }
+    const cleanUsername = username.trim();
+    const existing = await db.select().from(usersTable).where(eq(usersTable.username, cleanUsername)).limit(1);
+    if (existing.length > 0) {
+      return res.status(409).json({ error: "T\xEAn \u0111\u0103ng nh\u1EADp n\xE0y \u0111\xE3 t\u1ED3n t\u1EA1i" });
+    }
+    const userId = getDeterministicUserId(cleanUsername);
+    const passwordHash = await bcryptjs_default.hash(password, 10);
+    const [newUser] = await db.insert(usersTable).values({
+      id: userId,
+      username: cleanUsername,
+      passwordHash,
+      forumTitle: forumTitle?.trim() || "T\xE2n Th\u1EE7 Long T\u1ED9c",
+      selectedRegion: selectedRegion || "VN",
+      selectedServerId: selectedServerId || "s1_long_vuong"
+    }).returning();
+    return res.status(201).json({
+      message: "T\u1EA1o t\xE0i kho\u1EA3n th\xE0nh c\xF4ng",
+      user: {
+        id: newUser.id,
+        username: newUser.username,
+        forumTitle: newUser.forumTitle,
+        selectedRegion: newUser.selectedRegion,
+        selectedServerId: newUser.selectedServerId,
+        createdAt: newUser.createdAt
+      }
+    });
+  } catch (err) {
+    return res.status(500).json({ error: "L\u1ED7i t\u1EA1o t\xE0i kho\u1EA3n: " + err.message });
+  }
+});
+router19.put("/admin/users/:id", async (req, res) => {
+  try {
+    const userId = parseInt(req.params.id, 10);
+    const { username, password, forumTitle, selectedRegion, selectedServerId } = req.body;
+    const [existing] = await db.select().from(usersTable).where(eq(usersTable.id, userId)).limit(1);
+    if (!existing) {
+      return res.status(404).json({ error: "Kh\xF4ng t\xECm th\u1EA5y ng\u01B0\u1EDDi ch\u01A1i" });
+    }
+    const updateData = {};
+    if (username && username.trim() !== existing.username) {
+      updateData.username = username.trim();
+    }
+    if (forumTitle) updateData.forumTitle = forumTitle.trim();
+    if (selectedRegion) updateData.selectedRegion = selectedRegion;
+    if (selectedServerId) updateData.selectedServerId = selectedServerId;
+    if (password && password.trim().length >= 4) {
+      updateData.passwordHash = await bcryptjs_default.hash(password.trim(), 10);
+    }
+    const [updated] = await db.update(usersTable).set(updateData).where(eq(usersTable.id, userId)).returning();
+    return res.json({
+      message: "C\u1EADp nh\u1EADt t\xE0i kho\u1EA3n th\xE0nh c\xF4ng",
+      user: {
+        id: updated.id,
+        username: updated.username,
+        forumTitle: updated.forumTitle,
+        selectedRegion: updated.selectedRegion,
+        selectedServerId: updated.selectedServerId,
+        createdAt: updated.createdAt
+      }
+    });
+  } catch (err) {
+    return res.status(500).json({ error: "L\u1ED7i c\u1EADp nh\u1EADt t\xE0i kho\u1EA3n: " + err.message });
+  }
+});
+router19.delete("/admin/users/:id", async (req, res) => {
+  try {
+    const userId = parseInt(req.params.id, 10);
+    const characters = await db.select().from(charactersTable).where(eq(charactersTable.userId, userId));
+    for (const c of characters) {
+      await db.delete(characterItemsTable).where(eq(characterItemsTable.characterId, c.id));
+      await db.delete(charactersTable).where(eq(charactersTable.id, c.id));
+    }
+    await db.delete(usersTable).where(eq(usersTable.id, userId));
+    return res.json({ message: `\u0110\xE3 x\xF3a t\xE0i kho\u1EA3n ID ${userId} v\xE0 ${characters.length} nh\xE2n v\u1EADt li\xEAn quan.` });
+  } catch (err) {
+    return res.status(500).json({ error: "L\u1ED7i x\xF3a t\xE0i kho\u1EA3n: " + err.message });
+  }
+});
+router19.get("/admin/characters", async (_req, res) => {
+  try {
+    const characters = await db.select().from(charactersTable).orderBy(desc(charactersTable.level), desc(charactersTable.combatPower));
+    const users = await db.select().from(usersTable);
+    const userMap = new Map(users.map((u) => [u.id, u.username]));
+    const result = characters.map((c) => ({
+      ...c,
+      username: userMap.get(c.userId) || `User #${c.userId}`
+    }));
+    return res.json(result);
+  } catch (err) {
+    return res.status(500).json({ error: "L\u1ED7i t\u1EA3i nh\xE2n v\u1EADt: " + err.message });
+  }
+});
+router19.post("/admin/characters", async (req, res) => {
+  try {
+    const { userId, name, classId, level = 1, gold = 1e3, serverId = "s1_long_vuong" } = req.body;
+    if (!userId || !name || !classId) {
+      return res.status(400).json({ error: "userId, name v\xE0 classId l\xE0 b\u1EAFt bu\u1ED9c" });
+    }
+    const cls = CHARACTER_CLASSES.find((c) => c.id === classId) || CHARACTER_CLASSES[0];
+    const stats = getStatsForLevel(cls.id, level);
+    const charId = Math.floor(Math.random() * 9e5) + 1e5;
+    const [newChar] = await db.insert(charactersTable).values({
+      id: charId,
+      userId: Number(userId),
+      serverId,
+      name: name.trim(),
+      classId: cls.id,
+      className: cls.name,
+      level,
+      experience: 0,
+      gold: Number(gold),
+      hp: stats.hp,
+      maxHp: stats.hp,
+      mp: stats.mp,
+      maxMp: stats.mp,
+      atk: stats.atk,
+      def: stats.def,
+      spd: stats.spd,
+      str: cls.baseStr + level,
+      dex: cls.baseDex + level,
+      intel: cls.baseInt + level,
+      luk: cls.baseLuk + level,
+      vit: cls.baseVit + level,
+      combatPower: Math.round(stats.hp * 1.5 + stats.atk * 8 + stats.def * 6 + stats.spd * 4)
+    }).returning();
+    return res.status(201).json({ message: "T\u1EA1o nh\xE2n v\u1EADt th\xE0nh c\xF4ng", character: newChar });
+  } catch (err) {
+    return res.status(500).json({ error: "L\u1ED7i t\u1EA1o nh\xE2n v\u1EADt: " + err.message });
+  }
+});
+router19.put("/admin/characters/:id", async (req, res) => {
+  try {
+    const charId = parseInt(req.params.id, 10);
+    const body = req.body;
+    const [existing] = await db.select().from(charactersTable).where(eq(charactersTable.id, charId)).limit(1);
+    if (!existing) {
+      return res.status(404).json({ error: "Kh\xF4ng t\xECm th\u1EA5y nh\xE2n v\u1EADt" });
+    }
+    const updateData = {};
+    const numericFields = [
+      "level",
+      "experience",
+      "hp",
+      "maxHp",
+      "mp",
+      "maxMp",
+      "gold",
+      "kills",
+      "deaths",
+      "atk",
+      "matk",
+      "def",
+      "mdef",
+      "spd",
+      "critRate",
+      "critDmg",
+      "accuracy",
+      "evasion",
+      "str",
+      "dex",
+      "intel",
+      "luk",
+      "vit",
+      "combatPower",
+      "unlockedSlots",
+      "posX",
+      "posZ"
+    ];
+    for (const field of numericFields) {
+      if (body[field] !== void 0) {
+        updateData[field] = Number(body[field]);
+      }
+    }
+    const textFields = ["name", "title", "zoneId", "className", "classId", "gender", "serverId"];
+    for (const field of textFields) {
+      if (body[field] !== void 0) {
+        updateData[field] = String(body[field]).trim();
+      }
+    }
+    const [updated] = await db.update(charactersTable).set(updateData).where(eq(charactersTable.id, charId)).returning();
+    return res.json({ message: "C\u1EADp nh\u1EADt nh\xE2n v\u1EADt th\xE0nh c\xF4ng", character: updated });
+  } catch (err) {
+    return res.status(500).json({ error: "L\u1ED7i c\u1EADp nh\u1EADt nh\xE2n v\u1EADt: " + err.message });
+  }
+});
+router19.delete("/admin/characters/:id", async (req, res) => {
+  try {
+    const charId = parseInt(req.params.id, 10);
+    await db.delete(characterItemsTable).where(eq(characterItemsTable.characterId, charId));
+    await db.delete(charactersTable).where(eq(charactersTable.id, charId));
+    return res.json({ message: `\u0110\xE3 x\xF3a nh\xE2n v\u1EADt ID ${charId}` });
+  } catch (err) {
+    return res.status(500).json({ error: "L\u1ED7i x\xF3a nh\xE2n v\u1EADt: " + err.message });
+  }
+});
+router19.get("/admin/items", async (_req, res) => {
+  try {
+    const items = await db.select().from(itemsTable).orderBy(itemsTable.type, itemsTable.requiredLevel);
+    return res.json(items);
+  } catch (err) {
+    return res.status(500).json({ error: "L\u1ED7i t\u1EA3i v\u1EADt ph\u1EA9m: " + err.message });
+  }
+});
+router19.post("/admin/items", async (req, res) => {
+  try {
+    const { id, name, type, category = "equipment", equipSlot = "none", description = "", rarity = "common", hpBoost = 0, atkBoost = 0, defBoost = 0, spdBoost = 0, price = 100, classId = null, requiredLevel = 1, icon = "\u2694\uFE0F" } = req.body;
+    if (!id || !name || !type) {
+      return res.status(400).json({ error: "id, name v\xE0 type l\xE0 b\u1EAFt bu\u1ED9c" });
+    }
+    const [newItem] = await db.insert(itemsTable).values({
+      id: id.trim(),
+      name: name.trim(),
+      type,
+      category,
+      equipSlot,
+      description,
+      rarity,
+      hpBoost: Number(hpBoost) || 0,
+      atkBoost: Number(atkBoost) || 0,
+      defBoost: Number(defBoost) || 0,
+      spdBoost: Number(spdBoost) || 0,
+      price: Number(price) || 0,
+      classId: classId || null,
+      requiredLevel: Number(requiredLevel) || 1,
+      icon
+    }).returning();
+    return res.status(201).json({ message: "Th\xEAm v\u1EADt ph\u1EA9m m\u1EDBi th\xE0nh c\xF4ng", item: newItem });
+  } catch (err) {
+    return res.status(500).json({ error: "L\u1ED7i th\xEAm v\u1EADt ph\u1EA9m: " + err.message });
+  }
+});
+router19.put("/admin/items/:id", async (req, res) => {
+  try {
+    const itemId = req.params.id;
+    const body = req.body;
+    const [existing] = await db.select().from(itemsTable).where(eq(itemsTable.id, itemId)).limit(1);
+    if (!existing) {
+      return res.status(404).json({ error: "Kh\xF4ng t\xECm th\u1EA5y v\u1EADt ph\u1EA9m" });
+    }
+    const updateData = {};
+    const numericFields = ["hpBoost", "mpBoost", "atkBoost", "matkBoost", "defBoost", "mdefBoost", "spdBoost", "price", "requiredLevel"];
+    for (const f of numericFields) {
+      if (body[f] !== void 0) updateData[f] = Number(body[f]);
+    }
+    const textFields = ["name", "type", "category", "equipSlot", "description", "rarity", "icon", "classId"];
+    for (const f of textFields) {
+      if (body[f] !== void 0) updateData[f] = body[f] === "" ? null : body[f];
+    }
+    const [updated] = await db.update(itemsTable).set(updateData).where(eq(itemsTable.id, itemId)).returning();
+    return res.json({ message: "C\u1EADp nh\u1EADt v\u1EADt ph\u1EA9m th\xE0nh c\xF4ng", item: updated });
+  } catch (err) {
+    return res.status(500).json({ error: "L\u1ED7i c\u1EADp nh\u1EADt v\u1EADt ph\u1EA9m: " + err.message });
+  }
+});
+router19.delete("/admin/items/:id", async (req, res) => {
+  try {
+    const itemId = req.params.id;
+    await db.delete(itemsTable).where(eq(itemsTable.id, itemId));
+    return res.json({ message: `\u0110\xE3 x\xF3a v\u1EADt ph\u1EA9m ${itemId}` });
+  } catch (err) {
+    return res.status(500).json({ error: "L\u1ED7i x\xF3a v\u1EADt ph\u1EA9m: " + err.message });
+  }
+});
+router19.get("/admin/characters/:id/items", async (req, res) => {
+  try {
+    const charId = parseInt(req.params.id, 10);
+    const items = await db.select().from(characterItemsTable).where(eq(characterItemsTable.characterId, charId));
+    const allCatalog = await db.select().from(itemsTable);
+    const catalogMap = new Map(allCatalog.map((i) => [i.id, i]));
+    const enriched = items.map((ci) => ({
+      ...ci,
+      itemDetails: catalogMap.get(ci.itemId) || null
+    }));
+    return res.json(enriched);
+  } catch (err) {
+    return res.status(500).json({ error: "L\u1ED7i t\u1EA3i kho \u0111\u1ED3 nh\xE2n v\u1EADt: " + err.message });
+  }
+});
+router19.post("/admin/characters/:id/grant-item", async (req, res) => {
+  try {
+    const charId = parseInt(req.params.id, 10);
+    const { itemId, quantity = 1, enhanceLevel = 0 } = req.body;
+    const [item] = await db.select().from(itemsTable).where(eq(itemsTable.id, itemId)).limit(1);
+    if (!item) {
+      return res.status(404).json({ error: "V\u1EADt ph\u1EA9m kh\xF4ng t\u1ED3n t\u1EA1i trong danh m\u1EE5c" });
+    }
+    const currentItems = await db.select().from(characterItemsTable).where(eq(characterItemsTable.characterId, charId));
+    const usedSlots = new Set(currentItems.map((i) => i.slotIndex));
+    let nextSlot = 0;
+    while (usedSlots.has(nextSlot)) {
+      nextSlot++;
+    }
+    const [granted] = await db.insert(characterItemsTable).values({
+      characterId: charId,
+      itemId,
+      quantity: Number(quantity) || 1,
+      enhanceLevel: Number(enhanceLevel) || 0,
+      rarity: item.rarity,
+      slotIndex: nextSlot,
+      equipped: false
+    }).returning();
+    return res.status(201).json({ message: `\u0110\xE3 c\u1EA5p [${item.name}] cho nh\xE2n v\u1EADt!`, granted });
+  } catch (err) {
+    return res.status(500).json({ error: "L\u1ED7i c\u1EA5p v\u1EADt ph\u1EA9m: " + err.message });
+  }
+});
+router19.delete("/admin/character-items/:id", async (req, res) => {
+  try {
+    const id = parseInt(req.params.id, 10);
+    await db.delete(characterItemsTable).where(eq(characterItemsTable.id, id));
+    return res.json({ message: `\u0110\xE3 x\xF3a item #${id} kh\u1ECFi kho \u0111\u1ED3` });
+  } catch (err) {
+    return res.status(500).json({ error: "L\u1ED7i x\xF3a item kh\u1ECFi kho: " + err.message });
+  }
+});
+router19.get("/admin/tables", async (_req, res) => {
+  try {
+    const tables = [
+      { name: "users", description: "T\xE0i kho\u1EA3n ng\u01B0\u1EDDi ch\u01A1i & th\xF4ng tin \u0111\u0103ng nh\u1EADp" },
+      { name: "characters", description: "Nh\xE2n v\u1EADt, ch\u1EC9 s\u1ED1, m\xF4n ph\xE1i, v\xE0ng, v\u1ECB tr\xED" },
+      { name: "items", description: "Danh m\u1EE5c v\u1EADt ph\u1EA9m & trang b\u1ECB to\xE0n game" },
+      { name: "character_items", description: "Kho \u0111\u1ED3 (H\xE0nh trang) & trang b\u1ECB tr\xEAn ng\u01B0\u1EDDi c\u1EE7a nh\xE2n v\u1EADt" },
+      { name: "monsters", description: "Qu\xE1i v\u1EADt d\xE3 ngo\u1EA1i, Boss & t\u1EF7 l\u1EC7 r\u01A1i \u0111\u1ED3" },
+      { name: "servers", description: "M\xE1y ch\u1EE7 ph\xE2n v\xF9ng (S1 Long V\u01B0\u01A1ng, S2 H\u1EAFc \xC1m...)" },
+      { name: "quests", description: "H\u1EC7 th\u1ED1ng nhi\u1EC7m v\u1EE5 ch\xEDnh tuy\u1EBFn & d\xE3 ngo\u1EA1i" },
+      { name: "battle_logs", description: "Nh\u1EADt k\xFD chi\u1EBFn \u0111\u1EA5u v\xE0 l\u1ECBch s\u1EED ti\xEAu di\u1EC7t qu\xE1i" }
+    ];
+    const results = await Promise.all(
+      tables.map(async (t) => {
+        let count = 0;
+        try {
+          if (t.name === "users") count = (await db.select({ c: sql`count(*)` }).from(usersTable))[0]?.c;
+          else if (t.name === "characters") count = (await db.select({ c: sql`count(*)` }).from(charactersTable))[0]?.c;
+          else if (t.name === "items") count = (await db.select({ c: sql`count(*)` }).from(itemsTable))[0]?.c;
+          else if (t.name === "character_items") count = (await db.select({ c: sql`count(*)` }).from(characterItemsTable))[0]?.c;
+          else if (t.name === "monsters") count = (await db.select({ c: sql`count(*)` }).from(monstersTable))[0]?.c;
+          else if (t.name === "servers") count = (await db.select({ c: sql`count(*)` }).from(serversTable))[0]?.c;
+          else if (t.name === "quests") count = (await db.select({ c: sql`count(*)` }).from(questsTable))[0]?.c;
+          else if (t.name === "battle_logs") count = (await db.select({ c: sql`count(*)` }).from(battleLogsTable))[0]?.c;
+        } catch {
+          count = 0;
+        }
+        return { ...t, rowCount: Number(count) || 0 };
+      })
+    );
+    return res.json(results);
+  } catch (err) {
+    return res.status(500).json({ error: "L\u1ED7i l\u1EA5y danh s\xE1ch b\u1EA3ng: " + err.message });
+  }
+});
+router19.get("/admin/tables/:tableName", async (req, res) => {
+  try {
+    const { tableName } = req.params;
+    const limit = Math.min(parseInt(req.query.limit || "50", 10), 200);
+    let rows = [];
+    if (tableName === "users") rows = await db.select().from(usersTable).limit(limit);
+    else if (tableName === "characters") rows = await db.select().from(charactersTable).limit(limit);
+    else if (tableName === "items") rows = await db.select().from(itemsTable).limit(limit);
+    else if (tableName === "character_items") rows = await db.select().from(characterItemsTable).limit(limit);
+    else if (tableName === "monsters") rows = await db.select().from(monstersTable).limit(limit);
+    else if (tableName === "servers") rows = await db.select().from(serversTable).limit(limit);
+    else if (tableName === "quests") rows = await db.select().from(questsTable).limit(limit);
+    else if (tableName === "battle_logs") rows = await db.select().from(battleLogsTable).limit(limit);
+    else return res.status(404).json({ error: "B\u1EA3ng kh\xF4ng t\u1ED3n t\u1EA1i" });
+    return res.json({ tableName, count: rows.length, rows });
+  } catch (err) {
+    return res.status(500).json({ error: "L\u1ED7i truy v\u1EA5n b\u1EA3ng: " + err.message });
+  }
+});
+router19.delete("/admin/tables/:tableName/:id", async (req, res) => {
+  try {
+    const { tableName, id } = req.params;
+    const numId = parseInt(id, 10);
+    if (tableName === "users") await db.delete(usersTable).where(eq(usersTable.id, numId));
+    else if (tableName === "characters") await db.delete(charactersTable).where(eq(charactersTable.id, numId));
+    else if (tableName === "items") await db.delete(itemsTable).where(eq(itemsTable.id, id));
+    else if (tableName === "character_items") await db.delete(characterItemsTable).where(eq(characterItemsTable.id, numId));
+    else if (tableName === "monsters") await db.delete(monstersTable).where(eq(monstersTable.id, id));
+    else if (tableName === "servers") await db.delete(serversTable).where(eq(serversTable.id, id));
+    else if (tableName === "quests") await db.delete(questsTable).where(eq(questsTable.id, id));
+    else return res.status(404).json({ error: "B\u1EA3ng kh\xF4ng h\u1EE3p l\u1EC7" });
+    return res.json({ message: `\u0110\xE3 x\xF3a b\u1EA3n ghi ${id} kh\u1ECFi b\u1EA3ng ${tableName}` });
+  } catch (err) {
+    return res.status(500).json({ error: "L\u1ED7i x\xF3a b\u1EA3n ghi: " + err.message });
+  }
+});
+router19.post("/admin/db/reset-seed", async (_req, res) => {
+  try {
+    await seedDatabase();
+    return res.json({ message: "\u0110\xE3 n\u1EA1p l\u1EA1i to\xE0n b\u1ED9 d\u1EEF li\u1EC7u m\u1EABu (Items, Monsters, Servers, Quests) th\xE0nh c\xF4ng!" });
+  } catch (err) {
+    return res.status(500).json({ error: "L\u1ED7i n\u1EA1p seed: " + err.message });
+  }
+});
+var admin_default = router19;
+
+// src/routes/index.ts
+var router20 = (0, import_express20.Router)();
+router20.use(health_default);
+router20.use(auth_default);
+router20.use(classes_default);
+router20.use(characters_default);
+router20.use(battle_default);
+router20.use(encounters_default);
+router20.use(leaderboard_default);
+router20.use(inventory_default);
+router20.use(shop_default);
+router20.use(community_default);
+router20.use(quests_default);
+router20.use(blacksmith_default);
+router20.use(multiplayer_default);
+router20.use(endgame_default);
+router20.use(market_default);
+router20.use(talents_default);
+router20.use(codex_default);
+router20.use(dungeon_default);
+router20.use(admin_default);
+var routes_default = router20;
 
 // src/lib/logger.ts
 var import_pino = __toESM(require_pino(), 1);
@@ -69017,7 +69491,7 @@ var logger = (0, import_pino.default)({
 });
 
 // src/app.ts
-var app = (0, import_express20.default)();
+var app = (0, import_express21.default)();
 app.set("trust proxy", 1);
 app.use(
   (0, import_pino_http.default)({
@@ -69044,8 +69518,8 @@ app.use(
     credentials: true
   })
 );
-app.use(import_express20.default.json());
-app.use(import_express20.default.urlencoded({ extended: true }));
+app.use(import_express21.default.json());
+app.use(import_express21.default.urlencoded({ extended: true }));
 app.use((0, import_cookie_parser.default)());
 var sessionStore;
 if (isPostgres && pool) {
@@ -69078,8 +69552,8 @@ var sessionMiddleware = (0, import_express_session.default)({
 });
 app.use(sessionMiddleware);
 app.use("/api", routes_default);
-app.use("/assets/exported", import_express20.default.static(path2.resolve(process.cwd(), "assets/exported")));
-app.use("/game-sandbox", import_express20.default.static(path2.resolve(process.cwd(), "game")));
+app.use("/assets/exported", import_express21.default.static(path2.resolve(process.cwd(), "assets/exported")));
+app.use("/game-sandbox", import_express21.default.static(path2.resolve(process.cwd(), "game")));
 var potentialStaticPaths = [
   path2.resolve(process.cwd(), "artifacts/mmorpg-game/dist/public"),
   path2.resolve(process.cwd(), "dist/public"),
@@ -69090,7 +69564,7 @@ var potentialStaticPaths = [
 var staticDir = potentialStaticPaths.find((p) => fs2.existsSync(p));
 if (staticDir) {
   logger.info({ staticDir }, "Serving static frontend assets");
-  app.use(import_express20.default.static(staticDir));
+  app.use(import_express21.default.static(staticDir));
   app.use((req, res, next) => {
     if (req.path.startsWith("/api")) return next();
     res.sendFile(path2.join(staticDir, "index.html"));
