@@ -68473,16 +68473,24 @@ var app_default = app;
 
 // src/vercel-handler.ts
 var isDbInitialized = false;
-async function handler(req, res) {
-  if (!isDbInitialized) {
-    try {
-      await initDatabase();
-      await seedDatabase();
-      isDbInitialized = true;
-    } catch (err) {
-      console.error("[Vercel Serverless] Database init warning:", err);
-    }
+var initPromise = null;
+async function ensureDb() {
+  if (isDbInitialized) return;
+  if (!initPromise) {
+    initPromise = (async () => {
+      try {
+        await initDatabase();
+        isDbInitialized = true;
+        seedDatabase().catch((e) => console.warn("[Vercel] Catalog seed deferred warning:", e));
+      } catch (err) {
+        console.error("[Vercel Serverless] Database init warning:", err);
+      }
+    })();
   }
+  return initPromise;
+}
+async function handler(req, res) {
+  await ensureDb();
   return app_default(req, res);
 }
 export {
