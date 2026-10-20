@@ -61851,15 +61851,17 @@ function createMemoryDb() {
   return memoryDb;
 }
 async function initDatabase() {
-  const dbUrl = process.env.DATABASE_URL;
+  const dbUrl = process.env.DATABASE_URL || process.env.POSTGRES_URL;
   if (dbUrl && dbUrl !== "memory" && !dbUrl.startsWith("sqlite")) {
     try {
       console.log("[DB] Connecting to PostgreSQL:", dbUrl.replace(/:[^:@]+@/, ":***@"));
+      const isCloudDb = dbUrl.includes("supabase") || dbUrl.includes("neon") || dbUrl.includes("sslmode=require") || dbUrl.includes("pooler.supabase.com");
       pool = new Pool3({
         connectionString: dbUrl,
-        connectionTimeoutMillis: 5e3,
+        connectionTimeoutMillis: 8e3,
         idleTimeoutMillis: 3e4,
-        max: 10
+        max: 10,
+        ssl: isCloudDb ? { rejectUnauthorized: false } : void 0
       });
       const client = await pool.connect();
       client.release();
@@ -62221,11 +62223,14 @@ async function initDatabase() {
   db = createMemoryDb();
   isPostgres = false;
 }
-if (process.env.DATABASE_URL && process.env.DATABASE_URL !== "memory") {
+var initialDbUrl = process.env.DATABASE_URL || process.env.POSTGRES_URL;
+if (initialDbUrl && initialDbUrl !== "memory" && !initialDbUrl.startsWith("sqlite")) {
   try {
+    const isCloudDb = initialDbUrl.includes("supabase") || initialDbUrl.includes("neon") || initialDbUrl.includes("sslmode=require") || initialDbUrl.includes("pooler.supabase.com");
     pool = new Pool3({
-      connectionString: process.env.DATABASE_URL,
-      connectionTimeoutMillis: 5e3
+      connectionString: initialDbUrl,
+      connectionTimeoutMillis: 8e3,
+      ssl: isCloudDb ? { rejectUnauthorized: false } : void 0
     });
     db = drizzle(pool, { schema: schema_exports });
     isPostgres = true;

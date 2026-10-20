@@ -51,12 +51,13 @@ npx vercel --prod
 
 Để dữ liệu người chơi, nhân vật và bảng xếp hạng được lưu trữ vĩnh viễn trên server thật:
 1. Bạn có thể tạo 1 Database PostgreSQL miễn phí trong 30 giây tại:
-   - [Neon.tech](https://neon.tech) (Free Serverless Postgres, rất khuyên dùng cho Vercel)
-   - [Supabase.com](https://supabase.com)
+   - [Supabase.com](https://supabase.com) (Xem cẩm nang chi tiết tại [SUPABASE_VERCEL_GUIDE.md](file:///c:/Cassavas/Game2.5D/SUPABASE_VERCEL_GUIDE.md))
+   - [Neon.tech](https://neon.tech) (Free Serverless Postgres)
    - Hoặc trực tiếp tab **Storage -> Postgres** trong Vercel Dashboard.
 2. Vào **Project Settings -> Environment Variables** trên Vercel:
-   - `DATABASE_URL`: Điền connection string (vd: `postgresql://user:pass@ep-xyz.neon.tech/neondb?sslmode=require`)
+   - `DATABASE_URL`: Điền connection string (Với Supabase, nên dùng Transaction Pooler cổng 6543: `postgresql://postgres.[ref]:[pass]@aws-0-[region].pooler.supabase.com:6543/postgres`)
    - `SESSION_SECRET`: Một chuỗi ngẫu nhiên bí mật (vd: `mmorpg_secure_key_2026_xyz`)
 3. Nhấn **Redeploy**. Máy chủ sẽ tự động kết nối PostgreSQL và tự động tạo bảng CSDL khi khởi động!
 
 *(Lưu ý: Ngay cả khi chưa cấu hình `DATABASE_URL`, máy chủ vẫn hoạt động trơn tru ở chế độ Standalone Beta cho phép đăng ký tài khoản và trải nghiệm ngay lập tức).*
+
