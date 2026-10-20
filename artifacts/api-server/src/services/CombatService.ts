@@ -1,3 +1,4 @@
+import crypto from "node:crypto";
 import { and, eq } from "drizzle-orm";
 import {
   db,
@@ -114,7 +115,7 @@ export class CombatService {
               const maxSlots = character.unlockedSlots || 18;
 
               for (const drop of dropTable) {
-                if (Math.random() * 100 < drop.chancePercent) {
+                if ((crypto.randomInt(0, 10000) / 100) < drop.chancePercent) {
                   let freeSlot: number | null = null;
                   for (let s = 0; s < maxSlots; s++) {
                     if (!takenSlots.has(s)) {

@@ -39,8 +39,8 @@ const TEST_SUITES = [
   {
     id: 3,
     name: "Combat Engine & Boss AI",
-    script: "scratch/test-phase3-combat.mjs",
-    description: "Authoritative combat, 429 spam throttle, dead fight lock, battle logs",
+    script: "scripts/test-phase3-authoritative-combat.mjs",
+    description: "Authoritative combat, 429 spam throttle, speedhack & impossible DPS prevention",
   },
   {
     id: 4,

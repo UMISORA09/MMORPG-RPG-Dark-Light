@@ -9,6 +9,7 @@ import {
 } from "../lib/inventory";
 import { requireAuth } from "../middlewares/requireAuth";
 import { CombatService } from "../services/CombatService";
+import { calculateDamage } from "../rules/combatRules";
 
 const router = Router();
 
@@ -142,35 +143,66 @@ router.post("/characters/:characterId/battle", requireAuth, async (req, res) => 
   let rounds = simResult.rounds;
   let finalPlayerHp = simResult.finalPlayerHp;
 
-  // Real-time combat verification: If client provides metrics from 2.5D combat
+  // Real-time combat verification: Server Authoritative Metrics & Anti-Speedhack
   const metrics = req.body?.metrics;
   if (metrics && typeof metrics === "object") {
     const duration = Number(metrics.durationSeconds) || 0;
     const dmgDealt = Number(metrics.totalDamageDealt) || 0;
-    const hitsTaken = Number(metrics.hitsTaken) || 0;
+    const hitsTaken = Math.max(0, Number(metrics.hitsTaken) || 0);
 
-    const maxDps = Math.max(10, effectiveCharacter.atk * 8);
-    const minTimeRequired = rawMonster.hp / maxDps;
+    // 1. Tính toán sát thương tối đa trên 1 đòn đánh thực tế (kết hợp crit x1.8 và stagger x1.5)
+    const maxSingleHitDmg = calculateDamage(effectiveCharacter.atk, rawMonster.def, {
+      multiplier: 2.5,
+      isCritical: true,
+      isStaggered: true,
+    }).damage;
 
-    if (dmgDealt >= rawMonster.hp && duration >= minTimeRequired * 0.4 && effectiveCharacter.hp > 0) {
+    // 2. Tốc độ tấn công vật lý tối đa (hits/giây) dựa trên tốc độ của nhân vật
+    const maxAttackRate = Math.min(3.5, Math.max(1.0, (effectiveCharacter.spd || 6) / 5));
+    const realisticMaxDps = Math.max(1, maxSingleHitDmg * maxAttackRate);
+    const minRealisticDuration = rawMonster.hp / realisticMaxDps;
+
+    // 3. Sát thương quái vật gây ra cho người chơi trên mỗi đòn đánh
+    const monsterDmgPerHit = Math.max(1, rawMonster.atk - Math.floor(effectiveCharacter.def * 0.4));
+    const monsterAttackRateSec = rawMonster.archetype === "WORLD_BOSS" ? 1.8 : 2.5;
+    const minMonsterHitsExpected = duration > 1.5 ? Math.floor(duration / monsterAttackRateSec) : 0;
+    const effectiveHitsTaken = Math.max(hitsTaken, Math.floor(minMonsterHitsExpected * 0.5));
+    const totalDmgTaken = effectiveHitsTaken * monsterDmgPerHit;
+    finalPlayerHp = Math.max(0, effectiveCharacter.hp - totalDmgTaken);
+
+    // 4. Kiểm định tính hợp lệ: Sát thương đủ, thời gian đủ vật lý, và người chơi còn sống
+    const isDurationValid = duration >= minRealisticDuration * 0.35 || rawMonster.hp <= 100;
+    const isDamageValid = dmgDealt >= rawMonster.hp;
+    const isPlayerAlive = finalPlayerHp > 0;
+
+    if (isDamageValid && isDurationValid && isPlayerAlive) {
       victory = true;
-      const dmgPerHit = Math.max(1, rawMonster.atk - Math.floor(effectiveCharacter.def * 0.4));
-      finalPlayerHp = Math.max(1, effectiveCharacter.hp - hitsTaken * dmgPerHit);
       rounds = [
         {
           round: 1,
           playerHp: finalPlayerHp,
           monsterHp: 0,
           playerDmg: dmgDealt,
-          monsterDmg: hitsTaken * dmgPerHit,
+          monsterDmg: totalDmgTaken,
           playerAction: "Trảm sát trong không gian 2.5D Real-Time",
+          isCritical: true,
+        },
+      ];
+    } else {
+      // Cheating attempt hoặc người chơi bị hạ gục trước sức mạnh quái vật
+      victory = false;
+      finalPlayerHp = 0;
+      rounds = [
+        {
+          round: 1,
+          playerHp: 0,
+          monsterHp: Math.max(0, rawMonster.hp - dmgDealt),
+          playerDmg: dmgDealt,
+          monsterDmg: totalDmgTaken,
+          playerAction: "Thất bại trước uy lực quái vật",
           isCritical: false,
         },
       ];
-    } else if (duration < minTimeRequired * 0.4 && rawMonster.hp > 500) {
-      // Cheating attempt: claiming to defeat high-tier monster impossibly fast
-      victory = false;
-      finalPlayerHp = 0;
     }
   }
 
