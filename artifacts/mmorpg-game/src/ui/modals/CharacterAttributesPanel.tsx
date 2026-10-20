@@ -65,7 +65,12 @@ export const CharacterAttributesPanel = memo(function CharacterAttributesPanel()
     setIsSaving(true);
     playCombatSFX("level_up_fanfare", 0.5);
 
-    const charId = activeCharacterId || 1;
+    if (!activeCharacterId) {
+      toast({ title: "Chưa chọn nhân vật!", variant: "destructive" });
+      setIsSaving(false);
+      return;
+    }
+    const charId = activeCharacterId;
 
     try {
       const res = await fetch(`/api/characters/${charId}/stats`, {
