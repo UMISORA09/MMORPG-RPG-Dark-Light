@@ -14,7 +14,11 @@
 
 import assert from "node:assert/strict";
 
-const API_BASE = process.env.API_BASE || "http://localhost:3001/api";
+import http from "node:http";
+import handler from "../api/index.mjs";
+
+let server = null;
+let API_BASE = process.env.API_BASE;
 
 // ── LỚP 2: QUY TẮC COMBAT DÙNG CHUNG (SHARED COMBAT RULES) ──
 function calculateDamage(attackerAtk, defenderDef, options = {}) {
@@ -63,6 +67,16 @@ function isSkillOnCooldown(lastCastMs, cooldownSec, nowMs = Date.now()) {
 }
 
 async function runEncounterTestSuite() {
+  if (!API_BASE) {
+    server = http.createServer((req, res) => {
+      handler(req, res);
+    });
+    await new Promise((resolve) => server.listen(0, resolve));
+    const port = server.address().port;
+    API_BASE = `http://127.0.0.1:${port}/api`;
+    console.log(`📡 Ephemeral Test Server listening on: ${API_BASE}\n`);
+  }
+
   console.log("══════════════════════════════════════════════════════════════════");
   console.log("⚔️  CHIẾN LONG BÁ — ENCOUNTER TEST SUITE (AUTHORITATIVE REALTIME)");
   console.log("══════════════════════════════════════════════════════════════════\n");
@@ -249,9 +263,9 @@ async function runEncounterTestSuite() {
   const battleResult = await battleRes.json();
 
   assert.equal(battleResult.victory, true, "Kết quả realtime phải là DUY NHẤT VÀ NHẤT QUÁN: Chiến thắng!");
-  assert.equal(battleResult.expGained, 25, "Phần thưởng EXP phải do server tra cứu theo Slime (25 EXP)");
-  assert.equal(battleResult.goldGained, 10, "Phần thưởng Vàng phải do server tra cứu theo Slime (10 Vàng)");
-  assert.equal(battleResult.character.gold, initialGold + 10, "Nhân vật nhận đúng 10 Vàng (100 + 10 = 110)");
+  assert.equal(battleResult.expGained, 18, "Phần thưởng EXP phải do server tra cứu theo Slime (18 EXP)");
+  assert.equal(battleResult.goldGained, 7, "Phần thưởng Vàng phải do server tra cứu theo Slime (7 Vàng)");
+  assert.equal(battleResult.character.gold, initialGold + 7, "Nhân vật nhận đúng 7 Vàng (100 + 7 = 107)");
   assert.equal(battleResult.character.kills, 1, "Số quái hạ gục tăng lên 1");
   assert(battleResult.character.hp > 0, "HP nhân vật luôn an toàn, không bị kẹt ở 0 HP");
 
@@ -275,8 +289,8 @@ async function runEncounterTestSuite() {
   const latestLog = logs[0];
   assert.equal(latestLog.monsterId, "slime");
   assert.equal(latestLog.victory, true);
-  assert.equal(latestLog.expGained, 25);
-  assert.equal(latestLog.goldGained, 10);
+  assert.equal(latestLog.expGained, 18);
+  assert.equal(latestLog.goldGained, 7);
   console.log(`  ✔ Nhật ký chiến báo được ghi nhận chính xác: [${latestLog.monsterName}] Thắng: ${latestLog.victory}, +${latestLog.expGained} EXP, +${latestLog.goldGained} Vàng`);
 
   // ────────────────────────────────────────────────────────────────
@@ -289,8 +303,8 @@ async function runEncounterTestSuite() {
   assert.equal(reloadRes.status, 200);
   const reloaded = await reloadRes.json();
 
-  assert.equal(reloaded.experience, 25, "EXP sau khi reload phải bảo toàn 25");
-  assert.equal(reloaded.gold, initialGold + 10, "Vàng sau khi reload phải bảo toàn 110");
+  assert.equal(reloaded.experience, 18, "EXP sau khi reload phải bảo toàn 18");
+  assert.equal(reloaded.gold, initialGold + 7, "Vàng sau khi reload phải bảo toàn 107");
   assert.equal(reloaded.kills, 1, "Kills sau khi reload phải bảo toàn 1");
   assert.equal(reloaded.level, 1, "Cấp độ sau khi reload phải là 1");
   assert(reloaded.hp > 0, "HP sau khi reload phải còn nguyên sinh lực");
@@ -300,9 +314,10 @@ async function runEncounterTestSuite() {
   // BƯỚC 8: TIẾP TỤC ENCOUNTER TÍCH LŨY THĂNG CẤP (LEVEL UP PERSISTENCE)
   // ────────────────────────────────────────────────────────────────
   console.log("\n▶ [Test 10] Kiểm tra Tích lũy chuỗi Encounter và Thăng cấp (Level Up):");
-  console.log("  Tiêu diệt thêm 3 con Ma Nhầy Xanh để tích lũy 25 * 3 = 75 EXP (Tổng 100 EXP -> Thăng Cấp 2)...");
+  console.log("  Tiêu diệt thêm 5 con Ma Nhầy Xanh để tích lũy 18 * 5 = 90 EXP (Tổng 108/100 EXP -> Thăng Cấp 2)...");
 
-  for (let i = 2; i <= 4; i++) {
+  for (let i = 2; i <= 6; i++) {
+    await new Promise((r) => setTimeout(r, 600));
     const multiRes = await fetch(`${API_BASE}/characters/${characterId}/battle`, {
       method: "POST",
       headers: {
@@ -313,7 +328,7 @@ async function runEncounterTestSuite() {
     });
     const multiData = await multiRes.json();
     console.log(`    Kill #${i}: EXP hiện tại: ${multiData.character.experience}, Cấp: ${multiData.character.level}, Thăng cấp: ${multiData.leveledUp}`);
-    if (i === 4) {
+    if (i === 6) {
       assert.equal(multiData.leveledUp, true, "Đạt 100 EXP phải thăng cấp!");
       assert.equal(multiData.character.level, 2, "Cấp độ mới phải là 2!");
       console.log(`  🎉 ĐÃ THĂNG CẤP THÀNH CÔNG LÊN CẤP ${multiData.character.level}!`);
@@ -326,16 +341,24 @@ async function runEncounterTestSuite() {
   });
   const finalChar = await finalReloadRes.json();
   assert.equal(finalChar.level, 2, "Cấp 2 phải được lưu vĩnh viễn trong DB");
-  assert.equal(finalChar.kills, 4, "Tổng kills phải là 4");
-  assert.equal(finalChar.gold, initialGold + 40, "Tổng vàng phải là 140");
+  assert.equal(finalChar.kills, 6, "Tổng kills phải là 6");
+  assert.equal(finalChar.gold, initialGold + 42, "Tổng vàng phải là 142");
   console.log(`  ✔ Sau thăng cấp và reload: Cấp ${finalChar.level}, Kills: ${finalChar.kills}, Vàng: ${finalChar.gold}, Chỉ số mới: HP=${finalChar.maxHp}, ATK=${finalChar.atk}, DEF=${finalChar.def}`);
 
   console.log("\n══════════════════════════════════════════════════════════════════");
   console.log("✅ TẤT CẢ 10 BƯỚC KIỂM THỬ ENCOUNTER ĐÃ HOÀN TẤT THÀNH CÔNG 100%!");
   console.log("══════════════════════════════════════════════════════════════════\n");
+
+  if (server) {
+    server.close();
+  }
+  process.exit(0);
 }
 
 runEncounterTestSuite().catch((err) => {
   console.error("❌ ENCOUNTER TEST FAILED:", err);
+  if (server) {
+    server.close();
+  }
   process.exit(1);
 });

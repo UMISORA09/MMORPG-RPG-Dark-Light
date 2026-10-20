@@ -10,6 +10,7 @@ import { recalculateCharacterStats, InventoryRuleError } from "./CharacterInvent
 import { listInventory, getItem } from "../lib/inventory";
 
 export interface FullSyncItemInput {
+  ownershipId?: number | string;
   id?: number | string;
   itemId: string;
   equipped?: boolean;
@@ -178,129 +179,81 @@ export class CharacterPersistenceService {
         throw new InventoryRuleError("Không tìm thấy nhân vật hoặc không có quyền sở hữu.", 404);
       }
 
-      // 2. Concurrency Revision Check (Optimistic Concurrency Control)
+      // 2. Concurrency Revision Check (Optimistic Concurrency Control - Strict CAS)
       const currentRev = Number(existingChar.revision || 1);
-      if (payload.revision !== undefined && Number(payload.revision) < currentRev) {
-        throw new InventoryRuleError(
-          `Xung đột phiên bản dữ liệu (Optimistic Concurrency Conflict): Máy chủ đang ở rev ${currentRev}, dữ liệu gửi lên ở rev ${payload.revision}. Vui lòng đồng bộ lại trạng thái.`,
-          409
-        );
+      if (payload.revision !== undefined) {
+        const clientRev = Number(payload.revision);
+        if (!Number.isInteger(clientRev) || clientRev !== currentRev) {
+          throw new InventoryRuleError(
+            `Xung đột phiên bản dữ liệu (Optimistic Concurrency Conflict): Máy chủ đang ở rev ${currentRev}, dữ liệu gửi lên ở rev ${payload.revision}. Vui lòng đồng bộ lại trạng thái.`,
+            409
+          );
+        }
       }
-      const clientRev = payload.revision !== undefined ? Number(payload.revision) : currentRev;
-      const nextRev = Math.max(currentRev, clientRev) + 1;
+      const nextRev = currentRev + 1;
 
-      // 3. Chuẩn hóa dung lượng túi và kiểm toán hành trang
-      const unlockedSlots = payload.unlockedSlots
-        ? Math.min(30, Math.max(15, Number(payload.unlockedSlots)))
-        : Number(existingChar.unlockedSlots || 18);
+      // 3. Chuẩn hóa dung lượng túi và kiểm toán hành trang (Server Authority)
+      // Dung lượng túi do server kiểm soát, client không thể tự hack unlockedSlots
+      const unlockedSlots = Number(existingChar.unlockedSlots || 18);
 
       if (Array.isArray(payload.inventory)) {
-        const normalizedItems = this.auditAndNormalizeInventory(unlockedSlots, payload.inventory);
-
-        // Đọc danh sách vật phẩm hiện có trong DB
+        // Đọc danh sách vật phẩm hiện có thực tế trong DB của nhân vật
         const currentDbItems = await tx
           .select()
           .from(characterItemsTable)
           .where(eq(characterItemsTable.characterId, characterId));
 
-        const incomingIds = new Set<number>();
+        const dbItemMap = new Map((currentDbItems as any[]).map((it: any) => [it.id, it]));
 
-        for (const item of normalizedItems) {
-          const numId = Number(item.id);
-          const isExisting = !isNaN(numId) && currentDbItems.some((dbIt: any) => dbIt.id === numId);
+        // 🛡️ BẢO VỆ TOÀN VẸN TÚI ĐỒ (INVENTORY INTEGRITY):
+        // 1. Tuyệt đối KHÔNG INSERT vật phẩm mới từ client (Chặn Fake Item Injection).
+        // 2. Tuyệt đối KHÔNG thay đổi itemId, quantity, enhanceLevel, rarity từ client (Chặn Item Tampering).
+        // 3. Tuyệt đối KHÔNG DELETE vật phẩm khi snapshot thiếu bản ghi (Chặn Stale Snapshot Loss).
+        // 4. Chỉ cho phép cập nhật vị trí sắp xếp (slotIndex) và trạng thái trang bị (equipped) của các item ĐÃ TỒN TẠI.
+        for (const rawItem of payload.inventory) {
+          const numId = Number(rawItem.ownershipId !== undefined ? rawItem.ownershipId : rawItem.id);
+          if (isNaN(numId) || !dbItemMap.has(numId)) {
+            continue;
+          }
 
-            const socketsVal = item.socketsJson !== undefined ? (typeof item.socketsJson === "string" ? item.socketsJson : JSON.stringify(item.socketsJson)) : null;
-            const reforgeVal = item.reforgeStatsJson !== undefined ? (typeof item.reforgeStatsJson === "string" ? item.reforgeStatsJson : JSON.stringify(item.reforgeStatsJson)) : null;
+          const existingDbItem = dbItemMap.get(numId);
+          const isEquipped = Boolean(rawItem.equipped);
+          let targetSlot = Number(rawItem.slotIndex);
 
-            if (isExisting) {
-              incomingIds.add(numId);
-              await tx
-                .update(characterItemsTable)
-                .set({
-                  itemId: item.itemId,
-                  equipped: Boolean(item.equipped),
-                  equippedSlot: item.equipped ? item.equippedSlot : null,
-                  slotIndex: item.equipped ? -1 : Number(item.slotIndex ?? 0),
-                  quantity: Number(item.quantity ?? 1),
-                  enhanceLevel: Number(item.enhanceLevel ?? 0),
-                  rarity: item.rarity ?? "common",
-                  bonusCombatPower: Number(item.bonusCombatPower ?? 0),
-                  miraclePassive1: item.miraclePassive1 ?? null,
-                  miraclePassive2: item.miraclePassive2 ?? null,
-                  socketsJson: socketsVal,
-                  reforgeStatsJson: reforgeVal,
-                })
-                .where(and(eq(characterItemsTable.id, numId), eq(characterItemsTable.characterId, characterId)));
-            } else {
-              const [created] = await tx
-                .insert(characterItemsTable)
-                .values({
-                  characterId,
-                  itemId: item.itemId,
-                  equipped: Boolean(item.equipped),
-                  equippedSlot: item.equipped ? item.equippedSlot : null,
-                  slotIndex: item.equipped ? -1 : Number(item.slotIndex ?? 0),
-                  quantity: Number(item.quantity ?? 1),
-                  enhanceLevel: Number(item.enhanceLevel ?? 0),
-                  rarity: item.rarity ?? "common",
-                  bonusCombatPower: Number(item.bonusCombatPower ?? 0),
-                  miraclePassive1: item.miraclePassive1 ?? null,
-                  miraclePassive2: item.miraclePassive2 ?? null,
-                  socketsJson: socketsVal,
-                  reforgeStatsJson: reforgeVal,
-                })
-                .returning();
-              if (created?.id) incomingIds.add(created.id);
-            }
-        }
+          if (isEquipped) {
+            targetSlot = -1;
+          } else if (isNaN(targetSlot) || targetSlot < 0 || targetSlot >= unlockedSlots) {
+            targetSlot = existingDbItem.slotIndex;
+          }
 
-        // Xóa những item đã bị bán / phân giải (không còn trong danh sách gửi lên)
-        const itemsToDelete = currentDbItems.filter((dbIt: any) => !incomingIds.has(dbIt.id));
-        if (itemsToDelete.length > 0) {
-          const idsToDelete = itemsToDelete.map((it: any) => it.id);
+          const updateItemPayload: Record<string, any> = {
+            equipped: isEquipped,
+            slotIndex: targetSlot,
+          };
+
+          if (isEquipped && rawItem.equippedSlot && rawItem.equippedSlot !== "none") {
+            updateItemPayload.equippedSlot = String(rawItem.equippedSlot).toLowerCase().trim();
+          } else if (!isEquipped) {
+            updateItemPayload.equippedSlot = null;
+          }
+
           await tx
-            .delete(characterItemsTable)
+            .update(characterItemsTable)
+            .set(updateItemPayload)
             .where(
               and(
-                eq(characterItemsTable.characterId, characterId),
-                inArray(characterItemsTable.id, idsToDelete)
+                eq(characterItemsTable.id, numId),
+                eq(characterItemsTable.characterId, characterId)
               )
             );
         }
       }
 
-      // 4. Cập nhật tiến độ nhiệm vụ (character_quests) nếu có
-      if (Array.isArray(payload.quests)) {
-        for (const q of payload.quests) {
-          if (!q.questId) continue;
-          const questKey = `${characterId}_${q.questId}`;
-          const [existingQ] = await tx
-            .select()
-            .from(characterQuestsTable)
-            .where(eq(characterQuestsTable.id, questKey))
-            .limit(1);
-
-          if (existingQ) {
-            await tx
-              .update(characterQuestsTable)
-              .set({
-                progress: Math.max(Number(existingQ.progress || 0), Number(q.progress || 0)),
-                status: q.status || existingQ.status,
-                updatedAt: new Date(),
-              })
-              .where(eq(characterQuestsTable.id, questKey));
-          } else {
-            await tx.insert(characterQuestsTable).values({
-              id: questKey,
-              characterId,
-              questId: q.questId,
-              progress: Number(q.progress || 0),
-              status: q.status || "AVAILABLE",
-            });
-          }
-        }
-      }
-
+      // 4. Quản lý nhiệm vụ (Quest Authority)
+      // 🛡️ BẢO VỆ TIẾN TRÌNH NHIỆM VỤ:
+      // Tuyệt đối KHÔNG cho phép client tự thay đổi trạng thái (COMPLETED/READY_TO_CLAIM) hoặc progress qua FullSync.
+      // Tiến độ nhiệm vụ chỉ được ghi nhận bởi server khi tiêu diệt quái (CombatService) hoặc trả thưởng (quests.ts).
+      
       // 5. Cập nhật thông số nhân vật trong charactersTable
       // Server-authoritative progression fields (Gold, EXP, Level, Kills, Stats, Slots) are strictly protected
       const stringifyJson = (val: any, fallback = "") => {

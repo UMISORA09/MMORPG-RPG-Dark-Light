@@ -33,7 +33,7 @@ const TEST_SUITES = [
   {
     id: 2,
     name: "Database OCC & Auto-Save",
-    script: "scratch/test-phase2-database.mjs",
+    script: "scripts/test-phase2-integrity.mjs",
     description: "Optimistic Concurrency Control rev check, 409 Conflict, AutoSave",
   },
   {

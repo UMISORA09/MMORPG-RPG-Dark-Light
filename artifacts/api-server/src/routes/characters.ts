@@ -23,43 +23,50 @@ router.post("/characters/sync", requireAuth, async (req, res) => {
 
   for (const c of characters) {
     if (!c || !c.name || !c.classId) continue;
+    const cleanName = String(c.name).trim().slice(0, 24);
+    if (cleanName.length < 2) continue;
+    const classConfig = (CHARACTER_CLASSES as any).find((cls: any) => cls.id === c.classId);
+    if (!classConfig) continue;
+
     const existing = await db.select().from(charactersTable).where(eq(charactersTable.id, c.id)).limit(1);
     if (existing.length === 0) {
+      // 🛡️ BẢO VỆ TIẾN TRÌNH KHỞI TẠO (CHARACTER RECOVERY AUTHORITY):
+      // Tuyệt đối KHÔNG nhận level, gold, exp, stats tùy ý từ localStorage của client.
+      // Nhân vật mới khôi phục bắt buộc phải được chuẩn hóa từ hệ thống chỉ số gốc Level 1 của môn phái.
+      const baseStats = getStatsForLevel(c.classId, 1);
+      const cp = Math.round(baseStats.hp * 0.5 + baseStats.atk * 2.5 + baseStats.def * 1.5 + baseStats.spd * 1.0);
       const [inserted] = await db.insert(charactersTable).values({
-        id: c.id,
         userId,
         serverId: c.serverId || "s1_long_vuong",
-        name: c.name,
+        name: cleanName,
         classId: c.classId,
-        className: c.className || c.classId,
-        gender: c.gender || "male",
+        className: classConfig.name || c.classId,
+        gender: c.gender === "female" ? "female" : "male",
         hairStyle: c.hairStyle || "phong_van",
         hairColor: c.hairColor || "#1e1e1e",
         outfitId: c.outfitId || "basic",
-        destinyRolled: Boolean(c.destinyRolled),
-        talentIds: Array.isArray(c.talentIds) ? JSON.stringify(c.talentIds) : (typeof c.talentIds === "string" ? c.talentIds : "[]"),
-        auraIds: Array.isArray(c.auraIds) ? JSON.stringify(c.auraIds) : (typeof c.auraIds === "string" ? c.auraIds : "[]"),
-        level: c.level || 1,
-        experience: c.experience || 0,
-        hp: c.hp || 100,
-        maxHp: c.maxHp || 100,
-        mp: c.mp || 100,
-        maxMp: c.maxMp || 100,
-        atk: c.atk || 20,
-        def: c.def || 10,
-        spd: c.spd || 10,
-        gold: c.gold || 100,
-        kills: c.kills || 0,
-        deaths: c.deaths || 0,
-        unlockedSlots: c.unlockedSlots || 15,
-        combatPower: c.combatPower || 500,
+        destinyRolled: false,
+        level: 1,
+        experience: 0,
+        hp: baseStats.hp,
+        maxHp: baseStats.hp,
+        mp: baseStats.mp,
+        maxMp: baseStats.mp,
+        atk: baseStats.atk,
+        def: baseStats.def,
+        spd: baseStats.spd,
+        gold: 100, // Khởi đầu chuẩn 100 vàng
+        kills: 0,
+        deaths: 0,
+        unlockedSlots: 18,
+        combatPower: cp,
+        revision: 1,
       }).returning();
       restored.push(inserted);
     } else if (existing[0].userId === userId) {
-      // Chỉ trả về nếu nhân vật thuộc quyền sở hữu của chính người chơi hiện tại
+      // Nếu nhân vật đã tồn tại và thuộc về user, trả về dữ liệu server chuẩn xác
       restored.push(existing[0]);
     }
-    // Tuyệt đối KHÔNG ghi đè quyền sở hữu của nhân vật thuộc về tài khoản khác!
   }
   return res.status(200).json({ success: true, count: restored.length, characters: restored });
 });
