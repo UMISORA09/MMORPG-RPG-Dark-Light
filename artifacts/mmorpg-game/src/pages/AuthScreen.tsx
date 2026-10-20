@@ -10,6 +10,7 @@ import {
 import { useQueryClient } from "@tanstack/react-query";
 import { motion, AnimatePresence } from "framer-motion";
 import { useToast } from "@/hooks/use-toast";
+import { Database } from "lucide-react";
 
 export default function AuthScreen() {
   const [, setLocation] = useLocation();
@@ -141,6 +142,16 @@ export default function AuthScreen() {
         backgroundImage: "radial-gradient(circle at 50% 50%, #567c7d 0%, #446364 75%, #385253 100%)",
       }}
     >
+      {/* ── NÚT TRUY CẬP QUẢN TRỊ ADMIN / DATABASE ── */}
+      <button
+        type="button"
+        onClick={() => setLocation("/admin")}
+        className="absolute top-4 right-4 z-50 flex items-center gap-1.5 px-3.5 py-2 rounded-full bg-[#342a2b]/90 hover:bg-[#342a2b] border border-[#5d4648] text-xs font-bold text-gray-200 hover:text-[#28c3e1] backdrop-blur-md shadow-xl transition-all hover:scale-105 active:scale-95"
+      >
+        <Database className="w-3.5 h-3.5 text-[#28c3e1]" />
+        <span>Quản Trị Database</span>
+      </button>
+
       {/* ── SPLIT-SCREEN MODAL CARD ── */}
       <motion.div
         initial={{ opacity: 0, scale: 0.96, y: 15 }}

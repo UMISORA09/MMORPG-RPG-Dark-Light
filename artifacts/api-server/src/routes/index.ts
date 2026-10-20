@@ -16,6 +16,7 @@ import endgameRouter from "./endgame";
 import marketRouter from "./market";
 import talentsRouter from "./talents";
 import codexRouter from "./codex";
+import adminRouter from "./admin";
 
 const router: IRouter = Router();
 
@@ -36,5 +37,6 @@ router.use(endgameRouter);
 router.use(marketRouter);
 router.use(talentsRouter);
 router.use(codexRouter);
+router.use(adminRouter);
 
 export default router;
