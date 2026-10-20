@@ -42,7 +42,14 @@ export const RemotePlayerEntity25D = memo(function RemotePlayerEntity25D({ playe
 
   useFrame((_, delta) => {
     targetPos.current.set(player.posX, 0, player.posZ);
-    currentPos.current.lerp(targetPos.current, Math.min(delta * 12.0, 1.0));
+    const distSq = currentPos.current.distanceToSquared(targetPos.current);
+    if (distSq > 400) {
+      // Khoảng cách lớn hơn 20 units: Người chơi vừa dịch chuyển map -> Snap vị trí tức thời chống trượt
+      currentPos.current.copy(targetPos.current);
+    } else {
+      // Nội suy mượt mà chống giật lag
+      currentPos.current.lerp(targetPos.current, Math.min(delta * 12.0, 1.0));
+    }
     if (groupRef.current) {
       groupRef.current.position.copy(currentPos.current);
     }

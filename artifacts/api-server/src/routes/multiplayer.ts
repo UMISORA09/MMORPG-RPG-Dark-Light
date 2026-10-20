@@ -1,7 +1,20 @@
 import { Router } from "express";
 import { requireAuth } from "../middlewares/requireAuth";
+import { db, charactersTable } from "@workspace/db";
+import { eq, and } from "drizzle-orm";
 
 const router = Router();
+
+async function verifyCharacterOwnership(characterId: number, userId?: number): Promise<boolean> {
+  if (!userId || !characterId) return false;
+  const [char] = await db
+    .select({ id: charactersTable.id })
+    .from(charactersTable)
+    .where(and(eq(charactersTable.id, characterId), eq(charactersTable.userId, userId)))
+    .limit(1);
+  return Boolean(char);
+}
+
 
 // ==============================================================================
 // In-Memory Multiplayer State & Session Manager
@@ -241,6 +254,14 @@ router.post("/multiplayer/sync", (req, res): void => {
   });
 });
 
+router.post("/multiplayer/disconnect", (req, res): void => {
+  const { characterId } = req.body;
+  if (characterId && activePlayers.has(Number(characterId))) {
+    activePlayers.delete(Number(characterId));
+  }
+  res.status(200).json({ success: true, message: "Đã ngắt kết nối session realtime thành công." });
+});
+
 // ==============================================================================
 // Party System (Tổ Đội 4 Người)
 // ==============================================================================
@@ -282,11 +303,16 @@ router.get("/party/:characterId", (req, res): void => {
   });
 });
 
-router.post("/party/create", requireAuth, (req, res): void => {
+router.post("/party/create", requireAuth, async (req, res): Promise<void> => {
   const { characterId, name, classId, level, gender = "male", hp = 500, maxHp = 500 } = req.body;
 
   if (!characterId) {
     res.status(400).json({ error: "Thiếu characterId" });
+    return;
+  }
+
+  if (!(await verifyCharacterOwnership(Number(characterId), req.session.userId))) {
+    res.status(403).json({ error: "Không có quyền thao tác trên nhân vật này" });
     return;
   }
 
@@ -327,9 +353,15 @@ router.post("/party/create", requireAuth, (req, res): void => {
   });
 });
 
-router.post("/party/invite-bot", requireAuth, (req, res): void => {
+router.post("/party/invite-bot", requireAuth, async (req, res): Promise<void> => {
   const { characterId, botType = "tank" } = req.body;
-  const partyId = playerPartyMap.get(characterId);
+
+  if (!(await verifyCharacterOwnership(Number(characterId), req.session.userId))) {
+    res.status(403).json({ error: "Không có quyền thao tác trên nhân vật này" });
+    return;
+  }
+
+  const partyId = playerPartyMap.get(Number(characterId));
 
   if (!partyId || !parties.has(partyId)) {
     res.status(400).json({ error: "Bạn chưa có tổ đội để mời đồng hành!" });
@@ -367,22 +399,109 @@ router.post("/party/invite-bot", requireAuth, (req, res): void => {
   });
 });
 
-router.post("/party/leave", requireAuth, (req, res): void => {
-  const { characterId } = req.body;
-  const partyId = playerPartyMap.get(characterId);
+router.post("/party/invite-player", requireAuth, async (req, res): Promise<void> => {
+  try {
+    const characterId = Number(req.body.characterId);
+    const targetCharacterId = Number(req.body.targetCharacterId);
 
-  if (partyId && parties.has(partyId)) {
-    const party = parties.get(partyId)!;
-    party.members = party.members.filter((m) => m.characterId !== characterId);
-    if (party.members.length === 0 || party.leaderId === characterId) {
-      // Nếu trưởng nhóm rời, giải tán đội hoặc chuyển quyền
-      parties.delete(partyId);
+    if (!characterId || !targetCharacterId) {
+      res.status(400).json({ error: "Thiếu characterId hoặc targetCharacterId hợp lệ" });
+      return;
     }
-    playerPartyMap.delete(characterId);
-  }
 
-  res.status(200).json({ success: true, message: "Đã rời khỏi tổ đội." });
+    if (!(await verifyCharacterOwnership(characterId, req.session.userId))) {
+      res.status(403).json({ error: "Không có quyền thao tác trên nhân vật này" });
+      return;
+    }
+
+    const partyId = playerPartyMap.get(characterId);
+    if (!partyId || !parties.has(partyId)) {
+      res.status(400).json({ error: "Bạn chưa có tổ đội!" });
+      return;
+    }
+
+    const party = parties.get(partyId)!;
+    if (party.leaderId !== characterId) {
+      res.status(403).json({ error: "Chỉ trưởng nhóm mới có quyền mời thành viên" });
+      return;
+    }
+
+    if (party.members.length >= 4) {
+      res.status(400).json({ error: "Tổ đội đã đầy (tối đa 4 thành viên)!" });
+      return;
+    }
+
+    const [targetChar] = await db
+      .select()
+      .from(charactersTable)
+      .where(eq(charactersTable.id, targetCharacterId))
+      .limit(1);
+
+    if (!targetChar) {
+      res.status(404).json({ error: "Không tìm thấy người chơi cần mời" });
+      return;
+    }
+
+    const targetOldParty = playerPartyMap.get(targetCharacterId);
+    if (targetOldParty && parties.has(targetOldParty)) {
+      const oldP = parties.get(targetOldParty)!;
+      oldP.members = oldP.members.filter((m) => m.characterId !== targetCharacterId);
+      if (oldP.members.length === 0) parties.delete(targetOldParty);
+    }
+
+    party.members.push({
+      characterId: targetChar.id,
+      name: targetChar.name,
+      classId: targetChar.classId,
+      level: targetChar.level,
+      gender: (targetChar.gender as any) || "male",
+      hp: targetChar.hp,
+      maxHp: targetChar.maxHp,
+      isLeader: false,
+      isBot: false,
+    });
+    playerPartyMap.set(targetCharacterId, partyId);
+
+    res.status(200).json({
+      success: true,
+      message: `Đã mời thành viên ${targetChar.name} vào tổ đội thành công!`,
+      party,
+    });
+  } catch (err: any) {
+    console.error("[Party Invite Player Error]:", err);
+    res.status(500).json({ error: "Lỗi nội bộ khi mời người chơi", details: err?.message });
+  }
+});
+
+router.post("/party/leave", requireAuth, async (req, res): Promise<void> => {
+  try {
+    const characterId = Number(req.body.characterId);
+    if (!characterId) {
+      res.status(400).json({ error: "Thiếu characterId" });
+      return;
+    }
+
+    if (!(await verifyCharacterOwnership(characterId, req.session.userId))) {
+      res.status(403).json({ error: "Không có quyền thao tác trên nhân vật này" });
+      return;
+    }
+
+    const partyId = playerPartyMap.get(characterId);
+
+    if (partyId && parties.has(partyId)) {
+      const party = parties.get(partyId)!;
+      party.members = party.members.filter((m) => m.characterId !== characterId);
+      if (party.members.length === 0 || party.leaderId === characterId) {
+        parties.delete(partyId);
+      }
+      playerPartyMap.delete(characterId);
+    }
+
+    res.status(200).json({ success: true, message: "Đã rời khỏi tổ đội." });
+  } catch (err: any) {
+    console.error("[Party Leave Error]:", err);
+    res.status(500).json({ error: "Lỗi nội bộ khi rời tổ đội", details: err?.message });
+  }
 });
 
 export default router;
-

@@ -45,8 +45,8 @@ const TEST_SUITES = [
   {
     id: 4,
     name: "Multiplayer & Realtime AOI",
-    script: "scratch/test-phase4-multiplayer.mjs",
-    description: "Spatial sync, AOI <=50m culling, party creation & +15% EXP buff",
+    script: "scripts/test-phase4-multiplayer.mjs",
+    description: "Spatial sync, AOI <=50m culling, party invite-player & anti-IDOR guard",
   },
   {
     id: 5,

@@ -64724,6 +64724,11 @@ function getStatsForLevel3(classId, level) {
 // artifacts/api-server/src/routes/multiplayer.ts
 var import_express5 = __toESM(require_express2(), 1);
 var router5 = (0, import_express5.Router)();
+async function verifyCharacterOwnership(characterId, userId) {
+  if (!userId || !characterId) return false;
+  const [char2] = await db.select({ id: charactersTable.id }).from(charactersTable).where(and(eq(charactersTable.id, characterId), eq(charactersTable.userId, userId))).limit(1);
+  return Boolean(char2);
+}
 var activePlayers = /* @__PURE__ */ new Map();
 var AI_ADVENTURERS = [
   {
@@ -64912,6 +64917,13 @@ router5.post("/multiplayer/sync", (req, res) => {
     totalOnline: activePlayers.size + AI_ADVENTURERS.length
   });
 });
+router5.post("/multiplayer/disconnect", (req, res) => {
+  const { characterId } = req.body;
+  if (characterId && activePlayers.has(Number(characterId))) {
+    activePlayers.delete(Number(characterId));
+  }
+  res.status(200).json({ success: true, message: "\u0110\xE3 ng\u1EAFt k\u1EBFt n\u1ED1i session realtime th\xE0nh c\xF4ng." });
+});
 var parties = /* @__PURE__ */ new Map();
 var playerPartyMap = /* @__PURE__ */ new Map();
 router5.get("/party/:characterId", (req, res) => {
@@ -64926,10 +64938,14 @@ router5.get("/party/:characterId", (req, res) => {
     party: parties.get(partyId)
   });
 });
-router5.post("/party/create", requireAuth, (req, res) => {
+router5.post("/party/create", requireAuth, async (req, res) => {
   const { characterId, name, classId, level, gender = "male", hp = 500, maxHp = 500 } = req.body;
   if (!characterId) {
     res.status(400).json({ error: "Thi\u1EBFu characterId" });
+    return;
+  }
+  if (!await verifyCharacterOwnership(Number(characterId), req.session.userId)) {
+    res.status(403).json({ error: "Kh\xF4ng c\xF3 quy\u1EC1n thao t\xE1c tr\xEAn nh\xE2n v\u1EADt n\xE0y" });
     return;
   }
   const oldPartyId = playerPartyMap.get(characterId);
@@ -64963,9 +64979,13 @@ router5.post("/party/create", requireAuth, (req, res) => {
     party: newParty
   });
 });
-router5.post("/party/invite-bot", requireAuth, (req, res) => {
+router5.post("/party/invite-bot", requireAuth, async (req, res) => {
   const { characterId, botType = "tank" } = req.body;
-  const partyId = playerPartyMap.get(characterId);
+  if (!await verifyCharacterOwnership(Number(characterId), req.session.userId)) {
+    res.status(403).json({ error: "Kh\xF4ng c\xF3 quy\u1EC1n thao t\xE1c tr\xEAn nh\xE2n v\u1EADt n\xE0y" });
+    return;
+  }
+  const partyId = playerPartyMap.get(Number(characterId));
   if (!partyId || !parties.has(partyId)) {
     res.status(400).json({ error: "B\u1EA1n ch\u01B0a c\xF3 t\u1ED5 \u0111\u1ED9i \u0111\u1EC3 m\u1EDDi \u0111\u1ED3ng h\xE0nh!" });
     return;
@@ -64996,18 +65016,90 @@ router5.post("/party/invite-bot", requireAuth, (req, res) => {
     party
   });
 });
-router5.post("/party/leave", requireAuth, (req, res) => {
-  const { characterId } = req.body;
-  const partyId = playerPartyMap.get(characterId);
-  if (partyId && parties.has(partyId)) {
-    const party = parties.get(partyId);
-    party.members = party.members.filter((m) => m.characterId !== characterId);
-    if (party.members.length === 0 || party.leaderId === characterId) {
-      parties.delete(partyId);
+router5.post("/party/invite-player", requireAuth, async (req, res) => {
+  try {
+    const characterId = Number(req.body.characterId);
+    const targetCharacterId = Number(req.body.targetCharacterId);
+    if (!characterId || !targetCharacterId) {
+      res.status(400).json({ error: "Thi\u1EBFu characterId ho\u1EB7c targetCharacterId h\u1EE3p l\u1EC7" });
+      return;
     }
-    playerPartyMap.delete(characterId);
+    if (!await verifyCharacterOwnership(characterId, req.session.userId)) {
+      res.status(403).json({ error: "Kh\xF4ng c\xF3 quy\u1EC1n thao t\xE1c tr\xEAn nh\xE2n v\u1EADt n\xE0y" });
+      return;
+    }
+    const partyId = playerPartyMap.get(characterId);
+    if (!partyId || !parties.has(partyId)) {
+      res.status(400).json({ error: "B\u1EA1n ch\u01B0a c\xF3 t\u1ED5 \u0111\u1ED9i!" });
+      return;
+    }
+    const party = parties.get(partyId);
+    if (party.leaderId !== characterId) {
+      res.status(403).json({ error: "Ch\u1EC9 tr\u01B0\u1EDFng nh\xF3m m\u1EDBi c\xF3 quy\u1EC1n m\u1EDDi th\xE0nh vi\xEAn" });
+      return;
+    }
+    if (party.members.length >= 4) {
+      res.status(400).json({ error: "T\u1ED5 \u0111\u1ED9i \u0111\xE3 \u0111\u1EA7y (t\u1ED1i \u0111a 4 th\xE0nh vi\xEAn)!" });
+      return;
+    }
+    const [targetChar] = await db.select().from(charactersTable).where(eq(charactersTable.id, targetCharacterId)).limit(1);
+    if (!targetChar) {
+      res.status(404).json({ error: "Kh\xF4ng t\xECm th\u1EA5y ng\u01B0\u1EDDi ch\u01A1i c\u1EA7n m\u1EDDi" });
+      return;
+    }
+    const targetOldParty = playerPartyMap.get(targetCharacterId);
+    if (targetOldParty && parties.has(targetOldParty)) {
+      const oldP = parties.get(targetOldParty);
+      oldP.members = oldP.members.filter((m) => m.characterId !== targetCharacterId);
+      if (oldP.members.length === 0) parties.delete(targetOldParty);
+    }
+    party.members.push({
+      characterId: targetChar.id,
+      name: targetChar.name,
+      classId: targetChar.classId,
+      level: targetChar.level,
+      gender: targetChar.gender || "male",
+      hp: targetChar.hp,
+      maxHp: targetChar.maxHp,
+      isLeader: false,
+      isBot: false
+    });
+    playerPartyMap.set(targetCharacterId, partyId);
+    res.status(200).json({
+      success: true,
+      message: `\u0110\xE3 m\u1EDDi th\xE0nh vi\xEAn ${targetChar.name} v\xE0o t\u1ED5 \u0111\u1ED9i th\xE0nh c\xF4ng!`,
+      party
+    });
+  } catch (err) {
+    console.error("[Party Invite Player Error]:", err);
+    res.status(500).json({ error: "L\u1ED7i n\u1ED9i b\u1ED9 khi m\u1EDDi ng\u01B0\u1EDDi ch\u01A1i", details: err?.message });
   }
-  res.status(200).json({ success: true, message: "\u0110\xE3 r\u1EDDi kh\u1ECFi t\u1ED5 \u0111\u1ED9i." });
+});
+router5.post("/party/leave", requireAuth, async (req, res) => {
+  try {
+    const characterId = Number(req.body.characterId);
+    if (!characterId) {
+      res.status(400).json({ error: "Thi\u1EBFu characterId" });
+      return;
+    }
+    if (!await verifyCharacterOwnership(characterId, req.session.userId)) {
+      res.status(403).json({ error: "Kh\xF4ng c\xF3 quy\u1EC1n thao t\xE1c tr\xEAn nh\xE2n v\u1EADt n\xE0y" });
+      return;
+    }
+    const partyId = playerPartyMap.get(characterId);
+    if (partyId && parties.has(partyId)) {
+      const party = parties.get(partyId);
+      party.members = party.members.filter((m) => m.characterId !== characterId);
+      if (party.members.length === 0 || party.leaderId === characterId) {
+        parties.delete(partyId);
+      }
+      playerPartyMap.delete(characterId);
+    }
+    res.status(200).json({ success: true, message: "\u0110\xE3 r\u1EDDi kh\u1ECFi t\u1ED5 \u0111\u1ED9i." });
+  } catch (err) {
+    console.error("[Party Leave Error]:", err);
+    res.status(500).json({ error: "L\u1ED7i n\u1ED9i b\u1ED9 khi r\u1EDDi t\u1ED5 \u0111\u1ED9i", details: err?.message });
+  }
 });
 var multiplayer_default = router5;
 
