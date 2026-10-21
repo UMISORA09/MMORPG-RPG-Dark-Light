@@ -238,6 +238,14 @@ export function CharacterCreationModal({ isOpen, onClose, onCharacterCreated }: 
 
   // Submit creation
   const handleConfirmCreate = () => {
+    if (!isDestinyRolled) {
+      toast({
+        variant: "destructive",
+        title: "Chưa thức tỉnh Thiên Mệnh!",
+        description: "Đại hiệp bắt buộc phải ấn Random Thiên Mệnh & Khí Linh trước khi bắt đầu hành trình!",
+      });
+      return;
+    }
     const trimmed = characterName.trim();
     if (!trimmed) {
       setNameError("Vui lòng nhập tên nhân vật");
@@ -365,7 +373,7 @@ export function CharacterCreationModal({ isOpen, onClose, onCharacterCreated }: 
             initial={{ opacity: 0, scale: 0.95, y: 10 }}
             animate={{ opacity: 1, scale: 1, y: 0 }}
             exit={{ opacity: 0, scale: 0.95, y: 10 }}
-            className="relative w-full max-w-[1240px] max-h-[96vh] rounded-[28px] bg-[#271f20] border border-[#5d4648] shadow-[0_30px_90px_rgba(0,0,0,0.85)] p-4 sm:p-5 text-white z-10 flex flex-col justify-between overflow-y-auto custom-scrollbar my-auto"
+            className="relative w-full max-w-[1240px] max-h-[92vh] rounded-[28px] bg-[#271f20] border border-[#5d4648] shadow-[0_30px_90px_rgba(0,0,0,0.85)] p-4 sm:p-5 text-white z-10 flex flex-col overflow-hidden my-auto"
           >
             {/* Close Button */}
             <button
@@ -376,7 +384,7 @@ export function CharacterCreationModal({ isOpen, onClose, onCharacterCreated }: 
             </button>
 
             {/* Header: Compact Top Bar */}
-            <div className="flex items-center justify-between pb-2 mb-2 border-b border-[#5d4648]/60">
+            <div className="shrink-0 flex items-center justify-between pb-2 mb-2 border-b border-[#5d4648]/60">
               <div className="flex items-center gap-3">
                 <div className="font-sans inline-flex items-center gap-1.5 px-3 py-0.5 rounded-full bg-[#4a383a] border border-[#5d4648] text-[11px] font-bold uppercase tracking-wider text-[#28c3e1]">
                   <Dna className="w-3 h-3 text-[#28c3e1]" />
@@ -393,7 +401,8 @@ export function CharacterCreationModal({ isOpen, onClose, onCharacterCreated }: 
             </div>
 
             {/* Main 3-Column Content: Spacious Landscape Grid */}
-            <div className="grid grid-cols-1 lg:grid-cols-12 gap-3.5 flex-1 min-h-0">
+            <div className="flex-1 min-h-0 overflow-y-auto custom-scrollbar pr-1 pb-2">
+              <div className="grid grid-cols-1 lg:grid-cols-12 gap-3.5 items-start">
               {/* ═══════════ CỘT 1: HỆ PHÁI & SÂN KHẤU NHÂN VẬT (Col 4) ═══════════ */}
               <div className="lg:col-span-4 flex flex-col justify-between p-3 rounded-2xl bg-[#342a2b] border border-[#5d4648]">
                 {/* 1. Chọn 4 Hệ Phái */}
@@ -781,9 +790,10 @@ export function CharacterCreationModal({ isOpen, onClose, onCharacterCreated }: 
                 </div>
               </div>
             </div>
+          </div>
 
-            {/* ═══════════ FOOTER BAR: NHẬP TÊN & NÚT KHỞI TẠO ═══════════ */}
-            <div className="flex flex-col sm:flex-row items-center justify-between gap-3 pt-2.5 mt-2 border-t border-[#5d4648]/60">
+          {/* ═══════════ FOOTER BAR: NHẬP TÊN & NÚT KHỞI TẠO ═══════════ */}
+            <div className="shrink-0 pt-3 border-t border-[#5d4648] bg-[#271f20] flex flex-col sm:flex-row items-center justify-between gap-3 z-30">
               {/* Ô Nhập Tên & Random Tên */}
               <div className="flex items-center gap-2 w-full sm:w-auto flex-1 max-w-lg">
                 <span className="text-xs font-bold text-[#8e7a7c] shrink-0 hidden md:inline">

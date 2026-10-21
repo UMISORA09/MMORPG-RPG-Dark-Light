@@ -188,6 +188,7 @@ export function DestinyRandomizer({
 }: DestinyRandomizerProps) {
   const [isRolling, setIsRolling] = useState(false);
   const [isLocked, setIsLocked] = useState(isLockedInitially);
+  const [hasRolled, setHasRolled] = useState(isLockedInitially);
   const [talents, setTalents] = useState<DestinySlotItem[]>(initialTalents || DEFAULT_TALENTS);
   const [auras, setAuras] = useState<DestinySlotItem[]>(initialAuras || DEFAULT_AURAS);
   const [revealedSlots, setRevealedSlots] = useState<number[]>(isLockedInitially ? [0, 1, 2, 3, 4, 5, 6, 7] : [0, 1, 2, 3, 4, 5, 6, 7]);
@@ -321,6 +322,7 @@ export function DestinyRandomizer({
           clearInterval(tickInterval);
           setIsRolling(false);
           setIsLocked(true);
+          setHasRolled(true);
           setTalents(finalTalents);
           setAuras(finalAuras);
           onDestinyRolled(finalTalents, finalAuras);
@@ -353,7 +355,7 @@ export function DestinyRandomizer({
         )}
       </div>
 
-      {/* ── 8 SLOTS DISPLAY (4 Talents + 4 Auras) ── */}
+            {/* ── 8 SLOTS DISPLAY (4 Talents + 4 Auras) ── */}
       <div className="space-y-2 flex-1 my-1">
         {/* 1. 4 Thiên Phú Khởi Nguyên */}
         <div>
@@ -365,64 +367,84 @@ export function DestinyRandomizer({
           </div>
 
           <div className="grid grid-cols-2 gap-1.5">
-            {talents.map((t, idx) => {
-              const isRevealed = revealedSlots.includes(idx);
-              const tierCfg = TIER_CONFIG[t.tier] || TIER_CONFIG.F;
-              const isMiracle = t.tier === "Miracle";
-              const isLegend = t.tier === "S";
-
-              return (
+            {!hasRolled && !isRolling ? (
+              [0, 1, 2, 3].map((idx) => (
                 <div
-                  key={t.id + idx}
-                  className={`relative p-1.5 rounded-xl border text-left transition-all overflow-hidden ${
-                    isRolling && !isRevealed
-                      ? "bg-[#271f20] border-amber-500/60 animate-pulse"
-                      : isMiracle
-                      ? "bg-rose-950/60 border-2 border-rose-500 shadow-[0_0_20px_rgba(244,63,94,0.6)]"
-                      : isLegend
-                      ? "bg-amber-950/60 border border-amber-500 shadow-[0_0_15px_rgba(249,115,22,0.4)]"
-                      : "bg-[#271f20] border-[#5d4648]/80"
-                  }`}
+                  key={"unrevealed-talent-" + idx}
+                  className="relative p-2 rounded-xl border border-dashed border-[#5d4648] bg-[#221a1b] text-left transition-all"
                 >
-                  {/* Rolling Blur Animation */}
-                  {isRolling && !isRevealed ? (
-                    <div className="flex flex-col items-center justify-center py-2 text-center">
-                      <div className="w-4 h-4 border-2 border-amber-400 border-t-transparent rounded-full animate-spin mb-1" />
-                      <span className="text-[9px] font-mono text-amber-300 tracking-widest animate-pulse">
-                        ĐANG CUỘN...
-                      </span>
-                    </div>
-                  ) : (
-                    <>
-                      {/* Miracle/Legendary Crown Badge */}
-                      {(isMiracle || isLegend) && (
-                        <div className="absolute top-1 right-1">
-                          <Crown className={`w-3.5 h-3.5 ${isMiracle ? "text-rose-400" : "text-amber-400"} animate-bounce`} />
-                        </div>
-                      )}
-
-                      <div className="flex items-center justify-between gap-1 mb-0.5">
-                        <span className="font-bold text-[10px] text-white truncate max-w-[110px]">
-                          {t.name}
-                        </span>
-                        <span
-                          className={`text-[8px] font-black px-1.5 py-0.2 rounded font-mono ${tierCfg.badgeBg} ${tierCfg.textColor} border ${tierCfg.border}`}
-                        >
-                          {t.tier}
-                        </span>
-                      </div>
-
-                      <div className="text-[9px] font-mono font-bold truncate" style={{ color: t.color }}>
-                        {t.buff}
-                      </div>
-                      <div className="text-[8.5px] text-[#8e7a7c] line-clamp-1 leading-tight mt-0.5">
-                        {t.desc}
-                      </div>
-                    </>
-                  )}
+                  <div className="flex items-center justify-between gap-1 mb-0.5">
+                    <span className="font-bold text-[10px] text-[#8e7a7c] flex items-center gap-1">
+                      <span className="text-amber-400">❓</span> Thiên Phú #{idx + 1}
+                    </span>
+                    <span className="text-[9px] font-black px-1.5 py-0.2 rounded font-mono bg-black/50 text-amber-300 border border-amber-500/40">
+                      ?
+                    </span>
+                  </div>
+                  <div className="text-[9.5px] font-mono text-amber-400/90 font-bold">
+                    Chưa Thức Tỉnh
+                  </div>
+                  <div className="text-[8.5px] text-[#8e7a7c]/70 line-clamp-1 leading-tight mt-0.5">
+                    Nhấn Quay để mở khóa
+                  </div>
                 </div>
-              );
-            })}
+              ))
+            ) : (
+              talents.map((t, idx) => {
+                const isRevealed = revealedSlots.includes(idx);
+                const tierCfg = TIER_CONFIG[t.tier] || TIER_CONFIG.F;
+                const isMiracle = t.tier === "Miracle";
+                const isLegend = t.tier === "S";
+
+                return (
+                  <div
+                    key={t.id + idx}
+                    className={`relative p-1.5 rounded-xl border text-left transition-all overflow-hidden ${
+                      isRolling && !isRevealed
+                        ? "bg-[#271f20] border-amber-500/60 animate-pulse"
+                        : isMiracle
+                        ? "bg-rose-950/60 border-2 border-rose-500 shadow-[0_0_20px_rgba(244,63,94,0.6)]"
+                        : isLegend
+                        ? "bg-amber-950/60 border border-amber-500 shadow-[0_0_15px_rgba(249,115,22,0.4)]"
+                        : "bg-[#271f20] border-[#5d4648]/80"
+                    }`}
+                  >
+                    {isRolling && !isRevealed ? (
+                      <div className="flex flex-col items-center justify-center py-2 text-center">
+                        <div className="w-4 h-4 border-2 border-amber-400 border-t-transparent rounded-full animate-spin mb-1" />
+                        <span className="text-[9px] font-mono text-amber-300 tracking-widest animate-pulse">
+                          ĐANG CUỘN...
+                        </span>
+                      </div>
+                    ) : (
+                      <>
+                        {(isMiracle || isLegend) && (
+                          <div className="absolute top-1 right-1">
+                            <Crown className={`w-3.5 h-3.5 ${isMiracle ? "text-rose-400" : "text-amber-400"} animate-bounce`} />
+                          </div>
+                        )}
+                        <div className="flex items-center justify-between gap-1 mb-0.5">
+                          <span className="font-bold text-[10px] text-white truncate max-w-[110px]">
+                            {t.name}
+                          </span>
+                          <span
+                            className={`text-[8px] font-black px-1.5 py-0.2 rounded font-mono ${tierCfg.badgeBg} ${tierCfg.textColor} border ${tierCfg.border}`}
+                          >
+                            {t.tier}
+                          </span>
+                        </div>
+                        <div className="text-[9px] font-mono font-bold truncate" style={{ color: t.color }}>
+                          {t.buff}
+                        </div>
+                        <div className="text-[8.5px] text-[#8e7a7c] line-clamp-1 leading-tight mt-0.5">
+                          {t.desc}
+                        </div>
+                      </>
+                    )}
+                  </div>
+                );
+              })
+            )}
           </div>
         </div>
 
@@ -436,60 +458,83 @@ export function DestinyRandomizer({
           </div>
 
           <div className="grid grid-cols-2 gap-1.5">
-            {auras.map((a, idx) => {
-              const slotIdx = idx + 4;
-              const isRevealed = revealedSlots.includes(slotIdx);
-              const tierCfg = TIER_CONFIG[a.tier] || TIER_CONFIG.F;
-              const isMiracle = a.tier === "Miracle";
-              const isLegend = a.tier === "S";
-
-              return (
+            {!hasRolled && !isRolling ? (
+              [0, 1, 2, 3].map((idx) => (
                 <div
-                  key={a.id + slotIdx}
-                  className={`relative p-1.5 rounded-xl border text-left transition-all overflow-hidden ${
-                    isRolling && !isRevealed
-                      ? "bg-[#271f20] border-cyan-500/60 animate-pulse"
-                      : isMiracle
-                      ? "bg-rose-950/60 border-2 border-rose-500 shadow-[0_0_20px_rgba(244,63,94,0.6)]"
-                      : isLegend
-                      ? "bg-amber-950/60 border border-amber-500 shadow-[0_0_15px_rgba(249,115,22,0.4)]"
-                      : "bg-[#271f20] border-[#5d4648]/80"
-                  }`}
+                  key={"unrevealed-aura-" + idx}
+                  className="relative p-2 rounded-xl border border-dashed border-[#5d4648] bg-[#221a1b] text-left transition-all"
                 >
-                  {isRolling && !isRevealed ? (
-                    <div className="flex flex-col items-center justify-center py-2 text-center">
-                      <div className="w-4 h-4 border-2 border-cyan-400 border-t-transparent rounded-full animate-spin mb-1" />
-                      <span className="text-[9px] font-mono text-cyan-300 tracking-widest animate-pulse">
-                        ĐANG CUỘN...
-                      </span>
-                    </div>
-                  ) : (
-                    <>
-                      <div className="flex items-center justify-between gap-1 mb-0.5">
-                        <div className="flex items-center gap-1 min-w-0">
-                          <span className="w-2 h-2 rounded-full shrink-0" style={{ backgroundColor: a.glowHex }} />
-                          <span className="font-bold text-[10px] text-white truncate max-w-[100px]">
-                            {a.name}
-                          </span>
-                        </div>
-                        <span
-                          className={`text-[8px] font-black px-1.5 py-0.2 rounded font-mono ${tierCfg.badgeBg} ${tierCfg.textColor} border ${tierCfg.border}`}
-                        >
-                          {a.tier}
+                  <div className="flex items-center justify-between gap-1 mb-0.5">
+                    <span className="font-bold text-[10px] text-[#8e7a7c] flex items-center gap-1">
+                      <span className="text-cyan-400">❓</span> Khí Linh #{idx + 1}
+                    </span>
+                    <span className="text-[9px] font-black px-1.5 py-0.2 rounded font-mono bg-black/50 text-cyan-300 border border-cyan-500/40">
+                      ?
+                    </span>
+                  </div>
+                  <div className="text-[9.5px] font-mono text-cyan-400/90 font-bold">
+                    Chưa Thức Tỉnh
+                  </div>
+                  <div className="text-[8.5px] text-[#8e7a7c]/70 line-clamp-1 leading-tight mt-0.5">
+                    Nhấn Quay để mở khóa
+                  </div>
+                </div>
+              ))
+            ) : (
+              auras.map((a, idx) => {
+                const slotIdx = idx + 4;
+                const isRevealed = revealedSlots.includes(slotIdx);
+                const tierCfg = TIER_CONFIG[a.tier] || TIER_CONFIG.F;
+                const isMiracle = a.tier === "Miracle";
+                const isLegend = a.tier === "S";
+
+                return (
+                  <div
+                    key={a.id + slotIdx}
+                    className={`relative p-1.5 rounded-xl border text-left transition-all overflow-hidden ${
+                      isRolling && !isRevealed
+                        ? "bg-[#271f20] border-cyan-500/60 animate-pulse"
+                        : isMiracle
+                        ? "bg-rose-950/60 border-2 border-rose-500 shadow-[0_0_20px_rgba(244,63,94,0.6)]"
+                        : isLegend
+                        ? "bg-amber-950/60 border border-amber-500 shadow-[0_0_15px_rgba(249,115,22,0.4)]"
+                        : "bg-[#271f20] border-[#5d4648]/80"
+                    }`}
+                  >
+                    {isRolling && !isRevealed ? (
+                      <div className="flex flex-col items-center justify-center py-2 text-center">
+                        <div className="w-4 h-4 border-2 border-cyan-400 border-t-transparent rounded-full animate-spin mb-1" />
+                        <span className="text-[9px] font-mono text-cyan-300 tracking-widest animate-pulse">
+                          ĐANG CUỘN...
                         </span>
                       </div>
-
-                      <div className="text-[9px] font-mono font-bold truncate" style={{ color: a.color }}>
-                        {a.buff}
-                      </div>
-                      <div className="text-[8.5px] text-[#8e7a7c] line-clamp-1 leading-tight mt-0.5">
-                        {a.desc}
-                      </div>
-                    </>
-                  )}
-                </div>
-              );
-            })}
+                    ) : (
+                      <>
+                        <div className="flex items-center justify-between gap-1 mb-0.5">
+                          <div className="flex items-center gap-1 min-w-0">
+                            <span className="w-2 h-2 rounded-full shrink-0" style={{ backgroundColor: a.glowHex }} />
+                            <span className="font-bold text-[10px] text-white truncate max-w-[100px]">
+                              {a.name}
+                            </span>
+                          </div>
+                          <span
+                            className={`text-[8px] font-black px-1.5 py-0.2 rounded font-mono ${tierCfg.badgeBg} ${tierCfg.textColor} border ${tierCfg.border}`}
+                          >
+                            {a.tier}
+                          </span>
+                        </div>
+                        <div className="text-[9px] font-mono font-bold truncate" style={{ color: a.color }}>
+                          {a.buff}
+                        </div>
+                        <div className="text-[8.5px] text-[#8e7a7c] line-clamp-1 leading-tight mt-0.5">
+                          {a.desc}
+                        </div>
+                      </>
+                    )}
+                  </div>
+                );
+              })
+            )}
           </div>
         </div>
       </div>
@@ -511,7 +556,7 @@ export function DestinyRandomizer({
             ) : (
               <>
                 <Dice5 className="w-4 h-4 animate-spin text-white" />
-                <span>🎲 RANDOM THIÊN MỆNH & KHÍ LINH (1 LẦN DUY NHẤT)</span>
+                <span>🎲 RANDOM THIÊN MỆNH & KHÍ LINH (BẮT BUỘC)</span>
               </>
             )}
           </button>
