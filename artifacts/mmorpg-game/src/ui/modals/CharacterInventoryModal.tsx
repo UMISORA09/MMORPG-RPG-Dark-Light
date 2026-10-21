@@ -1550,17 +1550,21 @@ export const CharacterInventoryModal = memo(function CharacterInventoryModal({
       setSelectedItem((prev) => (prev && prev.id === target.id ? { ...prev, equipped: false, slotIndex: freeSlot } : prev));
       showToast(`Đã tháo ${target.name}!`);
 
-      // Backend sync
-      try {
-        const charId = propChar?.id || useGameWorldStore.getState().activeCharacterId;
-        if (charId) {
-          await fetch(`/api/characters/${charId}/inventory/${target.id}/unequip`, {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-          });
+      // Sync equip state
+      if (propOnEquip) {
+        propOnEquip(target as any);
+      } else {
+        try {
+          const charId = propChar?.id || useGameWorldStore.getState().activeCharacterId;
+          if (charId) {
+            await fetch(`/api/characters/${charId}/inventory/${target.id}/unequip`, {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+            });
+          }
+        } catch (err) {
+          console.warn("Backend unequip sync:", err);
         }
-      } catch (err) {
-        console.warn("Backend unequip sync:", err);
       }
       triggerGlobalAutoSave("unequip");
     } else {
@@ -1585,25 +1589,24 @@ export const CharacterInventoryModal = memo(function CharacterInventoryModal({
       setSelectedItem((prev) => (prev && prev.id === target.id ? { ...prev, equipped: true, slotIndex: -1 } : prev));
       showToast(`Đã trang bị ${target.name}!`);
 
-      // Backend sync
-      try {
-        const charId = propChar?.id || useGameWorldStore.getState().activeCharacterId;
-        if (charId) {
-          await fetch(`/api/characters/${charId}/inventory/${target.id}/equip`, {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ slot: target.type }),
-          });
+      // Sync equip state
+      if (propOnEquip) {
+        propOnEquip(target as any);
+      } else {
+        try {
+          const charId = propChar?.id || useGameWorldStore.getState().activeCharacterId;
+          if (charId) {
+            await fetch(`/api/characters/${charId}/inventory/${target.id}/equip`, {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({ slot: target.type }),
+            });
+          }
+        } catch (err) {
+          console.warn("Backend equip sync:", err);
         }
-      } catch (err) {
-        console.warn("Backend equip sync:", err);
       }
       triggerGlobalAutoSave("equip");
-    }
-
-    // Propagate callback if provided
-    if (propOnEquip) {
-      propOnEquip(target as any);
     }
   };
 

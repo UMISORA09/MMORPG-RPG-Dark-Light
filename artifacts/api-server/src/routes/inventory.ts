@@ -49,7 +49,7 @@ router.get("/characters/:characterId/inventory", requireAuth, async (req, res): 
     return;
   }
 
-  const character = await getCharacterForUser(params.data.characterId, userId);
+  const character = await getCharacterForUser(params.data.characterId, userId, (req as any).authUser);
   if (!character) {
     res.status(404).json({ error: "Không tìm thấy nhân vật" });
     return;
@@ -70,7 +70,7 @@ router.post("/characters/:characterId/inventory/:itemId/equip", requireAuth, asy
     return;
   }
 
-  const character = await getCharacterForUser(params.data.characterId, userId);
+  const character = await getCharacterForUser(params.data.characterId, userId, (req as any).authUser);
   const owned = await getOwnedItem(params.data.characterId, params.data.itemId);
   if (!character || !owned) {
     res.status(404).json({ error: "Không tìm thấy nhân vật hoặc vật phẩm trong túi đồ" });
@@ -99,10 +99,11 @@ router.post("/characters/:characterId/inventory/:itemId/equip", requireAuth, asy
 
     // If an item was previously equipped in that slot, unequip it into the bag
     for (const equippedItem of equippedInSlot) {
-      await tx
-        .update(characterItemsTable)
+      if (equippedItem.id !== owned.ownershipId) {
+        await tx.update(characterItemsTable)
         .set({ equipped: false, equippedSlot: null, slotIndex: owned.slotIndex ?? 0 })
         .where(eq(characterItemsTable.id, equippedItem.id));
+      }
     }
 
     // Newly equipped gear occupies character equipment slot, freed from bag grid
@@ -128,7 +129,7 @@ router.post("/characters/:characterId/inventory/:itemId/unequip", requireAuth, a
     return;
   }
 
-  const character = await getCharacterForUser(params.data.characterId, userId);
+  const character = await getCharacterForUser(params.data.characterId, userId, (req as any).authUser);
   const owned = await getOwnedItem(params.data.characterId, params.data.itemId);
   if (!character || !owned) {
     res.status(404).json({ error: "Không tìm thấy nhân vật hoặc vật phẩm trong túi đồ" });
@@ -184,7 +185,7 @@ router.post("/characters/:characterId/inventory/unlock-slot", requireAuth, async
     return;
   }
 
-  const character = await getCharacterForUser(characterId, userId);
+  const character = await getCharacterForUser(characterId, userId, (req as any).authUser);
   if (!character) {
     res.status(404).json({ error: "Không tìm thấy nhân vật" });
     return;
@@ -233,7 +234,7 @@ router.post("/characters/:characterId/inventory/sort", requireAuth, async (req, 
     return;
   }
 
-  const character = await getCharacterForUser(characterId, userId);
+  const character = await getCharacterForUser(characterId, userId, (req as any).authUser);
   if (!character) {
     res.status(404).json({ error: "Không tìm thấy nhân vật" });
     return;
@@ -334,7 +335,7 @@ router.post("/characters/:characterId/inventory/:itemId/sell", requireAuth, asyn
     return;
   }
 
-  const character = await getCharacterForUser(characterId, userId);
+  const character = await getCharacterForUser(characterId, userId, (req as any).authUser);
   if (!character) {
     res.status(404).json({ error: "Không tìm thấy nhân vật" });
     return;
@@ -589,7 +590,7 @@ router.post("/characters/:characterId/open-chest", requireAuth, async (req, res)
 
   const { chestId, tier, chestPosition, playerPosition } = req.body;
 
-  const character = await getCharacterForUser(characterId, userId);
+  const character = await getCharacterForUser(characterId, userId, (req as any).authUser);
   if (!character) {
     res.status(404).json({ error: "Không tìm thấy nhân vật" });
     return;
@@ -638,7 +639,7 @@ router.post("/characters/:characterId/inventory/swap-slots", requireAuth, async 
     return;
   }
 
-  const character = await getCharacterForUser(characterId, userId);
+  const character = await getCharacterForUser(characterId, userId, (req as any).authUser);
   if (!character) {
     res.status(404).json({ error: "Không tìm thấy nhân vật" });
     return;
