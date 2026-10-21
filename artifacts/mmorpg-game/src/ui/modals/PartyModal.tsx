@@ -315,7 +315,7 @@ export const PartyModal = memo(function PartyModal({
         if (e.target === e.currentTarget) handleClose();
       }}
     >
-      <div className="relative w-full max-w-2xl bg-[#342a2b] border border-[#5d4648] rounded-[32px] shadow-[0_30px_90px_rgba(0,0,0,0.85)] p-5 sm:p-7 text-white flex flex-col gap-5 overflow-hidden">
+      <div className="relative w-full max-w-2xl max-h-[92vh] overflow-y-auto custom-scrollbar bg-[#342a2b] border border-[#5d4648] rounded-[32px] shadow-[0_30px_90px_rgba(0,0,0,0.85)] p-5 sm:p-7 text-white flex flex-col gap-5">
         
         {/* Background decorative glow */}
         <div className="absolute top-0 right-0 w-80 h-80 bg-cyan-500/10 rounded-full blur-3xl pointer-events-none" />

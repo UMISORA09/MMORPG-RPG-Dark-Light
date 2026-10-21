@@ -227,7 +227,7 @@ export const TalentAndAwakeningModal = memo(function TalentAndAwakeningModal() {
         </div>
 
         {/* Content Body */}
-        <div className="flex-1 p-6 flex flex-col gap-6 overflow-y-auto">
+        <div className="flex-1 p-6 flex flex-col gap-6 overflow-y-auto custom-scrollbar">
           
           {/* SECTION 1: THỨC TỈNH CHUYỂN CHỨC (AWAKENING TIERS) */}
           <div className="p-5 rounded-3xl bg-gradient-to-br from-[#120f26] via-[#090b14] to-[#120f26] border-2 border-amber-500/40 shadow-xl flex flex-col md:flex-row items-center justify-between gap-6">

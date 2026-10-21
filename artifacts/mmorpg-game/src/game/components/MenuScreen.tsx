@@ -22,7 +22,7 @@ export default function MenuScreen() {
         WebkitBackdropFilter: "blur(2px)",
       }}
     >
-      <div style={{ textAlign: "center", maxWidth: 420, width: "90%", padding: "0 16px" }}>
+      <div style={{ textAlign: "center", maxWidth: 420, width: "90%", padding: "0 16px", maxHeight: "92vh", overflowY: "auto", margin: "auto" }}>
 
         {/* ── Main menu ─────────────────────────────────────────────────────── */}
         {game.phase === "menu" && (

@@ -240,7 +240,7 @@ export const DetailedStatsInspectorPanel = memo(function DetailedStatsInspectorP
         </div>
 
         {/* Body content */}
-        <div className="p-5 sm:p-6 space-y-6 overflow-y-auto max-h-[72vh]">
+        <div className="p-5 sm:p-6 space-y-6 overflow-y-auto custom-scrollbar max-h-[72vh]">
           
           {/* ── PHẦN 1: PHÂN TÁCH CHỈ SỐ (GỐC + TRANG BỊ = TỔNG) ── */}
           <div>

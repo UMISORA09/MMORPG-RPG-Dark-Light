@@ -350,7 +350,7 @@ export function CharacterCreationModal({ isOpen, onClose, onCharacterCreated }: 
   return (
     <AnimatePresence>
       {isOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-2 sm:p-4 overflow-hidden">
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-2 sm:p-4 overflow-y-auto custom-scrollbar">
           {/* Backdrop with subtle blur */}
           <motion.div
             initial={{ opacity: 0 }}
@@ -365,7 +365,7 @@ export function CharacterCreationModal({ isOpen, onClose, onCharacterCreated }: 
             initial={{ opacity: 0, scale: 0.95, y: 10 }}
             animate={{ opacity: 1, scale: 1, y: 0 }}
             exit={{ opacity: 0, scale: 0.95, y: 10 }}
-            className="relative w-full max-w-[1240px] max-h-[96vh] rounded-[28px] bg-[#271f20] border border-[#5d4648] shadow-[0_30px_90px_rgba(0,0,0,0.85)] p-4 sm:p-5 text-white z-10 flex flex-col justify-between overflow-hidden"
+            className="relative w-full max-w-[1240px] max-h-[96vh] rounded-[28px] bg-[#271f20] border border-[#5d4648] shadow-[0_30px_90px_rgba(0,0,0,0.85)] p-4 sm:p-5 text-white z-10 flex flex-col justify-between overflow-y-auto custom-scrollbar my-auto"
           >
             {/* Close Button */}
             <button

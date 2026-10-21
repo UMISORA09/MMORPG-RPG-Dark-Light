@@ -323,7 +323,7 @@ export const AuctionHouseModal = memo(function AuctionHouseModal() {
 
         {/* Tab 1: MUA VẬT PHẨM (BROWSE) */}
         {activeTab === "browse" && (
-          <div className="flex-1 p-6 flex flex-col gap-4 overflow-y-auto min-h-[460px]">
+          <div className="flex-1 min-h-0 p-6 flex flex-col gap-4 overflow-y-auto custom-scrollbar">
             {/* Filter Bar */}
             <div className="flex flex-wrap items-center justify-between gap-3 p-3 rounded-2xl bg-black/40 border border-slate-800">
               <div className="flex items-center gap-2 flex-1 min-w-[220px]">
@@ -490,13 +490,13 @@ export const AuctionHouseModal = memo(function AuctionHouseModal() {
 
         {/* Tab 2: ĐĂNG BÁN ĐỒ CỦA TÔI (SELL) */}
         {activeTab === "sell" && (
-          <div className="flex-1 p-6 grid grid-cols-1 md:grid-cols-2 gap-6 overflow-y-auto">
+          <div className="flex-1 min-h-0 p-6 grid grid-cols-1 md:grid-cols-2 gap-6 overflow-y-auto custom-scrollbar">
             {/* Left: Inventory Picker */}
             <div className="flex flex-col gap-2">
               <h3 className="text-xs font-black text-cyan-300 uppercase tracking-wider">
                 1. Chọn vật phẩm không dùng trong túi đồ
               </h3>
-              <div className="grid grid-cols-4 sm:grid-cols-5 gap-2 p-3 rounded-2xl bg-black/40 border border-slate-800 max-h-[360px] overflow-y-auto">
+              <div className="grid grid-cols-4 sm:grid-cols-5 gap-2 p-3 rounded-2xl bg-black/40 border border-slate-800 max-h-[360px] overflow-y-auto custom-scrollbar">
                 {inventory.length === 0 ? (
                   <div className="col-span-full p-8 text-center text-xs text-slate-500">
                     Túi đồ của bạn không có trang bị nào để bán.
@@ -593,7 +593,7 @@ export const AuctionHouseModal = memo(function AuctionHouseModal() {
 
         {/* Tab 3: HÀNG ĐANG RAO BÁN CỦA TÔI (MY LISTINGS) */}
         {activeTab === "my_listings" && (
-          <div className="flex-1 p-6 flex flex-col gap-3 overflow-y-auto">
+          <div className="flex-1 min-h-0 p-6 flex flex-col gap-3 overflow-y-auto custom-scrollbar">
             {myListings.length === 0 ? (
               <div className="p-12 text-center text-slate-500 text-xs">
                 Bạn hiện không có món hàng nào đang rao bán trên chợ.

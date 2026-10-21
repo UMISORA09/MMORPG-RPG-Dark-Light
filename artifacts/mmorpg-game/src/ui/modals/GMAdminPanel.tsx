@@ -355,7 +355,7 @@ export const GMAdminPanel = memo(function GMAdminPanel() {
         )}
 
         {/* Main Body */}
-        <div className="p-5 sm:p-6 space-y-5 overflow-y-auto max-h-[75vh]">
+        <div className="p-5 sm:p-6 space-y-5 overflow-y-auto custom-scrollbar max-h-[75vh]">
           
           {/* Section 1: 7 Core Instant Powers */}
           <div>

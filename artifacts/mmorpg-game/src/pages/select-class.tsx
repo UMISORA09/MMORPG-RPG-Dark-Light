@@ -86,8 +86,8 @@ export default function SelectClassPage() {
   }
 
   return (
-    <div className="min-h-[100dvh] w-full bg-gradient-to-b from-background to-card px-4 py-8">
-      <div className="max-w-md mx-auto">
+    <div className="min-h-[100dvh] w-full flex flex-col items-center justify-center bg-gradient-to-b from-background to-card px-4 py-8 overflow-y-auto custom-scrollbar">
+      <div className="max-w-md w-full mx-auto my-auto">
         <div className="text-center mb-8">
           <h1 className="text-3xl font-bold mb-2 bg-gradient-to-r from-primary via-secondary to-accent bg-clip-text text-transparent">
             CHỌN LỚP NHÂN VẬT

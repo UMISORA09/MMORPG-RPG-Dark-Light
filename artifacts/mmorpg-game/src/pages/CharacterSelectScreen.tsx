@@ -185,7 +185,7 @@ export default function CharacterSelectScreen() {
 
   return (
     <div
-      className="min-h-[100dvh] w-full text-white relative overflow-x-hidden flex flex-col justify-between selection:bg-[#28c3e1] selection:text-[#1c161a]"
+      className="min-h-[100dvh] w-full text-white relative overflow-y-auto overflow-x-hidden custom-scrollbar flex flex-col justify-between selection:bg-[#28c3e1] selection:text-[#1c161a]"
       style={{
         backgroundColor: "#4c6e6f",
         backgroundImage: "radial-gradient(circle at 50% 50%, #567c7d 0%, #446364 75%, #385253 100%)",
@@ -259,7 +259,7 @@ export default function CharacterSelectScreen() {
       </header>
 
       {/* ── Main Content Area ── */}
-      <main className="relative z-10 flex-1 w-full max-w-6xl mx-auto px-4 sm:px-8 py-8 flex flex-col justify-center">
+      <main className="relative z-10 flex-1 w-full max-w-6xl mx-auto px-4 sm:px-8 py-8 flex flex-col justify-center my-auto">
         {/* Title & Slot Info */}
         <div className="flex flex-col sm:flex-row sm:items-end justify-between mb-8 gap-2">
           <div>

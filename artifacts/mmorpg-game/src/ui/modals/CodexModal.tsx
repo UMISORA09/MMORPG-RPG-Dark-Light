@@ -146,7 +146,7 @@ export const CodexModal = memo(function CodexModal() {
         </div>
 
         {/* Body Content */}
-        <div className="flex-1 p-6 overflow-y-auto">
+        <div className="flex-1 p-6 overflow-y-auto custom-scrollbar">
           {activeTab === "monsters" && (
             <div className="grid grid-cols-1 md:grid-cols-2 gap-3.5">
               {monstersList.map((m) => {

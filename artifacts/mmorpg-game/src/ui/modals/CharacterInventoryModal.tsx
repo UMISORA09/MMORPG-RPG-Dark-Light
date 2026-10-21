@@ -1915,7 +1915,7 @@ export const CharacterInventoryModal = memo(function CharacterInventoryModal({
       {/* ── MODAL WINDOW CONTAINER WITH SPRING SCALE & FADE-IN ── */}
       <div
         className={`relative rounded-[30px] bg-[#0b0e14]/95 border border-slate-800/80 shadow-[0_8px_32px_rgba(0,0,0,0.85),0_0_30px_rgba(0,242,255,0.15)] p-4 sm:p-5 text-slate-100 flex flex-col gap-3.5 backdrop-blur-2xl pointer-events-auto animate-in fade-in zoom-in-95 duration-200 ease-[cubic-bezier(0.16,1,0.3,1)] transition-all ${
-          isSidePanel ? "w-full max-w-[560px] max-h-[94vh] overflow-y-auto" : "w-full max-w-[980px]"
+          isSidePanel ? "w-full max-w-[560px] max-h-[94vh] overflow-y-auto custom-scrollbar" : "w-full max-w-[980px] max-h-[94vh] overflow-y-auto custom-scrollbar"
         }`}
       >
         

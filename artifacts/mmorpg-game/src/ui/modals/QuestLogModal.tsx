@@ -78,7 +78,7 @@ export const QuestLogModal = memo(function QuestLogModal() {
         }
       }}
     >
-      <div className="relative w-full max-w-4xl h-[560px] bg-[#0b0e14]/95 border border-amber-500/40 rounded-3xl overflow-hidden shadow-[0_8px_32px_rgba(0,0,0,0.85),0_0_50px_rgba(245,158,11,0.25)] flex flex-col animate-in fade-in zoom-in-95 duration-200 ease-[cubic-bezier(0.16,1,0.3,1)]">
+      <div className="relative w-full max-w-4xl max-h-[92vh] h-[560px] bg-[#0b0e14]/95 border border-amber-500/40 rounded-3xl overflow-hidden shadow-[0_8px_32px_rgba(0,0,0,0.85),0_0_50px_rgba(245,158,11,0.25)] flex flex-col animate-in fade-in zoom-in-95 duration-200 ease-[cubic-bezier(0.16,1,0.3,1)]">
         {/* Header */}
         <div className="px-6 py-4 border-b border-slate-800/80 bg-slate-900/60 flex items-center justify-between">
           <div className="flex items-center gap-2.5">
@@ -107,7 +107,7 @@ export const QuestLogModal = memo(function QuestLogModal() {
         {/* Content Split Pane */}
         <div className="flex-1 flex overflow-hidden">
           {/* Left: Quest List */}
-          <div className="w-2/5 border-r border-slate-800/80 overflow-y-auto p-3 space-y-2">
+          <div className="w-2/5 border-r border-slate-800/80 overflow-y-auto custom-scrollbar p-3 space-y-2">
             {loading ? (
               <div className="p-8 text-center text-xs text-slate-400">Đang tải nhiệm vụ...</div>
             ) : (
@@ -158,7 +158,7 @@ export const QuestLogModal = memo(function QuestLogModal() {
           </div>
 
           {/* Right: Quest Detail */}
-          <div className="flex-1 p-6 overflow-y-auto flex flex-col justify-between">
+          <div className="flex-1 p-6 overflow-y-auto custom-scrollbar flex flex-col justify-between">
             {selectedQuest ? (
               <div className="space-y-4">
                 <div>
