@@ -688,3 +688,30 @@
 }
 
 
+
+
+/* Global & Custom Scrollbar Standards */
+* {
+  scrollbar-width: thin;
+  scrollbar-color: #5d4648 rgba(39, 31, 32, 0.45);
+}
+
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: rgba(28, 22, 26, 0.7);
+}
+
+::-webkit-scrollbar-thumb {
+  background: #5d4648;
+  border-radius: 9999px;
+  border: 1px solid rgba(40, 195, 225, 0.25);
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: #28c3e1;
+  box-shadow: 0 0 10px rgba(40, 195, 225, 0.6);
+}
