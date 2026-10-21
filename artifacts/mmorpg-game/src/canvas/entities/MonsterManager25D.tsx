@@ -6,7 +6,7 @@
 import { memo, useRef, useState, useEffect, useCallback } from "react";
 import * as THREE from "three";
 import { useFrame } from "@react-three/fiber";
-import { Html } from "@react-three/drei";
+import { Html, Billboard, Text } from "@react-three/drei";
 import { SpriteBillboard25D } from "../sprites/SpriteBillboard25D";
 import { TelegraphZoneItem, isPlayerInsideTelegraphZone } from "../vfx/TelegraphZoneShader";
 import { useGameWorldStore } from "@/stores/useGameWorldStore";
@@ -1588,23 +1588,19 @@ export const MonsterManager25D = memo(function MonsterManager25D() {
 
               {/* Monster State Overhead Icon: ! for Aggro / Warning for Cast (Positioned safely above name HUD, culled for distant mobs) */}
               {showOverhead && monster.aiState === "AGGRO_CHASE" && (
-                <Html center position={[monster.currentPos.x, overheadY, monster.currentPos.z]} distanceFactor={14} style={{ pointerEvents: "none" }}>
-                  <span className="text-rose-500 font-black text-lg select-none drop-shadow">!</span>
-                </Html>
+                <Billboard position={[monster.currentPos.x, overheadY, monster.currentPos.z]}>
+                  <Text fontSize={0.48} color="#f43f5e" outlineWidth={0.04} outlineColor="#000000" anchorX="center" anchorY="middle">!</Text>
+                </Billboard>
               )}
               {showOverhead && monster.aiState === "TELEGRAPH_WINDUP" && (
-                <Html center position={[monster.currentPos.x, overheadY, monster.currentPos.z]} distanceFactor={14} style={{ pointerEvents: "none" }}>
-                  <span className="px-2 py-0.5 rounded-md bg-rose-950/90 border border-rose-500 text-rose-300 font-bold text-[10px] whitespace-nowrap select-none animate-pulse">
-                    ⚠️ GỒNG CHIÊU
-                  </span>
-                </Html>
+                <Billboard position={[monster.currentPos.x, overheadY, monster.currentPos.z]}>
+                  <Text fontSize={0.24} color="#fda4af" outlineWidth={0.03} outlineColor="#4c0519" anchorX="center" anchorY="middle">⚠️ GỒNG CHIÊU</Text>
+                </Billboard>
               )}
               {showOverhead && monster.aiState === "STAGGERED" && (
-                <Html center position={[monster.currentPos.x, overheadY, monster.currentPos.z]} distanceFactor={14} style={{ pointerEvents: "none" }}>
-                  <span className="px-2 py-0.5 rounded-md bg-yellow-950/90 border border-yellow-400 text-yellow-300 font-bold text-[10px] whitespace-nowrap select-none">
-                    ⚡ CHOÁNG (1.5x)
-                  </span>
-                </Html>
+                <Billboard position={[monster.currentPos.x, overheadY, monster.currentPos.z]}>
+                  <Text fontSize={0.24} color="#fde047" outlineWidth={0.03} outlineColor="#713f12" anchorX="center" anchorY="middle">⚡ CHOÁNG (1.5x)</Text>
+                </Billboard>
               )}
 
               <SpriteBillboard25D
@@ -1636,14 +1632,18 @@ export const MonsterManager25D = memo(function MonsterManager25D() {
         });
       })()}
 
-      {/* ── 3D Bullets / Projectiles Render (Player Kiếm Khí & Quái Bắn Đạn) ── */}
+      {/* ── 3D Bullets / Projectiles Render (Optimized Dual-Layer Glow Mesh) ── */}
       {bullets.map((b) => (
         <group key={`bullet-${b.id}`} position={b.position}>
           <mesh>
-            <sphereGeometry args={[b.size || 0.28, 14, 14]} />
+            <sphereGeometry args={[b.size || 0.28, 10, 10]} />
             <meshBasicMaterial color={b.color || "#38bdf8"} />
           </mesh>
-          <pointLight color={b.color || "#38bdf8"} intensity={0.9} distance={3.5} />
+          {/* Outer glowing halo ring with zero shader recompilation overhead */}
+          <mesh rotation={[-Math.PI / 2, 0, 0]}>
+            <ringGeometry args={[(b.size || 0.28) * 0.85, (b.size || 0.28) * 1.6, 12]} />
+            <meshBasicMaterial color={b.color || "#38bdf8"} transparent opacity={0.4} depthWrite={false} side={THREE.DoubleSide} />
+          </mesh>
         </group>
       ))}
 
@@ -1683,22 +1683,24 @@ export const MonsterManager25D = memo(function MonsterManager25D() {
         );
       })}
 
-      {/* ── Floating Damage & Reward Texts Render ── */}
-      {floatingTexts.map((ft) => (
-        <Html
+      {/* ── Floating Damage & Reward Texts (Ultra Fast GPU SDF Font) ── */}
+      {floatingTexts.slice(-15).map((ft) => (
+        <Billboard
           key={`txt-${ft.id}`}
-          center
           position={[ft.position.x, ft.position.y, ft.position.z]}
-          distanceFactor={14}
-          style={{ pointerEvents: "none" }}
         >
-          <div
-            className="font-black text-sm drop-shadow-[0_2px_8px_rgba(0,0,0,0.95)] whitespace-nowrap select-none"
-            style={{ color: ft.color, opacity: Math.max(0, ft.opacity ?? 1) }}
+          <Text
+            fontSize={0.36}
+            color={ft.color}
+            outlineWidth={0.035}
+            outlineColor="#000000"
+            fillOpacity={Math.max(0, ft.opacity ?? 1)}
+            anchorX="center"
+            anchorY="middle"
           >
             {ft.text}
-          </div>
-        </Html>
+          </Text>
+        </Billboard>
       ))}
     </group>
   );

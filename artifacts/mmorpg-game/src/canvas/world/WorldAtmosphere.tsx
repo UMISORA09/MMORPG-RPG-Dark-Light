@@ -3,7 +3,7 @@
 // Atmospheric fog, dual-zone magical particles, and calibrated shadow biases
 // ==============================================================================
 
-import { memo } from "react";
+import { memo, useState, useEffect } from "react";
 import { Sparkles } from "@react-three/drei";
 
 export const WorldAtmosphere = memo(function WorldAtmosphere() {

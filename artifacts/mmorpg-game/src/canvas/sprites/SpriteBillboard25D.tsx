@@ -113,7 +113,7 @@ function OrbitingRelicAura({ auraIds }: { auraIds?: string[] }) {
             metalness={0.8}
           />
         </mesh>
-        <pointLight color={cfg.emissive} intensity={cfg.intensity * 1.2} distance={2.5} />
+        {/* Emissive material provides clean visual glow with zero light-recompile overhead */}
       </group>
 
       {/* Gentle Foot Halo Ring in Relic Color */}

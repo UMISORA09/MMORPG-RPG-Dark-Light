@@ -2,20 +2,22 @@ import { memo, useState } from "react";
 import { InventoryEquipmentPanel } from "./InventoryEquipmentPanel";
 import { CharacterInventoryModal } from "@/ui/modals/CharacterInventoryModal";
 import { GameSettingsPanel } from "./GameSettingsPanel";
-import { QuestLogModal } from "@/ui/modals/QuestLogModal";
-import { BlacksmithModal } from "@/ui/modals/BlacksmithModal";
-import { AuctionHouseModal } from "@/ui/modals/AuctionHouseModal";
-import { TalentAndAwakeningModal } from "@/ui/modals/TalentAndAwakeningModal";
-import { CodexModal } from "@/ui/modals/CodexModal";
-import { CharacterAttributesPanel } from "@/ui/modals/CharacterAttributesPanel";
-import { PvPArenaModal } from "@/ui/modals/PvPArenaModal";
-import { GMAdminPanel } from "@/ui/modals/GMAdminPanel";
-import { DungeonSelectModal } from "@/ui/modals/DungeonSelectModal";
-import { BattleReportModal } from "@/ui/modals/BattleReportModal";
-import { AchievementsModal } from "@/ui/modals/AchievementsModal";
-import { DailyLoginModal } from "@/ui/modals/DailyLoginModal";
-import { WorldAtlasModal } from "@/ui/modals/WorldAtlasModal";
-import { PartyModal } from "@/ui/modals/PartyModal";
+import { lazy, Suspense } from "react";
+
+const QuestLogModal = lazy(() => import("@/ui/modals/QuestLogModal").then(m => ({ default: m.QuestLogModal })));
+const BlacksmithModal = lazy(() => import("@/ui/modals/BlacksmithModal").then(m => ({ default: m.BlacksmithModal })));
+const AuctionHouseModal = lazy(() => import("@/ui/modals/AuctionHouseModal").then(m => ({ default: m.AuctionHouseModal })));
+const TalentAndAwakeningModal = lazy(() => import("@/ui/modals/TalentAndAwakeningModal").then(m => ({ default: m.TalentAndAwakeningModal })));
+const CodexModal = lazy(() => import("@/ui/modals/CodexModal").then(m => ({ default: m.CodexModal })));
+const CharacterAttributesPanel = lazy(() => import("@/ui/modals/CharacterAttributesPanel").then(m => ({ default: m.CharacterAttributesPanel })));
+const PvPArenaModal = lazy(() => import("@/ui/modals/PvPArenaModal").then(m => ({ default: m.PvPArenaModal })));
+const GMAdminPanel = lazy(() => import("@/ui/modals/GMAdminPanel").then(m => ({ default: m.GMAdminPanel })));
+const DungeonSelectModal = lazy(() => import("@/ui/modals/DungeonSelectModal").then(m => ({ default: m.DungeonSelectModal })));
+const BattleReportModal = lazy(() => import("@/ui/modals/BattleReportModal").then(m => ({ default: m.BattleReportModal })));
+const AchievementsModal = lazy(() => import("@/ui/modals/AchievementsModal").then(m => ({ default: m.AchievementsModal })));
+const DailyLoginModal = lazy(() => import("@/ui/modals/DailyLoginModal").then(m => ({ default: m.DailyLoginModal })));
+const WorldAtlasModal = lazy(() => import("@/ui/modals/WorldAtlasModal").then(m => ({ default: m.WorldAtlasModal })));
+const PartyModal = lazy(() => import("@/ui/modals/PartyModal").then(m => ({ default: m.PartyModal })));
 import { LoadingTransitionScreen } from "@/ui/transition/LoadingTransitionScreen";
 import { PlayerDeathRespawnModal } from "./PlayerDeathRespawnModal";
 import {
@@ -167,7 +169,7 @@ export const UnifiedOverlayModals = memo(function UnifiedOverlayModals({
   };
 
   return (
-    <>
+    <Suspense fallback={null}>
       {/* 0.0 Death & Town Respawn System Modal */}
       <PlayerDeathRespawnModal />
 
@@ -393,6 +395,6 @@ export const UnifiedOverlayModals = memo(function UnifiedOverlayModals({
       </div>
     </div>
       )}
-    </>
+    </Suspense>
   );
 });

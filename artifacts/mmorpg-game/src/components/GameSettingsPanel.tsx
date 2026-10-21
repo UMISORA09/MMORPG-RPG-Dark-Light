@@ -85,6 +85,7 @@ export function GameSettingsPanel({ characterId }: { characterId: number }) {
   const saveGraphics = (next: GraphicsSettings) => {
     setGraphics(next);
     window.localStorage.setItem("clb-graphics-settings", JSON.stringify(next));
+    window.dispatchEvent(new Event("clb-graphics-updated"));
   };
 
   const applyPreset = (preset: "low" | "medium" | "high") => {
