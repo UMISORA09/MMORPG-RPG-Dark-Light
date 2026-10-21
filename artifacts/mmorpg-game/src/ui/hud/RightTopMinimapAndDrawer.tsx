@@ -140,7 +140,7 @@ export const RightTopMinimapAndDrawer = memo(function RightTopMinimapAndDrawer({
       <div className="relative flex items-center justify-end">
         {/* ── EXPANDED TRAY: Dãy 12+ nút chức năng trượt thác nước lệch nhịp (staggered 35ms) ── */}
         {isTrayExpanded ? (
-          <div className="flex items-center gap-1.5 p-1.5 rounded-2xl bg-[#0b0e14]/95 backdrop-blur-xl border border-slate-800/80 shadow-[0_8px_32px_rgba(0,0,0,0.85),0_0_20px_rgba(0,242,255,0.15)] animate-in fade-in duration-200">
+          <div className="flex items-center gap-1.5 p-1.5 rounded-2xl bg-[#0b0e14]/95 backdrop-blur-xl border border-slate-800/80 shadow-[0_8px_32px_rgba(0,0,0,0.85),0_0_20px_rgba(0,242,255,0.15)] animate-in fade-in duration-200 overflow-x-auto max-w-[calc(100vw-32px)] custom-scrollbar">
             {[
               {
                 id: "worldAtlas",

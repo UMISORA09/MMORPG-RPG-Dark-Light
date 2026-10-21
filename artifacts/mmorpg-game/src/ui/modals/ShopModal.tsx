@@ -186,7 +186,7 @@ export const ShopModal = memo(function ShopModal({ characterId }: ShopModalProps
       }}
     >
       <div
-        className="relative w-full max-w-3xl max-h-[88vh] flex flex-col bg-[#0b0616]/95 border-2 border-amber-500/40 rounded-3xl shadow-[0_0_60px_rgba(0,0,0,0.95)] overflow-hidden text-slate-100 ring-1 ring-amber-400/20"
+        className="relative w-full max-w-3xl max-h-[88vh] flex flex-col bg-[#0b0616]/95 border-2 border-amber-500/40 rounded-3xl shadow-[0_0_60px_rgba(0,0,0,0.95)] overflow-hidden text-slate-100 ring-1 ring-amber-400/20 my-auto"
         onPointerDown={(e) => e.stopPropagation()}
       >
         {/* Header - Cinema Slate & Dark Fantasy Gold */}

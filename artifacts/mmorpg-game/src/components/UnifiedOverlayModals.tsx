@@ -271,7 +271,7 @@ export const UnifiedOverlayModals = memo(function UnifiedOverlayModals({
         >
           <div
             className={`relative flex flex-col bg-[#0b0e14]/95 border border-slate-800/80 rounded-[24px] shadow-[0_8px_32px_rgba(0,0,0,0.85)] overflow-hidden text-slate-100 pointer-events-auto backdrop-blur-xl transition-all duration-300 animate-in fade-in zoom-in-95 duration-200 ease-[cubic-bezier(0.16,1,0.3,1)] ${
-              isSidePanel ? "w-full max-w-md max-h-[92vh] border-cyan-500/40" : "w-full max-w-5xl max-h-[90vh]"
+              isSidePanel ? "w-full max-w-md max-h-[92vh] border-cyan-500/40 my-auto" : "w-full max-w-5xl max-h-[90vh] my-auto"
             }`}
           >
             {/* ── Modal Header ── */}

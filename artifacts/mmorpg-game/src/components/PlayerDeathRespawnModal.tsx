@@ -47,7 +47,7 @@ export const PlayerDeathRespawnModal = memo(function PlayerDeathRespawnModal() {
 
   return (
     <div className="fixed inset-0 z-[120] flex items-center justify-center p-3 sm:p-4 bg-black/80 backdrop-blur-md select-none animate-in fade-in duration-200">
-      <div className="relative w-full max-w-lg bg-[#11141c]/95 border border-red-500/50 rounded-[28px] p-5 sm:p-7 overflow-hidden shadow-[0_25px_80px_rgba(0,0,0,0.85),0_0_60px_rgba(239,68,68,0.25)] flex flex-col gap-4 text-center animate-in zoom-in-95 duration-200">
+      <div className="relative w-full max-w-lg bg-[#11141c]/95 border border-red-500/50 rounded-[28px] p-5 sm:p-7 overflow-hidden shadow-[0_25px_80px_rgba(0,0,0,0.85),0_0_60px_rgba(239,68,68,0.25)] flex flex-col gap-4 text-center animate-in zoom-in-95 duration-200 my-auto">
         {/* Subtle Ambient Red Glow */}
         <div className="absolute -top-24 left-1/2 -translate-x-1/2 w-72 h-72 bg-red-600/15 blur-3xl rounded-full pointer-events-none" />
 

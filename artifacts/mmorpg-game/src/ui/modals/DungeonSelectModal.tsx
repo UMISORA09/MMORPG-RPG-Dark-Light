@@ -485,7 +485,7 @@ export const DungeonSelectModal = memo(function DungeonSelectModal() {
       onClick={handleClose}
     >
       <div
-        className="relative w-full max-w-4xl bg-[#0b0f19] border border-cyan-500/40 rounded-2xl shadow-[0_0_60px_rgba(6,182,212,0.3)] overflow-hidden flex flex-col font-sans max-h-[90vh]"
+        className="relative w-full max-w-4xl bg-[#0b0f19] border border-cyan-500/40 rounded-2xl shadow-[0_0_60px_rgba(6,182,212,0.3)] overflow-hidden flex flex-col font-sans max-h-[90vh] my-auto"
         onClick={(e) => e.stopPropagation()}
       >
         {/* Top Glow Accent Ribbon */}

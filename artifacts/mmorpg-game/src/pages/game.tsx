@@ -253,8 +253,34 @@ export default function GamePage() {
     );
   }
 
-  if (!activeCharacter) {
-    return null;
+    if (!activeCharacter) {
+    return (
+      <div
+        className="min-h-screen w-full flex flex-col items-center justify-center p-6 text-white relative overflow-hidden"
+        style={{
+          backgroundColor: "#4c6e6f",
+          backgroundImage: "radial-gradient(circle at 50% 50%, #567c7d 0%, #446364 75%, #385253 100%)",
+        }}
+      >
+        <div className="relative w-full max-w-md p-8 rounded-[28px] bg-[#342a2b] border border-[#5d4648] shadow-2xl flex flex-col items-center text-center gap-5 my-auto">
+          <div className="w-16 h-16 rounded-2xl bg-[#4a383a] border border-[#5d4648] flex items-center justify-center">
+            <div className="w-8 h-8 border-2 border-[#28c3e1] border-t-transparent rounded-full animate-spin" />
+          </div>
+          <div>
+            <h3 className="font-sans text-xl font-bold text-white mb-1.5">ĐANG KẾT NỐI ANH HÙNG</h3>
+            <p className="font-sans text-xs text-[#8e7a7c]">
+              Đang xác thực thông tin nhân vật và chuẩn bị bước vào Đại Lục...
+            </p>
+          </div>
+          <button
+            onClick={() => setLocation("/characters")}
+            className="w-full py-3 rounded-full bg-[#28c3e1] hover:brightness-110 text-[#1c161a] font-bold text-xs uppercase tracking-wider shadow-[0_0_20px_rgba(40,195,225,0.4)] transition-all cursor-pointer"
+          >
+            Đến Sảnh Chọn Nhân Vật
+          </button>
+        </div>
+      </div>
+    );
   }
 
   return (

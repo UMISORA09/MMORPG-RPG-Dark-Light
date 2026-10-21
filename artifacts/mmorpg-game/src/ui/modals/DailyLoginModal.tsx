@@ -208,7 +208,7 @@ export const DailyLoginModal = memo(function DailyLoginModal({
         if (e.target === e.currentTarget) close();
       }}
     >
-      <div className="relative w-full max-w-4xl max-h-[92vh] flex flex-col bg-[#0b0f19] border border-[#232f48] rounded-[28px] shadow-[0_30px_90px_rgba(0,0,0,0.95)] overflow-hidden text-slate-100">
+      <div className="relative w-full max-w-4xl max-h-[92vh] flex flex-col bg-[#0b0f19] border border-[#232f48] rounded-[28px] shadow-[0_30px_90px_rgba(0,0,0,0.95)] overflow-hidden text-slate-100 my-auto">
         
         {/* ── Modal Header ── */}
         <div className="flex items-center justify-between px-6 py-4 border-b border-slate-800/80 bg-slate-900/60">
