@@ -6,7 +6,7 @@
 import { memo, useRef, useState, useEffect, useCallback } from "react";
 import * as THREE from "three";
 import { useFrame } from "@react-three/fiber";
-import { Html, Billboard, Text } from "@react-three/drei";
+import { Billboard, Text } from "@react-three/drei";
 import { SpriteBillboard25D } from "../sprites/SpriteBillboard25D";
 import { TelegraphZoneItem, isPlayerInsideTelegraphZone } from "../vfx/TelegraphZoneShader";
 import { useGameWorldStore } from "@/stores/useGameWorldStore";
@@ -940,6 +940,11 @@ export const MonsterManager25D = memo(function MonsterManager25D() {
 
       switch (m.aiState) {
         case "PATROL": {
+          // Distance AOI throttling: distant monsters don't need continuous sub-step roaming
+          if (!m.isBoss && distToPlayer > 45) {
+            break;
+          }
+
           const weatherAggroMult = weather === "RAIN" ? 0.8 : weather === "DARK_FOG" ? 0.65 : 1.0;
           const aggroRadius = (m.typeConfig?.behavior?.aggroRadius || m.blueprint.aggroRadius) * weatherAggroMult;
           if (distToPlayer <= aggroRadius && !isPlayerInSafeZone) {
@@ -1509,10 +1514,16 @@ export const MonsterManager25D = memo(function MonsterManager25D() {
         />
       ))}
 
-      {/* ── Render 2.5D Billboard Sprites for All Living Monsters with Overhead Culling ── */}
+      {/* ── Render 2.5D Billboard Sprites for All Living Monsters with Overhead Culling & Distance Culling (AOI <= 38m) ── */}
       {(() => {
-        const aliveMobs = monstersRef.current.filter((m) => m.isAlive);
         const playerPos = playerPosition;
+        // Distance Culling (Tầm nhìn AOI <= 38m): Chỉ render quái vật gần người chơi hoặc Boss
+        const aliveMobs = monstersRef.current.filter((m) => {
+          if (!m.isAlive) return false;
+          if (m.isBoss) return true;
+          return m.currentPos.distanceTo(playerPos) <= 38;
+        });
+
         // Optimization: Only top 4 nearest entities within 12m or boss / active hit get overhead HUD mounted
         const visibleOverheadSet = new Set(
           aliveMobs
@@ -1528,7 +1539,7 @@ export const MonsterManager25D = memo(function MonsterManager25D() {
 
           return (
             <group key={`mob-grp-${monster.id}`}>
-              {/* Radiant Elite Monster Pulsing Foot Aura Ring & Light */}
+              {/* Radiant Elite Monster Pulsing Foot Aura Ring */}
               {monster.isElite && (
                 <group position={[monster.currentPos.x, 0.03, monster.currentPos.z]}>
                   <mesh rotation={[-Math.PI / 2, 0, 0]}>
@@ -1551,23 +1562,23 @@ export const MonsterManager25D = memo(function MonsterManager25D() {
                       depthWrite={false}
                     />
                   </mesh>
-                  <pointLight
-                    color={monster.eliteAuraColor || "#f59e0b"}
-                    intensity={2.2}
-                    distance={6}
-                    position={[0, 1.2, 0]}
-                  />
                 </group>
               )}
 
-              {/* Radiant Elite Overhead Crown Label */}
-              {/* Radiant Elite Overhead Crown Label */}
+              {/* Radiant Elite Overhead Crown Label (GPU SDF Text, Zero DOM Overhead) */}
               {monster.isElite && (
-                <Html center position={[monster.currentPos.x, overheadY + 0.45, monster.currentPos.z]} distanceFactor={14} style={{ pointerEvents: "none" }}>
-                  <span className="px-2 py-0.5 rounded-full bg-black/85 border border-amber-400 text-amber-300 font-black text-[11px] whitespace-nowrap shadow-md select-none">
+                <Billboard position={[monster.currentPos.x, overheadY + 0.45, monster.currentPos.z]}>
+                  <Text
+                    fontSize={0.28}
+                    color="#fde047"
+                    outlineWidth={0.035}
+                    outlineColor="#78350f"
+                    anchorX="center"
+                    anchorY="middle"
+                  >
                     👑 [TINH ANH]
-                  </span>
-                </Html>
+                  </Text>
+                </Billboard>
               )}
 
               {/* Lone Predator Ground Purple Aura Decal */}

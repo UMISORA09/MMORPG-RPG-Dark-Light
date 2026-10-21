@@ -75,7 +75,6 @@ export const GMAdminPanel = memo(function GMAdminPanel() {
       const data = await res.json().catch(() => ({}));
       if (res.ok && data?.character) {
         useGameWorldStore.getState().syncFromBackendCharacter(data.character);
-        useGameStore.getState().syncFromCharacter(data.character);
       }
       return { ok: res.ok, data };
     } catch (err: any) {

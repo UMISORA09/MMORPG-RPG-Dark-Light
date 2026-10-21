@@ -288,7 +288,7 @@ export default function CharacterSelectScreen() {
             {/* Left Column: Artwork Illustration Panel */}
             <div className="relative md:w-[48%] flex items-end justify-center rounded-t-[34px] md:rounded-t-none md:rounded-l-[34px] overflow-hidden min-h-[240px] md:min-h-full bg-[#271f20]">
               <img
-                src="/auth-character-art-2x.png"
+                src="/auth-character-art.jpg"
                 alt="Chiến Long Bá Hero"
                 className="w-full h-full object-cover object-center"
               />

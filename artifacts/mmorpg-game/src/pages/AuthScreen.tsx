@@ -163,7 +163,7 @@ export default function AuthScreen() {
         <div className="relative md:w-[57.4%] flex items-end justify-center rounded-t-[34px] md:rounded-t-none md:rounded-l-[34px] overflow-hidden min-h-[280px] md:min-h-full bg-[#1e1718]">
           {/* Background Illustration Artwork */}
           <img
-            src="/auth-character-art-2x.png"
+            src="/auth-character-art.jpg"
             alt="Chiến Long Bá - Hành Trình Huyền Thoại"
             className="w-full h-full object-cover object-top select-none pointer-events-none drop-shadow-[0_15px_30px_rgba(0,0,0,0.4)]"
           />

@@ -26,13 +26,6 @@ router.post("/characters/:characterId/allocate-stats", requireAuth, async (req, 
     return;
   }
 
-  // Chống gian lận kết quả PvP vô lý
-  const playerHpPct = req.body.playerHpPercent !== undefined ? Number(req.body.playerHpPercent) : null;
-  if (Boolean(victory) && playerHpPct !== null && playerHpPct <= 0) {
-    res.status(400).json({ error: "Không thể ghi nhận chiến thắng khi lượng máu bản thân bằng 0." });
-    return;
-  }
-
   let [character] = await db
     .select()
     .from(charactersTable)
