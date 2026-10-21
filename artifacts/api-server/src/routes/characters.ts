@@ -451,8 +451,10 @@ const handleAllocateStats = async (req: any, res: any) => {
     return res.status(404).json({ error: "Không tìm thấy nhân vật" });
   }
 
-  // Bảo vệ Ownership
-  if (character.userId !== req.session.userId) {
+  // Bảo vệ Ownership (Cho phép GM/Admin can thiệp)
+  const authUser = (req as any).authUser;
+  const userRole = (authUser?.role || "").toUpperCase();
+  if (userRole !== "ADMIN" && userRole !== "GM" && character.userId && character.userId !== req.session.userId) {
     return res.status(403).json({ error: "Từ chối truy cập: Bạn không có quyền phân bổ chỉ số cho nhân vật này." });
   }
 

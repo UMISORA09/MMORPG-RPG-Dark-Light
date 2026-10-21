@@ -33,14 +33,26 @@ router.post("/characters/:characterId/allocate-stats", requireAuth, async (req, 
     return;
   }
 
-  const [character] = await db
+  let [character] = await db
     .select()
     .from(charactersTable)
     .where(and(eq(charactersTable.id, characterId), eq(charactersTable.userId, userId)))
     .limit(1);
 
+  // GM/Admin có quyền thao tác trên bất kỳ nhân vật nào trong hệ thống
   if (!character) {
-    res.status(404).json({ error: "Không tìm thấy nhân vật hoặc không có quyền sở hữu" });
+    const [adminChar] = await db
+      .select()
+      .from(charactersTable)
+      .where(eq(charactersTable.id, characterId))
+      .limit(1);
+    if (adminChar) {
+      character = adminChar;
+    }
+  }
+
+  if (!character) {
+    res.status(404).json({ error: "Không tìm thấy nhân vật" });
     return;
   }
 
@@ -431,6 +443,9 @@ router.post("/characters/:characterId/gm/action", requireAuth, requireGMOrAdmin,
       .where(eq(charactersTable.id, characterId));
 
     const updated = await recalculateCharacterStats(characterId);
+    await db.update(charactersTable).set({ hp: updated.maxHp, mp: updated.maxMp }).where(eq(charactersTable.id, characterId));
+    updated.hp = updated.maxHp;
+    updated.mp = updated.maxMp;
     res.status(200).json({
       success: true,
       action,
@@ -456,6 +471,9 @@ router.post("/characters/:characterId/gm/action", requireAuth, requireGMOrAdmin,
       .where(eq(charactersTable.id, characterId));
 
     const updated = await recalculateCharacterStats(characterId);
+    await db.update(charactersTable).set({ hp: updated.maxHp, mp: updated.maxMp }).where(eq(charactersTable.id, characterId));
+    updated.hp = updated.maxHp;
+    updated.mp = updated.maxMp;
     res.status(200).json({
       success: true,
       action,
