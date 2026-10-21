@@ -150,6 +150,7 @@ export default function AdminDashboardScreen() {
 
   // Characters state
   const [characters, setCharacters] = useState<CharacterData[]>([]);
+  const [charPage, setCharPage] = useState(1);
   const [charSearch, setCharSearch] = useState("");
   const [charModal, setCharModal] = useState<{ open: boolean; mode: "create" | "edit" | "grant"; data?: CharacterData }>({
     open: false,
@@ -164,6 +165,7 @@ export default function AdminDashboardScreen() {
 
   // Items state
   const [items, setItems] = useState<ItemData[]>([]);
+  const [itemPage, setItemPage] = useState(1);
   const [itemSearch, setItemSearch] = useState("");
   const [itemModal, setItemModal] = useState<{ open: boolean; mode: "create" | "edit"; data?: ItemData }>({
     open: false,
@@ -619,24 +621,43 @@ export default function AdminDashboardScreen() {
     });
   };
 
-  // Filtered lists
-  const filteredUsers = users.filter((u) =>
-    u.username.toLowerCase().includes(userSearch.toLowerCase()) ||
-    u.id.toString().includes(userSearch) ||
-    u.forumTitle.toLowerCase().includes(userSearch.toLowerCase())
-  );
+  // Filtered lists with complete null-safety
+  const filteredUsers = (users || []).filter((u) => {
+    if (!u) return false;
+    const s = (userSearch || "").toLowerCase();
+    return (
+      (u.username || "").toLowerCase().includes(s) ||
+      (u.id ?? "").toString().includes(userSearch) ||
+      (u.forumTitle || "").toLowerCase().includes(s)
+    );
+  });
 
-  const filteredCharacters = characters.filter((c) =>
-    c.name.toLowerCase().includes(charSearch.toLowerCase()) ||
-    c.username.toLowerCase().includes(charSearch.toLowerCase()) ||
-    c.className.toLowerCase().includes(charSearch.toLowerCase())
-  );
+  const filteredCharacters = (characters || []).filter((c) => {
+    if (!c) return false;
+    const s = (charSearch || "").toLowerCase();
+    return (
+      (c.name || "").toLowerCase().includes(s) ||
+      (c.username || "").toLowerCase().includes(s) ||
+      (c.className || c.classId || "").toLowerCase().includes(s)
+    );
+  });
 
-  const filteredItems = items.filter((i) =>
-    i.name.toLowerCase().includes(itemSearch.toLowerCase()) ||
-    i.id.toLowerCase().includes(itemSearch.toLowerCase()) ||
-    i.type.toLowerCase().includes(itemSearch.toLowerCase())
-  );
+  const filteredItems = (items || []).filter((i) => {
+    if (!i) return false;
+    const s = (itemSearch || "").toLowerCase();
+    return (
+      (i.name || "").toLowerCase().includes(s) ||
+      (i.id || "").toLowerCase().includes(s) ||
+      (i.type || i.category || "").toLowerCase().includes(s)
+    );
+  });
+
+  const PAGE_SIZE = 25;
+  const paginatedCharacters = filteredCharacters.slice((charPage - 1) * PAGE_SIZE, charPage * PAGE_SIZE);
+  const totalCharPages = Math.max(1, Math.ceil(filteredCharacters.length / PAGE_SIZE));
+
+  const paginatedItems = filteredItems.slice((itemPage - 1) * PAGE_SIZE, itemPage * PAGE_SIZE);
+  const totalItemPages = Math.max(1, Math.ceil(filteredItems.length / PAGE_SIZE));
 
   // Rarity color helper
   const getRarityBadge = (rarity: string) => {
@@ -1116,7 +1137,7 @@ export default function AdminDashboardScreen() {
                   type="text"
                   placeholder="Tìm theo tên nhân vật, class, tài khoản..."
                   value={charSearch}
-                  onChange={(e) => setCharSearch(e.target.value)}
+                  onChange={(e) => { setCharSearch(e.target.value); setCharPage(1); }}
                   className="w-full h-11 pl-10 pr-4 rounded-xl bg-[#4a383a] border border-[#5d4648] text-white placeholder-[#8e7a7c] text-xs font-medium focus:ring-2 focus:ring-[#28c3e1] focus:border-transparent outline-none transition-all"
                 />
               </div>
@@ -1165,14 +1186,14 @@ export default function AdminDashboardScreen() {
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-[#5d4648]/60 text-gray-200">
-                    {filteredCharacters.length === 0 ? (
+                    {paginatedCharacters.length === 0 ? (
                       <tr>
                         <td colSpan={9} className="py-8 text-center text-[#8e7a7c]">
                           Không có nhân vật nào.
                         </td>
                       </tr>
                     ) : (
-                      filteredCharacters.map((c) => (
+                      paginatedCharacters.map((c) => (
                         <tr key={c.id} className="hover:bg-[#4a383a]/40 transition-colors">
                           <td className="py-3 px-4 font-mono text-gray-400">#{c.id}</td>
                           <td className="py-3 px-4 font-bold text-white flex items-center gap-2">
@@ -1187,13 +1208,13 @@ export default function AdminDashboardScreen() {
                           </td>
                           <td className="py-3 px-4 font-bold text-emerald-400">Lv. {c.level}</td>
                           <td className="py-3 px-4 font-black text-cyan-300 drop-shadow-[0_0_8px_rgba(40,195,225,0.4)]">
-                            ⚡ {c.combatPower}
+                            ⚡ {c.combatPower ?? 0}
                           </td>
                           <td className="py-3 px-4 text-rose-300">
-                            {c.hp}/{c.maxHp}
+                            {c.hp ?? 0}/{c.maxHp ?? 0}
                           </td>
                           <td className="py-3 px-4 text-amber-300 font-bold">
-                            🪙 {c.gold.toLocaleString()}
+                            🪙 {(c.gold ?? 0).toLocaleString()}
                           </td>
                           <td className="py-3 px-4 text-right">
                             <div className="flex items-center justify-end gap-1.5">
@@ -1207,7 +1228,7 @@ export default function AdminDashboardScreen() {
                               <button
                                 onClick={() => {
                                   setCharModal({ open: true, mode: "grant", data: c });
-                                  setGrantForm({ itemId: items[0]?.id || "", quantity: 1, enhanceLevel: 0 });
+                                  setGrantForm({ itemId: items[0]?.id || "gear_fighter_main_weapon_rare", quantity: 1, enhanceLevel: 0 });
                                 }}
                                 className="p-1.5 rounded-lg bg-[#28c3e1]/20 hover:bg-[#28c3e1]/40 text-[#28c3e1] transition-colors"
                                 title="Cấp trang bị thần binh"
@@ -1254,7 +1275,7 @@ export default function AdminDashboardScreen() {
                   type="text"
                   placeholder="Tìm theo tên vật phẩm, ID, loại..."
                   value={itemSearch}
-                  onChange={(e) => setItemSearch(e.target.value)}
+                  onChange={(e) => { setItemSearch(e.target.value); setItemPage(1); }}
                   className="w-full h-11 pl-10 pr-4 rounded-xl bg-[#4a383a] border border-[#5d4648] text-white placeholder-[#8e7a7c] text-xs font-medium focus:ring-2 focus:ring-[#28c3e1] focus:border-transparent outline-none transition-all"
                 />
               </div>
@@ -1311,14 +1332,14 @@ export default function AdminDashboardScreen() {
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-[#5d4648]/60 text-gray-200">
-                    {filteredItems.length === 0 ? (
+                    {paginatedItems.length === 0 ? (
                       <tr>
                         <td colSpan={9} className="py-8 text-center text-[#8e7a7c]">
                           Không có vật phẩm nào trong danh mục.
                         </td>
                       </tr>
                     ) : (
-                      filteredItems.map((i) => (
+                      paginatedItems.map((i) => (
                         <tr key={i.id} className="hover:bg-[#4a383a]/40 transition-colors">
                           <td className="py-3 px-4 text-lg">{i.icon || "◇"}</td>
                           <td className="py-3 px-4 font-mono text-gray-400 text-[11px]">{i.id}</td>
@@ -1326,14 +1347,14 @@ export default function AdminDashboardScreen() {
                           <td className="py-3 px-4 text-gray-300 uppercase text-[10px] tracking-wider font-semibold">
                             {i.type}
                           </td>
-                          <td className="py-3 px-4">{getRarityBadge(i.rarity)}</td>
+                          <td className="py-3 px-4">{getRarityBadge(i.rarity || "common")}</td>
                           <td className="py-3 px-4 text-[11px] text-gray-300">
                             {i.atkBoost > 0 && <span className="text-amber-400 mr-2 font-bold">ATK +{i.atkBoost}</span>}
                             {i.defBoost > 0 && <span className="text-sky-400 mr-2 font-bold">DEF +{i.defBoost}</span>}
                             {i.hpBoost > 0 && <span className="text-rose-400 mr-2 font-bold">HP +{i.hpBoost}</span>}
                             {i.spdBoost > 0 && <span className="text-emerald-400 mr-2 font-bold">SPD +{i.spdBoost}</span>}
                           </td>
-                          <td className="py-3 px-4 text-amber-300 font-bold">🪙 {i.price}</td>
+                          <td className="py-3 px-4 text-amber-300 font-bold">🪙 {(i.price ?? 0).toLocaleString()}</td>
                           <td className="py-3 px-4 text-gray-300">Lv. {i.requiredLevel}</td>
                           <td className="py-3 px-4 text-right">
                             <div className="flex items-center justify-end gap-1.5">
