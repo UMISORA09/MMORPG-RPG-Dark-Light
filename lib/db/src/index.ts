@@ -294,7 +294,7 @@ function createMemoryDb() {
   }
 
   const memoryDb: any = {
-    select: () => ({
+    select: (fields?: any) => ({
       from: (table: any) => {
         let rows = [...getTableData(table)];
         const builder: any = {
@@ -325,8 +325,33 @@ function createMemoryDb() {
             rows = rows.slice(0, n);
             return builder;
           },
-          then: (resolve: any, reject: any) => Promise.resolve(rows).then(resolve, reject),
+          then: (resolve: any, reject: any) => {
+            if (fields && typeof fields === "object" && !Array.isArray(fields)) {
+              const fieldKeys = Object.keys(fields);
+              const isCount = fieldKeys.some(
+                (k) => k === "count" || k === "c" || k === "total" || (fields[k]?.queryChunks && JSON.stringify(fields[k].queryChunks).toLowerCase().includes("count"))
+              );
+              if (isCount) {
+                const countKey = fieldKeys[0] || "count";
+                const countVal = rows.length;
+                return Promise.resolve([{ count: countVal, c: countVal, total: countVal, [countKey]: countVal }]).then(resolve, reject);
+              }
+            }
+            return Promise.resolve(rows).then(resolve, reject);
+          },
           [Symbol.asyncIterator]: async function* () {
+            if (fields && typeof fields === "object" && !Array.isArray(fields)) {
+              const fieldKeys = Object.keys(fields);
+              const isCount = fieldKeys.some(
+                (k) => k === "count" || k === "c" || k === "total" || (fields[k]?.queryChunks && JSON.stringify(fields[k].queryChunks).toLowerCase().includes("count"))
+              );
+              if (isCount) {
+                const countKey = fieldKeys[0] || "count";
+                const countVal = rows.length;
+                yield { count: countVal, c: countVal, total: countVal, [countKey]: countVal };
+                return;
+              }
+            }
             for (const r of rows) yield r;
           },
         };

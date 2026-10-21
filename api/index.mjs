@@ -61744,7 +61744,7 @@ function createMemoryDb() {
     return str.replace(/[A-Z]/g, (letter) => `_${letter.toLowerCase()}`);
   }
   const memoryDb = {
-    select: () => ({
+    select: (fields) => ({
       from: (table) => {
         let rows = [...getTableData(table)];
         const builder = {
@@ -61775,8 +61775,33 @@ function createMemoryDb() {
             rows = rows.slice(0, n);
             return builder;
           },
-          then: (resolve, reject) => Promise.resolve(rows).then(resolve, reject),
+          then: (resolve, reject) => {
+            if (fields && typeof fields === "object" && !Array.isArray(fields)) {
+              const fieldKeys = Object.keys(fields);
+              const isCount = fieldKeys.some(
+                (k) => k === "count" || k === "c" || k === "total" || fields[k]?.queryChunks && JSON.stringify(fields[k].queryChunks).toLowerCase().includes("count")
+              );
+              if (isCount) {
+                const countKey = fieldKeys[0] || "count";
+                const countVal = rows.length;
+                return Promise.resolve([{ count: countVal, c: countVal, total: countVal, [countKey]: countVal }]).then(resolve, reject);
+              }
+            }
+            return Promise.resolve(rows).then(resolve, reject);
+          },
           [Symbol.asyncIterator]: async function* () {
+            if (fields && typeof fields === "object" && !Array.isArray(fields)) {
+              const fieldKeys = Object.keys(fields);
+              const isCount = fieldKeys.some(
+                (k) => k === "count" || k === "c" || k === "total" || fields[k]?.queryChunks && JSON.stringify(fields[k].queryChunks).toLowerCase().includes("count")
+              );
+              if (isCount) {
+                const countKey = fieldKeys[0] || "count";
+                const countVal = rows.length;
+                yield { count: countVal, c: countVal, total: countVal, [countKey]: countVal };
+                return;
+              }
+            }
             for (const r of rows) yield r;
           }
         };
@@ -69186,16 +69211,34 @@ var dungeon_default = router18;
 var import_express19 = __toESM(require_express2(), 1);
 var router19 = (0, import_express19.Router)();
 router19.use("/admin", requireAdmin);
+var safeCount = async (tbl) => {
+  try {
+    const r = await db.select({ count: sql`count(*)` }).from(tbl);
+    const val = r?.[0]?.count ?? r?.[0]?.c;
+    if (val !== void 0 && val !== null && !isNaN(Number(val))) {
+      return Number(val);
+    }
+    const all = await db.select().from(tbl);
+    return Array.isArray(all) ? all.length : 0;
+  } catch {
+    try {
+      const all = await db.select().from(tbl);
+      return Array.isArray(all) ? all.length : 0;
+    } catch {
+      return 0;
+    }
+  }
+};
 router19.get("/admin/stats", async (_req, res) => {
   try {
     const [usersCount, charactersCount, itemsCount, monstersCount, serversCount, questsCount, characterItemsCount] = await Promise.all([
-      db.select({ count: sql`count(*)` }).from(usersTable).then((r) => Number(r[0]?.count || 0)).catch(() => 0),
-      db.select({ count: sql`count(*)` }).from(charactersTable).then((r) => Number(r[0]?.count || 0)).catch(() => 0),
-      db.select({ count: sql`count(*)` }).from(itemsTable).then((r) => Number(r[0]?.count || 0)).catch(() => 0),
-      db.select({ count: sql`count(*)` }).from(monstersTable).then((r) => Number(r[0]?.count || 0)).catch(() => 0),
-      db.select({ count: sql`count(*)` }).from(serversTable).then((r) => Number(r[0]?.count || 0)).catch(() => 0),
-      db.select({ count: sql`count(*)` }).from(questsTable).then((r) => Number(r[0]?.count || 0)).catch(() => 0),
-      db.select({ count: sql`count(*)` }).from(characterItemsTable).then((r) => Number(r[0]?.count || 0)).catch(() => 0)
+      safeCount(usersTable),
+      safeCount(charactersTable),
+      safeCount(itemsTable),
+      safeCount(monstersTable),
+      safeCount(serversTable),
+      safeCount(questsTable),
+      safeCount(characterItemsTable)
     ]);
     return res.json({
       dbMode: isPostgres ? "PostgreSQL (Supabase Cloud)" : "In-Memory / Standalone Fallback",
@@ -69580,18 +69623,19 @@ router19.get("/admin/tables", async (_req, res) => {
       { name: "quests", description: "H\u1EC7 th\u1ED1ng nhi\u1EC7m v\u1EE5 ch\xEDnh tuy\u1EBFn & d\xE3 ngo\u1EA1i" },
       { name: "battle_logs", description: "Nh\u1EADt k\xFD chi\u1EBFn \u0111\u1EA5u v\xE0 l\u1ECBch s\u1EED ti\xEAu di\u1EC7t qu\xE1i" }
     ];
+    const getTableCount = safeCount;
     const results = await Promise.all(
       tables.map(async (t) => {
         let count = 0;
         try {
-          if (t.name === "users") count = (await db.select({ c: sql`count(*)` }).from(usersTable))[0]?.c;
-          else if (t.name === "characters") count = (await db.select({ c: sql`count(*)` }).from(charactersTable))[0]?.c;
-          else if (t.name === "items") count = (await db.select({ c: sql`count(*)` }).from(itemsTable))[0]?.c;
-          else if (t.name === "character_items") count = (await db.select({ c: sql`count(*)` }).from(characterItemsTable))[0]?.c;
-          else if (t.name === "monsters") count = (await db.select({ c: sql`count(*)` }).from(monstersTable))[0]?.c;
-          else if (t.name === "servers") count = (await db.select({ c: sql`count(*)` }).from(serversTable))[0]?.c;
-          else if (t.name === "quests") count = (await db.select({ c: sql`count(*)` }).from(questsTable))[0]?.c;
-          else if (t.name === "battle_logs") count = (await db.select({ c: sql`count(*)` }).from(battleLogsTable))[0]?.c;
+          if (t.name === "users") count = await getTableCount(usersTable);
+          else if (t.name === "characters") count = await getTableCount(charactersTable);
+          else if (t.name === "items") count = await getTableCount(itemsTable);
+          else if (t.name === "character_items") count = await getTableCount(characterItemsTable);
+          else if (t.name === "monsters") count = await getTableCount(monstersTable);
+          else if (t.name === "servers") count = await getTableCount(serversTable);
+          else if (t.name === "quests") count = await getTableCount(questsTable);
+          else if (t.name === "battle_logs") count = await getTableCount(battleLogsTable);
         } catch {
           count = 0;
         }

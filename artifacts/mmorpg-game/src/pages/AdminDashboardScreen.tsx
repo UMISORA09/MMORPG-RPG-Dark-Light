@@ -807,7 +807,7 @@ export default function AdminDashboardScreen() {
                 : "bg-[#342a2b] text-[#8e7a7c] hover:text-white border border-[#5d4648]"
             }`}
           >
-            <Users className="w-4 h-4" /> Tài Khoản Người Chơi ({stats?.counts.users ?? users.length})
+            <Users className="w-4 h-4" /> Tài Khoản Người Chơi ({stats?.counts?.users || users.length || 0})
           </button>
 
           <button
@@ -818,7 +818,7 @@ export default function AdminDashboardScreen() {
                 : "bg-[#342a2b] text-[#8e7a7c] hover:text-white border border-[#5d4648]"
             }`}
           >
-            <Sword className="w-4 h-4" /> Nhân Vật & Chỉ Số ({stats?.counts.characters ?? characters.length})
+            <Sword className="w-4 h-4" /> Nhân Vật & Chỉ Số ({stats?.counts?.characters || characters.length || 0})
           </button>
 
           <button
@@ -829,7 +829,7 @@ export default function AdminDashboardScreen() {
                 : "bg-[#342a2b] text-[#8e7a7c] hover:text-white border border-[#5d4648]"
             }`}
           >
-            <Backpack className="w-4 h-4" /> Danh Mục Vật Phẩm ({stats?.counts.items ?? items.length})
+            <Backpack className="w-4 h-4" /> Danh Mục Vật Phẩm ({stats?.counts?.items || items.length || 0})
           </button>
 
           <button
@@ -854,7 +854,7 @@ export default function AdminDashboardScreen() {
                   <span className="text-xs font-semibold">Tài Khoản</span>
                   <Users className="w-4 h-4 text-[#28c3e1]" />
                 </div>
-                <div className="text-2xl font-black text-white">{stats?.counts.users ?? 0}</div>
+                <div className="text-2xl font-black text-white">{stats?.counts?.users || users.length || 0}</div>
                 <div className="text-[11px] text-[#8e7a7c] mt-1">Đã đăng ký</div>
               </div>
 
@@ -863,7 +863,7 @@ export default function AdminDashboardScreen() {
                   <span className="text-xs font-semibold">Nhân Vật</span>
                   <Sword className="w-4 h-4 text-amber-400" />
                 </div>
-                <div className="text-2xl font-black text-white">{stats?.counts.characters ?? 0}</div>
+                <div className="text-2xl font-black text-white">{stats?.counts?.characters || characters.length || 0}</div>
                 <div className="text-[11px] text-[#8e7a7c] mt-1">Đang hoạt động</div>
               </div>
 
@@ -872,7 +872,7 @@ export default function AdminDashboardScreen() {
                   <span className="text-xs font-semibold">Vật Phẩm</span>
                   <Backpack className="w-4 h-4 text-purple-400" />
                 </div>
-                <div className="text-2xl font-black text-white">{stats?.counts.items ?? 0}</div>
+                <div className="text-2xl font-black text-white">{stats?.counts?.items || items.length || 0}</div>
                 <div className="text-[11px] text-[#8e7a7c] mt-1">Trong danh mục</div>
               </div>
 
@@ -1040,9 +1040,9 @@ export default function AdminDashboardScreen() {
 
             {/* Users Table */}
             <div className="rounded-2xl bg-[#342a2b] border border-[#5d4648] overflow-hidden shadow-xl">
-              <div className="overflow-x-auto">
+              <div className="overflow-x-auto overflow-y-auto max-h-[60vh] custom-scrollbar">
                 <table className="w-full text-left text-xs">
-                  <thead className="bg-[#271f20] text-[#8e7a7c] uppercase tracking-wider text-[11px] border-b border-[#5d4648]">
+                  <thead className="bg-[#271f20] sticky top-0 z-10 text-[#8e7a7c] uppercase tracking-wider text-[11px] border-b border-[#5d4648]">
                     <tr>
                       <th className="py-3 px-4">ID</th>
                       <th className="py-3 px-4">Tài Khoản</th>
@@ -1170,9 +1170,9 @@ export default function AdminDashboardScreen() {
 
             {/* Characters Table */}
             <div className="rounded-2xl bg-[#342a2b] border border-[#5d4648] overflow-hidden shadow-xl">
-              <div className="overflow-x-auto">
+              <div className="overflow-x-auto overflow-y-auto max-h-[60vh] custom-scrollbar">
                 <table className="w-full text-left text-xs">
-                  <thead className="bg-[#271f20] text-[#8e7a7c] uppercase tracking-wider text-[11px] border-b border-[#5d4648]">
+                  <thead className="bg-[#271f20] sticky top-0 z-10 text-[#8e7a7c] uppercase tracking-wider text-[11px] border-b border-[#5d4648]">
                     <tr>
                       <th className="py-3 px-4">ID</th>
                       <th className="py-3 px-4">Nhân Vật</th>
@@ -1316,9 +1316,9 @@ export default function AdminDashboardScreen() {
 
             {/* Items Grid / Table */}
             <div className="rounded-2xl bg-[#342a2b] border border-[#5d4648] overflow-hidden shadow-xl">
-              <div className="overflow-x-auto">
+              <div className="overflow-x-auto overflow-y-auto max-h-[60vh] custom-scrollbar">
                 <table className="w-full text-left text-xs">
-                  <thead className="bg-[#271f20] text-[#8e7a7c] uppercase tracking-wider text-[11px] border-b border-[#5d4648]">
+                  <thead className="bg-[#271f20] sticky top-0 z-10 text-[#8e7a7c] uppercase tracking-wider text-[11px] border-b border-[#5d4648]">
                     <tr>
                       <th className="py-3 px-4">Icon</th>
                       <th className="py-3 px-4">Mã ID</th>
@@ -1434,14 +1434,14 @@ export default function AdminDashboardScreen() {
 
             {/* Raw Rows */}
             <div className="rounded-2xl bg-[#342a2b] border border-[#5d4648] overflow-hidden shadow-xl">
-              <div className="overflow-x-auto">
+              <div className="overflow-x-auto overflow-y-auto max-h-[60vh] custom-scrollbar">
                 {tableRows.length === 0 ? (
                   <div className="p-8 text-center text-xs text-[#8e7a7c]">
                     Bảng này hiện chưa có dòng dữ liệu nào.
                   </div>
                 ) : (
                   <table className="w-full text-left text-xs font-mono">
-                    <thead className="bg-[#271f20] text-[#8e7a7c] uppercase tracking-wider text-[11px] border-b border-[#5d4648]">
+                    <thead className="bg-[#271f20] sticky top-0 z-10 text-[#8e7a7c] uppercase tracking-wider text-[11px] border-b border-[#5d4648]">
                       <tr>
                         {Object.keys(tableRows[0] || {}).map((col) => (
                           <th key={col} className="py-2.5 px-3 whitespace-nowrap">
@@ -1489,7 +1489,7 @@ export default function AdminDashboardScreen() {
               initial={{ opacity: 0, scale: 0.95, y: 15 }}
               animate={{ opacity: 1, scale: 1, y: 0 }}
               exit={{ opacity: 0, scale: 0.95, y: 15 }}
-              className="w-full max-w-md rounded-[28px] bg-[#342a2b] border border-[#5d4648] shadow-2xl p-6 flex flex-col gap-5 text-white"
+              className="w-full max-w-md rounded-[28px] bg-[#342a2b] border border-[#5d4648] shadow-2xl p-6 flex flex-col gap-5 text-white max-h-[90vh] overflow-y-auto custom-scrollbar"
             >
               <div className="flex items-center justify-between border-b border-[#5d4648] pb-3">
                 <h3 className="text-base font-bold text-white flex items-center gap-2">

@@ -27,16 +27,35 @@ router.use("/admin", requireAdmin);
 // ==========================================
 // 1. STATS & SYSTEM HEALTH
 // ==========================================
+const safeCount = async (tbl: any): Promise<number> => {
+  try {
+    const r: any = await db.select({ count: sql<number>`count(*)` }).from(tbl);
+    const val = r?.[0]?.count ?? r?.[0]?.c;
+    if (val !== undefined && val !== null && !isNaN(Number(val))) {
+      return Number(val);
+    }
+    const all: any = await db.select().from(tbl);
+    return Array.isArray(all) ? all.length : 0;
+  } catch {
+    try {
+      const all: any = await db.select().from(tbl);
+      return Array.isArray(all) ? all.length : 0;
+    } catch {
+      return 0;
+    }
+  }
+};
+
 router.get("/admin/stats", async (_req, res) => {
   try {
     const [usersCount, charactersCount, itemsCount, monstersCount, serversCount, questsCount, characterItemsCount] = await Promise.all([
-      db.select({ count: sql<number>`count(*)` }).from(usersTable).then((r: any) => Number(r[0]?.count || 0)).catch(() => 0),
-      db.select({ count: sql<number>`count(*)` }).from(charactersTable).then((r: any) => Number(r[0]?.count || 0)).catch(() => 0),
-      db.select({ count: sql<number>`count(*)` }).from(itemsTable).then((r: any) => Number(r[0]?.count || 0)).catch(() => 0),
-      db.select({ count: sql<number>`count(*)` }).from(monstersTable).then((r: any) => Number(r[0]?.count || 0)).catch(() => 0),
-      db.select({ count: sql<number>`count(*)` }).from(serversTable).then((r: any) => Number(r[0]?.count || 0)).catch(() => 0),
-      db.select({ count: sql<number>`count(*)` }).from(questsTable).then((r: any) => Number(r[0]?.count || 0)).catch(() => 0),
-      db.select({ count: sql<number>`count(*)` }).from(characterItemsTable).then((r: any) => Number(r[0]?.count || 0)).catch(() => 0),
+      safeCount(usersTable),
+      safeCount(charactersTable),
+      safeCount(itemsTable),
+      safeCount(monstersTable),
+      safeCount(serversTable),
+      safeCount(questsTable),
+      safeCount(characterItemsTable),
     ]);
 
     return res.json({
@@ -467,18 +486,20 @@ router.get("/admin/tables", async (_req, res) => {
       { name: "battle_logs", description: "Nhật ký chiến đấu và lịch sử tiêu diệt quái" },
     ];
 
+    const getTableCount = safeCount;
+
     const results = await Promise.all(
       tables.map(async (t) => {
         let count = 0;
         try {
-          if (t.name === "users") count = (await db.select({ c: sql`count(*)` }).from(usersTable))[0]?.c as number;
-          else if (t.name === "characters") count = (await db.select({ c: sql`count(*)` }).from(charactersTable))[0]?.c as number;
-          else if (t.name === "items") count = (await db.select({ c: sql`count(*)` }).from(itemsTable))[0]?.c as number;
-          else if (t.name === "character_items") count = (await db.select({ c: sql`count(*)` }).from(characterItemsTable))[0]?.c as number;
-          else if (t.name === "monsters") count = (await db.select({ c: sql`count(*)` }).from(monstersTable))[0]?.c as number;
-          else if (t.name === "servers") count = (await db.select({ c: sql`count(*)` }).from(serversTable))[0]?.c as number;
-          else if (t.name === "quests") count = (await db.select({ c: sql`count(*)` }).from(questsTable))[0]?.c as number;
-          else if (t.name === "battle_logs") count = (await db.select({ c: sql`count(*)` }).from(battleLogsTable))[0]?.c as number;
+          if (t.name === "users") count = await getTableCount(usersTable);
+          else if (t.name === "characters") count = await getTableCount(charactersTable);
+          else if (t.name === "items") count = await getTableCount(itemsTable);
+          else if (t.name === "character_items") count = await getTableCount(characterItemsTable);
+          else if (t.name === "monsters") count = await getTableCount(monstersTable);
+          else if (t.name === "servers") count = await getTableCount(serversTable);
+          else if (t.name === "quests") count = await getTableCount(questsTable);
+          else if (t.name === "battle_logs") count = await getTableCount(battleLogsTable);
         } catch {
           count = 0;
         }
