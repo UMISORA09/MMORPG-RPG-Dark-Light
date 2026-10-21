@@ -28,7 +28,6 @@ import {
   Skull,
   Award,
   Globe2,
-  Database,
 } from "lucide-react";
 import { REGIONS, SERVERS, useCommunityPortalStore } from "@/stores/useCommunityPortalStore";
 
@@ -222,14 +221,6 @@ export default function CharacterSelectScreen() {
             <Globe2 className="h-3.5 w-3.5" />
             <span className="hidden md:inline">Về Trang Chủ / Đổi Server</span>
             <span className="md:hidden">Đổi Server</span>
-          </button>
-          <button
-            type="button"
-            onClick={() => setLocation("/admin")}
-            className="font-sans flex items-center gap-1.5 rounded-full border border-[#28c3e1]/50 bg-[#28c3e1]/15 px-3 py-2 text-[10px] font-bold text-[#28c3e1] transition hover:bg-[#28c3e1] hover:text-[#1c161a] shadow-[0_0_12px_rgba(40,195,225,0.25)]"
-          >
-            <Database className="h-3.5 w-3.5" />
-            <span>Quản Trị Admin</span>
           </button>
           <div className="font-sans hidden sm:flex items-center gap-2 px-3.5 py-1.5 rounded-xl bg-[#4a383a] border border-[#5d4648] text-xs">
             <User className="w-3.5 h-3.5 text-[#28c3e1]" />

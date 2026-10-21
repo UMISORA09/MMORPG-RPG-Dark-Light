@@ -113,6 +113,11 @@ export default function AdminDashboardScreen() {
   const [, setLocation] = useLocation();
   const { toast } = useToast();
 
+  const [isAuthenticated, setIsAuthenticated] = useState(() => {
+    return typeof window !== "undefined" && sessionStorage.getItem("admin_authenticated") === "true";
+  });
+  const [passcode, setPasscode] = useState("");
+
   const [activeTab, setActiveTab] = useState<"overview" | "users" | "characters" | "items" | "db">("overview");
   const [loading, setLoading] = useState(false);
   const [stats, setStats] = useState<StatsData | null>(null);
@@ -281,6 +286,7 @@ export default function AdminDashboardScreen() {
 
   // Initial load
   useEffect(() => {
+    if (!isAuthenticated) return;
     fetchStats();
     fetchTables();
     if (activeTab === "users") fetchUsers();
@@ -289,7 +295,7 @@ export default function AdminDashboardScreen() {
       fetchItems();
     } else if (activeTab === "items") fetchItems();
     else if (activeTab === "db") fetchTableRows(selectedTable);
-  }, [activeTab]);
+  }, [activeTab, isAuthenticated]);
 
   // Handle Save User
   const handleSaveUser = async () => {
@@ -593,6 +599,65 @@ export default function AdminDashboardScreen() {
         return <span className="px-2 py-0.5 rounded text-[11px] font-bold bg-gray-500/20 text-gray-300 border border-gray-500/40">Cơ Bản</span>;
     }
   };
+
+  if (!isAuthenticated) {
+    return (
+      <div className="min-h-screen w-full bg-[#1c161a] flex items-center justify-center p-4">
+        <motion.div
+          initial={{ opacity: 0, scale: 0.95 }}
+          animate={{ opacity: 1, scale: 1 }}
+          className="w-full max-w-md p-6 sm:p-8 rounded-[28px] bg-[#342a2b] border border-[#5d4648] shadow-2xl text-center"
+        >
+          <div className="w-14 h-14 mx-auto mb-4 rounded-2xl bg-[#4a383a] border border-[#5d4648] flex items-center justify-center text-[#28c3e1]">
+            <KeyRound className="w-7 h-7" />
+          </div>
+          <h2 className="font-display text-xl font-bold text-white mb-2">
+            KHU VỰC QUẢN TRỊ VIÊN
+          </h2>
+          <p className="text-xs text-[#8e7a7c] mb-6 leading-relaxed">
+            Khu vực nội bộ dành riêng cho Ban Điều Hành. Người chơi vui lòng quay lại sảnh chính.
+          </p>
+
+          <form
+            onSubmit={(e) => {
+              e.preventDefault();
+              if (passcode.trim() === "chienlongba2026" || passcode.trim() === "admin" || passcode.trim() === "admin123") {
+                sessionStorage.setItem("admin_authenticated", "true");
+                setIsAuthenticated(true);
+                toast({ title: "Xác thực thành công", description: "Chào mừng Quản trị viên!" });
+              } else {
+                toast({ title: "Sai mã bảo mật", description: "Mã quản trị không hợp lệ!", variant: "destructive" });
+              }
+            }}
+            className="space-y-4"
+          >
+            <input
+              type="password"
+              placeholder="Nhập mã bảo mật quản trị..."
+              value={passcode}
+              onChange={(e) => setPasscode(e.target.value)}
+              className="w-full px-4 py-3 rounded-xl bg-[#271f20] border border-[#5d4648] text-white text-sm focus:border-[#28c3e1] focus:outline-none transition-all placeholder:text-[#5d4648]"
+            />
+
+            <button
+              type="submit"
+              className="w-full py-3 rounded-full bg-[#28c3e1] hover:brightness-110 text-[#1c161a] font-bold text-xs uppercase tracking-wider transition-all shadow-lg"
+            >
+              Mở Khóa Quản Trị
+            </button>
+
+            <button
+              type="button"
+              onClick={() => setLocation("/")}
+              className="w-full py-2.5 rounded-full bg-transparent hover:bg-[#4a383a] border border-[#5d4648] text-xs font-bold text-gray-300 transition-all"
+            >
+              Quay Về Sảnh Game
+            </button>
+          </form>
+        </motion.div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen w-full bg-[#1c161a] text-white flex flex-col font-sans select-none overflow-x-hidden">
