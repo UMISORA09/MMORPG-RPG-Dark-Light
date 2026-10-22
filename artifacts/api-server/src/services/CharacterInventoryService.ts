@@ -183,15 +183,17 @@ export async function recalculateCharacterStats(characterId: number, executor: a
     bonuses.bonusCombatPower += codexUnlocked.length * 100;
   }
 
+  const levelStats = getStatsForLevel(character.classId, character.level || 1);
+  const baseHp = Math.floor(levelStats.hp * awakeningMult);
+  const baseMp = Math.floor(levelStats.mp * awakeningMult);
+  const baseAtk = Math.floor(levelStats.atk * awakeningMult);
+  const baseMatk = Math.floor((10 + Math.max(0, (character.level || 1) - 1) * 3) * awakeningMult);
+  const baseDef = Math.floor(levelStats.def * awakeningMult);
+  const baseSpd = levelStats.spd;
+  const baseCrit = levelStats.critRate;
+  const baseEva = levelStats.evasion;
+
   const baseCls = CHARACTER_CLASSES.find((c) => c.id === character.classId) || CHARACTER_CLASSES[0];
-  const baseHp = Math.floor(baseCls.baseHp * awakeningMult);
-  const baseMp = Math.floor(baseCls.baseMp * awakeningMult);
-  const baseAtk = Math.floor(baseCls.baseAtk * awakeningMult);
-  const baseMatk = Math.floor(10 * awakeningMult);
-  const baseDef = Math.floor(baseCls.baseDef * awakeningMult);
-  const baseSpd = baseCls.baseSpd;
-  const baseCrit = baseCls.critRate;
-  const baseEva = baseCls.evasion;
 
   const str = Math.max((baseCls as any).baseStr || 8, character.str || 8);
   const dex = Math.max((baseCls as any).baseDex || 5, character.dex || 5);

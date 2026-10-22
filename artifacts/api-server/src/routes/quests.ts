@@ -247,16 +247,22 @@ router.post("/characters/:characterId/quests/:questId/claim", requireAuth, async
     .where(eq(characterQuestsTable.id, recordId))
     .limit(1);
 
-  if (!existing || existing.status !== "READY_TO_CLAIM") {
+  // 1. Cập nhật trạng thái nhiệm vụ hiện tại thành COMPLETED bằng Atomic CAS
+  const [claimedRecord] = await db
+    .update(characterQuestsTable)
+    .set({ status: "COMPLETED", updatedAt: new Date() })
+    .where(
+      and(
+        eq(characterQuestsTable.id, recordId),
+        eq(characterQuestsTable.status, "READY_TO_CLAIM"),
+      ),
+    )
+    .returning();
+
+  if (!claimedRecord) {
     res.status(400).json({ error: "Nhiệm vụ chưa hoàn thành hoặc đã được nhận thưởng!" });
     return;
   }
-
-  // 1. Cập nhật trạng thái nhiệm vụ hiện tại thành COMPLETED
-  await db
-    .update(characterQuestsTable)
-    .set({ status: "COMPLETED", updatedAt: new Date() })
-    .where(eq(characterQuestsTable.id, recordId));
 
   // 2. Mở khóa nhiệm vụ kế tiếp (nếu có) thành AVAILABLE
   if (quest.nextQuestId) {

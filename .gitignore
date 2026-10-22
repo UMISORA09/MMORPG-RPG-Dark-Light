@@ -52,3 +52,5 @@ Heroic-Battleground/
 bonfire-develop/
 .vercel
 .env*
+scratch/
+.agents/teamwork/

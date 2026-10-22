@@ -292,7 +292,7 @@ export const InventoryEquipmentPanel = memo(function InventoryEquipmentPanel({
   };
 
   return (
-    <div className="relative w-full max-w-[960px] mx-auto rounded-[28px] bg-[#11141c]/95 border border-[#273044] shadow-[0_25px_80px_rgba(0,0,0,0.85)] p-4 sm:p-6 text-slate-100 flex flex-col gap-4 font-sans backdrop-blur-xl select-none animate-in fade-in zoom-in-95 duration-200">
+    <div className="relative w-full max-w-[960px] mx-auto rounded-[28px] bg-[#11141c]/95 border border-[#273044] shadow-[0_25px_80px_rgba(0,0,0,0.85)] p-4 sm:p-6 text-slate-100 flex flex-col gap-4 font-sans backdrop-blur-xl select-none animate-in fade-in zoom-in-95 duration-200 max-h-[92vh] overflow-y-auto custom-scrollbar my-auto">
       
       {/* ═════════════════════════════════════════════════════════════════════════
           TOP BAR: Stat Highlights (Máu, Sát Thương, Giáp, Tốc Độ) & Controls

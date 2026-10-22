@@ -6,7 +6,7 @@
 import { memo, useRef, useMemo } from "react";
 import * as THREE from "three";
 import { useFrame } from "@react-three/fiber";
-import { Html } from "@react-three/drei";
+import { Html, Billboard, Text } from "@react-three/drei";
 import { useGameWorldStore } from "@/stores/useGameWorldStore";
 import { playCombatSFX } from "@/audio/CombatSoundSynth";
 import { RARITY_COLORS, type DroppedItem } from "./loot.types";
@@ -153,12 +153,18 @@ const LootItemInstance = memo(function LootItemInstance({
         />
       </mesh>
 
-      {/* ── 3. Rotating 3D Item Icon Badge ── */}
-      <Html center position={[0, 0.45, 0]} distanceFactor={14} style={{ pointerEvents: "none" }}>
-        <div className="text-2xl select-none drop-shadow-[0_2px_8px_rgba(0,0,0,0.85)] filter animate-pulse">
+      {/* ── 3. Rotating 3D Item Icon Badge (High-Performance GPU Text) ── */}
+      <Billboard position={[0, 0.45, 0]}>
+        <Text
+          fontSize={0.42}
+          anchorX="center"
+          anchorY="middle"
+          outlineWidth={0.03}
+          outlineColor="#000000"
+        >
           {item.icon}
-        </div>
-      </Html>
+        </Text>
+      </Billboard>
 
       {/* ── 4. Floating Name & Stats Tooltip (Near Player) ── */}
       {showTooltip && (

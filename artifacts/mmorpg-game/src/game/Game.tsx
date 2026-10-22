@@ -1,5 +1,5 @@
 import { Canvas, useFrame } from "@react-three/fiber";
-import { useEffect, useRef, memo } from "react";
+import { useEffect, useRef, memo, useState } from "react";
 import {
   SeamlessWorldMap,
   PlayerEntity25D,
@@ -63,6 +63,33 @@ const Game = memo(function Game({ onLogout }: GameProps) {
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
   const device = useDeviceType();
 
+  // Dynamic Graphic Performance Settings
+  const [graphics, setGraphics] = useState<{ preset: string; shadows: boolean; fpsCap: number }>(() => {
+    try {
+      const saved = localStorage.getItem("clb-graphics-settings");
+      if (saved) return JSON.parse(saved);
+    } catch {}
+    return { preset: "medium", shadows: true, fpsCap: 60 };
+  });
+
+  useEffect(() => {
+    const handleUpdate = () => {
+      try {
+        const saved = localStorage.getItem("clb-graphics-settings");
+        if (saved) setGraphics(JSON.parse(saved));
+      } catch {}
+    };
+    window.addEventListener("storage", handleUpdate);
+    window.addEventListener("clb-graphics-updated", handleUpdate);
+    return () => {
+      window.removeEventListener("storage", handleUpdate);
+      window.removeEventListener("clb-graphics-updated", handleUpdate);
+    };
+  }, []);
+
+  const isLowPreset = graphics.preset === "low" || graphics.shadows === false;
+  const canvasDpr: [number, number] = isLowPreset ? [1, 1] : graphics.preset === "high" ? [1, 1.35] : [1, 1.2];
+
   // Unified Mouse & Keyboard Controls via InputRouter
   useEffect(() => {
     initInputRouter();
@@ -76,8 +103,8 @@ const Game = memo(function Game({ onLogout }: GameProps) {
       {/* ── Single Unified 3D Canvas with High-Performance 2.5D GPU Optimization ── */}
       <Canvas
         ref={canvasRef}
-        shadows
-        dpr={[1, 1.25]}
+        shadows={!isLowPreset}
+        dpr={canvasDpr}
         gl={{
           powerPreference: "high-performance",
           antialias: false,

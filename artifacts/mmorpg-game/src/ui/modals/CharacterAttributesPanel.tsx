@@ -65,7 +65,12 @@ export const CharacterAttributesPanel = memo(function CharacterAttributesPanel()
     setIsSaving(true);
     playCombatSFX("level_up_fanfare", 0.5);
 
-    const charId = activeCharacterId || 1;
+    if (!activeCharacterId) {
+      toast({ title: "Chưa chọn nhân vật!", variant: "destructive" });
+      setIsSaving(false);
+      return;
+    }
+    const charId = activeCharacterId;
 
     try {
       const res = await fetch(`/api/characters/${charId}/stats`, {
@@ -188,7 +193,7 @@ export const CharacterAttributesPanel = memo(function CharacterAttributesPanel()
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-md">
-      <div className="relative w-full max-w-xl bg-[#0f1420] border border-cyan-500/40 rounded-3xl overflow-hidden shadow-[0_0_50px_rgba(0,242,255,0.25)] flex flex-col animate-in fade-in zoom-in-95 duration-200">
+      <div className="relative w-full max-w-xl max-h-[92vh] bg-[#0f1420] border border-cyan-500/40 rounded-3xl overflow-hidden shadow-[0_0_50px_rgba(0,242,255,0.25)] flex flex-col animate-in fade-in zoom-in-95 duration-200 my-auto">
         {/* Header */}
         <div className="px-6 py-4 border-b border-slate-800/80 bg-slate-900/60 flex items-center justify-between">
           <div>
@@ -218,7 +223,7 @@ export const CharacterAttributesPanel = memo(function CharacterAttributesPanel()
         </div>
 
         {/* 5 Stats Allocation Rows */}
-        <div className="p-6 space-y-3 overflow-y-auto max-h-[380px]">
+        <div className="p-6 space-y-3 overflow-y-auto custom-scrollbar max-h-[50vh]">
           {statsConfig.map((stat) => {
             const Icon = stat.icon;
 

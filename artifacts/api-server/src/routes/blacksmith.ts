@@ -115,22 +115,7 @@ router.post("/characters/:characterId/blacksmith/enhance", requireAuth, async (r
     return;
   }
 
-  // Trừ tài nguyên
-  await db
-    .update(charactersTable)
-    .set({ gold: character.gold - goldCost })
-    .where(eq(charactersTable.id, characterId));
-
-  if (stoneItem.quantity <= stoneCost) {
-    await db.delete(characterItemsTable).where(eq(characterItemsTable.id, stoneItem.id));
-  } else {
-    await db
-      .update(characterItemsTable)
-      .set({ quantity: stoneItem.quantity - stoneCost })
-      .where(eq(characterItemsTable.id, stoneItem.id));
-  }
-
-  // Kiểm tra Bùa Bảo Hộ nếu cấp >= 10 và có yêu cầu bảo hộ
+  // Kiểm tra Bùa Bảo Hộ nếu cấp >= 10 và có yêu cầu bảo hộ (TRƯỚC KHI TRỪ TÀI NGUYÊN)
   let protectionUsed = false;
   let protectionCharmItem: any = null;
 
@@ -150,19 +135,39 @@ router.post("/characters/:characterId/blacksmith/enhance", requireAuth, async (r
     if (charm && charm.quantity > 0) {
       protectionCharmItem = charm;
       protectionUsed = true;
-      if (charm.quantity <= 1) {
-        await db.delete(characterItemsTable).where(eq(characterItemsTable.id, charm.id));
-      } else {
-        await db
-          .update(characterItemsTable)
-          .set({ quantity: charm.quantity - 1 })
-          .where(eq(characterItemsTable.id, charm.id));
-      }
     } else {
       res.status(400).json({ error: "Bạn không có Bùa Bảo Hộ Cường Hóa trong túi đồ!" });
       return;
     }
   }
+
+  // Thực hiện trừ tài nguyên và vàng an toàn trong Transaction
+  await db.transaction(async (tx: any) => {
+    await tx
+      .update(charactersTable)
+      .set({ gold: character.gold - goldCost })
+      .where(eq(charactersTable.id, characterId));
+
+    if (stoneItem.quantity <= stoneCost) {
+      await tx.delete(characterItemsTable).where(eq(characterItemsTable.id, stoneItem.id));
+    } else {
+      await tx
+        .update(characterItemsTable)
+        .set({ quantity: stoneItem.quantity - stoneCost })
+        .where(eq(characterItemsTable.id, stoneItem.id));
+    }
+
+    if (protectionUsed && protectionCharmItem) {
+      if (protectionCharmItem.quantity <= 1) {
+        await tx.delete(characterItemsTable).where(eq(characterItemsTable.id, protectionCharmItem.id));
+      } else {
+        await tx
+          .update(characterItemsTable)
+          .set({ quantity: protectionCharmItem.quantity - 1 })
+          .where(eq(characterItemsTable.id, protectionCharmItem.id));
+      }
+    }
+  });
 
   // Quay tỉ lệ
   const successRate = getEnhanceSuccessRate(curLevel);
@@ -628,7 +633,11 @@ router.post("/characters/:characterId/blacksmith/socket", requireAuth, async (re
     return;
   }
 
-  const rarity = (gear.rarity || "common").toLowerCase();
+  let rarity = (gear.rarity || "common").toLowerCase();
+  if (rarity === "common") {
+    const [it] = await db.select().from(itemsTable).where(eq(itemsTable.id, gear.itemId)).limit(1);
+    if (it?.rarity) rarity = it.rarity.toLowerCase();
+  }
   const maxSockets = rarity === "miracle" || rarity === "legendary" ? 3 : rarity === "epic" ? 2 : rarity === "rare" ? 1 : 0;
   if (maxSockets <= 0) {
     res.status(400).json({ error: "Trang bị phẩm chất Rare trở lên mới có lỗ khảm ngọc!" });

@@ -9,7 +9,7 @@
 //    + PixelEnemyHealthBars (Filtered target bars with dismiss)
 // ==============================================================================
 
-import { memo, useRef, useState, useEffect } from "react";
+import { memo, useRef, useState, useEffect, useCallback } from "react";
 import { useGameWorldStore } from "@/stores/useGameWorldStore";
 import { LeftTopHudColumn } from "./LeftTopHudColumn";
 import { RightTopMinimapAndDrawer } from "./RightTopMinimapAndDrawer";
@@ -19,6 +19,8 @@ import { PixelEnemyHealthBars } from "./PixelEnemyHealthBars";
 import { TargetHealthBar } from "./TargetHealthBar";
 import { LevelUpAndLootFlashOverlay } from "./LevelUpAndLootFlashOverlay";
 import { ChestInteractionAndLootHUD } from "./ChestInteractionAndLootHUD";
+import { playButtonClick } from "@/audio/CombatSoundSynth";
+import { Users, Sparkles } from "lucide-react";
 
 export interface UnifiedGameHUDProps {
   onLogout?: () => void;
@@ -37,6 +39,7 @@ export const UnifiedGameHUD = memo(function UnifiedGameHUD({
   const bossMaxHealth = useGameWorldStore((s) => s.bossMaxHealth);
   const bossActive = useGameWorldStore((s) => s.bossActive);
   const bossPhase = useGameWorldStore((s) => s.bossPhase);
+  const bossIsEnraged = useGameWorldStore((s) => s.bossIsEnraged);
   const bossStagger = useGameWorldStore((s) => s.bossStagger);
   const bossIsStaggered = useGameWorldStore((s) => s.bossIsStaggered);
   const bossCastingSpell = useGameWorldStore((s) => s.bossCastingSpell);
@@ -53,6 +56,43 @@ export const UnifiedGameHUD = memo(function UnifiedGameHUD({
     }, 450);
     return () => clearTimeout(timer);
   }, [bossHpPct]);
+
+  // Party System & +15% EXP Buff Tracking
+  const activeCharId = useGameWorldStore((s) => s.activeCharacterId);
+  const [hasParty, setHasParty] = useState(false);
+  const [partyMembersCount, setPartyMembersCount] = useState(0);
+
+  const checkPartyStatus = useCallback(async () => {
+    if (!activeCharId) return;
+    try {
+      const res = await fetch(`/api/party/${activeCharId}`, {
+        credentials: "include",
+        headers: {
+          ...(typeof window !== "undefined" && (localStorage.getItem("clb_token") || localStorage.getItem("token"))
+            ? { Authorization: `Bearer ${(localStorage.getItem("clb_token") || localStorage.getItem("token"))}` }
+            : {}),
+        },
+      });
+      if (res.ok) {
+        const data = await res.json();
+        setHasParty(Boolean(data.hasParty));
+        setPartyMembersCount(data.party?.members?.length || 0);
+      }
+    } catch {
+      // ignore
+    }
+  }, [activeCharId]);
+
+  useEffect(() => {
+    checkPartyStatus();
+    const interval = setInterval(checkPartyStatus, 5000);
+    const handler = () => checkPartyStatus();
+    window.addEventListener("clb-party-updated", handler);
+    return () => {
+      clearInterval(interval);
+      window.removeEventListener("clb-party-updated", handler);
+    };
+  }, [checkPartyStatus]);
 
   // Touch joystick handling for Mobile
   const joystickAreaRef = useRef<HTMLDivElement>(null);
@@ -125,8 +165,18 @@ export const UnifiedGameHUD = memo(function UnifiedGameHUD({
                   <span>🐉</span>
                   <span className="truncate">{bossName}</span>
                   {bossPhase === 2 && (
-                    <span className="px-1.5 py-0.2 rounded bg-red-600 text-white font-mono text-[9px] animate-pulse">
-                      PHASE 2: CUỒNG NỘ
+                    <span className="px-1.5 py-0.2 rounded bg-amber-600 text-white font-mono text-[9px] animate-pulse">
+                      PHASE 2: TRIỆU HỒI
+                    </span>
+                  )}
+                  {bossPhase === 3 && (
+                    <span className="px-1.5 py-0.2 rounded bg-rose-600 text-white font-mono text-[9px] animate-pulse">
+                      PHASE 3: CUỒNG SÁT
+                    </span>
+                  )}
+                  {bossIsEnraged && (
+                    <span className="px-1.5 py-0.2 rounded bg-red-700 text-yellow-200 font-mono text-[9px] font-black animate-bounce border border-yellow-400">
+                      ⚠️ BERSERK ENRAGED!
                     </span>
                   )}
                 </span>
@@ -217,6 +267,22 @@ export const UnifiedGameHUD = memo(function UnifiedGameHUD({
               {weather === "SUNNY" ? "☀️ Trời Nắng Ráo" : weather === "RAIN" ? "🌧️ Mưa Giông (Tầm quái -20%, Kỹ năng +25%)" : "🩸 Huyết Nguyệt (Quái Cuồng Bạo)"}
             </span>
           </div>
+
+          {/* Active Party +15% EXP Buff Status Badge */}
+          {hasParty && (
+            <button
+              onClick={() => {
+                playButtonClick();
+                useGameWorldStore.getState().setActiveModal("party");
+              }}
+              className="pointer-events-auto mt-1.5 flex items-center gap-1.5 px-3 py-1 rounded-full bg-gradient-to-r from-cyan-950/90 via-[#342a2b]/90 to-emerald-950/90 border border-cyan-400/80 text-cyan-200 text-xs font-bold shadow-[0_0_15px_rgba(40,195,225,0.4)] hover:scale-105 active:scale-95 transition-all cursor-pointer animate-in fade-in"
+              title="Tổ Đội Đang Kích Hoạt: +15% EXP quái vật & +10% Lực Chiến. Nhấn để mở Bảng Tổ Đội."
+            >
+              <Users className="w-3.5 h-3.5 text-cyan-300 animate-pulse" />
+              <span className="font-mono text-cyan-300 font-black">+15% EXP TỔ ĐỘI</span>
+              <span className="text-[10px] text-slate-300 font-mono">({partyMembersCount}/4)</span>
+            </button>
+          )}
         </div>
 
         {/* Top-Right: Zoomable Minimap Radar + Collapsible 12-Button System Tray */}
@@ -225,6 +291,39 @@ export const UnifiedGameHUD = memo(function UnifiedGameHUD({
 
       {/* ── RIGHT EDGE QUICK DOCK: Semi-Circle Tabs for Chat & Adventure Logs ── */}
       <RightEdgeQuickDock />
+
+      {/* ── PARTY DOCK BUTTON: Quick Access to Party & Companion Bot System ── */}
+      <div className="fixed right-3 bottom-24 z-30 pointer-events-auto flex flex-col items-end gap-1.5 font-sans">
+        <button
+          onClick={() => {
+            playButtonClick();
+            useGameWorldStore.getState().setActiveModal("party");
+          }}
+          className={`relative group px-3 py-2 rounded-2xl backdrop-blur-md border transition-all duration-200 shadow-xl flex items-center gap-2 cursor-pointer hover:scale-105 active:scale-95 ${
+            hasParty
+              ? "bg-gradient-to-r from-cyan-950/90 to-[#342a2b]/95 border-cyan-400 text-cyan-300 shadow-[0_0_20px_rgba(40,195,225,0.35)]"
+              : "bg-[#342a2b]/90 hover:bg-[#4a383a] border-[#5d4648] text-slate-300 hover:text-white"
+          }`}
+          title="Mở Bảng Tổ Đội & Chiêu Mộ Bot Đồng Hành"
+        >
+          <div className="p-1 rounded-lg bg-black/40 border border-cyan-500/30">
+            <Users className="w-4 h-4 text-cyan-400 group-hover:animate-bounce" />
+          </div>
+          <div className="flex flex-col items-start text-left">
+            <span className="text-[11px] font-black uppercase tracking-wider flex items-center gap-1.5">
+              <span>Tổ Đội</span>
+              {hasParty && (
+                <span className="px-1.5 py-0.2 rounded-full bg-cyan-400/20 text-cyan-300 text-[9px] font-mono font-bold">
+                  +15% EXP
+                </span>
+              )}
+            </span>
+            <span className="text-[9px] text-[#8e7a7c] font-mono">
+              {hasParty ? `${partyMembersCount}/4 Đội Viên` : "Chiêu Mộ Bot"}
+            </span>
+          </div>
+        </button>
+      </div>
 
       {/* ── BOTTOM SECTION: Action Combat Bar, Mobile Controls & Bottom-Right Enemy HP Bars ── */}
       <div className="flex items-end justify-between w-full">

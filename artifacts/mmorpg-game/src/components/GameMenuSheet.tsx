@@ -201,14 +201,14 @@ export function GameMenuSheet({
 
   return (
     <div
-      className="fixed inset-0 z-50 flex items-end justify-center bg-background/75 px-0 backdrop-blur-sm sm:px-4"
+      className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-background/75 px-0 backdrop-blur-sm sm:px-4"
       role="presentation"
       onMouseDown={(event) => {
         if (event.target === event.currentTarget) onOpenChange(false);
       }}
     >
       <section
-        className="game-menu-sheet w-full max-w-md rounded-t-3xl border border-card-border bg-card p-4 pb-6 shadow-2xl sm:mb-4 sm:rounded-3xl"
+        className="game-menu-sheet w-full max-w-md rounded-t-3xl border border-card-border bg-card p-4 pb-6 shadow-2xl sm:mb-4 sm:rounded-3xl max-h-[90vh] overflow-y-auto custom-scrollbar my-auto"
         role="dialog"
         aria-modal="true"
         aria-labelledby="game-menu-title"

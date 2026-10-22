@@ -55,6 +55,7 @@ interface MemoryStoreData {
   quests: any[];
   character_quests: any[];
   market_listings: any[];
+  gm_audit_logs: any[];
 }
 
 const memoryStore: MemoryStoreData = {
@@ -73,6 +74,7 @@ const memoryStore: MemoryStoreData = {
   quests: [...SEED_QUESTS],
   character_quests: [],
   market_listings: [],
+  gm_audit_logs: [],
 };
 
 let autoIncrement = {
@@ -83,6 +85,7 @@ let autoIncrement = {
   forum_posts: 1,
   world_chats: 1,
   market_listings: 100,
+  gm_audit_logs: 1,
 };
 
 const STORE_FILE = path.join(
@@ -135,6 +138,7 @@ export async function wipeAllAccountsAndUserData() {
   memoryStore.forum_comments = [];
   memoryStore.world_chats = [];
   memoryStore.market_listings = [];
+  memoryStore.gm_audit_logs = [];
   autoIncrement.users = 1;
   autoIncrement.characters = 1;
   autoIncrement.character_items = 1;
@@ -142,6 +146,7 @@ export async function wipeAllAccountsAndUserData() {
   autoIncrement.forum_posts = 1;
   autoIncrement.world_chats = 1;
   autoIncrement.market_listings = 100;
+  autoIncrement.gm_audit_logs = 1;
 
   try {
     if (fs.existsSync(STORE_FILE)) {
@@ -165,7 +170,8 @@ export async function wipeAllAccountsAndUserData() {
           forum_posts, 
           forum_comments, 
           world_chats, 
-          market_listings 
+          market_listings,
+          gm_audit_logs
         CASCADE;
       `);
     } catch (e) {
@@ -204,7 +210,10 @@ function createMemoryDb() {
     if (name.includes("server")) return memoryStore.servers;
     if (name.includes("encounter")) return memoryStore.encounters;
     if (name.includes("character_item")) return memoryStore.character_items;
+    if (name.includes("character_quest")) return memoryStore.character_quests;
+    if (name.includes("quest")) return memoryStore.quests;
     if (name.includes("market_listing")) return memoryStore.market_listings;
+    if (name.includes("gm_audit_log")) return memoryStore.gm_audit_logs;
     if (name.includes("character")) return memoryStore.characters;
     if (name.includes("user")) return memoryStore.users;
     if (name.includes("item")) return memoryStore.items;
@@ -222,14 +231,22 @@ function createMemoryDb() {
     if (data === memoryStore.forum_comments) return "forum_comments";
     if (data === memoryStore.world_chats) return "world_chats";
     if (data === memoryStore.market_listings) return "market_listings";
+    if (data === memoryStore.quests) return "quests";
+    if (data === memoryStore.character_quests) return "character_quests";
+    if (data === memoryStore.gm_audit_logs) return "gm_audit_logs";
     return null;
   };
 
-  const matchesPredicate = (row: any, predicate: any): boolean => {
+    const matchesPredicate = (row: any, predicate: any): boolean => {
     if (!predicate) return true;
     if (typeof predicate === "function") return predicate(row);
 
-    // Drizzle BinaryOperator / SQL condition
+    // 1. Direct object { id: 5 }
+    if (typeof predicate === "object" && !predicate.queryChunks && !predicate.left) {
+      return Object.entries(predicate).every(([k, v]) => row[k] === v || row[k] == v);
+    }
+
+    // 2. BinaryOperator { left, right }
     if (predicate.left && predicate.right !== undefined) {
       const colName = predicate.left.name || predicate.left.key;
       const targetVal = predicate.right?.value !== undefined ? predicate.right.value : predicate.right;
@@ -239,64 +256,64 @@ function createMemoryDb() {
       }
     }
 
+    // 3. Drizzle SQL chunks (hỗ trợ cả and(...) và atomic eq(...))
     if (Array.isArray(predicate.queryChunks)) {
-      // Recursively extract all sub-expressions
-      const subConditions: any[] = [];
-      const extractSubs = (arr: any[]) => {
-        for (const item of arr) {
-          if (!item || typeof item !== "object") continue;
-          if (item.left && item.right !== undefined) {
-            subConditions.push(item);
-          } else if (Array.isArray(item.queryChunks)) {
-            // Check if this sub-chunk is an atomic condition with name & Param
-            let foundName = "";
-            let foundVal: any = undefined;
-            for (const sub of item.queryChunks) {
-              if (sub?.name && typeof sub.name === "string") foundName = sub.name;
-              else if (sub?.constructor?.name === "Param" || (sub?.value !== undefined && !Array.isArray(sub.value) && typeof sub.value !== "object")) {
-                foundVal = sub.value;
-              }
-            }
-            if (foundName && foundVal !== undefined) {
-              subConditions.push({ left: { name: foundName }, right: foundVal });
-            } else {
-              extractSubs(item.queryChunks);
-            }
+      const allChunks: any[] = [];
+      const flatten = (chunks: any[]) => {
+        for (const c of chunks) {
+          if (!c) continue;
+          if (Array.isArray(c.queryChunks)) {
+            flatten(c.queryChunks);
+          } else {
+            allChunks.push(c);
           }
         }
       };
-      extractSubs(predicate.queryChunks);
+      flatten(predicate.queryChunks);
 
-      if (subConditions.length > 0) {
-        return subConditions.every((sub) => matchesPredicate(row, sub));
-      }
+      let lastColName = "";
+      const pairs: Array<{ col: string; val: any; isInArray?: boolean }> = [];
 
-      let colName = "";
-      let targetVal: any = undefined;
-      for (const chunk of predicate.queryChunks) {
+      for (let i = 0; i < allChunks.length; i++) {
+        const chunk = allChunks[i];
+        if (!chunk || chunk?.constructor?.name === "StringChunk") continue;
         if (chunk?.name && typeof chunk.name === "string") {
-          colName = chunk.name;
+          lastColName = chunk.name;
+        } else if (lastColName && Array.isArray(chunk)) {
+          const list = chunk.map((item: any) =>
+            item?.constructor?.name === "Param" || item?.value !== undefined ? item.value : item
+          );
+          pairs.push({ col: lastColName, val: list, isInArray: true });
+          lastColName = "";
+        } else if (lastColName && Array.isArray(chunk?.value)) {
+          pairs.push({ col: lastColName, val: chunk.value, isInArray: true });
+          lastColName = "";
         } else if (
-          chunk?.constructor?.name === "Param" ||
-          (chunk?.value !== undefined && !Array.isArray(chunk.value) && typeof chunk.value !== "object")
+          lastColName &&
+          (chunk?.constructor?.name === "Param" ||
+            (chunk?.value !== undefined && typeof chunk.value !== "object"))
         ) {
-          targetVal = chunk.value;
+          pairs.push({ col: lastColName, val: chunk.value });
+          lastColName = "";
         }
       }
-      if (colName && targetVal !== undefined) {
-        const valInRow =
-          row[colName] !== undefined
-            ? row[colName]
-            : row[camelCase(colName)] !== undefined
-            ? row[camelCase(colName)]
-            : row[snakeCase(colName)];
-        return valInRow === targetVal || valInRow == targetVal;
+
+      if (pairs.length > 0) {
+        return pairs.every(({ col, val, isInArray }: any) => {
+          const valInRow =
+            row[col] !== undefined
+              ? row[col]
+              : row[camelCase(col)] !== undefined
+              ? row[camelCase(col)]
+              : row[snakeCase(col)];
+          if (isInArray && Array.isArray(val)) {
+            return val.includes(valInRow) || val.some((v: any) => v == valInRow);
+          }
+          return valInRow === val || valInRow == val;
+        });
       }
     }
 
-    if (typeof predicate === "object") {
-      return Object.entries(predicate).every(([k, v]) => row[k] === v || row[k] == v);
-    }
     return true;
   };
 
@@ -341,15 +358,31 @@ function createMemoryDb() {
             return builder;
           },
           then: (resolve: any, reject: any) => {
-            if (fields && (fields.count !== undefined || fields.c !== undefined)) {
-              return Promise.resolve([{ count: rows.length, c: rows.length }]).then(resolve, reject);
+            if (fields && typeof fields === "object" && !Array.isArray(fields)) {
+              const fieldKeys = Object.keys(fields);
+              const isCount = fieldKeys.some(
+                (k) => k === "count" || k === "c" || k === "total" || (fields[k]?.queryChunks && JSON.stringify(fields[k].queryChunks).toLowerCase().includes("count"))
+              );
+              if (isCount) {
+                const countKey = fieldKeys[0] || "count";
+                const countVal = rows.length;
+                return Promise.resolve([{ count: countVal, c: countVal, total: countVal, [countKey]: countVal }]).then(resolve, reject);
+              }
             }
             return Promise.resolve(rows).then(resolve, reject);
           },
           [Symbol.asyncIterator]: async function* () {
-            if (fields && (fields.count !== undefined || fields.c !== undefined)) {
-              yield { count: rows.length, c: rows.length };
-              return;
+            if (fields && typeof fields === "object" && !Array.isArray(fields)) {
+              const fieldKeys = Object.keys(fields);
+              const isCount = fieldKeys.some(
+                (k) => k === "count" || k === "c" || k === "total" || (fields[k]?.queryChunks && JSON.stringify(fields[k].queryChunks).toLowerCase().includes("count"))
+              );
+              if (isCount) {
+                const countKey = fieldKeys[0] || "count";
+                const countVal = rows.length;
+                yield { count: countVal, c: countVal, total: countVal, [countKey]: countVal };
+                return;
+              }
             }
             for (const r of rows) yield r;
           },
@@ -796,6 +829,17 @@ export async function initDatabase() {
         );
         CREATE INDEX IF NOT EXISTS "IDX_session_expire" ON user_sessions ("expire");
 
+        CREATE TABLE IF NOT EXISTS gm_audit_logs (
+          id SERIAL PRIMARY KEY,
+          user_id INTEGER NOT NULL,
+          character_id INTEGER,
+          action TEXT NOT NULL,
+          payload_json TEXT,
+          ip_address TEXT,
+          created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP NOT NULL
+        );
+        CREATE INDEX IF NOT EXISTS gm_audit_logs_user_id_idx ON gm_audit_logs(user_id);
+
         CREATE TABLE IF NOT EXISTS servers (
           id TEXT PRIMARY KEY, name TEXT NOT NULL, region TEXT NOT NULL,
           status TEXT DEFAULT 'GOOD' NOT NULL, exp_multiplier INTEGER DEFAULT 1 NOT NULL,
@@ -901,22 +945,7 @@ export async function initDatabase() {
         CREATE INDEX IF NOT EXISTS forum_comments_user_id_idx ON forum_comments(user_id);
         CREATE INDEX IF NOT EXISTS forum_comments_character_id_idx ON forum_comments(character_id);
 
-        DO $$
-        DECLARE fk RECORD;
-        BEGIN
-          FOR fk IN
-            SELECT conrelid::regclass AS table_name, conname
-            FROM pg_constraint
-            WHERE contype = 'f'
-              AND conrelid IN (
-                SELECT oid FROM pg_class
-                WHERE relname IN ('characters', 'character_items', 'battle_logs', 'encounters', 'reward_grants')
-                  AND relnamespace = current_schema()::regnamespace
-              )
-          LOOP
-            EXECUTE format('ALTER TABLE %s DROP CONSTRAINT %I', fk.table_name, fk.conname);
-          END LOOP;
-        END $$;
+        -- Bảo toàn toàn vẹn dữ liệu: Giữ nguyên Foreign Key constraints
       `);
 
       // Check if catalog already seeded to avoid redundant network round trips

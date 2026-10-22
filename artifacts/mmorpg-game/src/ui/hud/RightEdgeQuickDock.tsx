@@ -68,7 +68,7 @@ export const RightEdgeQuickDock = memo(function RightEdgeQuickDock() {
           </div>
 
           {/* Body: Chat Message Feed or Adventure Logs */}
-          <div className="flex-1 overflow-y-auto p-2.5 space-y-2 text-xs font-sans">
+          <div className="flex-1 overflow-y-auto custom-scrollbar p-2.5 space-y-2 text-xs font-sans">
             {activeTab === "chat" ? (
               chatMessages.map((m, idx) => (
                 <div key={idx} className="flex flex-col bg-slate-900/40 p-1.5 rounded-lg border border-slate-800/60">

@@ -13,7 +13,8 @@ export type VFXType =
   | "DRAGON_SHOCKWAVE"
   | "HOLY_SHIELD_DOME"
   | "DASH_AFTERIMAGE"
-  | "BOSS_METEOR_AOE";
+  | "BOSS_METEOR_AOE"
+  | "explosion";
 
 export interface SkillVFXConfig {
   type: VFXType;
@@ -47,12 +48,14 @@ export interface MovementPhysics {
 export type HitShapeType =
   | "CIRCLE_AOE"
   | "CONE_120"
+  | "CONE_FRONT"
+  | "ARC_SWEEP"
   | "LINE_PIERCE"
   | "PROJECTILE_SINGLE"
   | "PROJECTILE_SPREAD";
 
 export interface CrowdControlEffect {
-  type: "NONE" | "KNOCKBACK" | "PULL_VORTEX" | "STUN" | "SLOW" | "AIRBORNE";
+  type: "NONE" | "KNOCKBACK" | "PULL_VORTEX" | "STUN" | "SLOW" | "AIRBORNE" | "TAUNT";
   value: number; // distance in meters or slow percentage (0.0 to 1.0)
   durationMs: number;
 }

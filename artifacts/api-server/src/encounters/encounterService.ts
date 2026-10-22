@@ -23,6 +23,7 @@ import type {
   EncounterSnapshotPacket,
   EncounterTerminalResultPacket,
 } from "./encounterTypes";
+import { playerPartyMap } from "../routes/multiplayer";
 
 export class EncounterService {
   private static activeEngines = new Map<string, EncounterEngine>();
@@ -274,7 +275,11 @@ export class EncounterService {
     let expGained = 0;
     let goldGained = 0;
     if (isVictory) {
-      expGained = monsterReward.expReward;
+      let baseExp = monsterReward.expReward;
+      if (playerPartyMap.has(encounter.characterId)) {
+        baseExp = Math.round(baseExp * 1.15);
+      }
+      expGained = baseExp;
       goldGained = monsterReward.goldReward;
     }
 

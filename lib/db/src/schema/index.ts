@@ -10,3 +10,4 @@ export * from "./monsters";
 export * from "./community";
 export * from "./quests";
 export * from "./market";
+export * from "./gmAuditLogs";

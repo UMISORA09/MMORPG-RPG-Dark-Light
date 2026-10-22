@@ -87,6 +87,7 @@ const WAL_PREFIX = "clb_wal_snapshot_";
 let heartbeatTimer: ReturnType<typeof setInterval> | null = null;
 let lastSyncedSnapshotStr = "";
 let listenersInitialized = false;
+let isSyncing = false;
 
 export class PersistenceManager {
   /**
@@ -197,7 +198,22 @@ export class PersistenceManager {
         body: JSON.stringify(snapshot),
       });
 
-      if (!res.ok) {
+            if (!res.ok) {
+        if (res.status === 409) {
+          // Xung đột Optimistic Concurrency Control: Máy chủ có revision mới hơn.
+          // Tự động đọc lại revision mới nhất từ server để không bị kẹt ở lần lưu sau
+          try {
+            const stateRes = await fetch(`/api/characters/${characterId}/full-state`, {
+              credentials: "include",
+            });
+            if (stateRes.ok) {
+              const stateData = await stateRes.json();
+              if (stateData?.character?.revision) {
+                usePersistenceStore.getState().setStatus("wal_cached", stateData.character.revision, "Xung đột phiên bản - Đã phục hồi revision mới nhất", null);
+              }
+            }
+          } catch {}
+        }
         throw new Error(`HTTP ${res.status}`);
       }
 

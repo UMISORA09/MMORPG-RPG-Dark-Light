@@ -6,7 +6,7 @@
 import { memo, useRef, useState, useEffect, useCallback } from "react";
 import * as THREE from "three";
 import { useFrame } from "@react-three/fiber";
-import { Html } from "@react-three/drei";
+import { Billboard, Text } from "@react-three/drei";
 import { SpriteBillboard25D } from "../sprites/SpriteBillboard25D";
 import { TelegraphZoneItem, isPlayerInsideTelegraphZone } from "../vfx/TelegraphZoneShader";
 import { useGameWorldStore } from "@/stores/useGameWorldStore";
@@ -66,7 +66,9 @@ interface MonsterInstance {
   staggerGauge: number;
   staggerMax: number;
   staggerTimer: number;
-  phase: 1 | 2;
+  phase: 1 | 2 | 3;
+  bossCombatTimer: number;
+  isBerserkEnraged?: boolean;
   currentPattern: MonsterAttackPattern | null;
   currentTelegraphId: number | null;
 
@@ -303,6 +305,8 @@ export const MonsterManager25D = memo(function MonsterManager25D() {
         staggerMax: Math.round(bp.staggerThreshold * (isElite ? 2.5 : isBoss ? 3.5 : 1.0)),
         staggerTimer: 0,
         phase: 1,
+        bossCombatTimer: 0,
+        isBerserkEnraged: false,
         currentPattern: null,
         currentTelegraphId: null,
         hitFlashTimer: 0,
@@ -598,6 +602,12 @@ export const MonsterManager25D = memo(function MonsterManager25D() {
           const hitRadius = m.isBoss ? 2.5 : (m.scale || 1.0) * 1.4;
 
           if (dist <= hitRadius) {
+            if (m.aiState === "RETURNING_HOME") {
+              addFloatingText("🛡️ MIỄN NHIỄM (RESET)", m.currentPos.clone().add(new THREE.Vector3(0, 2.2, 0)), "#94a3b8");
+              b.lifetime = -1;
+              bulletsCleaned = true;
+              break;
+            }
             // Check Level Suppression: High Level Monsters have +25% evasion against lower level players
             const isSuppressedMob = m.level > playerLevel + 2;
             if (isSuppressedMob && Math.random() < 0.25) {
@@ -694,7 +704,23 @@ export const MonsterManager25D = memo(function MonsterManager25D() {
         sl.hitMonsterIds = new Set<number>();
       }
 
+      if (sl.isTaunt) {
+        const tauntRadius = sl.tauntRadius || 8.5;
+        for (const other of monsters) {
+          if (!other.isAlive) continue;
+          if (other.currentPos.distanceTo(playerPos) <= tauntRadius) {
+            if (other.aiState === "PATROL" || other.aiState === "IDLE") {
+              other.aiState = "AGGRO_CHASE";
+              other.attackCooldown = Math.min(other.attackCooldown, 0.4);
+              addFloatingText("🛡️ KHIÊU KHÍCH (TAUNT)!", other.currentPos.clone().add(new THREE.Vector3(0, 2.2, 0)), "#fbbf24");
+            }
+          }
+        }
+      }
+
       for (const m of monsters) {
+        if (!m.isAlive) continue;
+        if (m.aiState === "RETURNING_HOME") continue;
         if (!m.isAlive) continue;
         if (sl.hitMonsterIds.has(m.id)) continue; // Mỗi quái chỉ dính sát thương 1 lần trên 1 nhát chém
 
@@ -889,6 +915,19 @@ export const MonsterManager25D = memo(function MonsterManager25D() {
         playCombatSFX("laser_pew", 0.4);
       }
 
+      // Boss Enrage Timer: Sau 3 phút (180s) giao tranh liên tục, Boss vào trạng thái Berserk (+200% ATK)
+      if (m.isBoss && (m.aiState === "AGGRO_CHASE" || m.aiState === "TELEGRAPH_WINDUP")) {
+        m.bossCombatTimer = (m.bossCombatTimer || 0) + dt;
+        if (m.bossCombatTimer >= 180 && !m.isBerserkEnraged) {
+          m.isBerserkEnraged = true;
+          m.atk = Math.round(m.atk * 3.0); // +200% ATK
+          m.eliteAuraColor = "#dc2626";
+          addFloatingText("⚠️ BOSS ENRAGED! ATK +200%!", m.currentPos.clone().add(new THREE.Vector3(0, 4.2, 0)), "#ff0000");
+          playCombatSFX("dragon_roar", 1.0);
+          setBossRaidState({ isEnraged: true });
+        }
+      }
+
       // Boss Territory Advantage: 1% Max HP auto-heal per second in Boss Altar or Dungeon
       if (m.isBoss && (currentZone === "BOSS_ALTAR" || currentZone === "DUNGEON") && m.hp < m.maxHp) {
         m.territoryHealAcc = (m.territoryHealAcc || 0) + m.maxHp * 0.01 * dt;
@@ -901,6 +940,11 @@ export const MonsterManager25D = memo(function MonsterManager25D() {
 
       switch (m.aiState) {
         case "PATROL": {
+          // Distance AOI throttling: distant monsters don't need continuous sub-step roaming
+          if (!m.isBoss && distToPlayer > 45) {
+            break;
+          }
+
           const weatherAggroMult = weather === "RAIN" ? 0.8 : weather === "DARK_FOG" ? 0.65 : 1.0;
           const aggroRadius = (m.typeConfig?.behavior?.aggroRadius || m.blueprint.aggroRadius) * weatherAggroMult;
           if (distToPlayer <= aggroRadius && !isPlayerInSafeZone) {
@@ -965,7 +1009,7 @@ export const MonsterManager25D = memo(function MonsterManager25D() {
           m.facingLeft = chaseDir.x < -0.05;
 
           // 1. Quái Tinh Anh & Boss: Kiểm tra tung chiêu đặc biệt có báo vùng đỏ (Red Telegraph)
-          const specialSkills = m.isBoss && m.phase === 2 && m.typeConfig?.phase2Skills && m.typeConfig.phase2Skills.length > 0
+          const specialSkills = m.isBoss && m.phase >= 2 && m.typeConfig?.phase2Skills && m.typeConfig.phase2Skills.length > 0
             ? [...m.typeConfig.phase2Skills, ...m.typeConfig.specialSkills]
             : m.typeConfig?.specialSkills || [];
 
@@ -977,8 +1021,10 @@ export const MonsterManager25D = memo(function MonsterManager25D() {
               m.aiState = "TELEGRAPH_WINDUP";
               m.state = "attack";
 
-              const duration = m.isBoss && m.phase === 2
-                ? Math.round(chosenSkill.telegraphDurationMs * 0.7)
+              const duration = m.isBoss && m.phase === 3
+                ? Math.round(chosenSkill.telegraphDurationMs * 0.6)
+                : m.isBoss && m.phase === 2
+                ? Math.round(chosenSkill.telegraphDurationMs * 0.75)
                 : chosenSkill.telegraphDurationMs;
 
               const zoneId = nextTelegraphId++;
@@ -1005,7 +1051,7 @@ export const MonsterManager25D = memo(function MonsterManager25D() {
               const pattern: MonsterAttackPattern = {
                 id: chosenSkill.id,
                 name: chosenSkill.name,
-                telegraphShape: chosenSkill.telegraphShape,
+                shape: chosenSkill.telegraphShape,
                 range: chosenSkill.range,
                 radiusOrWidth: chosenSkill.radiusOrWidth,
                 angleDeg: chosenSkill.angleDeg || 75,
@@ -1146,11 +1192,14 @@ export const MonsterManager25D = memo(function MonsterManager25D() {
             m.hasBarrier = false;
             m.barrierHp = 0;
             m.isEnraged = false;
+            m.phase = 1;
+            m.bossCombatTimer = 0;
+            m.isBerserkEnraged = false;
             m.aiState = "PATROL";
             m.state = "idle";
-            addFloatingText("💚 HỒI ĐẦY MÁU", m.spawnPos.clone().add(new THREE.Vector3(0, 2.2, 0)), "#22c55e");
+            addFloatingText("💚 HỒI ĐẦY MÁU (RESET)", m.spawnPos.clone().add(new THREE.Vector3(0, 2.2, 0)), "#22c55e");
             if (m.isBoss) {
-              setBossRaidState({ health: m.maxHp, stagger: 0, castingSpell: null });
+              setBossRaidState({ health: m.maxHp, stagger: 0, castingSpell: null, phase: 1, isEnraged: false });
             }
           } else {
             retDir.normalize();
@@ -1259,20 +1308,46 @@ export const MonsterManager25D = memo(function MonsterManager25D() {
       }
     }
 
-    // 2. Boss Phase 2 Enrage Check (HP <= 50%)
-    if (m.isBoss && m.phase === 1 && m.hp <= m.maxHp * 0.5) {
-      m.phase = 2;
-      playCombatSFX("dragon_roar", 0.7);
+    // 2. Boss Multi-Phase Mechanics (Phase 1: 100-70%, Phase 2: 70-30%, Phase 3: 30-0%)
+    if (m.isBoss) {
+      // Phase 2 (HP <= 70%) - Triệu hồi quái đệ (Adds) & mở khóa chiêu thức diện rộng mới
+      if (m.phase === 1 && m.hp <= m.maxHp * 0.70) {
+        m.phase = 2;
+        playCombatSFX("dragon_roar", 0.85);
+        addFloatingText(
+          "🔥 PHASE 2 (70% HP): TRIỆU HỒI QUÁI ĐỆ!",
+          m.currentPos.clone().add(new THREE.Vector3(0, 3.5, 0)),
+          "#f59e0b"
+        );
+        const offsets = [new THREE.Vector3(-3.5, 0, 2.5), new THREE.Vector3(3.5, 0, -2.5)];
+        offsets.forEach((offset) => {
+          const deadMob = monstersRef.current.find((o) => !o.isAlive && !o.isBoss);
+          if (deadMob) {
+            deadMob.isAlive = true;
+            deadMob.hp = deadMob.maxHp;
+            deadMob.currentPos.copy(m.currentPos).add(offset);
+            deadMob.spawnPos.copy(deadMob.currentPos);
+            deadMob.aiState = "AGGRO_CHASE";
+            deadMob.state = "run";
+            addFloatingText("🐺 QUÁI ĐỆ HỘ GIÁ!", deadMob.currentPos.clone().add(new THREE.Vector3(0, 2.0, 0)), "#fbbf24");
+          }
+        });
+        setBossRaidState({ phase: 2 });
+      }
 
-      addFloatingText(
-        `🔥 CUỒNG NỘ! PHASE 2 KÍCH HOẠT!`,
-        m.currentPos.clone().add(new THREE.Vector3(0, 3.5, 0)),
-        "#ef4444"
-      );
-
-      setBossRaidState({
-        phase: 2,
-      });
+      // Phase 3 (HP <= 30%) - Tối thượng cuồng bạo: Tốc độ ra đòn tăng vọt, AOE liên tục
+      if (m.phase === 2 && m.hp <= m.maxHp * 0.30) {
+        m.phase = 3;
+        m.atk = Math.round(m.atk * 1.35);
+        m.eliteAuraColor = "#dc2626";
+        playCombatSFX("dragon_roar", 1.0);
+        addFloatingText(
+          "⚡ PHASE 3 (30% HP): CUỒNG SÁT LIÊN TỤC (TỐC ĐÁNH +40%)!",
+          m.currentPos.clone().add(new THREE.Vector3(0, 4.0, 0)),
+          "#ef4444"
+        );
+        setBossRaidState({ phase: 3 });
+      }
     }
   };
 
@@ -1316,23 +1391,27 @@ export const MonsterManager25D = memo(function MonsterManager25D() {
             entry.rarity === "rare" ? "#00f2ff" : "#ffffff";
           const dropIcon =
             entry.category === "pill" ? "💊" :
-            entry.category === "treasure" ? "💎" :
-            entry.category === "gear" ? "⚔️" : "📦";
+            entry.category === "chest" ? "💎" :
+            entry.category === "equipment" ? "⚔️" : "📦";
           const angle = Math.random() * Math.PI * 2;
           const speed = 2.0 + Math.random() * 3.0;
 
           specificDrops.push({
             id: `drop_${m.id}_${entry.itemId}_${Date.now()}_${Math.random().toString(36).substring(2, 6)}`,
+            itemId: entry.itemId,
             name: `${entry.name}${qty > 1 ? ` x${qty}` : ""}`,
-            rarity: entry.rarity as any,
-            type: entry.category === "pill" ? "potion" : entry.category === "gear" ? "weapon" : "accessory",
+            rarity: (entry.rarity === "uncommon" ? "rare" : entry.rarity) as any,
+            type: entry.category === "pill" ? "potion" : entry.category === "equipment" ? "weapon" : "accessory",
             icon: dropIcon,
             color: dropColor,
             statText: `Phần thưởng từ ${m.name}`,
             position: [m.currentPos.x, 0.5, m.currentPos.z],
             velocity: [Math.cos(angle) * speed, 5.0 + Math.random() * 3.0, Math.sin(angle) * speed],
             lifetime: 25.0,
-            goldValue: entry.rarity === "legendary" ? 200 : entry.rarity === "epic" ? 100 : 25,
+            value: entry.rarity === "legendary" ? 200 : entry.rarity === "epic" ? 100 : 25,
+            quantity: qty,
+            bounceCount: 0,
+            isGrounded: false,
           });
         }
       }
@@ -1435,10 +1514,16 @@ export const MonsterManager25D = memo(function MonsterManager25D() {
         />
       ))}
 
-      {/* ── Render 2.5D Billboard Sprites for All Living Monsters with Overhead Culling ── */}
+      {/* ── Render 2.5D Billboard Sprites for All Living Monsters with Overhead Culling & Distance Culling (AOI <= 38m) ── */}
       {(() => {
-        const aliveMobs = monstersRef.current.filter((m) => m.isAlive);
         const playerPos = playerPosition;
+        // Distance Culling (Tầm nhìn AOI <= 38m): Chỉ render quái vật gần người chơi hoặc Boss
+        const aliveMobs = monstersRef.current.filter((m) => {
+          if (!m.isAlive) return false;
+          if (m.isBoss) return true;
+          return m.currentPos.distanceTo(playerPos) <= 38;
+        });
+
         // Optimization: Only top 4 nearest entities within 12m or boss / active hit get overhead HUD mounted
         const visibleOverheadSet = new Set(
           aliveMobs
@@ -1454,7 +1539,7 @@ export const MonsterManager25D = memo(function MonsterManager25D() {
 
           return (
             <group key={`mob-grp-${monster.id}`}>
-              {/* Radiant Elite Monster Pulsing Foot Aura Ring & Light */}
+              {/* Radiant Elite Monster Pulsing Foot Aura Ring */}
               {monster.isElite && (
                 <group position={[monster.currentPos.x, 0.03, monster.currentPos.z]}>
                   <mesh rotation={[-Math.PI / 2, 0, 0]}>
@@ -1477,23 +1562,23 @@ export const MonsterManager25D = memo(function MonsterManager25D() {
                       depthWrite={false}
                     />
                   </mesh>
-                  <pointLight
-                    color={monster.eliteAuraColor || "#f59e0b"}
-                    intensity={2.2}
-                    distance={6}
-                    position={[0, 1.2, 0]}
-                  />
                 </group>
               )}
 
-              {/* Radiant Elite Overhead Crown Label */}
-              {/* Radiant Elite Overhead Crown Label */}
+              {/* Radiant Elite Overhead Crown Label (GPU SDF Text, Zero DOM Overhead) */}
               {monster.isElite && (
-                <Html center position={[monster.currentPos.x, overheadY + 0.45, monster.currentPos.z]} distanceFactor={14} style={{ pointerEvents: "none" }}>
-                  <span className="px-2 py-0.5 rounded-full bg-black/85 border border-amber-400 text-amber-300 font-black text-[11px] whitespace-nowrap shadow-md select-none">
+                <Billboard position={[monster.currentPos.x, overheadY + 0.45, monster.currentPos.z]}>
+                  <Text
+                    fontSize={0.28}
+                    color="#fde047"
+                    outlineWidth={0.035}
+                    outlineColor="#78350f"
+                    anchorX="center"
+                    anchorY="middle"
+                  >
                     👑 [TINH ANH]
-                  </span>
-                </Html>
+                  </Text>
+                </Billboard>
               )}
 
               {/* Lone Predator Ground Purple Aura Decal */}
@@ -1514,23 +1599,19 @@ export const MonsterManager25D = memo(function MonsterManager25D() {
 
               {/* Monster State Overhead Icon: ! for Aggro / Warning for Cast (Positioned safely above name HUD, culled for distant mobs) */}
               {showOverhead && monster.aiState === "AGGRO_CHASE" && (
-                <Html center position={[monster.currentPos.x, overheadY, monster.currentPos.z]} distanceFactor={14} style={{ pointerEvents: "none" }}>
-                  <span className="text-rose-500 font-black text-lg select-none drop-shadow">!</span>
-                </Html>
+                <Billboard position={[monster.currentPos.x, overheadY, monster.currentPos.z]}>
+                  <Text fontSize={0.48} color="#f43f5e" outlineWidth={0.04} outlineColor="#000000" anchorX="center" anchorY="middle">!</Text>
+                </Billboard>
               )}
               {showOverhead && monster.aiState === "TELEGRAPH_WINDUP" && (
-                <Html center position={[monster.currentPos.x, overheadY, monster.currentPos.z]} distanceFactor={14} style={{ pointerEvents: "none" }}>
-                  <span className="px-2 py-0.5 rounded-md bg-rose-950/90 border border-rose-500 text-rose-300 font-bold text-[10px] whitespace-nowrap select-none animate-pulse">
-                    ⚠️ GỒNG CHIÊU
-                  </span>
-                </Html>
+                <Billboard position={[monster.currentPos.x, overheadY, monster.currentPos.z]}>
+                  <Text fontSize={0.24} color="#fda4af" outlineWidth={0.03} outlineColor="#4c0519" anchorX="center" anchorY="middle">⚠️ GỒNG CHIÊU</Text>
+                </Billboard>
               )}
               {showOverhead && monster.aiState === "STAGGERED" && (
-                <Html center position={[monster.currentPos.x, overheadY, monster.currentPos.z]} distanceFactor={14} style={{ pointerEvents: "none" }}>
-                  <span className="px-2 py-0.5 rounded-md bg-yellow-950/90 border border-yellow-400 text-yellow-300 font-bold text-[10px] whitespace-nowrap select-none">
-                    ⚡ CHOÁNG (1.5x)
-                  </span>
-                </Html>
+                <Billboard position={[monster.currentPos.x, overheadY, monster.currentPos.z]}>
+                  <Text fontSize={0.24} color="#fde047" outlineWidth={0.03} outlineColor="#713f12" anchorX="center" anchorY="middle">⚡ CHOÁNG (1.5x)</Text>
+                </Billboard>
               )}
 
               <SpriteBillboard25D
@@ -1562,14 +1643,18 @@ export const MonsterManager25D = memo(function MonsterManager25D() {
         });
       })()}
 
-      {/* ── 3D Bullets / Projectiles Render (Player Kiếm Khí & Quái Bắn Đạn) ── */}
+      {/* ── 3D Bullets / Projectiles Render (Optimized Dual-Layer Glow Mesh) ── */}
       {bullets.map((b) => (
         <group key={`bullet-${b.id}`} position={b.position}>
           <mesh>
-            <sphereGeometry args={[b.size || 0.28, 14, 14]} />
+            <sphereGeometry args={[b.size || 0.28, 10, 10]} />
             <meshBasicMaterial color={b.color || "#38bdf8"} />
           </mesh>
-          <pointLight color={b.color || "#38bdf8"} intensity={0.9} distance={3.5} />
+          {/* Outer glowing halo ring with zero shader recompilation overhead */}
+          <mesh rotation={[-Math.PI / 2, 0, 0]}>
+            <ringGeometry args={[(b.size || 0.28) * 0.85, (b.size || 0.28) * 1.6, 12]} />
+            <meshBasicMaterial color={b.color || "#38bdf8"} transparent opacity={0.4} depthWrite={false} side={THREE.DoubleSide} />
+          </mesh>
         </group>
       ))}
 
@@ -1609,22 +1694,24 @@ export const MonsterManager25D = memo(function MonsterManager25D() {
         );
       })}
 
-      {/* ── Floating Damage & Reward Texts Render ── */}
-      {floatingTexts.map((ft) => (
-        <Html
+      {/* ── Floating Damage & Reward Texts (Ultra Fast GPU SDF Font) ── */}
+      {floatingTexts.slice(-15).map((ft) => (
+        <Billboard
           key={`txt-${ft.id}`}
-          center
           position={[ft.position.x, ft.position.y, ft.position.z]}
-          distanceFactor={14}
-          style={{ pointerEvents: "none" }}
         >
-          <div
-            className="font-black text-sm drop-shadow-[0_2px_8px_rgba(0,0,0,0.95)] whitespace-nowrap select-none"
-            style={{ color: ft.color, opacity: Math.max(0, ft.opacity) }}
+          <Text
+            fontSize={0.36}
+            color={ft.color}
+            outlineWidth={0.035}
+            outlineColor="#000000"
+            fillOpacity={Math.max(0, ft.opacity ?? 1)}
+            anchorX="center"
+            anchorY="middle"
           >
             {ft.text}
-          </div>
-        </Html>
+          </Text>
+        </Billboard>
       ))}
     </group>
   );

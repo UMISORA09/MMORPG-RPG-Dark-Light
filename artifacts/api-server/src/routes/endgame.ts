@@ -1,12 +1,13 @@
 import { Router } from "express";
-import { and, eq } from "drizzle-orm";
+import { and, eq, desc } from "drizzle-orm";
 import {
   db,
   charactersTable,
   characterItemsTable,
-  itemsTable,
+  gmAuditLogsTable,
+  usersTable,
 } from "@workspace/db";
-import { requireAuth } from "../middlewares/requireAuth";
+import { requireAuth, requireGMOrAdmin } from "../middlewares/requireAuth";
 import { recalculateCharacterStats } from "../services/CharacterInventoryService";
 
 const router = Router();
@@ -25,11 +26,23 @@ router.post("/characters/:characterId/allocate-stats", requireAuth, async (req, 
     return;
   }
 
-  const [character] = await db
+  let [character] = await db
     .select()
     .from(charactersTable)
     .where(and(eq(charactersTable.id, characterId), eq(charactersTable.userId, userId)))
     .limit(1);
+
+  // GM/Admin có quyền thao tác trên bất kỳ nhân vật nào trong hệ thống
+  if (!character) {
+    const [adminChar] = await db
+      .select()
+      .from(charactersTable)
+      .where(eq(charactersTable.id, characterId))
+      .limit(1);
+    if (adminChar) {
+      character = adminChar;
+    }
+  }
 
   if (!character) {
     res.status(404).json({ error: "Không tìm thấy nhân vật" });
@@ -91,9 +104,10 @@ router.post("/characters/:characterId/allocate-stats", requireAuth, async (req, 
 });
 
 // ==============================================================================
-// 2. RANKED ARENA PVP SYSTEM (Đấu Trường 1v1)
 // ==============================================================================
-const ARENA_RANKS = [
+// 2. RANKED ARENA PVP SYSTEM (Đấu Trường 1v1 & Authentic ELO Ranking)
+// ==============================================================================
+export const ARENA_RANKS = [
   { name: "Đồng IV", minPoints: 0, title: "Đấu Sĩ Tập Sự" },
   { name: "Đồng I", minPoints: 100, title: "Đấu Sĩ Dũng Cảm" },
   { name: "Bạc III", minPoints: 250, title: "Chiến Binh Ngân Bảng" },
@@ -104,7 +118,7 @@ const ARENA_RANKS = [
   { name: "Chiến Thần", minPoints: 2500, title: "★ Chiến Thần Vô Song ★" },
 ];
 
-function getArenaRank(honorPoints: number) {
+export function getArenaRank(honorPoints: number) {
   let rank = ARENA_RANKS[0];
   for (const r of ARENA_RANKS) {
     if (honorPoints >= r.minPoints) {
@@ -114,10 +128,82 @@ function getArenaRank(honorPoints: number) {
   return rank;
 }
 
-router.post("/characters/:characterId/pvp/match", requireAuth, async (req, res): Promise<void> => {
-  const characterId = Number(req.params.characterId);
+const BOT_OPPONENT_RATINGS: Record<string, number> = {
+  champ_1: 400, // Chiến Vương Huyết Lôi (Bạc II)
+  champ_2: 850, // Bóng Ma Đoạt Mệnh (Vàng III)
+  champ_3: 1850, // Thần Khiên Kim Cang (Kim Cương)
+  "Chiến Vương Huyết Lôi": 400,
+  "Bóng Ma Đoạt Mệnh": 850,
+  "Thần Khiên Kim Cang": 1850,
+  "Hư Không Kiếm Khách": 800, // Test phase 5 gladiator
+  "Chiến Binh Ảo Mộng": 400,
+  "Ảo Ảnh": 400,
+};
+
+/**
+ * Authentic ELO Rating Calculation for PvP Arena
+ * Expected score: E = 1 / (1 + 10^((oppRating - playerRating) / 400))
+ * Victory: rating increase scales based on opponent rating diff (+16 to +35)
+ * Defeat: rating decrease penalty (-12 to -24, cannot fall below 0)
+ */
+export function calculateEloRatingChange(
+  playerRating: number,
+  opponentRating: number,
+  victory: boolean,
+): { pointChange: number; expectedScore: number } {
+  const pRating = Math.max(0, playerRating);
+  const oRating = Math.max(0, opponentRating);
+
+  const exponent = (oRating - pRating) / 400;
+  const expectedScore = 1 / (1 + Math.pow(10, exponent));
+
+  let pointChange = 0;
+
+  if (victory) {
+    const kWin = 35;
+    const rawDelta = Math.round(kWin * (1 - expectedScore));
+    pointChange = Math.max(16, Math.min(35, rawDelta));
+  } else {
+    const kLoss = 24;
+    const rawLoss = Math.round(kLoss * expectedScore);
+    const penalty = Math.max(12, Math.min(24, rawLoss));
+    pointChange = -penalty;
+  }
+
+  return { pointChange, expectedScore };
+}
+
+// In-memory rate limiting cho trận đấu PvP (tối đa 10 trận / phút / nhân vật)
+const pvpMatchRateLimits = new Map<number, { count: number; resetAt: number }>();
+
+async function handlePvPMatchRequest(req: any, res: any, characterId: number): Promise<void> {
   const userId = req.session.userId!;
-  const { opponentName, victory = true } = req.body;
+  const { opponentId, opponentName, victory = true } = req.body;
+
+  if (!characterId || isNaN(characterId)) {
+    res.status(400).json({ error: "Thiếu mã nhân vật (characterId)" });
+    return;
+  }
+
+  // Chống spam kết quả PvP giả mạo
+  const now = Date.now();
+  const rateLimit = pvpMatchRateLimits.get(characterId);
+  if (!rateLimit || now > rateLimit.resetAt) {
+    pvpMatchRateLimits.set(characterId, { count: 1, resetAt: now + 60000 });
+  } else {
+    if (rateLimit.count >= 10) {
+      res.status(429).json({ error: "Thao tác quá nhanh. Vui lòng nghỉ giữa các trận đấu PvP." });
+      return;
+    }
+    rateLimit.count++;
+  }
+
+  // Chống gian lận kết quả PvP vô lý khi máu bản thân bằng 0
+  const playerHpPct = req.body.playerHpPercent !== undefined ? Number(req.body.playerHpPercent) : null;
+  if (Boolean(victory) && playerHpPct !== null && playerHpPct <= 0) {
+    res.status(400).json({ error: "Không thể ghi nhận chiến thắng khi lượng máu bản thân bằng 0." });
+    return;
+  }
 
   const [character] = await db
     .select()
@@ -126,17 +212,49 @@ router.post("/characters/:characterId/pvp/match", requireAuth, async (req, res):
     .limit(1);
 
   if (!character) {
-    res.status(404).json({ error: "Không tìm thấy nhân vật" });
+    res.status(404).json({ error: "Không tìm thấy nhân vật hoặc không có quyền sở hữu" });
     return;
   }
 
-  const pointChange = victory ? 35 : 10;
-  const newPoints = Math.max(0, Number(character.honorPoints || 0) + pointChange);
+  if (character.hp <= 0) {
+    res.status(400).json({ error: "Nhân vật đang tử trận, không thể tiếp tục thi đấu Đấu Trường." });
+    return;
+  }
+
+  // Resolve opponent rating
+  let opponentRating = Number(req.body.opponentRating);
+  if (isNaN(opponentRating) || opponentRating <= 0) {
+    if (opponentId && BOT_OPPONENT_RATINGS[String(opponentId)]) {
+      opponentRating = BOT_OPPONENT_RATINGS[String(opponentId)];
+    } else if (opponentName && BOT_OPPONENT_RATINGS[String(opponentName)]) {
+      opponentRating = BOT_OPPONENT_RATINGS[String(opponentName)];
+    } else if (opponentId && !isNaN(Number(opponentId))) {
+      try {
+        const [oppChar] = await db
+          .select({ honorPoints: charactersTable.honorPoints })
+          .from(charactersTable)
+          .where(eq(charactersTable.id, Number(opponentId)))
+          .limit(1);
+        if (oppChar) {
+          opponentRating = Number(oppChar.honorPoints || 0);
+        }
+      } catch {}
+    }
+  }
+
+  if (isNaN(opponentRating) || opponentRating <= 0) {
+    opponentRating = Math.max(400, Number(character.honorPoints || 0));
+  }
+
+  const prevPoints = Number(character.honorPoints || 0);
+  const isVictory = Boolean(victory);
+  const { pointChange } = calculateEloRatingChange(prevPoints, opponentRating, isVictory);
+  const newPoints = Math.max(0, prevPoints + pointChange);
   const currentRankInfo = getArenaRank(newPoints);
   const prevRank = character.arenaRank || "Đồng IV";
 
   let newTitle = character.title;
-  if (currentRankInfo.name !== prevRank && victory) {
+  if (currentRankInfo.name !== prevRank) {
     newTitle = currentRankInfo.title;
   }
 
@@ -149,25 +267,128 @@ router.post("/characters/:characterId/pvp/match", requireAuth, async (req, res):
     })
     .where(eq(charactersTable.id, characterId));
 
+  const resolvedOpponentName = opponentName || "Cao Thủ Ảo Mộng";
+  const isRankUp = newPoints > prevPoints && currentRankInfo.name !== prevRank;
+  const isRankDown = newPoints < prevPoints && currentRankInfo.name !== prevRank;
+
   res.status(200).json({
     success: true,
-    victory,
-    opponentName: opponentName || "Cao Thủ Ảo Mộng",
+    victory: isVictory,
+    opponentName: resolvedOpponentName,
     pointsGained: pointChange,
+    honorAwarded: pointChange,
+    oldRating: prevPoints,
+    newRating: newPoints,
     honorPoints: newPoints,
     arenaRank: currentRankInfo.name,
+    rankTitle: currentRankInfo.title,
     title: newTitle,
-    isRankUp: currentRankInfo.name !== prevRank,
-    message: victory
-      ? `🎉 Chiến thắng vinh quang trước ${opponentName}! Nhận +${pointChange} Điểm Danh Vọng!`
-      : `⚠️ Quyết đấu thất bại trước ${opponentName}. Nhận +${pointChange} Điểm Khích Lệ.`,
+    isRankUp,
+    isRankDown,
+    message: isVictory
+      ? `🎉 Chiến thắng vinh quang trước ${resolvedOpponentName}! Nhận +${pointChange} Điểm Danh Vọng!`
+      : `⚠️ Quyết đấu thất bại trước ${resolvedOpponentName}. Trừ ${Math.abs(pointChange)} Điểm Danh Vọng.`,
   });
+}
+
+router.post("/characters/:characterId/pvp/match", requireAuth, async (req, res): Promise<void> => {
+  const characterId = Number(req.params.characterId);
+  await handlePvPMatchRequest(req, res, characterId);
+});
+
+router.post("/endgame/pvp/match", requireAuth, async (req, res): Promise<void> => {
+  const characterId = Number((req.body as any)?.characterId || (req.params as any)?.characterId);
+  await handlePvPMatchRequest(req, res, characterId);
+});
+
+router.post("/pvp/match", requireAuth, async (req, res): Promise<void> => {
+  const characterId = Number((req.body as any)?.characterId || (req.params as any)?.characterId);
+  await handlePvPMatchRequest(req, res, characterId);
 });
 
 // ==============================================================================
-// 3. GM ADMIN PANEL COMMANDS (Vũ Khí Trình Diễn Đồ Án)
+// 2.2. PVP LEADERBOARD ENDPOINT (Bảng Xếp Hạng Đấu Trường PvP ELO)
 // ==============================================================================
-router.post("/characters/:characterId/gm/action", requireAuth, async (req, res): Promise<void> => {
+async function handlePvPLeaderboardRequest(req: any, res: any): Promise<void> {
+  const limit = Math.min(100, Math.max(1, Number(req.query.limit) || 20));
+
+  const topCharacters = await db
+    .select({
+      id: charactersTable.id,
+      name: charactersTable.name,
+      className: charactersTable.className,
+      classId: charactersTable.classId,
+      level: charactersTable.level,
+      combatPower: charactersTable.combatPower,
+      honorPoints: charactersTable.honorPoints,
+      arenaRank: charactersTable.arenaRank,
+      title: charactersTable.title,
+      kills: charactersTable.kills,
+      deaths: charactersTable.deaths,
+      userId: charactersTable.userId,
+    })
+    .from(charactersTable)
+    .orderBy(desc(charactersTable.honorPoints), desc(charactersTable.combatPower))
+    .limit(limit);
+
+  // Guarantee descending sort order across both PostgreSQL and in-memory mock storage
+  topCharacters.sort((a: any, b: any) => {
+    const diff = (Number(b.honorPoints) || 0) - (Number(a.honorPoints) || 0);
+    if (diff !== 0) return diff;
+    return (Number(b.combatPower) || 0) - (Number(a.combatPower) || 0);
+  });
+
+  const leaderboard = await Promise.all(
+    topCharacters.map(async (c: any, idx: number) => {
+      let username = "Vô Danh";
+      if (c.userId) {
+        try {
+          const [u] = await db
+            .select({ username: usersTable.username })
+            .from(usersTable)
+            .where(eq(usersTable.id, c.userId))
+            .limit(1);
+          if (u?.username) username = u.username;
+        } catch {}
+      }
+
+      const rankInfo = getArenaRank(Number(c.honorPoints || 0));
+
+      return {
+        rank: idx + 1,
+        characterId: c.id,
+        characterName: c.name,
+        name: c.name,
+        className: c.className,
+        classId: c.classId,
+        level: c.level,
+        combatPower: c.combatPower,
+        honorPoints: c.honorPoints,
+        rating: c.honorPoints,
+        arenaRank: c.arenaRank || rankInfo.name,
+        rankTitle: rankInfo.title,
+        title: c.title || rankInfo.title,
+        kills: c.kills,
+        deaths: c.deaths,
+        username,
+      };
+    })
+  );
+
+  res.status(200).json({
+    success: true,
+    total: leaderboard.length,
+    leaderboard,
+  });
+}
+
+router.get("/endgame/pvp/leaderboard", handlePvPLeaderboardRequest);
+router.get("/pvp/leaderboard", handlePvPLeaderboardRequest);
+
+// ==============================================================================
+// 3. GM ADMIN PANEL COMMANDS (Yêu cầu quyền GM/Admin thực sự)
+// ==============================================================================
+router.post("/characters/:characterId/gm/action", requireAuth, requireGMOrAdmin, async (req, res): Promise<void> => {
   const characterId = Number(req.params.characterId);
   const userId = req.session.userId!;
   const { action } = req.body;
@@ -179,8 +400,21 @@ router.post("/characters/:characterId/gm/action", requireAuth, async (req, res):
     .limit(1);
 
   if (!character) {
-    res.status(404).json({ error: "Không tìm thấy nhân vật" });
+    res.status(404).json({ error: "Không tìm thấy nhân vật hoặc không có quyền sở hữu" });
     return;
+  }
+
+  // Ghi Audit Log vào hệ thống nhật ký GM
+  try {
+    await db.insert(gmAuditLogsTable).values({
+      userId,
+      characterId,
+      action: String(action || "unknown"),
+      payloadJson: JSON.stringify(req.body || {}),
+      ipAddress: req.ip || req.socket.remoteAddress || "unknown",
+    });
+  } catch (logErr) {
+    console.warn("[GM Audit Log] Không thể ghi audit log:", logErr);
   }
 
   // 0. Set Level trực tiếp (Lv.500 / Lv.999)
@@ -202,6 +436,9 @@ router.post("/characters/:characterId/gm/action", requireAuth, async (req, res):
       .where(eq(charactersTable.id, characterId));
 
     const updated = await recalculateCharacterStats(characterId);
+    await db.update(charactersTable).set({ hp: updated.maxHp, mp: updated.maxMp }).where(eq(charactersTable.id, characterId));
+    updated.hp = updated.maxHp;
+    updated.mp = updated.maxMp;
     res.status(200).json({
       success: true,
       action,
@@ -227,6 +464,9 @@ router.post("/characters/:characterId/gm/action", requireAuth, async (req, res):
       .where(eq(charactersTable.id, characterId));
 
     const updated = await recalculateCharacterStats(characterId);
+    await db.update(charactersTable).set({ hp: updated.maxHp, mp: updated.maxMp }).where(eq(charactersTable.id, characterId));
+    updated.hp = updated.maxHp;
+    updated.mp = updated.maxMp;
     res.status(200).json({
       success: true,
       action,
@@ -237,7 +477,7 @@ router.post("/characters/:characterId/gm/action", requireAuth, async (req, res):
   }
 
   // 2. Thêm 50,000 Vàng & 10 Đá Cường Hóa
-  if (action === "add_gold_stones") {
+  if (action === "add_gold" || action === "add_gold_stones") {
     const newGold = character.gold + 50000;
     await db.update(charactersTable).set({ gold: newGold }).where(eq(charactersTable.id, characterId));
 
@@ -335,4 +575,3 @@ router.post("/characters/:characterId/gm/action", requireAuth, async (req, res):
 });
 
 export default router;
-

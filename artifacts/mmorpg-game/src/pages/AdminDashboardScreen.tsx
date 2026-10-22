@@ -191,6 +191,7 @@ export default function AdminDashboardScreen() {
 
   // Characters state
   const [characters, setCharacters] = useState<CharacterData[]>([]);
+  const [charPage, setCharPage] = useState(1);
   const [charSearch, setCharSearch] = useState("");
   const [charModal, setCharModal] = useState<{ open: boolean; mode: "create" | "edit" | "grant"; data?: CharacterData }>({
     open: false,
@@ -205,6 +206,7 @@ export default function AdminDashboardScreen() {
 
   // Items state
   const [items, setItems] = useState<ItemData[]>([]);
+  const [itemPage, setItemPage] = useState(1);
   const [itemSearch, setItemSearch] = useState("");
   const [auditData, setAuditData] = useState<AuditResult | null>(null);
   const [auditLoading, setAuditLoading] = useState(false);
@@ -233,6 +235,66 @@ export default function AdminDashboardScreen() {
   const [tables, setTables] = useState<TableInfo[]>([]);
   const [selectedTable, setSelectedTable] = useState("users");
   const [tableRows, setTableRows] = useState<any[]>([]);
+  const [authStatus, setAuthStatus] = useState<"checking" | "authorized" | "unauthorized" | "forbidden">("checking");
+  const [authErrorMsg, setAuthErrorMsg] = useState("");
+
+  const adminFetch = async (url: string, init?: RequestInit): Promise<Response> => {
+    const token = typeof window !== "undefined" ? (localStorage.getItem("clb_token") || localStorage.getItem("token")) : null;
+    const gmSecret = typeof window !== "undefined" ? localStorage.getItem("clb_gm_secret") : null;
+
+    const headers: Record<string, string> = {
+      ...(init?.headers as Record<string, string> || {}),
+    };
+
+    if (token) {
+      headers["Authorization"] = `Bearer ${token}`;
+    }
+    if (gmSecret) {
+      headers["x-gm-secret"] = gmSecret;
+    }
+
+    try {
+      const res = await fetch(url, {
+        ...init,
+        credentials: "include",
+        headers,
+      });
+
+      if (res.status === 401) {
+        setAuthStatus("unauthorized");
+        setAuthErrorMsg("Phiên đăng nhập không hợp lệ hoặc chưa đăng nhập.");
+        setStats(null);
+        setUsers([]);
+        setCharacters([]);
+        setItems([]);
+        setTables([]);
+        setTableRows([]);
+        return res;
+      }
+
+      if (res.status === 403) {
+        setAuthStatus("forbidden");
+        setAuthErrorMsg("Từ chối truy cập: Tài khoản không có quyền Quản trị viên (ADMIN).");
+        setStats(null);
+        setUsers([]);
+        setCharacters([]);
+        setItems([]);
+        setTables([]);
+        setTableRows([]);
+        return res;
+      }
+
+      if (res.ok && authStatus !== "authorized") {
+        setAuthStatus("authorized");
+      }
+
+      return res;
+    } catch (err: any) {
+      throw err;
+    }
+  };
+
+
 
   // Supabase Continuous Live Sync state
   const [supabaseStatus, setSupabaseStatus] = useState<any>(null);
@@ -297,7 +359,7 @@ export default function AdminDashboardScreen() {
   // Fetch Stats
   const fetchStats = async () => {
     try {
-      const res = await fetch("/api/admin/stats");
+      const res = await adminFetch("/api/admin/stats");
       if (res.ok) {
         const data = await res.json();
         setStats(data);
@@ -312,7 +374,7 @@ export default function AdminDashboardScreen() {
     setLoading(true);
     const activeFilter = filterOverride || userTypeFilter;
     try {
-      const res = await fetch(`/api/admin/users?format=meta&filter=${activeFilter}`);
+      const res = await adminFetch(`/api/admin/users?format=meta&filter=${activeFilter}`);
       if (res.ok) {
         const data = await res.json();
         if (data && Array.isArray(data.users)) {
@@ -446,7 +508,7 @@ export default function AdminDashboardScreen() {
   const fetchCharacters = async () => {
     setLoading(true);
     try {
-      const res = await fetch("/api/admin/characters");
+      const res = await adminFetch("/api/admin/characters");
       if (res.ok) {
         const data = await res.json();
         setCharacters(data);
@@ -462,7 +524,7 @@ export default function AdminDashboardScreen() {
   const fetchItems = async () => {
     setLoading(true);
     try {
-      const res = await fetch("/api/admin/items");
+      const res = await adminFetch("/api/admin/items");
       if (res.ok) {
         const data = await res.json();
         setItems(data);
@@ -477,7 +539,7 @@ export default function AdminDashboardScreen() {
   // Fetch Tables
   const fetchTables = async () => {
     try {
-      const res = await fetch("/api/admin/tables");
+      const res = await adminFetch("/api/admin/tables");
       if (res.ok) {
         const data = await res.json();
         setTables(data);
@@ -491,7 +553,7 @@ export default function AdminDashboardScreen() {
   const fetchTableRows = async (tableName: string) => {
     setLoading(true);
     try {
-      const res = await fetch(`/api/admin/tables/${tableName}?limit=50`);
+      const res = await adminFetch(`/api/admin/tables/${tableName}?limit=50`);
       if (res.ok) {
         const data = await res.json();
         setTableRows(data.rows || []);
@@ -537,7 +599,7 @@ export default function AdminDashboardScreen() {
           toast({ title: "Lỗi", description: "Vui lòng nhập mật khẩu", variant: "destructive" });
           return;
         }
-        const res = await fetch("/api/admin/users", {
+        const res = await adminFetch("/api/admin/users", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify(userForm),
@@ -546,7 +608,7 @@ export default function AdminDashboardScreen() {
         if (!res.ok) throw new Error(data.error);
         toast({ title: "Thành công", description: `Đã tạo tài khoản ${userForm.username}!` });
       } else if (userModal.data) {
-        const res = await fetch(`/api/admin/users/${userModal.data.id}`, {
+        const res = await adminFetch(`/api/admin/users/${userModal.data.id}`, {
           method: "PUT",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify(userForm),
@@ -573,7 +635,7 @@ export default function AdminDashboardScreen() {
       confirmVariant: "danger",
       onConfirm: async () => {
         try {
-          const res = await fetch(`/api/admin/users/${id}`, { method: "DELETE" });
+          const res = await adminFetch(`/api/admin/users/${id}`, { method: "DELETE" });
           const data = await res.json();
           if (!res.ok) throw new Error(data.error);
           toast({ title: "Đã xóa", description: data.message });
@@ -590,7 +652,7 @@ export default function AdminDashboardScreen() {
   const handleSaveCharacter = async () => {
     try {
       if (charModal.mode === "create") {
-        const res = await fetch("/api/admin/characters", {
+        const res = await adminFetch("/api/admin/characters", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify(charForm),
@@ -599,7 +661,7 @@ export default function AdminDashboardScreen() {
         if (!res.ok) throw new Error(data.error);
         toast({ title: "Thành công", description: "Đã tạo nhân vật mới!" });
       } else if (charModal.data) {
-        const res = await fetch(`/api/admin/characters/${charModal.data.id}`, {
+        const res = await adminFetch(`/api/admin/characters/${charModal.data.id}`, {
           method: "PUT",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify(charForm),
@@ -626,7 +688,7 @@ export default function AdminDashboardScreen() {
       confirmVariant: "danger",
       onConfirm: async () => {
         try {
-          const res = await fetch(`/api/admin/characters/${id}`, { method: "DELETE" });
+          const res = await adminFetch(`/api/admin/characters/${id}`, { method: "DELETE" });
           const data = await res.json();
           if (!res.ok) throw new Error(data.error);
           toast({ title: "Đã xóa", description: data.message });
@@ -646,7 +708,7 @@ export default function AdminDashboardScreen() {
       return;
     }
     try {
-      const res = await fetch(`/api/admin/characters/${charModal.data.id}/grant-item`, {
+      const res = await adminFetch(`/api/admin/characters/${charModal.data.id}/grant-item`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(grantForm),
@@ -663,7 +725,7 @@ export default function AdminDashboardScreen() {
   // Handle View Character Inventory
   const handleOpenInventory = async (c: CharacterData) => {
     try {
-      const res = await fetch(`/api/admin/characters/${c.id}/items`);
+      const res = await adminFetch(`/api/admin/characters/${c.id}/items`);
       if (res.ok) {
         const items = await res.json();
         setCharItemsModal({ open: true, char: c, items });
@@ -676,7 +738,7 @@ export default function AdminDashboardScreen() {
   // Handle Delete Item from Character Bag
   const handleDeleteCharItem = async (characterItemId: number) => {
     try {
-      const res = await fetch(`/api/admin/character-items/${characterItemId}`, { method: "DELETE" });
+      const res = await adminFetch(`/api/admin/character-items/${characterItemId}`, { method: "DELETE" });
       if (res.ok) {
         toast({ title: "Đã xóa", description: "Đã xóa vật phẩm khỏi kho đồ!" });
         if (charItemsModal.char) handleOpenInventory(charItemsModal.char);
@@ -694,7 +756,7 @@ export default function AdminDashboardScreen() {
     }
     try {
       if (itemModal.mode === "create") {
-        const res = await fetch("/api/admin/items", {
+        const res = await adminFetch("/api/admin/items", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify(itemForm),
@@ -703,7 +765,7 @@ export default function AdminDashboardScreen() {
         if (!res.ok) throw new Error(data.error);
         toast({ title: "Thành công", description: "Đã thêm vật phẩm mới vào danh mục!" });
       } else if (itemModal.data) {
-        const res = await fetch(`/api/admin/items/${itemModal.data.id}`, {
+        const res = await adminFetch(`/api/admin/items/${itemModal.data.id}`, {
           method: "PUT",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify(itemForm),
@@ -730,7 +792,7 @@ export default function AdminDashboardScreen() {
       confirmVariant: "danger",
       onConfirm: async () => {
         try {
-          const res = await fetch(`/api/admin/items/${id}`, { method: "DELETE" });
+          const res = await adminFetch(`/api/admin/items/${id}`, { method: "DELETE" });
           const data = await res.json();
           if (!res.ok) throw new Error(data.error);
           toast({ title: "Đã xóa", description: data.message });
@@ -754,7 +816,7 @@ export default function AdminDashboardScreen() {
       onConfirm: async () => {
         setLoading(true);
         try {
-          const res = await fetch("/api/admin/db/reset-seed", { method: "POST" });
+          const res = await adminFetch("/api/admin/db/reset-seed", { method: "POST" });
           const data = await res.json();
           if (!res.ok) throw new Error(data.error);
           toast({ title: "Thành công", description: data.message });
@@ -779,7 +841,7 @@ export default function AdminDashboardScreen() {
       confirmVariant: "danger",
       onConfirm: async () => {
         try {
-          const res = await fetch(`/api/admin/tables/${tableName}/${id}`, { method: "DELETE" });
+          const res = await adminFetch(`/api/admin/tables/${tableName}/${id}`, { method: "DELETE" });
           const data = await res.json();
           if (!res.ok) throw new Error(data.error);
           toast({ title: "Đã xóa", description: data.message });
@@ -793,24 +855,43 @@ export default function AdminDashboardScreen() {
     });
   };
 
-  // Filtered lists
-  const filteredUsers = users.filter((u) =>
-    u.username.toLowerCase().includes(userSearch.toLowerCase()) ||
-    u.id.toString().includes(userSearch) ||
-    u.forumTitle.toLowerCase().includes(userSearch.toLowerCase())
-  );
+  // Filtered lists with complete null-safety
+  const filteredUsers = (users || []).filter((u) => {
+    if (!u) return false;
+    const s = (userSearch || "").toLowerCase();
+    return (
+      (u.username || "").toLowerCase().includes(s) ||
+      (u.id ?? "").toString().includes(userSearch) ||
+      (u.forumTitle || "").toLowerCase().includes(s)
+    );
+  });
 
-  const filteredCharacters = characters.filter((c) =>
-    c.name.toLowerCase().includes(charSearch.toLowerCase()) ||
-    c.username.toLowerCase().includes(charSearch.toLowerCase()) ||
-    c.className.toLowerCase().includes(charSearch.toLowerCase())
-  );
+  const filteredCharacters = (characters || []).filter((c) => {
+    if (!c) return false;
+    const s = (charSearch || "").toLowerCase();
+    return (
+      (c.name || "").toLowerCase().includes(s) ||
+      (c.username || "").toLowerCase().includes(s) ||
+      (c.className || c.classId || "").toLowerCase().includes(s)
+    );
+  });
 
-  const filteredItems = items.filter((i) =>
-    i.name.toLowerCase().includes(itemSearch.toLowerCase()) ||
-    i.id.toLowerCase().includes(itemSearch.toLowerCase()) ||
-    i.type.toLowerCase().includes(itemSearch.toLowerCase())
-  );
+  const filteredItems = (items || []).filter((i) => {
+    if (!i) return false;
+    const s = (itemSearch || "").toLowerCase();
+    return (
+      (i.name || "").toLowerCase().includes(s) ||
+      (i.id || "").toLowerCase().includes(s) ||
+      (i.type || i.category || "").toLowerCase().includes(s)
+    );
+  });
+
+  const PAGE_SIZE = 25;
+  const paginatedCharacters = filteredCharacters.slice((charPage - 1) * PAGE_SIZE, charPage * PAGE_SIZE);
+  const totalCharPages = Math.max(1, Math.ceil(filteredCharacters.length / PAGE_SIZE));
+
+  const paginatedItems = filteredItems.slice((itemPage - 1) * PAGE_SIZE, itemPage * PAGE_SIZE);
+  const totalItemPages = Math.max(1, Math.ceil(filteredItems.length / PAGE_SIZE));
 
   // Rarity color helper
   const getRarityBadge = (rarity: string) => {
@@ -827,6 +908,71 @@ export default function AdminDashboardScreen() {
         return <span className="px-2 py-0.5 rounded text-[11px] font-bold bg-gray-500/20 text-gray-300 border border-gray-500/40">Cơ Bản</span>;
     }
   };
+  if (authStatus === "checking" && !stats) {
+    return (
+      <div className="min-h-screen w-full bg-[#1c161a] text-white flex flex-col items-center justify-center font-sans select-none">
+        <div className="w-16 h-16 rounded-2xl bg-[#28c3e1]/10 border border-[#28c3e1]/30 flex items-center justify-center text-[#28c3e1] animate-spin mb-4">
+          <RefreshCw className="w-8 h-8" />
+        </div>
+        <h2 className="text-xl font-bold tracking-wide">Đang xác thực quyền Quản trị viên...</h2>
+        <p className="text-sm text-[#8e7a7c] mt-2">Vui lòng chờ trong giây lát</p>
+      </div>
+    );
+  }
+
+  if (authStatus === "unauthorized") {
+    return (
+      <div className="min-h-screen w-full bg-[#1c161a] text-white flex flex-col items-center justify-center font-sans p-6 select-none">
+        <div className="max-w-md w-full bg-[#2a2022] border border-[#5d4648] rounded-2xl p-8 text-center shadow-2xl">
+          <div className="w-16 h-16 rounded-full bg-amber-500/10 border border-amber-500/30 flex items-center justify-center text-amber-400 mx-auto mb-4">
+            <KeyRound className="w-8 h-8" />
+          </div>
+          <h2 className="text-2xl font-black text-amber-400 mb-2">Yêu Cầu Đăng Nhập</h2>
+          <p className="text-sm text-[#a49193] mb-6">
+            Bạn chưa đăng nhập hoặc phiên làm việc đã kết thúc. Vui lòng đăng nhập với tài khoản Quản trị viên (ADMIN) để truy cập Bảng Quản Trị.
+          </p>
+          <button
+            onClick={() => setLocation("/")}
+            className="w-full py-3 rounded-xl bg-[#28c3e1] hover:brightness-110 text-[#1c161a] font-black text-sm uppercase tracking-wider transition-all"
+          >
+            Đến Trang Đăng Nhập
+          </button>
+        </div>
+      </div>
+    );
+  }
+
+  if (authStatus === "forbidden") {
+    return (
+      <div className="min-h-screen w-full bg-[#1c161a] text-white flex flex-col items-center justify-center font-sans p-6 select-none">
+        <div className="max-w-md w-full bg-[#2a2022] border border-rose-500/40 rounded-2xl p-8 text-center shadow-2xl">
+          <div className="w-16 h-16 rounded-full bg-rose-500/10 border border-rose-500/30 flex items-center justify-center text-rose-400 mx-auto mb-4">
+            <AlertCircle className="w-8 h-8" />
+          </div>
+          <h2 className="text-2xl font-black text-rose-400 mb-2">403 — Từ Chối Truy Cập</h2>
+          <p className="text-sm text-[#a49193] mb-6">
+            Tài khoản hiện tại của bạn không có đặc quyền Quản trị viên (ADMIN). Khu vực này chỉ dành riêng cho Ban Quản Trị hệ thống máy chủ Chiến Long Bí Sử.
+          </p>
+          <div className="flex flex-col gap-3">
+            <button
+              onClick={() => setLocation("/characters")}
+              className="w-full py-3 rounded-xl bg-[#4a383a] hover:bg-[#5d4648] text-white font-bold text-sm transition-all"
+            >
+              Quay Về Sảnh Nhân Vật
+            </button>
+            <button
+              onClick={() => setLocation("/game")}
+              className="w-full py-3 rounded-xl bg-[#28c3e1] hover:brightness-110 text-[#1c161a] font-black text-sm uppercase tracking-wider transition-all"
+            >
+              Tiếp Tục Vào Game
+            </button>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+
 
   if (!isAuthenticated) {
     return (
@@ -964,7 +1110,7 @@ export default function AdminDashboardScreen() {
             }`}
           >
             <Users className="w-4 h-4 shrink-0" />
-            <span className="truncate">Tài Khoản ({stats?.counts.users ?? users.length})</span>
+            <span className="truncate">Tài Khoản ({stats?.counts?.users ?? users.length})</span>
           </button>
 
           <button
@@ -976,7 +1122,7 @@ export default function AdminDashboardScreen() {
             }`}
           >
             <Sword className="w-4 h-4 shrink-0" />
-            <span className="truncate">Nhân Vật ({stats?.counts.characters ?? characters.length})</span>
+            <span className="truncate">Nhân Vật ({stats?.counts?.characters ?? characters.length})</span>
           </button>
 
           <button
@@ -988,7 +1134,7 @@ export default function AdminDashboardScreen() {
             }`}
           >
             <Backpack className="w-4 h-4 shrink-0" />
-            <span className="truncate">Vật Phẩm ({stats?.counts.items ?? items.length})</span>
+            <span className="truncate">Vật Phẩm ({stats?.counts?.items ?? items.length})</span>
           </button>
 
           <button
@@ -1014,7 +1160,7 @@ export default function AdminDashboardScreen() {
                   <span className="text-xs font-semibold">Tài Khoản</span>
                   <Users className="w-4 h-4 text-[#28c3e1]" />
                 </div>
-                <div className="text-2xl font-black text-white">{stats?.counts.users ?? 0}</div>
+                <div className="text-2xl font-black text-white">{stats?.counts?.users || users.length || 0}</div>
                 <div className="text-[11px] text-[#8e7a7c] mt-1">Đã đăng ký</div>
               </div>
 
@@ -1023,7 +1169,7 @@ export default function AdminDashboardScreen() {
                   <span className="text-xs font-semibold">Nhân Vật</span>
                   <Sword className="w-4 h-4 text-amber-400" />
                 </div>
-                <div className="text-2xl font-black text-white">{stats?.counts.characters ?? 0}</div>
+                <div className="text-2xl font-black text-white">{stats?.counts?.characters || characters.length || 0}</div>
                 <div className="text-[11px] text-[#8e7a7c] mt-1">Đang hoạt động</div>
               </div>
 
@@ -1032,7 +1178,7 @@ export default function AdminDashboardScreen() {
                   <span className="text-xs font-semibold">Vật Phẩm</span>
                   <Backpack className="w-4 h-4 text-purple-400" />
                 </div>
-                <div className="text-2xl font-black text-white">{stats?.counts.items ?? 0}</div>
+                <div className="text-2xl font-black text-white">{stats?.counts?.items || items.length || 0}</div>
                 <div className="text-[11px] text-[#8e7a7c] mt-1">Trong danh mục</div>
               </div>
 
@@ -1260,9 +1406,9 @@ export default function AdminDashboardScreen() {
 
             {/* Users Table */}
             <div className="rounded-2xl bg-[#342a2b] border border-[#5d4648] overflow-hidden shadow-xl">
-              <div className="overflow-x-auto">
+              <div className="overflow-x-auto overflow-y-auto max-h-[60vh] custom-scrollbar">
                 <table className="w-full text-left text-xs">
-                  <thead className="bg-[#271f20] text-[#8e7a7c] uppercase tracking-wider text-[11px] border-b border-[#5d4648]">
+                  <thead className="bg-[#271f20] sticky top-0 z-10 text-[#8e7a7c] uppercase tracking-wider text-[11px] border-b border-[#5d4648]">
                     <tr>
                       <th className="py-3 px-4">ID</th>
                       <th className="py-3 px-4">Tài Khoản</th>
@@ -1375,7 +1521,7 @@ export default function AdminDashboardScreen() {
                   type="text"
                   placeholder="Tìm theo tên nhân vật, class, tài khoản..."
                   value={charSearch}
-                  onChange={(e) => setCharSearch(e.target.value)}
+                  onChange={(e) => { setCharSearch(e.target.value); setCharPage(1); }}
                   className="w-full h-11 pl-10 pr-4 rounded-xl bg-[#4a383a] border border-[#5d4648] text-white placeholder-[#8e7a7c] text-xs font-medium focus:ring-2 focus:ring-[#28c3e1] focus:border-transparent outline-none transition-all"
                 />
               </div>
@@ -1408,9 +1554,9 @@ export default function AdminDashboardScreen() {
 
             {/* Characters Table */}
             <div className="rounded-2xl bg-[#342a2b] border border-[#5d4648] overflow-hidden shadow-xl">
-              <div className="overflow-x-auto">
+              <div className="overflow-x-auto overflow-y-auto max-h-[60vh] custom-scrollbar">
                 <table className="w-full text-left text-xs">
-                  <thead className="bg-[#271f20] text-[#8e7a7c] uppercase tracking-wider text-[11px] border-b border-[#5d4648]">
+                  <thead className="bg-[#271f20] sticky top-0 z-10 text-[#8e7a7c] uppercase tracking-wider text-[11px] border-b border-[#5d4648]">
                     <tr>
                       <th className="py-3 px-4">ID</th>
                       <th className="py-3 px-4">Nhân Vật</th>
@@ -1424,14 +1570,14 @@ export default function AdminDashboardScreen() {
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-[#5d4648]/60 text-gray-200">
-                    {filteredCharacters.length === 0 ? (
+                    {paginatedCharacters.length === 0 ? (
                       <tr>
                         <td colSpan={9} className="py-8 text-center text-[#8e7a7c]">
                           Không có nhân vật nào.
                         </td>
                       </tr>
                     ) : (
-                      filteredCharacters.map((c) => (
+                      paginatedCharacters.map((c) => (
                         <tr key={c.id} className="hover:bg-[#4a383a]/40 transition-colors">
                           <td className="py-3 px-4 font-mono text-gray-400">#{c.id}</td>
                           <td className="py-3 px-4 font-bold text-white flex items-center gap-2">
@@ -1446,13 +1592,13 @@ export default function AdminDashboardScreen() {
                           </td>
                           <td className="py-3 px-4 font-bold text-emerald-400">Lv. {c.level}</td>
                           <td className="py-3 px-4 font-black text-cyan-300 drop-shadow-[0_0_8px_rgba(40,195,225,0.4)]">
-                            ⚡ {c.combatPower}
+                            ⚡ {c.combatPower ?? 0}
                           </td>
                           <td className="py-3 px-4 text-rose-300">
-                            {c.hp}/{c.maxHp}
+                            {c.hp ?? 0}/{c.maxHp ?? 0}
                           </td>
                           <td className="py-3 px-4 text-amber-300 font-bold">
-                            🪙 {c.gold.toLocaleString()}
+                            🪙 {(c.gold ?? 0).toLocaleString()}
                           </td>
                           <td className="py-3 px-4 text-right">
                             <div className="flex items-center justify-end gap-1.5">
@@ -1466,7 +1612,7 @@ export default function AdminDashboardScreen() {
                               <button
                                 onClick={() => {
                                   setCharModal({ open: true, mode: "grant", data: c });
-                                  setGrantForm({ itemId: items[0]?.id || "", quantity: 1, enhanceLevel: 0 });
+                                  setGrantForm({ itemId: items[0]?.id || "gear_fighter_main_weapon_rare", quantity: 1, enhanceLevel: 0 });
                                 }}
                                 className="p-1.5 rounded-lg bg-[#28c3e1]/20 hover:bg-[#28c3e1]/40 text-[#28c3e1] transition-colors"
                                 title="Cấp trang bị thần binh"
@@ -1577,7 +1723,7 @@ export default function AdminDashboardScreen() {
                   type="text"
                   placeholder="Tìm theo tên vật phẩm, ID, loại..."
                   value={itemSearch}
-                  onChange={(e) => setItemSearch(e.target.value)}
+                  onChange={(e) => { setItemSearch(e.target.value); setItemPage(1); }}
                   className="w-full h-11 pl-10 pr-4 rounded-xl bg-[#4a383a] border border-[#5d4648] text-white placeholder-[#8e7a7c] text-xs font-medium focus:ring-2 focus:ring-[#28c3e1] focus:border-transparent outline-none transition-all"
                 />
               </div>
@@ -1618,9 +1764,9 @@ export default function AdminDashboardScreen() {
 
             {/* Items Grid / Table */}
             <div className="rounded-2xl bg-[#342a2b] border border-[#5d4648] overflow-hidden shadow-xl">
-              <div className="overflow-x-auto">
+              <div className="overflow-x-auto overflow-y-auto max-h-[60vh] custom-scrollbar">
                 <table className="w-full text-left text-xs">
-                  <thead className="bg-[#271f20] text-[#8e7a7c] uppercase tracking-wider text-[11px] border-b border-[#5d4648]">
+                  <thead className="bg-[#271f20] sticky top-0 z-10 text-[#8e7a7c] uppercase tracking-wider text-[11px] border-b border-[#5d4648]">
                     <tr>
                       <th className="py-3 px-4">Icon</th>
                       <th className="py-3 px-4">Mã ID</th>
@@ -1634,14 +1780,14 @@ export default function AdminDashboardScreen() {
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-[#5d4648]/60 text-gray-200">
-                    {filteredItems.length === 0 ? (
+                    {paginatedItems.length === 0 ? (
                       <tr>
                         <td colSpan={9} className="py-8 text-center text-[#8e7a7c]">
                           Không có vật phẩm nào trong danh mục.
                         </td>
                       </tr>
                     ) : (
-                      filteredItems.map((i) => (
+                      paginatedItems.map((i) => (
                         <tr key={i.id} className="hover:bg-[#4a383a]/40 transition-colors">
                           <td className="py-3 px-4 text-lg">{i.icon || "◇"}</td>
                           <td className="py-3 px-4 font-mono text-gray-400 text-[11px]">{i.id}</td>
@@ -1649,14 +1795,14 @@ export default function AdminDashboardScreen() {
                           <td className="py-3 px-4 text-gray-300 uppercase text-[10px] tracking-wider font-semibold">
                             {i.type}
                           </td>
-                          <td className="py-3 px-4">{getRarityBadge(i.rarity)}</td>
+                          <td className="py-3 px-4">{getRarityBadge(i.rarity || "common")}</td>
                           <td className="py-3 px-4 text-[11px] text-gray-300">
                             {i.atkBoost > 0 && <span className="text-amber-400 mr-2 font-bold">ATK +{i.atkBoost}</span>}
                             {i.defBoost > 0 && <span className="text-sky-400 mr-2 font-bold">DEF +{i.defBoost}</span>}
                             {i.hpBoost > 0 && <span className="text-rose-400 mr-2 font-bold">HP +{i.hpBoost}</span>}
                             {i.spdBoost > 0 && <span className="text-emerald-400 mr-2 font-bold">SPD +{i.spdBoost}</span>}
                           </td>
-                          <td className="py-3 px-4 text-amber-300 font-bold">🪙 {i.price}</td>
+                          <td className="py-3 px-4 text-amber-300 font-bold">🪙 {(i.price ?? 0).toLocaleString()}</td>
                           <td className="py-3 px-4 text-gray-300">Lv. {i.requiredLevel}</td>
                           <td className="py-3 px-4 text-right">
                             <div className="flex items-center justify-end gap-1.5">
@@ -1873,14 +2019,14 @@ export default function AdminDashboardScreen() {
 
             {/* Raw Rows */}
             <div className="rounded-2xl bg-[#342a2b] border border-[#5d4648] overflow-hidden shadow-xl">
-              <div className="overflow-x-auto">
+              <div className="overflow-x-auto overflow-y-auto max-h-[60vh] custom-scrollbar">
                 {tableRows.length === 0 ? (
                   <div className="p-8 text-center text-xs text-[#8e7a7c]">
                     Bảng này hiện chưa có dòng dữ liệu nào.
                   </div>
                 ) : (
                   <table className="w-full text-left text-xs font-mono">
-                    <thead className="bg-[#271f20] text-[#8e7a7c] uppercase tracking-wider text-[11px] border-b border-[#5d4648]">
+                    <thead className="bg-[#271f20] sticky top-0 z-10 text-[#8e7a7c] uppercase tracking-wider text-[11px] border-b border-[#5d4648]">
                       <tr>
                         {Object.keys(tableRows[0] || {}).map((col) => (
                           <th key={col} className="py-2.5 px-3 whitespace-nowrap">
@@ -1928,7 +2074,7 @@ export default function AdminDashboardScreen() {
               initial={{ opacity: 0, scale: 0.95, y: 15 }}
               animate={{ opacity: 1, scale: 1, y: 0 }}
               exit={{ opacity: 0, scale: 0.95, y: 15 }}
-              className="w-full max-w-md rounded-[28px] bg-[#342a2b] border border-[#5d4648] shadow-2xl p-6 flex flex-col gap-5 text-white"
+              className="w-full max-w-md rounded-[28px] bg-[#342a2b] border border-[#5d4648] shadow-2xl p-6 flex flex-col gap-5 text-white max-h-[90vh] overflow-y-auto custom-scrollbar"
             >
               <div className="flex items-center justify-between border-b border-[#5d4648] pb-3">
                 <h3 className="text-base font-bold text-white flex items-center gap-2">

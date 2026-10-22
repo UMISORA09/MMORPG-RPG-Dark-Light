@@ -1550,17 +1550,21 @@ export const CharacterInventoryModal = memo(function CharacterInventoryModal({
       setSelectedItem((prev) => (prev && prev.id === target.id ? { ...prev, equipped: false, slotIndex: freeSlot } : prev));
       showToast(`Đã tháo ${target.name}!`);
 
-      // Backend sync
-      try {
-        const charId = propChar?.id || useGameWorldStore.getState().activeCharacterId;
-        if (charId) {
-          await fetch(`/api/characters/${charId}/inventory/${target.id}/unequip`, {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-          });
+      // Sync equip state
+      if (propOnEquip) {
+        propOnEquip(target as any);
+      } else {
+        try {
+          const charId = propChar?.id || useGameWorldStore.getState().activeCharacterId;
+          if (charId) {
+            await fetch(`/api/characters/${charId}/inventory/${target.id}/unequip`, {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+            });
+          }
+        } catch (err) {
+          console.warn("Backend unequip sync:", err);
         }
-      } catch (err) {
-        console.warn("Backend unequip sync:", err);
       }
       triggerGlobalAutoSave("unequip");
     } else {
@@ -1585,25 +1589,24 @@ export const CharacterInventoryModal = memo(function CharacterInventoryModal({
       setSelectedItem((prev) => (prev && prev.id === target.id ? { ...prev, equipped: true, slotIndex: -1 } : prev));
       showToast(`Đã trang bị ${target.name}!`);
 
-      // Backend sync
-      try {
-        const charId = propChar?.id || useGameWorldStore.getState().activeCharacterId;
-        if (charId) {
-          await fetch(`/api/characters/${charId}/inventory/${target.id}/equip`, {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ slot: target.type }),
-          });
+      // Sync equip state
+      if (propOnEquip) {
+        propOnEquip(target as any);
+      } else {
+        try {
+          const charId = propChar?.id || useGameWorldStore.getState().activeCharacterId;
+          if (charId) {
+            await fetch(`/api/characters/${charId}/inventory/${target.id}/equip`, {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({ slot: target.type }),
+            });
+          }
+        } catch (err) {
+          console.warn("Backend equip sync:", err);
         }
-      } catch (err) {
-        console.warn("Backend equip sync:", err);
       }
       triggerGlobalAutoSave("equip");
-    }
-
-    // Propagate callback if provided
-    if (propOnEquip) {
-      propOnEquip(target as any);
     }
   };
 
@@ -1915,7 +1918,7 @@ export const CharacterInventoryModal = memo(function CharacterInventoryModal({
       {/* ── MODAL WINDOW CONTAINER WITH SPRING SCALE & FADE-IN ── */}
       <div
         className={`relative rounded-[30px] bg-[#0b0e14]/95 border border-slate-800/80 shadow-[0_8px_32px_rgba(0,0,0,0.85),0_0_30px_rgba(0,242,255,0.15)] p-4 sm:p-5 text-slate-100 flex flex-col gap-3.5 backdrop-blur-2xl pointer-events-auto animate-in fade-in zoom-in-95 duration-200 ease-[cubic-bezier(0.16,1,0.3,1)] transition-all ${
-          isSidePanel ? "w-full max-w-[560px] max-h-[94vh] overflow-y-auto" : "w-full max-w-[980px]"
+          isSidePanel ? "w-full max-w-[560px] max-h-[94vh] overflow-y-auto custom-scrollbar my-auto" : "w-full max-w-[980px] max-h-[94vh] overflow-y-auto custom-scrollbar my-auto"
         }`}
       >
         

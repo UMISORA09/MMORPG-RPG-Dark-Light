@@ -68,7 +68,7 @@ export const BlacksmithModal = memo(function BlacksmithModal() {
     playCombatSFX("heavy_slam", 0.5);
 
     try {
-      const res = await fetch("/api/characters/1/blacksmith/enhance", {
+      const res = await fetch(`/api/characters/${activeCharacterId}/blacksmith/enhance`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ ownershipId: selectedGear.id }),
@@ -105,7 +105,7 @@ export const BlacksmithModal = memo(function BlacksmithModal() {
     playCombatSFX("heavy_slam", 0.4);
 
     try {
-      const res = await fetch("/api/characters/1/blacksmith/dismantle", {
+      const res = await fetch(`/api/characters/${activeCharacterId}/blacksmith/dismantle`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ ownershipIds: selectedDismantleIds }),
@@ -141,7 +141,7 @@ export const BlacksmithModal = memo(function BlacksmithModal() {
     playCombatSFX("heavy_slam", 0.5);
 
     try {
-      const res = await fetch("/api/characters/1/blacksmith/craft", {
+      const res = await fetch(`/api/characters/${activeCharacterId}/blacksmith/craft`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ recipeId }),
@@ -290,7 +290,7 @@ export const BlacksmithModal = memo(function BlacksmithModal() {
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/75 backdrop-blur-md select-none font-sans">
-      <div className="relative w-full max-w-4xl h-[600px] bg-[#0b0e14]/95 border border-slate-800/80 rounded-3xl overflow-hidden shadow-[0_8px_32px_rgba(0,0,0,0.85),0_0_30px_rgba(245,158,11,0.2)] flex flex-col animate-in fade-in zoom-in-95 duration-200 ease-[cubic-bezier(0.16,1,0.3,1)]">
+      <div className="relative w-full max-w-4xl max-h-[92vh] h-[600px] bg-[#0b0e14]/95 border border-slate-800/80 rounded-3xl overflow-hidden shadow-[0_8px_32px_rgba(0,0,0,0.85),0_0_30px_rgba(245,158,11,0.2)] flex flex-col animate-in fade-in zoom-in-95 duration-200 ease-[cubic-bezier(0.16,1,0.3,1)]">
         {/* Header */}
         <div className="px-6 py-4 border-b border-slate-800/80 bg-slate-900/80 flex items-center justify-between">
           <div className="flex items-center gap-3">
@@ -377,7 +377,7 @@ export const BlacksmithModal = memo(function BlacksmithModal() {
           {activeTab === "enhance" && (
             <div className="h-full flex gap-6">
               {/* Left: Gear Selector */}
-              <div className="w-1/3 border border-slate-800 rounded-2xl bg-slate-950/60 p-3 overflow-y-auto space-y-2">
+              <div className="w-1/3 border border-slate-800 rounded-2xl bg-slate-950/60 p-3 overflow-y-auto custom-scrollbar space-y-2">
                 <h4 className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-2">
                   Trang Bị Có Thể Cường Hóa
                 </h4>
@@ -486,7 +486,7 @@ export const BlacksmithModal = memo(function BlacksmithModal() {
               </div>
 
               {/* Grid of Dismantle Items */}
-              <div className="grid grid-cols-4 gap-3 overflow-y-auto max-h-[360px] py-3">
+              <div className="grid grid-cols-4 gap-3 overflow-y-auto custom-scrollbar max-h-[360px] py-3">
                 {inventory
                   .filter((i: any) => i.item.category === "equipment" && !i.equipped)
                   .map((i: any) => {
@@ -536,7 +536,7 @@ export const BlacksmithModal = memo(function BlacksmithModal() {
 
           {/* ── TAB 3: CHẾ TẠO ── */}
           {activeTab === "craft" && (
-            <div className="h-full overflow-y-auto space-y-3 pr-2">
+            <div className="h-full overflow-y-auto custom-scrollbar space-y-3 pr-2">
               {[
                 {
                   id: "craft_rare_weapon",
@@ -603,7 +603,7 @@ export const BlacksmithModal = memo(function BlacksmithModal() {
           {activeTab === "socket" && (
             <div className="h-full flex gap-6">
               {/* Gear Selection */}
-              <div className="w-1/3 border border-slate-800 rounded-2xl bg-slate-950/60 p-3 overflow-y-auto space-y-2">
+              <div className="w-1/3 border border-slate-800 rounded-2xl bg-slate-950/60 p-3 overflow-y-auto custom-scrollbar space-y-2">
                 <h4 className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-2">
                   Chọn Trang Bị Khảm Ngọc
                 </h4>
@@ -642,7 +642,7 @@ export const BlacksmithModal = memo(function BlacksmithModal() {
               </div>
 
               {/* Sockets & Gems Container */}
-              <div className="flex-1 flex flex-col gap-4 overflow-y-auto pr-1">
+              <div className="flex-1 flex flex-col gap-4 overflow-y-auto custom-scrollbar pr-1">
                 {/* 3 Gem Sockets on Current Gear */}
                 <div className="p-4 rounded-2xl bg-slate-900/70 border border-cyan-500/30">
                   <div className="flex items-center justify-between mb-3">
@@ -792,7 +792,7 @@ export const BlacksmithModal = memo(function BlacksmithModal() {
           {activeTab === "reforge" && (
             <div className="h-full flex gap-6">
               {/* Gear Selection */}
-              <div className="w-1/3 border border-slate-800 rounded-2xl bg-slate-950/60 p-3 overflow-y-auto space-y-2">
+              <div className="w-1/3 border border-slate-800 rounded-2xl bg-slate-950/60 p-3 overflow-y-auto custom-scrollbar space-y-2">
                 <h4 className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-2">
                   Chọn Trang Bị Tẩy Luyện
                 </h4>

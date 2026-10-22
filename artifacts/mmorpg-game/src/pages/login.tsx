@@ -52,8 +52,8 @@ export default function LoginPage() {
   };
 
   return (
-    <div className="min-h-[100dvh] w-full flex items-center justify-center bg-gradient-to-b from-background via-background to-card px-4">
-      <div className="w-full max-w-md">
+    <div className="min-h-[100dvh] w-full flex items-center justify-center bg-gradient-to-b from-background via-background to-card px-4 py-8 overflow-y-auto custom-scrollbar">
+      <div className="w-full max-w-md my-auto">
         {/* Logo */}
         <div className="text-center mb-12">
           <div className="inline-flex items-center justify-center w-24 h-24 rounded-full bg-gradient-to-br from-primary via-secondary to-accent mb-6 pulse-glow">

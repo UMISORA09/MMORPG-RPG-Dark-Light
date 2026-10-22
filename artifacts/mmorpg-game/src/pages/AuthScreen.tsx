@@ -135,7 +135,7 @@ export default function AuthScreen() {
 
   return (
     <div
-      className="min-h-screen w-full flex items-center justify-center p-4 sm:p-8 relative overflow-hidden"
+      className="min-h-[100dvh] w-full flex items-center justify-center p-4 sm:p-8 relative overflow-y-auto custom-scrollbar"
       style={{
         backgroundColor: "#4c6e6f",
         backgroundImage: "radial-gradient(circle at 50% 50%, #567c7d 0%, #446364 75%, #385253 100%)",
@@ -147,13 +147,13 @@ export default function AuthScreen() {
         initial={{ opacity: 0, scale: 0.96, y: 15 }}
         animate={{ opacity: 1, scale: 1, y: 0 }}
         transition={{ duration: 0.45, ease: "easeOut" }}
-        className="relative w-full max-w-[860px] min-h-[510px] md:h-[515px] rounded-[34px] bg-[#342a2b] shadow-[0_30px_90px_rgba(0,0,0,0.55),0_10px_30px_rgba(0,0,0,0.4)] flex flex-col md:flex-row items-stretch"
+        className="relative w-full max-w-[860px] min-h-[510px] md:h-[515px] my-auto rounded-[34px] bg-[#342a2b] shadow-[0_30px_90px_rgba(0,0,0,0.55),0_10px_30px_rgba(0,0,0,0.4)] flex flex-col md:flex-row items-stretch"
       >
         {/* ── CỘT TRÁI: ARTWORK PANEL (Chiến Long Bá Key Art Illustration) ── */}
         <div className="relative md:w-[57.4%] flex items-end justify-center rounded-t-[34px] md:rounded-t-none md:rounded-l-[34px] overflow-hidden min-h-[280px] md:min-h-full bg-[#1e1718]">
           {/* Background Illustration Artwork */}
           <img
-            src="/auth-character-art-2x.png"
+            src="/auth-character-art.jpg"
             alt="Chiến Long Bá - Hành Trình Huyền Thoại"
             className="w-full h-full object-cover object-top select-none pointer-events-none drop-shadow-[0_15px_30px_rgba(0,0,0,0.4)]"
           />

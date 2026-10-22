@@ -19,6 +19,8 @@
     "pipeline:rpg-assets": "pnpm --filter @workspace/scripts run pipeline:rpg-assets",
     "test:encounter": "node ./scripts/test-encounter.mjs",
     "test:realtime-encounter": "node ./scripts/test-realtime-encounter.mjs",
+    "test:security": "node ./scripts/test-security.mjs",
+    "test:all": "node ./scripts/run-all-tests.mjs",
     "start": "pnpm --filter @workspace/api-server run start"
   },
   "private": true,

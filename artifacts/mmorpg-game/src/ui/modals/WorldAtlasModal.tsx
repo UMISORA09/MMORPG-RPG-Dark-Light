@@ -169,7 +169,7 @@ export const WorldAtlasModal: React.FC<Props> = ({ isOpen: propIsOpen, onClose: 
         </div>
 
         {/* 100 Maps Scrollable Grid */}
-        <div className="flex-1 overflow-y-auto p-6 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3.5 scrollbar-thin scrollbar-thumb-slate-800">
+        <div className="flex-1 overflow-y-auto custom-scrollbar p-6 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3.5 scrollbar-thin scrollbar-thumb-slate-800">
           {filteredMaps.map((mapDef) => {
             const isCurrent = mapDef.id === currentZone;
             const cfg = BIOME_CONFIGS[mapDef.biome];

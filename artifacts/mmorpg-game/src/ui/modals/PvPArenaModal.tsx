@@ -77,7 +77,7 @@ export const PvPArenaModal = memo(function PvPArenaModal() {
         }
       }}
     >
-      <div className="relative w-full max-w-3xl bg-[#0b0e14]/95 border border-rose-500/50 rounded-3xl overflow-hidden shadow-[0_8px_32px_rgba(0,0,0,0.85),0_0_60px_rgba(244,63,94,0.3)] flex flex-col animate-in fade-in zoom-in-95 duration-200 ease-[cubic-bezier(0.16,1,0.3,1)]">
+      <div className="relative w-full max-w-3xl max-h-[92vh] bg-[#0b0e14]/95 border border-rose-500/50 rounded-3xl overflow-hidden shadow-[0_8px_32px_rgba(0,0,0,0.85),0_0_60px_rgba(244,63,94,0.3)] flex flex-col animate-in fade-in zoom-in-95 duration-200 ease-[cubic-bezier(0.16,1,0.3,1)]">
         {/* Header */}
         <div className="px-6 py-4 border-b border-slate-800/80 bg-slate-900/80 flex items-center justify-between">
           <div className="flex items-center gap-3">
@@ -124,7 +124,7 @@ export const PvPArenaModal = memo(function PvPArenaModal() {
         </div>
 
         {/* Opponent Selection List */}
-        <div className="p-6 space-y-3.5 overflow-y-auto max-h-[380px]">
+        <div className="p-6 space-y-3.5 overflow-y-auto custom-scrollbar max-h-[50vh]">
           <h4 className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-1">
             Chọn Đối Thủ Khiêu Chiến
           </h4>

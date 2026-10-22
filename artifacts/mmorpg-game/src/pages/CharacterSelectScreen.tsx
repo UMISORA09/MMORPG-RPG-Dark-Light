@@ -184,7 +184,7 @@ export default function CharacterSelectScreen() {
 
   return (
     <div
-      className="min-h-[100dvh] w-full text-white relative overflow-x-hidden flex flex-col justify-between selection:bg-[#28c3e1] selection:text-[#1c161a]"
+      className="min-h-full w-full text-white relative overflow-y-auto overflow-x-hidden custom-scrollbar flex flex-col justify-between selection:bg-[#28c3e1] selection:text-[#1c161a]"
       style={{
         backgroundColor: "#4c6e6f",
         backgroundImage: "radial-gradient(circle at 50% 50%, #567c7d 0%, #446364 75%, #385253 100%)",
@@ -250,7 +250,7 @@ export default function CharacterSelectScreen() {
       </header>
 
       {/* ── Main Content Area ── */}
-      <main className="relative z-10 flex-1 w-full max-w-6xl mx-auto px-4 sm:px-8 py-8 flex flex-col justify-center">
+      <main className="relative z-10 flex-1 w-full max-w-6xl mx-auto px-4 sm:px-8 py-4 sm:py-6 flex flex-col justify-center">
         {/* Title & Slot Info */}
         <div className="flex flex-col sm:flex-row sm:items-end justify-between mb-8 gap-2">
           <div>
@@ -274,12 +274,12 @@ export default function CharacterSelectScreen() {
             initial={{ opacity: 0, scale: 0.96, y: 15 }}
             animate={{ opacity: 1, scale: 1, y: 0 }}
             transition={{ duration: 0.45, ease: "easeOut" }}
-            className="relative w-full max-w-[860px] mx-auto min-h-[460px] rounded-[34px] bg-[#342a2b] shadow-[0_30px_90px_rgba(0,0,0,0.55),0_10px_30px_rgba(0,0,0,0.4)] border border-[#5d4648]/40 flex flex-col md:flex-row items-stretch overflow-hidden my-4"
+            className="relative w-full max-w-[860px] mx-auto min-h-[400px] rounded-[30px] bg-[#342a2b] shadow-[0_30px_90px_rgba(0,0,0,0.55),0_10px_30px_rgba(0,0,0,0.4)] border border-[#5d4648]/40 flex flex-col md:flex-row items-stretch overflow-hidden my-2 sm:my-3"
           >
             {/* Left Column: Artwork Illustration Panel */}
             <div className="relative md:w-[48%] flex items-end justify-center rounded-t-[34px] md:rounded-t-none md:rounded-l-[34px] overflow-hidden min-h-[240px] md:min-h-full bg-[#271f20]">
               <img
-                src="/auth-character-art-2x.png"
+                src="/auth-character-art.jpg"
                 alt="Chiến Long Bá Hero"
                 className="w-full h-full object-cover object-center"
               />
@@ -294,7 +294,7 @@ export default function CharacterSelectScreen() {
             </div>
 
             {/* Right Column: Information & Action */}
-            <div className="relative z-10 md:w-[52%] p-8 sm:p-12 flex flex-col justify-between text-left">
+            <div className="relative z-10 md:w-[52%] p-5 sm:p-8 flex flex-col justify-between text-left">
               <div>
                 <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-[#4a383a] border border-[#5d4648] text-[11px] font-bold text-[#28c3e1] uppercase tracking-wider mb-4">
                   <Sparkles className="w-3 h-3 text-[#28c3e1]" />
@@ -310,7 +310,7 @@ export default function CharacterSelectScreen() {
                 </p>
 
                 {/* Features Highlights */}
-                <div className="grid grid-cols-2 gap-2.5 mb-8">
+                <div className="grid grid-cols-2 gap-2 mb-4 sm:mb-6">
                   <div className="p-3 rounded-xl bg-[#4a383a] border border-[#5d4648]">
                     <div className="text-white font-bold text-xs">4 Hệ Phái Độc Đáo</div>
                     <div className="text-[11px] text-[#8e7a7c] mt-0.5">Hộ Vệ, Chiến Binh, Sát Thủ, Xạ Thủ</div>

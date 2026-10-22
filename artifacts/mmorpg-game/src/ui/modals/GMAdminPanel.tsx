@@ -43,6 +43,7 @@ export const GMAdminPanel = memo(function GMAdminPanel() {
   const setUnallocatedStatPoints = useGameWorldStore((s) => s.setUnallocatedStatPoints);
   const unallocatedStatPoints = useGameWorldStore((s) => s.unallocatedStatPoints);
   const setZone = useGameWorldStore((s) => s.setZone);
+  const activeCharId = useGameWorldStore((s) => (s as any).characterId || (s as any).activeCharacterId || 1);
 
   const [loadingAction, setLoadingAction] = useState<string | null>(null);
   const [statusFeedback, setStatusFeedback] = useState<string | null>(null);
@@ -60,6 +61,27 @@ export const GMAdminPanel = memo(function GMAdminPanel() {
     setTimeout(() => setStatusFeedback(null), 3000);
   };
 
+  const callGMAction = async (action: string, payload: any = {}) => {
+    const token = typeof window !== "undefined" ? localStorage.getItem("clb_token") : null;
+    const headers: Record<string, string> = { "Content-Type": "application/json" };
+    if (token) headers["Authorization"] = `Bearer ${token}`;
+
+    try {
+      const res = await fetch(`/api/characters/${activeCharId}/gm/action`, {
+        method: "POST",
+        headers,
+        body: JSON.stringify({ action, ...payload }),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (res.ok && data?.character) {
+        useGameWorldStore.getState().syncFromBackendCharacter(data.character);
+      }
+      return { ok: res.ok, data };
+    } catch (err: any) {
+      return { ok: false, data: { error: err?.message || "Lỗi kết nối máy chủ GM" } };
+    }
+  };
+
   // Set direct Level 500 or 999
   const handleSetTargetLevel = async (targetLevel: number) => {
     setLoadingAction(`set_level_${targetLevel}`);
@@ -68,29 +90,46 @@ export const GMAdminPanel = memo(function GMAdminPanel() {
       const lvDiff = Math.max(0, targetLevel - currentLv);
       const bonusStats = lvDiff * 5;
       const bonusSkill = lvDiff * 1;
+      const newStatPoints = unallocatedStatPoints + bonusStats;
 
-      useGameWorldStore.setState({
+      // Tính toán trực tiếp chỉ số cơ bản tương ứng với cấp độ mới
+      const levelOffset = Math.max(0, targetLevel - 1);
+      const addedHp = levelOffset * 35;
+      const addedMp = levelOffset * 15;
+      const addedAtk = levelOffset * 4;
+      const addedDef = levelOffset * 2;
+      const addedSpd = Math.floor(levelOffset * 0.5);
+      const baseMaxHp = 120 + addedHp;
+      const baseMaxMp = 65 + addedMp;
+
+      useGameWorldStore.setState((s) => ({
         playerLevel: targetLevel,
         playerExp: 0,
         playerExpToNext: 99999999,
-        playerSkillPoints: (useGameWorldStore.getState().playerSkillPoints || 0) + bonusSkill,
-        unallocatedStatPoints: unallocatedStatPoints + bonusStats,
-      });
+        playerSkillPoints: (s.playerSkillPoints || 0) + bonusSkill,
+        unallocatedStatPoints: newStatPoints,
+        playerMaxHealth: Math.max(s.playerMaxHealth, baseMaxHp),
+        playerHealth: Math.max(s.playerMaxHealth, baseMaxHp),
+        playerMaxPp: Math.max(s.playerMaxPp, baseMaxMp),
+        playerPp: Math.max(s.playerMaxPp, baseMaxMp),
+        playerAtk: s.playerAtk + addedAtk,
+        playerDef: s.playerDef + addedDef,
+        playerSpd: s.playerSpd + addedSpd,
+      }));
 
-      healPlayer(99999);
       playCombatSFX("level_up_fanfare", 0.85);
       addFloatingText(
-        `⭐ THĂNG CẤP THẦN THOẠI LV.${targetLevel}! (+${bonusStats} Điểm Tiềm Năng)`,
+        `⭐ THĂNG CẤP THẦN THOẠI LV.${targetLevel}! (+⭐${bonusStats} Điểm Tiềm Năng)`,
         playerPosition.clone().add(new THREE.Vector3(0, 3.0, 0)),
         "#eab308"
       );
-      showFeedback(`Nhân vật đã thăng cấp trực tiếp lên Lv.${targetLevel} (+${bonusStats} Điểm Tiềm Năng)!`);
+      showFeedback(`Nhân vật đã thăng cấp trực tiếp lên Lv.${targetLevel} (+⭐${bonusStats} Điểm Tiềm Năng & Tăng Vọt Chỉ Số Chiến Đấu)!`);
 
-      await fetch("/api/characters/1/gm/action", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ action: "set_level", level: targetLevel }),
-      }).catch(() => {});
+      const { ok, data } = await callGMAction("set_level", { level: targetLevel });
+      if (!ok) {
+        showFeedback(data.error || "Lệnh GM bị từ chối: Yêu cầu quyền Quản trị viên (GM/Admin)!");
+        return;
+      }
     } finally {
       setLoadingAction(null);
     }
@@ -114,18 +153,40 @@ export const GMAdminPanel = memo(function GMAdminPanel() {
   const handleAddLevels = async () => {
     setLoadingAction("add_levels");
     try {
-      setUnallocatedStatPoints(unallocatedStatPoints + 50);
-      healPlayer(9999);
-      addFloatingText("⚡ +10 CẤP & +50 ĐIỂM TIỀM NĂNG!", playerPosition.clone().add(new THREE.Vector3(0, 2.5, 0)), "#38bdf8");
-      playCombatSFX("level_up_fanfare", 0.6);
-      showFeedback("Đã cấp +10 Cấp và 50 Điểm Tiềm Năng vào nhân vật!");
+      const currentLv = useGameWorldStore.getState().playerLevel;
+      const targetLevel = Math.min(999, currentLv + 10);
+      const bonusStats = 50;
+      const bonusSkill = 10;
+      const newStatPoints = unallocatedStatPoints + bonusStats;
 
-      // Call API server
-      await fetch("/api/characters/1/gm/action", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ action: "add_levels" }),
-      }).catch(() => {});
+      const addedHp = 10 * 35;
+      const addedMp = 10 * 15;
+      const addedAtk = 10 * 4;
+      const addedDef = 10 * 2;
+      const addedSpd = 5;
+
+      useGameWorldStore.setState((s) => ({
+        playerLevel: targetLevel,
+        playerSkillPoints: (s.playerSkillPoints || 0) + bonusSkill,
+        unallocatedStatPoints: newStatPoints,
+        playerMaxHealth: s.playerMaxHealth + addedHp,
+        playerHealth: s.playerMaxHealth + addedHp,
+        playerMaxPp: s.playerMaxPp + addedMp,
+        playerPp: s.playerMaxPp + addedMp,
+        playerAtk: s.playerAtk + addedAtk,
+        playerDef: s.playerDef + addedDef,
+        playerSpd: s.playerSpd + addedSpd,
+      }));
+
+      playCombatSFX("level_up_fanfare", 0.6);
+      addFloatingText("⚡ +10 CẤP & +50 ĐIỂM TIỀM NĂNG!", playerPosition.clone().add(new THREE.Vector3(0, 2.5, 0)), "#38bdf8");
+      showFeedback(`Đã cấp +10 Cấp (Hiện tại Lv.${targetLevel}) và 50 Điểm Tiềm Năng!`);
+
+      const { ok, data } = await callGMAction("add_levels");
+      if (!ok) {
+        showFeedback(data.error || "Lệnh GM bị từ chối: Yêu cầu quyền Quản trị viên (GM/Admin)!");
+        return;
+      }
     } finally {
       setLoadingAction(null);
     }
@@ -140,11 +201,13 @@ export const GMAdminPanel = memo(function GMAdminPanel() {
       addFloatingText("🪙 +50,000 VÀNG & ĐÁ CƯỜNG HÓA!", playerPosition.clone().add(new THREE.Vector3(0, 2.5, 0)), "#f59e0b");
       showFeedback("Đã cấp +50,000 Vàng vào tài khoản!");
 
-      await fetch("/api/characters/1/gm/action", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ action: "add_gold_stones" }),
-      }).catch(() => {});
+      const { ok, data: errData } = await callGMAction("add_gold_stones");
+      const gmRes = { ok, json: async () => errData };
+      if (gmRes && !gmRes.ok) {
+        const errData = await gmRes.json().catch(() => ({}));
+        showFeedback(errData.error || "Lệnh GM bị từ chối: Yêu cầu quyền Quản trị viên (GM/Admin)!");
+        return;
+      }
     } finally {
       setLoadingAction(null);
     }
@@ -192,11 +255,13 @@ export const GMAdminPanel = memo(function GMAdminPanel() {
       addFloatingText("🎁 RƯƠNG HOÀNG KIM ĐÃ RƠI DƯỚI CHÂN!", playerPosition.clone().add(new THREE.Vector3(0, 2.5, 0)), "#ffaa00");
       showFeedback("Rương Thần Binh Hoàng Kim đã xuất hiện ngay cạnh bạn!");
 
-      await fetch("/api/characters/1/gm/action", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ action: "spawn_legendary" }),
-      }).catch(() => {});
+      const { ok, data: errData } = await callGMAction("spawn_legendary");
+      const gmRes = { ok, json: async () => errData };
+      if (gmRes && !gmRes.ok) {
+        const errData = await gmRes.json().catch(() => ({}));
+        showFeedback(errData.error || "Lệnh GM bị từ chối: Yêu cầu quyền Quản trị viên (GM/Admin)!");
+        return;
+      }
     } finally {
       setLoadingAction(null);
     }
@@ -265,11 +330,16 @@ export const GMAdminPanel = memo(function GMAdminPanel() {
       addFloatingText("🔥 VŨ KHÍ CƯỜNG HÓA +15 (RỒNG LỬA TỐI THƯỢNG)!", playerPosition.clone().add(new THREE.Vector3(0, 2.8, 0)), "#ffaa00");
       showFeedback("Vũ khí đã đạt +15 Thần Cấp, kích hoạt Aura Rồng Lửa!");
 
-      await fetch("/api/characters/1/gm/action", {
+      const gmRes = await fetch(`/api/characters/${activeCharId}/gm/action`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ action: "enhance_max" }),
-      }).catch(() => {});
+      }).catch(() => null);
+      if (gmRes && !gmRes.ok) {
+        const errData = await gmRes.json().catch(() => ({}));
+        showFeedback(errData.error || "Lệnh GM bị từ chối: Yêu cầu quyền Quản trị viên (GM/Admin)!");
+        return;
+      }
     } finally {
       setLoadingAction(null);
     }
@@ -329,7 +399,7 @@ export const GMAdminPanel = memo(function GMAdminPanel() {
         )}
 
         {/* Main Body */}
-        <div className="p-5 sm:p-6 space-y-5 overflow-y-auto max-h-[75vh]">
+        <div className="p-5 sm:p-6 space-y-5 overflow-y-auto custom-scrollbar max-h-[75vh]">
           
           {/* Section 1: 7 Core Instant Powers */}
           <div>
