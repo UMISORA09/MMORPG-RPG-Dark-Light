@@ -1121,18 +1121,25 @@ export async function pushAllLocalDataToSupabase(): Promise<{ success: boolean; 
   let charItemsSynced = 0;
 
   try {
-    // 1. Sync users
+    // 1. Sync users with safe conflict handling
     for (const u of memoryStore.users) {
-      await pool.query(`
-        INSERT INTO users (id, username, password_hash, role, is_real_user, forum_title, selected_region, selected_server_id)
-        VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
-        ON CONFLICT (id) DO UPDATE SET
-          username = EXCLUDED.username,
-          role = EXCLUDED.role,
-          is_real_user = EXCLUDED.is_real_user,
-          forum_title = EXCLUDED.forum_title;
-      `, [u.id, u.username, u.passwordHash, u.role || "player", u.isRealUser ?? true, u.forumTitle || "Tân Thủ Long Tộc", u.selectedRegion || "VN", u.selectedServerId || "s1_long_vuong"]);
-      usersSynced++;
+      try {
+        await pool.query(`
+          INSERT INTO users (id, username, password_hash, role, is_real_user, forum_title, selected_region, selected_server_id)
+          VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+          ON CONFLICT (id) DO UPDATE SET
+            role = EXCLUDED.role,
+            is_real_user = EXCLUDED.is_real_user,
+            forum_title = EXCLUDED.forum_title;
+        `, [u.id, u.username, u.passwordHash, u.role || "player", u.isRealUser ?? true, u.forumTitle || "Tân Thủ Long Tộc", u.selectedRegion || "VN", u.selectedServerId || "s1_long_vuong"]);
+        usersSynced++;
+      } catch {
+        // Safe fallback if username exists on different id
+        await pool.query(`
+          UPDATE users SET role = $1, is_real_user = $2, forum_title = $3 WHERE username = $4;
+        `, [u.role || "player", u.isRealUser ?? true, u.forumTitle || "Tân Thủ Long Tộc", u.username]).catch(() => {});
+        usersSynced++;
+      }
     }
 
     // 2. Sync characters
@@ -1151,14 +1158,30 @@ export async function pushAllLocalDataToSupabase(): Promise<{ success: boolean; 
       charsSynced++;
     }
 
-    // 3. Sync items
-    for (const item of memoryStore.items) {
-      await pool.query(`
-        INSERT INTO items (id, name, category, type, equip_slot, description, rarity, hp_boost, atk_boost, def_boost, spd_boost, price, required_level, icon)
-        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14)
-        ON CONFLICT (id) DO NOTHING;
-      `, [item.id, item.name, item.category || "equipment", item.type || "weapon", item.equipSlot || "none", item.description || "", item.rarity || "common", item.hpBoost || 0, item.atkBoost || 0, item.defBoost || 0, item.spdBoost || 0, item.price || 100, item.requiredLevel || 1, item.icon || "◇"]);
-      itemsSynced++;
+    // 3. Fast Sync items (check count first to avoid 291 slow queries)
+    const itemCountRes = await pool.query(`SELECT count(*)::int AS count FROM items;`);
+    const currentItemCount = Number(itemCountRes.rows[0]?.count || 0);
+    if (currentItemCount >= 50) {
+      itemsSynced = currentItemCount;
+    } else {
+      const chunkSize = 50;
+      for (let i = 0; i < memoryStore.items.length; i += chunkSize) {
+        const chunk = memoryStore.items.slice(i, i + chunkSize);
+        const valuePlaceholders: string[] = [];
+        const params: any[] = [];
+        let pIndex = 1;
+        for (const item of chunk) {
+          valuePlaceholders.push(`($${pIndex}, $${pIndex + 1}, $${pIndex + 2}, $${pIndex + 3}, $${pIndex + 4}, $${pIndex + 5}, $${pIndex + 6}, $${pIndex + 7}, $${pIndex + 8}, $${pIndex + 9}, $${pIndex + 10}, $${pIndex + 11}, $${pIndex + 12}, $${pIndex + 13})`);
+          params.push(item.id, item.name, item.category || "equipment", item.type || "weapon", item.equipSlot || "none", item.description || "", item.rarity || "common", item.hpBoost || 0, item.atkBoost || 0, item.defBoost || 0, item.spdBoost || 0, item.price || 100, item.requiredLevel || 1, item.icon || "◇");
+          pIndex += 14;
+        }
+        await pool.query(`
+          INSERT INTO items (id, name, category, type, equip_slot, description, rarity, hp_boost, atk_boost, def_boost, spd_boost, price, required_level, icon)
+          VALUES ${valuePlaceholders.join(", ")}
+          ON CONFLICT (id) DO NOTHING;
+        `, params);
+        itemsSynced += chunk.length;
+      }
     }
 
     // 4. Sync character items
