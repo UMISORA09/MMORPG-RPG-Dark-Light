@@ -940,62 +940,67 @@ export default function AdminDashboardScreen() {
       </header>
 
       {/* Main Container */}
-      <div className="flex-1 max-w-7xl w-full mx-auto p-4 sm:p-6 lg:p-8 flex flex-col gap-6">
-        {/* Navigation Tabs */}
-        <div className="flex items-center gap-2 border-b border-[#5d4648] pb-3 overflow-x-auto custom-scrollbar">
+      <div className="flex-1 max-w-[1680px] w-full mx-auto p-4 sm:p-6 lg:p-8 flex flex-col gap-6">
+        {/* Navigation Tabs - Responsive Full Grid with Zero Cut-off */}
+        <div className="grid grid-cols-2 sm:grid-cols-3 xl:grid-cols-5 gap-2.5 border-b border-[#5d4648] pb-4">
           <button
             onClick={() => setActiveTab("overview")}
-            className={`px-4 py-2 rounded-xl text-xs sm:text-sm font-bold tracking-wide transition-all flex items-center gap-2 whitespace-nowrap ${
+            className={`w-full py-3 px-3 rounded-2xl text-xs sm:text-sm font-bold tracking-wide transition-all flex items-center justify-center gap-2 text-center shadow-sm ${
               activeTab === "overview"
-                ? "bg-[#28c3e1] text-[#1c161a] shadow-[0_0_20px_rgba(40,195,225,0.35)]"
+                ? "bg-[linear-gradient(135deg,#28c3e1_0%,#189cb6_100%)] text-[#1c161a] shadow-[0_0_20px_rgba(40,195,225,0.4)]"
                 : "bg-[#342a2b] text-[#8e7a7c] hover:text-white border border-[#5d4648]"
             }`}
           >
-            <Activity className="w-4 h-4" /> Tổng Quan Hệ Thống
+            <Activity className="w-4 h-4 shrink-0" />
+            <span className="truncate">Tổng Quan Hệ Thống</span>
           </button>
 
           <button
             onClick={() => setActiveTab("users")}
-            className={`px-4 py-2 rounded-xl text-xs sm:text-sm font-bold tracking-wide transition-all flex items-center gap-2 whitespace-nowrap ${
+            className={`w-full py-3 px-3 rounded-2xl text-xs sm:text-sm font-bold tracking-wide transition-all flex items-center justify-center gap-2 text-center shadow-sm ${
               activeTab === "users"
-                ? "bg-[#28c3e1] text-[#1c161a] shadow-[0_0_20px_rgba(40,195,225,0.35)]"
+                ? "bg-[linear-gradient(135deg,#28c3e1_0%,#189cb6_100%)] text-[#1c161a] shadow-[0_0_20px_rgba(40,195,225,0.4)]"
                 : "bg-[#342a2b] text-[#8e7a7c] hover:text-white border border-[#5d4648]"
             }`}
           >
-            <Users className="w-4 h-4" /> Tài Khoản Người Chơi ({stats?.counts.users ?? users.length})
+            <Users className="w-4 h-4 shrink-0" />
+            <span className="truncate">Tài Khoản ({stats?.counts.users ?? users.length})</span>
           </button>
 
           <button
             onClick={() => setActiveTab("characters")}
-            className={`px-4 py-2 rounded-xl text-xs sm:text-sm font-bold tracking-wide transition-all flex items-center gap-2 whitespace-nowrap ${
+            className={`w-full py-3 px-3 rounded-2xl text-xs sm:text-sm font-bold tracking-wide transition-all flex items-center justify-center gap-2 text-center shadow-sm ${
               activeTab === "characters"
-                ? "bg-[#28c3e1] text-[#1c161a] shadow-[0_0_20px_rgba(40,195,225,0.35)]"
+                ? "bg-[linear-gradient(135deg,#28c3e1_0%,#189cb6_100%)] text-[#1c161a] shadow-[0_0_20px_rgba(40,195,225,0.4)]"
                 : "bg-[#342a2b] text-[#8e7a7c] hover:text-white border border-[#5d4648]"
             }`}
           >
-            <Sword className="w-4 h-4" /> Nhân Vật & Chỉ Số ({stats?.counts.characters ?? characters.length})
+            <Sword className="w-4 h-4 shrink-0" />
+            <span className="truncate">Nhân Vật ({stats?.counts.characters ?? characters.length})</span>
           </button>
 
           <button
             onClick={() => setActiveTab("items")}
-            className={`px-4 py-2 rounded-xl text-xs sm:text-sm font-bold tracking-wide transition-all flex items-center gap-2 whitespace-nowrap ${
+            className={`w-full py-3 px-3 rounded-2xl text-xs sm:text-sm font-bold tracking-wide transition-all flex items-center justify-center gap-2 text-center shadow-sm ${
               activeTab === "items"
-                ? "bg-[#28c3e1] text-[#1c161a] shadow-[0_0_20px_rgba(40,195,225,0.35)]"
+                ? "bg-[linear-gradient(135deg,#28c3e1_0%,#189cb6_100%)] text-[#1c161a] shadow-[0_0_20px_rgba(40,195,225,0.4)]"
                 : "bg-[#342a2b] text-[#8e7a7c] hover:text-white border border-[#5d4648]"
             }`}
           >
-            <Backpack className="w-4 h-4" /> Danh Mục Vật Phẩm ({stats?.counts.items ?? items.length})
+            <Backpack className="w-4 h-4 shrink-0" />
+            <span className="truncate">Vật Phẩm ({stats?.counts.items ?? items.length})</span>
           </button>
 
           <button
             onClick={() => setActiveTab("db")}
-            className={`px-4 py-2 rounded-xl text-xs sm:text-sm font-bold tracking-wide transition-all flex items-center gap-2 whitespace-nowrap ${
+            className={`w-full py-3 px-3 rounded-2xl text-xs sm:text-sm font-bold tracking-wide transition-all flex items-center justify-center gap-2 text-center shadow-sm col-span-2 sm:col-span-1 ${
               activeTab === "db"
-                ? "bg-[#28c3e1] text-[#1c161a] shadow-[0_0_20px_rgba(40,195,225,0.35)]"
+                ? "bg-[linear-gradient(135deg,#28c3e1_0%,#189cb6_100%)] text-[#1c161a] shadow-[0_0_20px_rgba(40,195,225,0.4)]"
                 : "bg-[#342a2b] text-[#8e7a7c] hover:text-white border border-[#5d4648]"
             }`}
           >
-            <Database className="w-4 h-4" /> Bảng Database Trực Tiếp
+            <Database className="w-4 h-4 shrink-0" />
+            <span className="truncate">CSDL & Supabase Sync</span>
           </button>
         </div>
 

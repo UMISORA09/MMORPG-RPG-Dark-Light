@@ -2,7 +2,8 @@ import { drizzle } from "drizzle-orm/node-postgres";
 import pg from "pg";
 import * as schema from "./schema";
 import { SEED_ITEMS } from "./seed-data";
-import { SEED_SERVERS, SEED_WORLD_MONSTERS } from "./game-seed";
+import { SEED_ALL_ITEMS, SEED_SERVERS, SEED_WORLD_MONSTERS } from "./game-seed";
+import { SEED_QUESTS } from "./quests-seed";
 import fs from "node:fs";
 import path from "node:path";
 
@@ -11,6 +12,31 @@ const { Pool } = pg;
 export let pool: pg.Pool | null = null;
 export let db: any = null;
 export let isPostgres = false;
+
+const DEFAULT_SEED_PASSWORD_HASH = "$2a$10$7EqJtq98hPqEX7fNZaFWoO.8/kR1Qp4Rkh3vJ8N7M7L5Y.7Z0c6Ky"; // "admin123"
+
+const DEFAULT_USERS = [
+  { id: 1, username: "admin", passwordHash: DEFAULT_SEED_PASSWORD_HASH, role: "admin", isRealUser: true, forumTitle: "Đại Sứ Quản Trị GM", selectedRegion: "VN", selectedServerId: "s1_long_vuong" },
+  { id: 2, username: "LongThan_2026", passwordHash: DEFAULT_SEED_PASSWORD_HASH, role: "player", isRealUser: true, forumTitle: "Long Thần Chiến Tướng", selectedRegion: "VN", selectedServerId: "s1_long_vuong" },
+  { id: 3, username: "KiemVuong_Hoa", passwordHash: DEFAULT_SEED_PASSWORD_HASH, role: "player", isRealUser: true, forumTitle: "Đao Thánh Xuất Thế", selectedRegion: "VN", selectedServerId: "s1_long_vuong" },
+  { id: 4, username: "NuVuong_BangGia", passwordHash: DEFAULT_SEED_PASSWORD_HASH, role: "player", isRealUser: true, forumTitle: "Băng Sương Pháp Sư", selectedRegion: "VN", selectedServerId: "s2_hac_am" },
+  { id: 5, username: "ThienXa_LongToc", passwordHash: DEFAULT_SEED_PASSWORD_HASH, role: "player", isRealUser: true, forumTitle: "Bách Bộ Xuyên Dương", selectedRegion: "SEA", selectedServerId: "s3_thien_phat" },
+];
+
+const DEFAULT_CHARACTERS = [
+  { id: 101, userId: 2, serverId: "s1_long_vuong", name: "Long Thần Bá Chủ", gender: "male", classId: "tank", className: "Chiến Sĩ Long Vương", level: 25, experience: 12500, hp: 1200, maxHp: 1200, mp: 300, maxMp: 300, atk: 180, def: 120, spd: 45, gold: 50000, combatPower: 2850, zoneId: "DRAGON_VALLEY", title: "Vạn Địch Chiến Thần" },
+  { id: 102, userId: 3, serverId: "s1_long_vuong", name: "Kiếm Vương Tuyệt Sát", gender: "male", classId: "fighter", className: "Cuồng Kiếm Sĩ", level: 18, experience: 6400, hp: 850, maxHp: 850, mp: 250, maxMp: 250, atk: 210, def: 85, spd: 55, gold: 28000, combatPower: 2100, zoneId: "SAFE_VILLAGE", title: "Thiên Hạ Vô Song" },
+  { id: 103, userId: 4, serverId: "s2_hac_am", name: "Băng Tuyết Nữ Vương", gender: "female", classId: "mage", className: "Nguyên Tố Pháp Sư", level: 30, experience: 25000, hp: 720, maxHp: 720, mp: 650, maxMp: 650, atk: 260, def: 70, spd: 50, gold: 75000, combatPower: 3400, zoneId: "FROST_PEAK", title: "Hàn Băng Thần Nữ" },
+  { id: 104, userId: 5, serverId: "s3_thien_phat", name: "Xạ Thần Tinh Tú", gender: "male", classId: "gunner", className: "Thần Xạ Thủ", level: 15, experience: 4200, hp: 680, maxHp: 680, mp: 200, maxMp: 200, atk: 195, def: 65, spd: 70, gold: 15000, combatPower: 1850, zoneId: "SAFE_VILLAGE", title: "Bách Thần Xạ Thủ" },
+];
+
+const DEFAULT_INVENTORY = [
+  { id: 201, characterId: 101, itemId: "weapon_sword_dragon_1", equipped: true, equippedSlot: "weapon", quantity: 1, enhanceLevel: 7, rarity: "legendary" },
+  { id: 202, characterId: 101, itemId: "armor_plate_dragon_1", equipped: true, equippedSlot: "armor", quantity: 1, enhanceLevel: 5, rarity: "epic" },
+  { id: 203, characterId: 101, itemId: "potion_hp_large", equipped: false, slotIndex: 0, quantity: 50, enhanceLevel: 0, rarity: "rare" },
+  { id: 204, characterId: 102, itemId: "weapon_blade_iron_1", equipped: true, equippedSlot: "weapon", quantity: 1, enhanceLevel: 5, rarity: "rare" },
+  { id: 205, characterId: 103, itemId: "weapon_staff_elemental_1", equipped: true, equippedSlot: "weapon", quantity: 1, enhanceLevel: 9, rarity: "miracle" },
+];
 
 // In-memory fallback storage when PostgreSQL is not configured
 interface MemoryStoreData {
@@ -32,10 +58,10 @@ interface MemoryStoreData {
 }
 
 const memoryStore: MemoryStoreData = {
-  users: [],
-  characters: [],
-  items: [...SEED_ITEMS],
-  character_items: [],
+  users: [...DEFAULT_USERS],
+  characters: [...DEFAULT_CHARACTERS],
+  items: [...SEED_ALL_ITEMS],
+  character_items: [...DEFAULT_INVENTORY],
   battle_logs: [],
   encounters: [],
   reward_grants: [],
@@ -44,15 +70,15 @@ const memoryStore: MemoryStoreData = {
   forum_posts: [],
   forum_comments: [],
   world_chats: [],
-  quests: [],
+  quests: [...SEED_QUESTS],
   character_quests: [],
   market_listings: [],
 };
 
 let autoIncrement = {
-  users: 1,
-  characters: 1,
-  character_items: 1,
+  users: 10,
+  characters: 200,
+  character_items: 300,
   battle_logs: 1,
   forum_posts: 1,
   world_chats: 1,
@@ -87,6 +113,12 @@ export function restoreMemoryStore() {
       }
     }
   } catch {}
+
+  if (memoryStore.users.length === 0) memoryStore.users = [...DEFAULT_USERS];
+  if (memoryStore.characters.length === 0) memoryStore.characters = [...DEFAULT_CHARACTERS];
+  if (memoryStore.items.length < 50) memoryStore.items = [...SEED_ALL_ITEMS];
+  if (memoryStore.quests.length === 0) memoryStore.quests = [...SEED_QUESTS];
+  if (memoryStore.character_items.length === 0) memoryStore.character_items = [...DEFAULT_INVENTORY];
 }
 
 export { memoryStore };
@@ -277,7 +309,7 @@ function createMemoryDb() {
   }
 
   const memoryDb: any = {
-    select: () => ({
+    select: (fields?: any) => ({
       from: (table: any) => {
         let rows = [...getTableData(table)];
         const builder: any = {
@@ -301,15 +333,24 @@ function createMemoryDb() {
             rows = rows.filter((r) => matchesPredicate(r, predicate));
             return builder;
           },
-          orderBy: (colOrOrder: any) => {
+          orderBy: (_colOrOrder: any) => {
             return builder;
           },
           limit: (n: number) => {
             rows = rows.slice(0, n);
             return builder;
           },
-          then: (resolve: any, reject: any) => Promise.resolve(rows).then(resolve, reject),
+          then: (resolve: any, reject: any) => {
+            if (fields && (fields.count !== undefined || fields.c !== undefined)) {
+              return Promise.resolve([{ count: rows.length, c: rows.length }]).then(resolve, reject);
+            }
+            return Promise.resolve(rows).then(resolve, reject);
+          },
           [Symbol.asyncIterator]: async function* () {
+            if (fields && (fields.count !== undefined || fields.c !== undefined)) {
+              yield { count: rows.length, c: rows.length };
+              return;
+            }
             for (const r of rows) yield r;
           },
         };
@@ -878,13 +919,24 @@ export async function initDatabase() {
         END $$;
       `);
 
-      // Auto-seed default item catalog into PostgreSQL
-      for (const item of SEED_ITEMS) {
+      // Auto-seed default catalog into PostgreSQL
+      for (const item of SEED_ALL_ITEMS) {
         await pool.query(`
           INSERT INTO items (id, name, type, description, rarity, hp_boost, atk_boost, def_boost, spd_boost, price, class_id, required_level, icon)
           VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13)
           ON CONFLICT (id) DO NOTHING;
-        `, [item.id, item.name, item.type, item.description, item.rarity, item.hpBoost, item.atkBoost, item.defBoost, item.spdBoost, item.price, item.classId, item.requiredLevel, item.icon]);
+        `, [item.id, item.name, item.type || "weapon", item.description || "", item.rarity || "common", item.hpBoost || 0, item.atkBoost || 0, item.defBoost || 0, item.spdBoost || 0, item.price || 100, item.classId || null, item.requiredLevel || 1, item.icon || "◇"]);
+      }
+
+      // Check if users table is empty and auto-seed users & characters
+      try {
+        const uCount = await pool.query("SELECT count(*) FROM users;").then(r => Number(r.rows[0].count)).catch(() => 0);
+        if (uCount === 0) {
+          const { seedDatabase } = await import("./seed");
+          await seedDatabase();
+        }
+      } catch (seedErr) {
+        console.warn("[DB] Auto-seed on startup note:", (seedErr as Error).message);
       }
 
       console.log("[DB] PostgreSQL tables & seed catalog successfully initialized.");

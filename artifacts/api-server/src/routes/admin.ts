@@ -149,13 +149,13 @@ router.post("/admin/logout", (req, res) => {
 router.get("/admin/stats", async (_req, res) => {
   try {
     const [usersCount, charactersCount, itemsCount, monstersCount, serversCount, questsCount, characterItemsCount] = await Promise.all([
-      db.select({ count: sql<number>`count(*)` }).from(usersTable).then((r: any) => Number(r[0]?.count || 0)).catch(() => 0),
-      db.select({ count: sql<number>`count(*)` }).from(charactersTable).then((r: any) => Number(r[0]?.count || 0)).catch(() => 0),
-      db.select({ count: sql<number>`count(*)` }).from(itemsTable).then((r: any) => Number(r[0]?.count || 0)).catch(() => 0),
-      db.select({ count: sql<number>`count(*)` }).from(monstersTable).then((r: any) => Number(r[0]?.count || 0)).catch(() => 0),
-      db.select({ count: sql<number>`count(*)` }).from(serversTable).then((r: any) => Number(r[0]?.count || 0)).catch(() => 0),
-      db.select({ count: sql<number>`count(*)` }).from(questsTable).then((r: any) => Number(r[0]?.count || 0)).catch(() => 0),
-      db.select({ count: sql<number>`count(*)` }).from(characterItemsTable).then((r: any) => Number(r[0]?.count || 0)).catch(() => 0),
+      db.select({ count: sql<number>`count(*)` }).from(usersTable).then((r: any) => Number(r[0]?.count ?? r[0]?.c ?? r.length ?? 0)).catch(() => memoryStore.users.length),
+      db.select({ count: sql<number>`count(*)` }).from(charactersTable).then((r: any) => Number(r[0]?.count ?? r[0]?.c ?? r.length ?? 0)).catch(() => memoryStore.characters.length),
+      db.select({ count: sql<number>`count(*)` }).from(itemsTable).then((r: any) => Number(r[0]?.count ?? r[0]?.c ?? r.length ?? 0)).catch(() => memoryStore.items.length),
+      db.select({ count: sql<number>`count(*)` }).from(monstersTable).then((r: any) => Number(r[0]?.count ?? r[0]?.c ?? r.length ?? 0)).catch(() => memoryStore.monsters.length),
+      db.select({ count: sql<number>`count(*)` }).from(serversTable).then((r: any) => Number(r[0]?.count ?? r[0]?.c ?? r.length ?? 0)).catch(() => memoryStore.servers.length),
+      db.select({ count: sql<number>`count(*)` }).from(questsTable).then((r: any) => Number(r[0]?.count ?? r[0]?.c ?? r.length ?? 0)).catch(() => memoryStore.quests.length),
+      db.select({ count: sql<number>`count(*)` }).from(characterItemsTable).then((r: any) => Number(r[0]?.count ?? r[0]?.c ?? r.length ?? 0)).catch(() => memoryStore.character_items.length),
     ]);
 
     return res.json({
