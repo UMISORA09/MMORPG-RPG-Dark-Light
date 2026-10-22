@@ -786,6 +786,7 @@ export async function initDatabase() {
         ALTER TABLE character_items ADD COLUMN IF NOT EXISTS miracle_passive_2 TEXT;
         ALTER TABLE character_items ADD COLUMN IF NOT EXISTS sockets_json TEXT DEFAULT '[]' NOT NULL;
         ALTER TABLE character_items ADD COLUMN IF NOT EXISTS reforge_stats_json TEXT DEFAULT '[]' NOT NULL;
+        ALTER TABLE character_items ADD COLUMN IF NOT EXISTS runes_json TEXT DEFAULT '[]' NOT NULL;
         DROP INDEX IF EXISTS character_item_unique;
 
         CREATE TABLE IF NOT EXISTS battle_logs (

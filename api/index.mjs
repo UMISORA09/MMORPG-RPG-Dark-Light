@@ -57966,6 +57966,7 @@ async function initDatabase() {
         ALTER TABLE character_items ADD COLUMN IF NOT EXISTS miracle_passive_2 TEXT;
         ALTER TABLE character_items ADD COLUMN IF NOT EXISTS sockets_json TEXT DEFAULT '[]' NOT NULL;
         ALTER TABLE character_items ADD COLUMN IF NOT EXISTS reforge_stats_json TEXT DEFAULT '[]' NOT NULL;
+        ALTER TABLE character_items ADD COLUMN IF NOT EXISTS runes_json TEXT DEFAULT '[]' NOT NULL;
         DROP INDEX IF EXISTS character_item_unique;
 
         CREATE TABLE IF NOT EXISTS battle_logs (
@@ -66950,56 +66951,67 @@ router4.post("/characters/sync", requireAuth, async (req, res) => {
   return res.status(200).json({ success: true, count: restored.length, characters: restored });
 });
 router4.get("/characters", requireAuth, async (req, res) => {
-  const userId = getAuthUserId(req);
-  if (req.headers["x-clb-client-characters"]) {
-    try {
-      const decoded = decodeURIComponent(req.headers["x-clb-client-characters"]);
-      const clientChars = JSON.parse(decoded);
-      if (Array.isArray(clientChars)) {
-        for (const c of clientChars) {
-          if (!c?.id || !c?.name) continue;
-          const [exists2] = await db.select().from(charactersTable).where(eq(charactersTable.id, c.id)).limit(1);
-          if (!exists2) {
-            await db.insert(charactersTable).values({
-              id: c.id,
-              userId,
-              serverId: c.serverId || "s1_long_vuong",
-              name: c.name,
-              classId: c.classId || "fighter",
-              className: c.className || "Ki\u1EBFm Kh\xE1ch",
-              gender: c.gender || "male",
-              level: c.level || 1,
-              experience: c.experience || 0,
-              hp: c.hp || 100,
-              maxHp: c.maxHp || 100,
-              mp: c.mp || 100,
-              maxMp: c.maxMp || 100,
-              atk: c.atk || 20,
-              def: c.def || 10,
-              spd: c.spd || 10,
-              gold: c.gold || 100,
-              kills: c.kills || 0,
-              deaths: c.deaths || 0,
-              unlockedSlots: c.unlockedSlots || 15,
-              combatPower: c.combatPower || 500
-            });
+  try {
+    const userId = getAuthUserId(req);
+    if (req.headers["x-clb-client-characters"]) {
+      try {
+        const decoded = decodeURIComponent(req.headers["x-clb-client-characters"]);
+        const clientChars = JSON.parse(decoded);
+        if (Array.isArray(clientChars)) {
+          for (const c of clientChars) {
+            if (!c?.id || !c?.name) continue;
+            const [exists2] = await db.select().from(charactersTable).where(eq(charactersTable.id, c.id)).limit(1);
+            if (!exists2) {
+              await db.insert(charactersTable).values({
+                id: c.id,
+                userId,
+                serverId: c.serverId || "s1_long_vuong",
+                name: c.name,
+                classId: c.classId || "fighter",
+                className: c.className || "Ki\u1EBFm Kh\xE1ch",
+                gender: c.gender || "male",
+                level: c.level || 1,
+                experience: c.experience || 0,
+                hp: c.hp || 100,
+                maxHp: c.maxHp || 100,
+                mp: c.mp || 100,
+                maxMp: c.maxMp || 100,
+                atk: c.atk || 20,
+                def: c.def || 10,
+                spd: c.spd || 10,
+                gold: c.gold || 100,
+                kills: c.kills || 0,
+                deaths: c.deaths || 0,
+                unlockedSlots: c.unlockedSlots || 15,
+                combatPower: c.combatPower || 500
+              });
+            }
           }
         }
+      } catch {
       }
-    } catch {
     }
+    const characters = await db.select().from(charactersTable).where(eq(charactersTable.userId, userId)).orderBy(desc(charactersTable.createdAt));
+    await ensureItemCatalog();
+    const expToNext = await Promise.all(
+      characters.map(async (character) => {
+        let charData;
+        try {
+          charData = await toCharacterResponse(character);
+        } catch {
+          charData = character;
+        }
+        return {
+          ...charData,
+          experienceToNextLevel: getExpForLevel2(character.level)
+        };
+      })
+    );
+    return res.status(200).json(expToNext);
+  } catch (err) {
+    console.error("[Characters] GET /characters error:", err);
+    return res.status(500).json({ error: err.message || "Kh\xF4ng th\u1EC3 t\u1EA3i danh s\xE1ch nh\xE2n v\u1EADt" });
   }
-  const characters = await db.select().from(charactersTable).where(eq(charactersTable.userId, userId)).orderBy(desc(charactersTable.createdAt));
-  await ensureItemCatalog();
-  const expToNext = await Promise.all(
-    characters.map(async (character) => {
-      return {
-        ...await toCharacterResponse(character),
-        experienceToNextLevel: getExpForLevel2(character.level)
-      };
-    })
-  );
-  return res.status(200).json(expToNext);
 });
 router4.post("/characters", requireAuth, async (req, res) => {
   try {
