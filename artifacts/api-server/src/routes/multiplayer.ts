@@ -1,7 +1,7 @@
 import { Router } from "express";
 import { requireAuth, getAuthUserId } from "../middlewares/requireAuth";
 import { db, charactersTable } from "@workspace/db";
-import { eq, and } from "drizzle-orm";
+import { eq, and, gte } from "drizzle-orm";
 
 const router = Router();
 
@@ -49,6 +49,14 @@ export interface RemotePlayerState {
 }
 
 const activePlayers = new Map<number, RemotePlayerState>();
+
+// Throttled DB write cache for positions across Vercel instances
+const lastDbWriteTime = new Map<number, number>();
+const lastDbPositions = new Map<number, { x: number; z: number; zoneId: string }>();
+
+// Short TTL cache for online players queried from Supabase
+let cachedDbPlayers: RemotePlayerState[] = [];
+let lastDbQueryTime = 0;
 
 // Simulated AI Adventurers for vibrant MMORPG world
 const AI_ADVENTURERS: RemotePlayerState[] = [
@@ -138,11 +146,11 @@ const AI_ADVENTURERS: RemotePlayerState[] = [
   },
 ];
 
-// Clean up stale sessions (> 12 seconds)
+// Clean up stale sessions (> 15 seconds)
 setInterval(() => {
   const now = Date.now();
   for (const [id, player] of activePlayers.entries()) {
-    if (now - player.lastHeartbeat > 12000) {
+    if (now - player.lastHeartbeat > 15000) {
       activePlayers.delete(id);
     }
   }
@@ -156,8 +164,89 @@ setInterval(() => {
   AI_ADVENTURERS[2].posZ = -14 + Math.cos(t * 0.6) * 3;
 }, 3000);
 
-// ── 1. REALTIME MULTIPLAYER SYNC ──
-router.post("/multiplayer/sync", (req, res): void => {
+// Helper: Query online players from Supabase with 1.5s caching
+async function getOnlinePlayersFromSupabase(serverId: string, currentZoneId: string, currentCharacterId: number): Promise<RemotePlayerState[]> {
+  const now = Date.now();
+  if (now - lastDbQueryTime < 1500 && cachedDbPlayers.length > 0) {
+    return cachedDbPlayers.filter(
+      (p) => p.characterId !== currentCharacterId && p.serverId === serverId && p.zoneId === currentZoneId
+    );
+  }
+
+  try {
+    const activeCutoff = new Date(now - 60000); // Online in the last 60 seconds
+    const rows = await db
+      .select({
+        id: charactersTable.id,
+        name: charactersTable.name,
+        classId: charactersTable.classId,
+        level: charactersTable.level,
+        gender: charactersTable.gender,
+        posX: charactersTable.posX,
+        posZ: charactersTable.posZ,
+        facing: charactersTable.facing,
+        hp: charactersTable.hp,
+        maxHp: charactersTable.maxHp,
+        zoneId: charactersTable.zoneId,
+        serverId: charactersTable.serverId,
+        hairStyle: charactersTable.hairStyle,
+        hairColor: charactersTable.hairColor,
+        outfitId: charactersTable.outfitId,
+        auraIds: charactersTable.auraIds,
+        isMounted: charactersTable.isMounted,
+        activeMountId: charactersTable.activeMountId,
+        activePetId: charactersTable.activePetId,
+        lastSavedAt: charactersTable.lastSavedAt,
+      })
+      .from(charactersTable)
+      .where(
+        and(
+          eq(charactersTable.serverId, serverId),
+          gte(charactersTable.lastSavedAt, activeCutoff)
+        )
+      )
+      .limit(50);
+
+    lastDbQueryTime = now;
+    cachedDbPlayers = rows.map((r: any) => ({
+      characterId: r.id,
+      name: r.name || "Hiệp Khách",
+      classId: r.classId || "fighter",
+      level: Number(r.level || 1),
+      gender: (r.gender === "female" ? "female" : "male") as "male" | "female",
+      posX: Number(r.posX || 0),
+      posZ: Number(r.posZ || 0),
+      facing: r.facing === "left" ? -Math.PI / 2 : Math.PI / 2,
+      facingLeft: r.facing === "left",
+      animState: "IDLE",
+      enhanceLevel: 7,
+      hp: Number(r.hp || 500),
+      maxHp: Number(r.maxHp || 500),
+      chatBubble: null,
+      zoneId: r.zoneId || "SAFE_VILLAGE",
+      serverId: r.serverId || "s1_long_vuong",
+      lastHeartbeat: new Date(r.lastSavedAt).getTime(),
+      hairStyle: r.hairStyle,
+      hairColor: r.hairColor,
+      outfitId: r.outfitId,
+      auraIds: r.auraIds,
+      isMounted: Boolean(r.isMounted),
+      mountId: r.activeMountId,
+      petId: r.activePetId,
+      isBot: false,
+    }));
+
+    return cachedDbPlayers.filter(
+      (p) => p.characterId !== currentCharacterId && p.serverId === serverId && p.zoneId === currentZoneId
+    );
+  } catch (err) {
+    console.warn("[Multiplayer] Supabase query fallback to in-memory:", err);
+    return [];
+  }
+}
+
+// ── 1. REALTIME MULTIPLAYER SYNC (3 SOURCES: SUPABASE + VERCEL + CLIENT) ──
+router.post("/multiplayer/sync", async (req, res): Promise<void> => {
   const {
     characterId,
     name,
@@ -189,12 +278,14 @@ router.post("/multiplayer/sync", (req, res): void => {
     return;
   }
 
+  const charNumId = Number(characterId);
   const now = Date.now();
-  const existing = activePlayers.get(characterId);
+  const existing = activePlayers.get(charNumId);
   const updatedBubble = chatBubble ?? (existing?.chatBubble && now - (existing.chatTime || 0) < 6000 ? existing.chatBubble : null);
 
-  activePlayers.set(characterId, {
-    characterId,
+  // 1. Cập nhật In-memory player state
+  activePlayers.set(charNumId, {
+    characterId: charNumId,
     name,
     classId,
     level,
@@ -221,21 +312,61 @@ router.post("/multiplayer/sync", (req, res): void => {
     petId,
   });
 
-  // Lấy các người chơi khác cùng serverId và cùng zoneId với Area of Interest (AOI <= 50m)
-  const othersInZone: RemotePlayerState[] = [];
-  const MAX_AOI_DIST_SQ = 50 * 50; // Bán kính nhìn thấy 50 units
+  // 2. Throttled update to Supabase Cloud Database (Mỗi 2.5s hoặc khi di chuyển > 1.5m)
+  const lastWrite = lastDbWriteTime.get(charNumId) || 0;
+  const lastPos = lastDbPositions.get(charNumId);
+  const distMoved = lastPos ? Math.hypot((posX || 0) - lastPos.x, (posZ || 0) - lastPos.z) : 999;
+  const zoneChanged = lastPos ? lastPos.zoneId !== zoneId : true;
 
+  if (now - lastWrite > 2500 || distMoved > 1.5 || zoneChanged) {
+    lastDbWriteTime.set(charNumId, now);
+    lastDbPositions.set(charNumId, { x: posX || 0, z: posZ || 0, zoneId: zoneId || "SAFE_VILLAGE" });
+
+    // Non-blocking async update to Supabase
+    (async () => {
+      try {
+        await db.update(charactersTable)
+          .set({
+            posX: Number((posX || 0).toFixed(2)),
+            posZ: Number((posZ || 0).toFixed(2)),
+            facing: facingLeft ? "left" : "right",
+            zoneId: zoneId || "SAFE_VILLAGE",
+            lastSavedAt: new Date(now),
+          })
+          .where(eq(charactersTable.id, charNumId));
+      } catch {}
+    })();
+  }
+
+  // 3. Kết hợp người chơi từ 2 nguồn: In-Memory (Vercel Lambda) + Supabase (Các Vercel Lambdas khác)
+  const mergedMap = new Map<number, RemotePlayerState>();
+
+  // A. Thêm người chơi từ Supabase
+  const dbPlayers = await getOnlinePlayersFromSupabase(serverId, zoneId, charNumId);
+  for (const dbPlayer of dbPlayers) {
+    mergedMap.set(dbPlayer.characterId, dbPlayer);
+  }
+
+  // B. Thêm/Ghi đè bằng người chơi In-Memory (có animState, chatBubble tức thời)
   for (const [id, other] of activePlayers.entries()) {
-    if (id !== characterId && other.serverId === serverId && other.zoneId === zoneId) {
-      const dx = (other.posX || 0) - (posX || 0);
-      const dz = (other.posZ || 0) - (posZ || 0);
-      if (dx * dx + dz * dz <= MAX_AOI_DIST_SQ) {
-        othersInZone.push(other);
-      }
+    if (id !== charNumId && other.serverId === serverId && other.zoneId === zoneId) {
+      mergedMap.set(id, other);
     }
   }
 
-  // Thêm AI Adventurers cùng server và zone trong AOI
+  // 4. Lọc Area of Interest (AOI <= 50m)
+  const othersInZone: RemotePlayerState[] = [];
+  const MAX_AOI_DIST_SQ = 50 * 50; // Bán kính nhìn thấy 50 units
+
+  for (const other of mergedMap.values()) {
+    const dx = (other.posX || 0) - (posX || 0);
+    const dz = (other.posZ || 0) - (posZ || 0);
+    if (dx * dx + dz * dz <= MAX_AOI_DIST_SQ) {
+      othersInZone.push(other);
+    }
+  }
+
+  // 5. Thêm AI Adventurers cùng server và zone trong AOI để thế giới luôn sống động
   for (const bot of AI_ADVENTURERS) {
     if (bot.zoneId === zoneId) {
       const dx = (bot.posX || 0) - (posX || 0);
@@ -250,14 +381,22 @@ router.post("/multiplayer/sync", (req, res): void => {
     success: true,
     players: othersInZone,
     serverTime: now,
-    totalOnline: activePlayers.size + AI_ADVENTURERS.length,
+    totalOnline: mergedMap.size + AI_ADVENTURERS.length + 1,
   });
 });
 
-router.post("/multiplayer/disconnect", (req, res): void => {
+router.post("/multiplayer/disconnect", async (req, res): Promise<void> => {
   const { characterId } = req.body;
-  if (characterId && activePlayers.has(Number(characterId))) {
-    activePlayers.delete(Number(characterId));
+  if (characterId) {
+    const numId = Number(characterId);
+    activePlayers.delete(numId);
+    cachedDbPlayers = cachedDbPlayers.filter((p) => p.characterId !== numId);
+    try {
+      await db
+        .update(charactersTable)
+        .set({ lastSavedAt: new Date(Date.now() - 120000) })
+        .where(eq(charactersTable.id, numId));
+    } catch {}
   }
   res.status(200).json({ success: true, message: "Đã ngắt kết nối session realtime thành công." });
 });

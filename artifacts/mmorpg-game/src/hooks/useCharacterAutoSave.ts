@@ -107,6 +107,12 @@ export function useCharacterAutoSave(characterIdOverride?: number) {
 
       if (isBeaconOrUnload) {
         // High priority unload save via keepalive fetch or sendBeacon
+        const token = typeof window !== "undefined" ? (localStorage.getItem("clb_token") || localStorage.getItem("token")) : null;
+        const authHeaders = {
+          "Content-Type": "application/json",
+          ...(token ? { Authorization: `Bearer ${token}` } : {}),
+        };
+
         try {
           if (typeof navigator !== "undefined" && navigator.sendBeacon) {
             const blob = new Blob([snapshot], { type: "application/json" });
@@ -114,7 +120,7 @@ export function useCharacterAutoSave(characterIdOverride?: number) {
           } else {
             fetch(url, {
               method: "POST",
-              headers: { "Content-Type": "application/json" },
+              headers: authHeaders,
               body: snapshot,
               keepalive: true,
               credentials: "include",
@@ -124,7 +130,7 @@ export function useCharacterAutoSave(characterIdOverride?: number) {
           try {
             fetch(url, {
               method: "POST",
-              headers: { "Content-Type": "application/json" },
+              headers: authHeaders,
               body: snapshot,
               keepalive: true,
               credentials: "include",
@@ -137,10 +143,15 @@ export function useCharacterAutoSave(characterIdOverride?: number) {
       if (isSavingRef.current) return;
       isSavingRef.current = true;
 
+      const token = typeof window !== "undefined" ? (localStorage.getItem("clb_token") || localStorage.getItem("token")) : null;
+
       try {
         const res = await fetch(url, {
           method: "PUT",
-          headers: { "Content-Type": "application/json" },
+          headers: {
+            "Content-Type": "application/json",
+            ...(token ? { Authorization: `Bearer ${token}` } : {}),
+          },
           body: snapshot,
           credentials: "include",
         });

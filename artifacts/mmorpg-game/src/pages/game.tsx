@@ -59,6 +59,7 @@ export default function GamePage() {
   useEffect(() => {
     if (targetCharId && typeof window !== "undefined") {
       localStorage.setItem("selectedCharacterId", String(targetCharId));
+      useGameWorldStore.getState().setActiveCharacterId(targetCharId);
     }
   }, [targetCharId]);
 

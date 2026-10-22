@@ -67490,6 +67490,10 @@ async function verifyCharacterOwnership(characterId, userId) {
   return Boolean(char2);
 }
 var activePlayers = /* @__PURE__ */ new Map();
+var lastDbWriteTime = /* @__PURE__ */ new Map();
+var lastDbPositions = /* @__PURE__ */ new Map();
+var cachedDbPlayers = [];
+var lastDbQueryTime = 0;
 var AI_ADVENTURERS = [
   {
     characterId: 9001,
@@ -67579,7 +67583,7 @@ var AI_ADVENTURERS = [
 setInterval(() => {
   const now = Date.now();
   for (const [id, player] of activePlayers.entries()) {
-    if (now - player.lastHeartbeat > 12e3) {
+    if (now - player.lastHeartbeat > 15e3) {
       activePlayers.delete(id);
     }
   }
@@ -67590,7 +67594,79 @@ setInterval(() => {
   AI_ADVENTURERS[2].posX = -25 + Math.sin(t * 0.6) * 4;
   AI_ADVENTURERS[2].posZ = -14 + Math.cos(t * 0.6) * 3;
 }, 3e3);
-router5.post("/multiplayer/sync", (req, res) => {
+async function getOnlinePlayersFromSupabase(serverId, currentZoneId, currentCharacterId) {
+  const now = Date.now();
+  if (now - lastDbQueryTime < 1500 && cachedDbPlayers.length > 0) {
+    return cachedDbPlayers.filter(
+      (p) => p.characterId !== currentCharacterId && p.serverId === serverId && p.zoneId === currentZoneId
+    );
+  }
+  try {
+    const activeCutoff = new Date(now - 6e4);
+    const rows = await db.select({
+      id: charactersTable.id,
+      name: charactersTable.name,
+      classId: charactersTable.classId,
+      level: charactersTable.level,
+      gender: charactersTable.gender,
+      posX: charactersTable.posX,
+      posZ: charactersTable.posZ,
+      facing: charactersTable.facing,
+      hp: charactersTable.hp,
+      maxHp: charactersTable.maxHp,
+      zoneId: charactersTable.zoneId,
+      serverId: charactersTable.serverId,
+      hairStyle: charactersTable.hairStyle,
+      hairColor: charactersTable.hairColor,
+      outfitId: charactersTable.outfitId,
+      auraIds: charactersTable.auraIds,
+      isMounted: charactersTable.isMounted,
+      activeMountId: charactersTable.activeMountId,
+      activePetId: charactersTable.activePetId,
+      lastSavedAt: charactersTable.lastSavedAt
+    }).from(charactersTable).where(
+      and(
+        eq(charactersTable.serverId, serverId),
+        gte(charactersTable.lastSavedAt, activeCutoff)
+      )
+    ).limit(50);
+    lastDbQueryTime = now;
+    cachedDbPlayers = rows.map((r) => ({
+      characterId: r.id,
+      name: r.name || "Hi\u1EC7p Kh\xE1ch",
+      classId: r.classId || "fighter",
+      level: Number(r.level || 1),
+      gender: r.gender === "female" ? "female" : "male",
+      posX: Number(r.posX || 0),
+      posZ: Number(r.posZ || 0),
+      facing: r.facing === "left" ? -Math.PI / 2 : Math.PI / 2,
+      facingLeft: r.facing === "left",
+      animState: "IDLE",
+      enhanceLevel: 7,
+      hp: Number(r.hp || 500),
+      maxHp: Number(r.maxHp || 500),
+      chatBubble: null,
+      zoneId: r.zoneId || "SAFE_VILLAGE",
+      serverId: r.serverId || "s1_long_vuong",
+      lastHeartbeat: new Date(r.lastSavedAt).getTime(),
+      hairStyle: r.hairStyle,
+      hairColor: r.hairColor,
+      outfitId: r.outfitId,
+      auraIds: r.auraIds,
+      isMounted: Boolean(r.isMounted),
+      mountId: r.activeMountId,
+      petId: r.activePetId,
+      isBot: false
+    }));
+    return cachedDbPlayers.filter(
+      (p) => p.characterId !== currentCharacterId && p.serverId === serverId && p.zoneId === currentZoneId
+    );
+  } catch (err) {
+    console.warn("[Multiplayer] Supabase query fallback to in-memory:", err);
+    return [];
+  }
+}
+router5.post("/multiplayer/sync", async (req, res) => {
   const {
     characterId,
     name,
@@ -67620,11 +67696,12 @@ router5.post("/multiplayer/sync", (req, res) => {
     res.status(400).json({ error: "Thi\u1EBFu characterId" });
     return;
   }
+  const charNumId = Number(characterId);
   const now = Date.now();
-  const existing = activePlayers.get(characterId);
+  const existing = activePlayers.get(charNumId);
   const updatedBubble = chatBubble ?? (existing?.chatBubble && now - (existing.chatTime || 0) < 6e3 ? existing.chatBubble : null);
-  activePlayers.set(characterId, {
-    characterId,
+  activePlayers.set(charNumId, {
+    characterId: charNumId,
     name,
     classId,
     level,
@@ -67650,15 +67727,43 @@ router5.post("/multiplayer/sync", (req, res) => {
     mountId,
     petId
   });
+  const lastWrite = lastDbWriteTime.get(charNumId) || 0;
+  const lastPos = lastDbPositions.get(charNumId);
+  const distMoved = lastPos ? Math.hypot((posX || 0) - lastPos.x, (posZ || 0) - lastPos.z) : 999;
+  const zoneChanged = lastPos ? lastPos.zoneId !== zoneId : true;
+  if (now - lastWrite > 2500 || distMoved > 1.5 || zoneChanged) {
+    lastDbWriteTime.set(charNumId, now);
+    lastDbPositions.set(charNumId, { x: posX || 0, z: posZ || 0, zoneId: zoneId || "SAFE_VILLAGE" });
+    (async () => {
+      try {
+        await db.update(charactersTable).set({
+          posX: Number((posX || 0).toFixed(2)),
+          posZ: Number((posZ || 0).toFixed(2)),
+          facing: facingLeft ? "left" : "right",
+          zoneId: zoneId || "SAFE_VILLAGE",
+          lastSavedAt: new Date(now)
+        }).where(eq(charactersTable.id, charNumId));
+      } catch {
+      }
+    })();
+  }
+  const mergedMap = /* @__PURE__ */ new Map();
+  const dbPlayers = await getOnlinePlayersFromSupabase(serverId, zoneId, charNumId);
+  for (const dbPlayer of dbPlayers) {
+    mergedMap.set(dbPlayer.characterId, dbPlayer);
+  }
+  for (const [id, other] of activePlayers.entries()) {
+    if (id !== charNumId && other.serverId === serverId && other.zoneId === zoneId) {
+      mergedMap.set(id, other);
+    }
+  }
   const othersInZone = [];
   const MAX_AOI_DIST_SQ = 50 * 50;
-  for (const [id, other] of activePlayers.entries()) {
-    if (id !== characterId && other.serverId === serverId && other.zoneId === zoneId) {
-      const dx = (other.posX || 0) - (posX || 0);
-      const dz = (other.posZ || 0) - (posZ || 0);
-      if (dx * dx + dz * dz <= MAX_AOI_DIST_SQ) {
-        othersInZone.push(other);
-      }
+  for (const other of mergedMap.values()) {
+    const dx = (other.posX || 0) - (posX || 0);
+    const dz = (other.posZ || 0) - (posZ || 0);
+    if (dx * dx + dz * dz <= MAX_AOI_DIST_SQ) {
+      othersInZone.push(other);
     }
   }
   for (const bot of AI_ADVENTURERS) {
@@ -67674,13 +67779,19 @@ router5.post("/multiplayer/sync", (req, res) => {
     success: true,
     players: othersInZone,
     serverTime: now,
-    totalOnline: activePlayers.size + AI_ADVENTURERS.length
+    totalOnline: mergedMap.size + AI_ADVENTURERS.length + 1
   });
 });
-router5.post("/multiplayer/disconnect", (req, res) => {
+router5.post("/multiplayer/disconnect", async (req, res) => {
   const { characterId } = req.body;
-  if (characterId && activePlayers.has(Number(characterId))) {
-    activePlayers.delete(Number(characterId));
+  if (characterId) {
+    const numId = Number(characterId);
+    activePlayers.delete(numId);
+    cachedDbPlayers = cachedDbPlayers.filter((p) => p.characterId !== numId);
+    try {
+      await db.update(charactersTable).set({ lastSavedAt: new Date(Date.now() - 12e4) }).where(eq(charactersTable.id, numId));
+    } catch {
+    }
   }
   res.status(200).json({ success: true, message: "\u0110\xE3 ng\u1EAFt k\u1EBFt n\u1ED1i session realtime th\xE0nh c\xF4ng." });
 });

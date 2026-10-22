@@ -28,16 +28,22 @@ export const MultiplayerSyncManager = memo(function MultiplayerSyncManager() {
       if (typeof window === "undefined") return;
 
       const now = Date.now();
-      if (now - lastSyncTime.current < 200) return;
+      if (now - lastSyncTime.current < 600) return;
       lastSyncTime.current = now;
 
-      const targetId = activeCharacterId || Number(localStorage.getItem("selectedCharacterId")) || 1;
+      const targetId = activeCharacterId || Number(localStorage.getItem("selectedCharacterId")) || 0;
+      if (!targetId || targetId <= 0) return;
+
       const store = useGameWorldStore.getState();
+      const token = typeof window !== "undefined" ? (localStorage.getItem("clb_token") || localStorage.getItem("token")) : null;
 
       try {
         const res = await fetch("/api/multiplayer/sync", {
           method: "POST",
-          headers: { "Content-Type": "application/json" },
+          headers: {
+            "Content-Type": "application/json",
+            ...(token ? { Authorization: `Bearer ${token}` } : {}),
+          },
           body: JSON.stringify({
             characterId: targetId,
             name: playerName,
@@ -74,13 +80,27 @@ export const MultiplayerSyncManager = memo(function MultiplayerSyncManager() {
       } catch {
         // Ignore transient network errors during sync
       }
-    }, 250);
+    }, 800);
 
     return () => {
       isCancelled = true;
       clearInterval(interval);
+      const targetId = activeCharacterId || (typeof window !== "undefined" ? Number(localStorage.getItem("selectedCharacterId")) : 0);
+      const token = typeof window !== "undefined" ? (localStorage.getItem("clb_token") || localStorage.getItem("token")) : null;
+      if (targetId && targetId > 0) {
+        fetch("/api/multiplayer/disconnect", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            ...(token ? { Authorization: `Bearer ${token}` } : {}),
+          },
+          body: JSON.stringify({ characterId: targetId }),
+          keepalive: true,
+        }).catch(() => {});
+      }
     };
   }, [
+    activeCharacterId,
     playerPosition,
     playerFacingLeft,
     playerAnimState,
