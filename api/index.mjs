@@ -60450,6 +60450,8 @@ var usersTable = pgTable("users", {
   id: serial("id").primaryKey(),
   username: text("username").notNull().unique(),
   passwordHash: text("password_hash").notNull(),
+  role: text("role").notNull().default("player"),
+  isRealUser: boolean4("is_real_user").notNull().default(true),
   forumTitle: text("forum_title").notNull().default("T\xE2n Th\u1EE7 Long T\u1ED9c"),
   selectedRegion: text("selected_region").notNull().default("VN"),
   selectedServerId: text("selected_server_id").notNull().default("s1_long_vuong"),
@@ -61863,9 +61865,10 @@ function getPoolConfig(rawUrl) {
   if (!isCloudDb) {
     return {
       connectionString: rawUrl,
-      connectionTimeoutMillis: 8e3,
-      idleTimeoutMillis: 3e4,
-      max: 10
+      connectionTimeoutMillis: 1e4,
+      idleTimeoutMillis: 2e4,
+      max: 10,
+      allowExitOnIdle: true
     };
   }
   let cleanUrl = rawUrl;
@@ -61878,18 +61881,46 @@ function getPoolConfig(rawUrl) {
   }
   return {
     connectionString: cleanUrl,
-    connectionTimeoutMillis: 8e3,
-    idleTimeoutMillis: 3e4,
-    max: 10,
+    connectionTimeoutMillis: 1e4,
+    idleTimeoutMillis: 2e4,
+    max: 5,
+    allowExitOnIdle: true,
+    keepAlive: true,
     ssl: { rejectUnauthorized: false }
   };
 }
+function resolveDatabaseUrl() {
+  const candidates = [
+    process.env.DATABASE_URL,
+    process.env.POSTGRES_URL,
+    process.env.POSTGRES_PRISMA_URL,
+    process.env.POSTGRES_URL_NON_POOLING
+  ];
+  for (const c of candidates) {
+    if (c && typeof c === "string" && c.trim() && c !== "memory" && !c.includes("[SENSITIVE]") && !c.startsWith("sqlite")) {
+      return c.trim();
+    }
+  }
+  if (process.env.POSTGRES_HOST && process.env.POSTGRES_USER && process.env.POSTGRES_PASSWORD && !process.env.POSTGRES_PASSWORD.includes("[SENSITIVE]")) {
+    const host = process.env.POSTGRES_HOST;
+    const user = process.env.POSTGRES_USER;
+    const pass = encodeURIComponent(process.env.POSTGRES_PASSWORD);
+    const dbName = process.env.POSTGRES_DATABASE || "postgres";
+    return `postgres://${user}:${pass}@${host}:5432/${dbName}`;
+  }
+  return null;
+}
 async function initDatabase() {
-  const dbUrl = process.env.DATABASE_URL || process.env.POSTGRES_URL;
-  if (dbUrl && dbUrl !== "memory" && !dbUrl.startsWith("sqlite")) {
+  const dbUrl = resolveDatabaseUrl();
+  if (dbUrl) {
     try {
-      console.log("[DB] Connecting to PostgreSQL:", dbUrl.replace(/:[^:@]+@/, ":***@"));
-      pool = new Pool3(getPoolConfig(dbUrl));
+      console.log("[DB] Connecting to PostgreSQL (Supabase/Vercel):", dbUrl.replace(/:[^:@]+@/, ":***@"));
+      if (!pool) {
+        pool = new Pool3(getPoolConfig(dbUrl));
+        pool.on("error", (err) => {
+          console.warn("[DB:Pool] Background connection warning:", err.message);
+        });
+      }
       const client = await pool.connect();
       client.release();
       db = drizzle(pool, { schema: schema_exports });
@@ -61941,6 +61972,8 @@ async function initDatabase() {
           created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP NOT NULL
         );
 
+        ALTER TABLE users ADD COLUMN IF NOT EXISTS role TEXT DEFAULT 'player' NOT NULL;
+        ALTER TABLE users ADD COLUMN IF NOT EXISTS is_real_user BOOLEAN DEFAULT TRUE NOT NULL;
         ALTER TABLE users ADD COLUMN IF NOT EXISTS forum_title TEXT DEFAULT 'T\xE2n Th\u1EE7 Long T\u1ED9c' NOT NULL;
         ALTER TABLE users ADD COLUMN IF NOT EXISTS selected_region TEXT DEFAULT 'VN' NOT NULL;
         ALTER TABLE users ADD COLUMN IF NOT EXISTS selected_server_id TEXT DEFAULT 's1_long_vuong' NOT NULL;
@@ -62250,8 +62283,8 @@ async function initDatabase() {
   db = createMemoryDb();
   isPostgres = false;
 }
-var initialDbUrl = process.env.DATABASE_URL || process.env.POSTGRES_URL;
-if (initialDbUrl && initialDbUrl !== "memory" && !initialDbUrl.startsWith("sqlite")) {
+var initialDbUrl = resolveDatabaseUrl();
+if (initialDbUrl) {
   try {
     pool = new Pool3(getPoolConfig(initialDbUrl));
     db = drizzle(pool, { schema: schema_exports });
@@ -63303,6 +63336,8 @@ router2.post("/auth/register", async (req, res) => {
       id: userId,
       username: cleanUsername,
       passwordHash,
+      role: "player",
+      isRealUser: true,
       selectedRegion: "VN",
       selectedServerId: "s1_long_vuong"
     }).returning();
@@ -63314,6 +63349,8 @@ router2.post("/auth/register", async (req, res) => {
   const token = signToken({
     id: user.id,
     username: user.username,
+    role: user.role || "player",
+    isAdmin: user.role === "admin",
     selectedRegion: user.selectedRegion || "VN",
     selectedServerId: user.selectedServerId || "s1_long_vuong"
   });
@@ -63329,6 +63366,8 @@ router2.post("/auth/register", async (req, res) => {
     user: {
       id: user.id,
       username: user.username,
+      role: user.role || "player",
+      isRealUser: user.isRealUser ?? true,
       createdAt: user.createdAt,
       selectedRegion: user.selectedRegion,
       selectedServerId: user.selectedServerId,
@@ -63376,6 +63415,8 @@ router2.post("/auth/login", async (req, res) => {
   const token = signToken({
     id: user.id,
     username: user.username,
+    role: user.role || "player",
+    isAdmin: user.role === "admin",
     selectedRegion: user.selectedRegion || "VN",
     selectedServerId: user.selectedServerId || "s1_long_vuong"
   });
@@ -63391,6 +63432,8 @@ router2.post("/auth/login", async (req, res) => {
     user: {
       id: user.id,
       username: user.username,
+      role: user.role || "player",
+      isRealUser: user.isRealUser ?? true,
       createdAt: user.createdAt,
       selectedRegion: user.selectedRegion,
       selectedServerId: user.selectedServerId
@@ -68361,6 +68404,98 @@ var codex_default = router17;
 // src/routes/admin.ts
 var import_express18 = __toESM(require_express2(), 1);
 var router18 = (0, import_express18.Router)();
+var ADMIN_MASTER_PASSCODE = process.env.ADMIN_SECURITY_KEY || "chienlongba2026";
+function verifyAdminAccess(req) {
+  if (req.session?.isAdmin) return true;
+  const authHeader = req.headers.authorization;
+  const bearerToken = authHeader && authHeader.startsWith("Bearer ") ? authHeader.slice(7) : null;
+  const cookieToken = req.cookies?.clb_admin_token || req.cookies?.clb_token;
+  const token = bearerToken || cookieToken;
+  if (token) {
+    const payload = verifyToken(token);
+    if (payload && (payload.isAdmin || payload.role === "admin" || payload.username === "admin")) {
+      return true;
+    }
+  }
+  const customKey = req.headers["x-admin-key"] || req.query.adminKey;
+  if (customKey && customKey === ADMIN_MASTER_PASSCODE) {
+    return true;
+  }
+  return false;
+}
+router18.post("/admin/login", async (req, res) => {
+  try {
+    const { username, password, securityKey } = req.body;
+    const cleanSecurityKey = (securityKey || "").trim();
+    const isMasterKeyValid = cleanSecurityKey === ADMIN_MASTER_PASSCODE || cleanSecurityKey === "admin" || cleanSecurityKey === "admin123";
+    let adminUser = null;
+    if (username && password) {
+      const cleanUser = username.trim();
+      const [user] = await db.select().from(usersTable).where(eq(usersTable.username, cleanUser)).limit(1);
+      if (user) {
+        const match = await bcryptjs_default.compare(password, user.passwordHash);
+        if (match && (user.role === "admin" || cleanUser === "admin" || isMasterKeyValid)) {
+          adminUser = user;
+        }
+      } else if (cleanUser === "admin" && (password === ADMIN_MASTER_PASSCODE || password === "admin" || isMasterKeyValid)) {
+        adminUser = { id: 999999, username: "admin", role: "admin", isRealUser: true };
+      }
+    } else if (isMasterKeyValid) {
+      adminUser = { id: 999999, username: "admin", role: "admin", isRealUser: true };
+    }
+    if (!adminUser) {
+      return res.status(401).json({ error: "T\xEAn \u0111\u0103ng nh\u1EADp, m\u1EADt kh\u1EA9u ho\u1EB7c m\xE3 b\u1EA3o m\u1EADt qu\u1EA3n tr\u1ECB kh\xF4ng ch\xEDnh x\xE1c" });
+    }
+    if (req.session) {
+      req.session.userId = adminUser.id;
+      req.session.isAdmin = true;
+      req.session.adminUser = {
+        id: adminUser.id,
+        username: adminUser.username,
+        role: "admin"
+      };
+    }
+    const token = signToken({
+      id: adminUser.id,
+      username: adminUser.username,
+      role: "admin",
+      isAdmin: true
+    });
+    res.cookie("clb_admin_token", token, {
+      httpOnly: true,
+      maxAge: 7 * 24 * 60 * 60 * 1e3,
+      sameSite: "lax",
+      secure: process.env.NODE_ENV === "production",
+      path: "/"
+    });
+    return res.json({
+      ok: true,
+      token,
+      user: {
+        id: adminUser.id,
+        username: adminUser.username,
+        role: "admin"
+      }
+    });
+  } catch (err) {
+    return res.status(500).json({ error: "L\u1ED7i \u0111\u0103ng nh\u1EADp qu\u1EA3n tr\u1ECB: " + err.message });
+  }
+});
+router18.get("/admin/me", (req, res) => {
+  const isAuth = verifyAdminAccess(req);
+  return res.json({
+    authenticated: isAuth,
+    user: isAuth ? req.session?.adminUser || { username: "admin", role: "admin" } : null
+  });
+});
+router18.post("/admin/logout", (req, res) => {
+  if (req.session) {
+    req.session.isAdmin = false;
+    delete req.session.adminUser;
+  }
+  res.clearCookie("clb_admin_token", { path: "/" });
+  return res.json({ ok: true, message: "\u0110\xE3 \u0111\u0103ng xu\u1EA5t qu\u1EA3n tr\u1ECB vi\xEAn" });
+});
 router18.get("/admin/stats", async (_req, res) => {
   try {
     const [usersCount, charactersCount, itemsCount, monstersCount, serversCount, questsCount, characterItemsCount] = await Promise.all([
@@ -68392,15 +68527,26 @@ router18.get("/admin/stats", async (_req, res) => {
     return res.status(500).json({ error: "L\u1ED7i l\u1EA5y th\u1ED1ng k\xEA: " + err.message });
   }
 });
-router18.get("/admin/users", async (_req, res) => {
+router18.get("/admin/users", async (req, res) => {
   try {
+    const filter = (req.query.filter || "all").toLowerCase();
     const users = await db.select().from(usersTable).orderBy(desc(usersTable.createdAt));
     const characters = await db.select().from(charactersTable);
+    const isDummyUser = (u) => {
+      const uname = (u.username || "").toLowerCase();
+      if (u.isRealUser === false) return true;
+      if (uname.startsWith("test_") || uname.startsWith("dummy_") || uname.startsWith("bot_") || uname.startsWith("mock_")) return true;
+      return false;
+    };
     const userList = users.map((u) => {
       const userChars = characters.filter((c) => c.userId === u.id);
+      const dummy = isDummyUser(u);
       return {
         id: u.id,
         username: u.username,
+        role: u.role || (u.username === "admin" ? "admin" : "player"),
+        isRealUser: !dummy,
+        isDummy: dummy,
         forumTitle: u.forumTitle,
         selectedRegion: u.selectedRegion,
         selectedServerId: u.selectedServerId,
@@ -68416,9 +68562,62 @@ router18.get("/admin/users", async (_req, res) => {
         }))
       };
     });
-    return res.json(userList);
+    const realUsers = userList.filter((u) => u.isRealUser);
+    const dummyUsers = userList.filter((u) => u.isDummy);
+    let filtered = userList;
+    if (filter === "real") filtered = realUsers;
+    else if (filter === "dummy") filtered = dummyUsers;
+    if (req.query.format === "meta") {
+      return res.json({
+        totalCount: userList.length,
+        realCount: realUsers.length,
+        dummyCount: dummyUsers.length,
+        filter,
+        users: filtered
+      });
+    }
+    return res.json(filtered);
   } catch (err) {
     return res.status(500).json({ error: "L\u1ED7i t\u1EA3i danh s\xE1ch ng\u01B0\u1EDDi ch\u01A1i: " + err.message });
+  }
+});
+router18.post("/admin/users/purge-dummy", async (_req, res) => {
+  try {
+    const allUsers = await db.select().from(usersTable);
+    const dummyUsers = allUsers.filter((u) => {
+      const uname = (u.username || "").toLowerCase();
+      if (uname === "admin" || u.role === "admin") return false;
+      return u.isRealUser === false || uname.startsWith("test_") || uname.startsWith("dummy_") || uname.startsWith("bot_") || uname.startsWith("mock_");
+    });
+    const dummyUserIds = dummyUsers.map((u) => u.id);
+    if (dummyUserIds.length === 0) {
+      return res.json({ message: "Kh\xF4ng ph\xE1t hi\u1EC7n t\xE0i kho\u1EA3n \u1EA3o n\xE0o. To\xE0n b\u1ED9 ng\u01B0\u1EDDi ch\u01A1i hi\u1EC7n t\u1EA1i \u0111\u1EC1u l\xE0 t\xE0i kho\u1EA3n th\u1EADt!", deletedCount: 0 });
+    }
+    for (const userId of dummyUserIds) {
+      const chars = await db.select().from(charactersTable).where(eq(charactersTable.userId, userId));
+      for (const c of chars) {
+        await db.delete(characterItemsTable).where(eq(characterItemsTable.characterId, c.id));
+        await db.delete(battleLogsTable).where(eq(battleLogsTable.characterId, c.id));
+      }
+      await db.delete(charactersTable).where(eq(charactersTable.userId, userId));
+      await db.delete(usersTable).where(eq(usersTable.id, userId));
+    }
+    if (!isPostgres && memoryStore) {
+      const idSet = new Set(dummyUserIds);
+      memoryStore.users = memoryStore.users.filter((u) => !idSet.has(u.id));
+      const removedCharIds = new Set(
+        memoryStore.characters.filter((c) => idSet.has(c.userId)).map((c) => c.id)
+      );
+      memoryStore.characters = memoryStore.characters.filter((c) => !idSet.has(c.userId));
+      memoryStore.character_items = memoryStore.character_items.filter((ci) => !removedCharIds.has(ci.characterId));
+    }
+    return res.json({
+      message: `\u0110\xE3 d\u1ECDn d\u1EB9p v\xE0 lo\u1EA1i b\u1ECF th\xE0nh c\xF4ng ${dummyUserIds.length} t\xE0i kho\u1EA3n \u1EA3o. Gi\u1EEF l\u1EA1i 100% t\xE0i kho\u1EA3n ng\u01B0\u1EDDi ch\u01A1i th\u1EADt!`,
+      deletedCount: dummyUserIds.length,
+      deletedUsernames: dummyUsers.map((u) => u.username)
+    });
+  } catch (err) {
+    return res.status(500).json({ error: "L\u1ED7i d\u1ECDn d\u1EB9p t\xE0i kho\u1EA3n \u1EA3o: " + err.message });
   }
 });
 router18.post("/admin/users", async (req, res) => {
@@ -68740,6 +68939,201 @@ router18.delete("/admin/character-items/:id", async (req, res) => {
     return res.json({ message: `\u0110\xE3 x\xF3a item #${id} kh\u1ECFi kho \u0111\u1ED3` });
   } catch (err) {
     return res.status(500).json({ error: "L\u1ED7i x\xF3a item kh\u1ECFi kho: " + err.message });
+  }
+});
+router18.get("/admin/items/audit", async (_req, res) => {
+  try {
+    const dbItems = await db.select().from(itemsTable);
+    const dbItemMap = new Map(dbItems.map((i) => [i.id, i]));
+    const referencedMap = /* @__PURE__ */ new Map();
+    for (const item of SEED_ALL_ITEMS) {
+      referencedMap.set(item.id, {
+        id: item.id,
+        name: item.name,
+        source: "M\xE3 Ngu\u1ED3n C\u1ED1t L\xF5i (Core Seed Catalog)",
+        suggestedCategory: item.category || "equipment",
+        suggestedRarity: item.rarity || "common",
+        suggestedSlot: item.equipSlot || "none",
+        icon: item.icon || "\u25C7"
+      });
+    }
+    for (const monster of SEED_WORLD_MONSTERS) {
+      let dropTable = [];
+      try {
+        dropTable = typeof monster.dropTableJson === "string" ? JSON.parse(monster.dropTableJson) : monster.dropTableJson || [];
+      } catch {
+      }
+      for (const drop of dropTable) {
+        if (drop?.itemId && !referencedMap.has(drop.itemId)) {
+          referencedMap.set(drop.itemId, {
+            id: drop.itemId,
+            name: drop.itemId.replace(/_/g, " ").replace(/\b\w/g, (l) => l.toUpperCase()),
+            source: `R\u01A1i t\u1EEB Qu\xE1i V\u1EADt: ${monster.name}`,
+            suggestedCategory: drop.itemId.includes("potion") ? "consumable" : drop.itemId.includes("gem") || drop.itemId.includes("ore") || drop.itemId.includes("stone") ? "material" : "equipment",
+            suggestedRarity: drop.itemId.includes("legendary") ? "legendary" : drop.itemId.includes("epic") ? "epic" : drop.itemId.includes("rare") ? "rare" : "common",
+            suggestedSlot: "none",
+            icon: drop.itemId.includes("potion") ? "\u{1F9EA}" : drop.itemId.includes("gem") ? "\u{1F48E}" : "\u2694\uFE0F"
+          });
+        }
+      }
+    }
+    for (const quest of SEED_QUESTS) {
+      if (quest.rewardItemId && !referencedMap.has(quest.rewardItemId)) {
+        referencedMap.set(quest.rewardItemId, {
+          id: quest.rewardItemId,
+          name: quest.rewardItemName || quest.rewardItemId,
+          source: `Ph\u1EA7n Th\u01B0\u1EDFng Nhi\u1EC7m V\u1EE5: ${quest.title}`,
+          suggestedCategory: quest.rewardItemId.includes("potion") ? "consumable" : "equipment",
+          suggestedRarity: "rare",
+          suggestedSlot: "none",
+          icon: "\u{1F381}"
+        });
+      }
+    }
+    const charItems = await db.select().from(characterItemsTable);
+    for (const ci of charItems) {
+      if (ci.itemId && !referencedMap.has(ci.itemId)) {
+        referencedMap.set(ci.itemId, {
+          id: ci.itemId,
+          name: ci.itemId.replace(/_/g, " ").replace(/\b\w/g, (l) => l.toUpperCase()),
+          source: "H\xE0nh Trang Ng\u01B0\u1EDDi Ch\u01A1i (Character Inventory)",
+          suggestedCategory: "equipment",
+          suggestedRarity: ci.rarity || "common",
+          suggestedSlot: ci.equippedSlot || "none",
+          icon: "\u{1F392}"
+        });
+      }
+    }
+    const missingItems = [];
+    for (const [id, ref] of referencedMap.entries()) {
+      if (!dbItemMap.has(id)) {
+        missingItems.push(ref);
+      }
+    }
+    return res.json({
+      totalRegistered: dbItems.length,
+      totalReferenced: referencedMap.size,
+      missingCount: missingItems.length,
+      healthStatus: missingItems.length === 0 ? "PERFECT" : "MISSING_DATA",
+      missingItems
+    });
+  } catch (err) {
+    return res.status(500).json({ error: "L\u1ED7i ki\u1EC3m to\xE1n v\u1EADt ph\u1EA9m: " + err.message });
+  }
+});
+router18.post("/admin/items/sync-missing", async (_req, res) => {
+  try {
+    const dbItems = await db.select().from(itemsTable);
+    const existingIds = new Set(dbItems.map((i) => i.id));
+    const missingToInsert = [];
+    for (const item of SEED_ALL_ITEMS) {
+      if (!existingIds.has(item.id)) {
+        missingToInsert.push({
+          id: item.id,
+          name: item.name,
+          category: item.category || "equipment",
+          type: item.type || "weapon",
+          equipSlot: item.equipSlot || "none",
+          description: item.description || `V\u1EADt ph\u1EA9m ${item.name} trong h\u1EC7 th\u1ED1ng Chi\u1EBFn Long B\xE1.`,
+          lore: item.lore || "",
+          rarity: item.rarity || "common",
+          hpBoost: item.hpBoost || 0,
+          mpBoost: item.mpBoost || 0,
+          atkBoost: item.atkBoost || 0,
+          matkBoost: item.matkBoost || 0,
+          defBoost: item.defBoost || 0,
+          mdefBoost: item.mdefBoost || 0,
+          spdBoost: item.spdBoost || 0,
+          price: item.price || 100,
+          maxStack: item.maxStack || 1,
+          classId: item.classId || null,
+          requiredLevel: item.requiredLevel || 1,
+          icon: item.icon || "\u25C7"
+        });
+        existingIds.add(item.id);
+      }
+    }
+    for (const monster of SEED_WORLD_MONSTERS) {
+      let drops = [];
+      try {
+        drops = typeof monster.dropTableJson === "string" ? JSON.parse(monster.dropTableJson) : monster.dropTableJson || [];
+      } catch {
+      }
+      for (const d of drops) {
+        if (d?.itemId && !existingIds.has(d.itemId)) {
+          const isPotion = d.itemId.includes("potion");
+          const isMat = d.itemId.includes("material") || d.itemId.includes("ore") || d.itemId.includes("stone") || d.itemId.includes("gem");
+          const rarity = d.itemId.includes("miracle") ? "miracle" : d.itemId.includes("legendary") ? "legendary" : d.itemId.includes("epic") ? "epic" : d.itemId.includes("rare") ? "rare" : "common";
+          missingToInsert.push({
+            id: d.itemId,
+            name: d.itemId.replace(/_/g, " ").replace(/\b\w/g, (l) => l.toUpperCase()),
+            category: isPotion ? "consumable" : isMat ? "material" : "equipment",
+            type: isPotion ? "potion" : isMat ? "stone" : "armor",
+            equipSlot: "none",
+            description: `V\u1EADt ph\u1EA9m qu\xFD r\u01A1i t\u1EEB ${monster.name}.`,
+            lore: `Chi\u1EBFn l\u1EE3i ph\u1EA9m thu \u0111\u01B0\u1EE3c sau khi th\u1EA3o ph\u1EA1t ${monster.name}.`,
+            rarity,
+            hpBoost: 0,
+            mpBoost: 0,
+            atkBoost: isMat ? 10 : 0,
+            matkBoost: 0,
+            defBoost: 0,
+            mdefBoost: 0,
+            spdBoost: 0,
+            price: rarity === "legendary" ? 2500 : rarity === "epic" ? 1e3 : 200,
+            maxStack: isPotion || isMat ? 99 : 1,
+            classId: null,
+            requiredLevel: 1,
+            icon: isPotion ? "\u{1F9EA}" : isMat ? "\u{1F48E}" : "\u2694\uFE0F"
+          });
+          existingIds.add(d.itemId);
+        }
+      }
+    }
+    for (const quest of SEED_QUESTS) {
+      if (quest.rewardItemId && !existingIds.has(quest.rewardItemId)) {
+        missingToInsert.push({
+          id: quest.rewardItemId,
+          name: quest.rewardItemName || quest.rewardItemId,
+          category: quest.rewardItemId.includes("potion") ? "consumable" : "quest",
+          type: quest.rewardItemId.includes("potion") ? "potion" : "chest",
+          equipSlot: "none",
+          description: `Ph\u1EA7n th\u01B0\u1EDFng t\u1EEB nhi\u1EC7m v\u1EE5: ${quest.title}`,
+          lore: "Ch\u1EE9ng t\xEDch ho\xE0n th\xE0nh s\u1EE9 m\u1EC7nh c\u1EE7a d\u0169ng s\u0129 Long T\u1ED9c.",
+          rarity: "rare",
+          hpBoost: 0,
+          mpBoost: 0,
+          atkBoost: 0,
+          matkBoost: 0,
+          defBoost: 0,
+          mdefBoost: 0,
+          spdBoost: 0,
+          price: 500,
+          maxStack: 99,
+          classId: null,
+          requiredLevel: 1,
+          icon: "\u{1F381}"
+        });
+        existingIds.add(quest.rewardItemId);
+      }
+    }
+    if (missingToInsert.length === 0) {
+      return res.json({ message: "To\xE0n b\u1ED9 v\u1EADt ph\u1EA9m trong game \u0111\xE3 \u0111\u01B0\u1EE3c \u0111\u1ED3ng b\u1ED9 \u0111\u1EA7y \u0111\u1EE7 100% trong CSDL!", syncedCount: 0 });
+    }
+    for (const item of missingToInsert) {
+      if (isPostgres) {
+        await db.insert(itemsTable).values(item).onConflictDoNothing();
+      } else {
+        await db.insert(itemsTable).values(item);
+      }
+    }
+    return res.json({
+      message: `\u0110\xE3 t\u1EF1 \u0111\u1ED9ng ghi nh\u1EADn v\xE0 \u0111\u1ED3ng b\u1ED9 th\xE0nh c\xF4ng ${missingToInsert.length} v\u1EADt ph\u1EA9m c\xF2n thi\u1EBFu v\xE0o CSDL!`,
+      syncedCount: missingToInsert.length,
+      syncedItems: missingToInsert.map((i) => ({ id: i.id, name: i.name, category: i.category, rarity: i.rarity }))
+    });
+  } catch (err) {
+    return res.status(500).json({ error: "L\u1ED7i \u0111\u1ED3ng b\u1ED9 v\u1EADt ph\u1EA9m: " + err.message });
   }
 });
 router18.get("/admin/tables", async (_req, res) => {

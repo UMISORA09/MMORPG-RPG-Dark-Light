@@ -436,9 +436,10 @@ function getPoolConfig(rawUrl: string) {
   if (!isCloudDb) {
     return {
       connectionString: rawUrl,
-      connectionTimeoutMillis: 8000,
-      idleTimeoutMillis: 30000,
+      connectionTimeoutMillis: 10000,
+      idleTimeoutMillis: 20000,
       max: 10,
+      allowExitOnIdle: true,
     };
   }
 
@@ -454,20 +455,57 @@ function getPoolConfig(rawUrl: string) {
 
   return {
     connectionString: cleanUrl,
-    connectionTimeoutMillis: 8000,
-    idleTimeoutMillis: 30000,
-    max: 10,
+    connectionTimeoutMillis: 10000,
+    idleTimeoutMillis: 20000,
+    max: 5,
+    allowExitOnIdle: true,
+    keepAlive: true,
     ssl: { rejectUnauthorized: false },
   };
 }
 
-export async function initDatabase() {
-  const dbUrl = process.env.DATABASE_URL || process.env.POSTGRES_URL;
+export function resolveDatabaseUrl(): string | null {
+  const candidates = [
+    process.env.DATABASE_URL,
+    process.env.POSTGRES_URL,
+    process.env.POSTGRES_PRISMA_URL,
+    process.env.POSTGRES_URL_NON_POOLING,
+  ];
 
-  if (dbUrl && dbUrl !== "memory" && !dbUrl.startsWith("sqlite")) {
+  for (const c of candidates) {
+    if (c && typeof c === "string" && c.trim() && c !== "memory" && !c.includes("[SENSITIVE]") && !c.startsWith("sqlite")) {
+      return c.trim();
+    }
+  }
+
+  if (
+    process.env.POSTGRES_HOST &&
+    process.env.POSTGRES_USER &&
+    process.env.POSTGRES_PASSWORD &&
+    !process.env.POSTGRES_PASSWORD.includes("[SENSITIVE]")
+  ) {
+    const host = process.env.POSTGRES_HOST;
+    const user = process.env.POSTGRES_USER;
+    const pass = encodeURIComponent(process.env.POSTGRES_PASSWORD);
+    const dbName = process.env.POSTGRES_DATABASE || "postgres";
+    return `postgres://${user}:${pass}@${host}:5432/${dbName}`;
+  }
+
+  return null;
+}
+
+export async function initDatabase() {
+  const dbUrl = resolveDatabaseUrl();
+
+  if (dbUrl) {
     try {
-      console.log("[DB] Connecting to PostgreSQL:", dbUrl.replace(/:[^:@]+@/, ":***@"));
-      pool = new Pool(getPoolConfig(dbUrl));
+      console.log("[DB] Connecting to PostgreSQL (Supabase/Vercel):", dbUrl.replace(/:[^:@]+@/, ":***@"));
+      if (!pool) {
+        pool = new Pool(getPoolConfig(dbUrl));
+        pool.on("error", (err) => {
+          console.warn("[DB:Pool] Background connection warning:", err.message);
+        });
+      }
 
       // Quick test
       const client = await pool.connect();
@@ -524,6 +562,8 @@ export async function initDatabase() {
           created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP NOT NULL
         );
 
+        ALTER TABLE users ADD COLUMN IF NOT EXISTS role TEXT DEFAULT 'player' NOT NULL;
+        ALTER TABLE users ADD COLUMN IF NOT EXISTS is_real_user BOOLEAN DEFAULT TRUE NOT NULL;
         ALTER TABLE users ADD COLUMN IF NOT EXISTS forum_title TEXT DEFAULT 'Tân Thủ Long Tộc' NOT NULL;
         ALTER TABLE users ADD COLUMN IF NOT EXISTS selected_region TEXT DEFAULT 'VN' NOT NULL;
         ALTER TABLE users ADD COLUMN IF NOT EXISTS selected_server_id TEXT DEFAULT 's1_long_vuong' NOT NULL;
@@ -839,8 +879,8 @@ export async function initDatabase() {
 }
 
 // Initial setup call if in non-deferred environment
-const initialDbUrl = process.env.DATABASE_URL || process.env.POSTGRES_URL;
-if (initialDbUrl && initialDbUrl !== "memory" && !initialDbUrl.startsWith("sqlite")) {
+const initialDbUrl = resolveDatabaseUrl();
+if (initialDbUrl) {
   try {
     pool = new Pool(getPoolConfig(initialDbUrl));
     db = drizzle(pool, { schema });
@@ -857,4 +897,5 @@ if (initialDbUrl && initialDbUrl !== "memory" && !initialDbUrl.startsWith("sqlit
 export * from "./schema";
 export * from "./seed-data";
 export * from "./game-seed";
+export * from "./quests-seed";
 export { seedDatabase } from "./seed";

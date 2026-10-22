@@ -99,6 +99,8 @@ router.post("/auth/register", async (req, res) => {
         id: userId,
         username: cleanUsername,
         passwordHash,
+        role: "player",
+        isRealUser: true,
         selectedRegion: "VN",
         selectedServerId: "s1_long_vuong",
       })
@@ -113,6 +115,8 @@ router.post("/auth/register", async (req, res) => {
   const token = signToken({
     id: user.id,
     username: user.username,
+    role: user.role || "player",
+    isAdmin: user.role === "admin",
     selectedRegion: user.selectedRegion || "VN",
     selectedServerId: user.selectedServerId || "s1_long_vuong",
   });
@@ -130,6 +134,8 @@ router.post("/auth/register", async (req, res) => {
     user: {
       id: user.id,
       username: user.username,
+      role: user.role || "player",
+      isRealUser: user.isRealUser ?? true,
       createdAt: user.createdAt,
       selectedRegion: user.selectedRegion,
       selectedServerId: user.selectedServerId,
@@ -192,6 +198,8 @@ router.post("/auth/login", async (req, res) => {
   const token = signToken({
     id: user.id,
     username: user.username,
+    role: user.role || "player",
+    isAdmin: user.role === "admin",
     selectedRegion: user.selectedRegion || "VN",
     selectedServerId: user.selectedServerId || "s1_long_vuong",
   });
@@ -209,6 +217,8 @@ router.post("/auth/login", async (req, res) => {
     user: {
       id: user.id,
       username: user.username,
+      role: user.role || "player",
+      isRealUser: user.isRealUser ?? true,
       createdAt: user.createdAt,
       selectedRegion: user.selectedRegion,
       selectedServerId: user.selectedServerId,

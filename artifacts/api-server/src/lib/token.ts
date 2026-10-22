@@ -5,6 +5,8 @@ const TOKEN_SECRET = process.env.SESSION_SECRET || "mmorpg-dev-secret-key-beta";
 export interface TokenPayload {
   id: number;
   username: string;
+  role?: string;
+  isAdmin?: boolean;
   selectedRegion?: string;
   selectedServerId?: string;
   exp?: number;

@@ -27,6 +27,11 @@ import {
   Eye,
   Sliders,
   Terminal,
+  LogOut,
+  Sparkles,
+  Filter,
+  Check,
+  AlertTriangle,
 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 
@@ -49,6 +54,9 @@ interface StatsData {
 interface UserData {
   id: number;
   username: string;
+  role?: string;
+  isRealUser?: boolean;
+  isDummy?: boolean;
   forumTitle: string;
   selectedRegion: string;
   selectedServerId: string;
@@ -61,6 +69,24 @@ interface UserData {
     level: number;
     gold: number;
   }>;
+}
+
+interface AuditItem {
+  id: string;
+  name: string;
+  source: string;
+  suggestedCategory: string;
+  suggestedRarity: string;
+  suggestedSlot: string;
+  icon: string;
+}
+
+interface AuditResult {
+  totalRegistered: number;
+  totalReferenced: number;
+  missingCount: number;
+  healthStatus: "PERFECT" | "MISSING_DATA";
+  missingItems: AuditItem[];
 }
 
 interface CharacterData {
@@ -142,6 +168,12 @@ export default function AdminDashboardScreen() {
   // Users state
   const [users, setUsers] = useState<UserData[]>([]);
   const [userSearch, setUserSearch] = useState("");
+  const [userTypeFilter, setUserTypeFilter] = useState<"all" | "real" | "dummy">("all");
+  const [userCounts, setUserCounts] = useState<{ total: number; real: number; dummy: number }>({
+    total: 0,
+    real: 0,
+    dummy: 0,
+  });
   const [userModal, setUserModal] = useState<{ open: boolean; mode: "create" | "edit"; data?: UserData }>({
     open: false,
     mode: "create",
@@ -170,6 +202,10 @@ export default function AdminDashboardScreen() {
   // Items state
   const [items, setItems] = useState<ItemData[]>([]);
   const [itemSearch, setItemSearch] = useState("");
+  const [auditData, setAuditData] = useState<AuditResult | null>(null);
+  const [auditLoading, setAuditLoading] = useState(false);
+  const [syncLoading, setSyncLoading] = useState(false);
+  const [auditModalOpen, setAuditModalOpen] = useState(false);
   const [itemModal, setItemModal] = useState<{ open: boolean; mode: "create" | "edit"; data?: ItemData }>({
     open: false,
     mode: "create",
@@ -207,20 +243,139 @@ export default function AdminDashboardScreen() {
     }
   };
 
-  // Fetch Users
-  const fetchUsers = async () => {
+  // Fetch Users with real / dummy filter & counts
+  const fetchUsers = async (filterOverride?: "all" | "real" | "dummy") => {
     setLoading(true);
+    const activeFilter = filterOverride || userTypeFilter;
     try {
-      const res = await fetch("/api/admin/users");
+      const res = await fetch(`/api/admin/users?format=meta&filter=${activeFilter}`);
       if (res.ok) {
         const data = await res.json();
-        setUsers(data);
+        if (data && Array.isArray(data.users)) {
+          setUsers(data.users);
+          setUserCounts({
+            total: data.totalCount ?? data.users.length,
+            real: data.realCount ?? data.users.filter((u: any) => u.isRealUser).length,
+            dummy: data.dummyCount ?? data.users.filter((u: any) => u.isDummy).length,
+          });
+        } else if (Array.isArray(data)) {
+          setUsers(data);
+          setUserCounts({
+            total: data.length,
+            real: data.filter((u: any) => u.isRealUser !== false).length,
+            dummy: data.filter((u: any) => u.isDummy === true).length,
+          });
+        }
       }
     } catch (err: any) {
-      toast({ title: "Lỗi", description: err.message, variant: "destructive" });
+      toast({ title: "Lỗi tải người chơi", description: err.message, variant: "destructive" });
     } finally {
       setLoading(false);
     }
+  };
+
+  // Handle Purge Dummy Users
+  const handlePurgeDummyUsers = () => {
+    setConfirmDialog({
+      open: true,
+      title: "Dọn Dẹp Tài Khoản Ảo & Dữ Liệu Test",
+      description: "Hệ thống sẽ quét và xóa sạch các tài khoản ảo (test_, dummy_, bot_). Toàn bộ 100% tài khoản thật của người chơi sẽ được bảo toàn tuyệt đối!",
+      confirmText: "🧹 Dọn Dẹp Ngay",
+      confirmVariant: "danger",
+      onConfirm: async () => {
+        setLoading(true);
+        try {
+          const res = await fetch("/api/admin/users/purge-dummy", { method: "POST" });
+          const data = await res.json();
+          if (!res.ok) throw new Error(data.error);
+          toast({
+            title: "Dọn dẹp thành công",
+            description: `${data.message} (Đã dọn: ${data.deletedCount ?? 0} tài khoản ảo)`,
+          });
+          fetchUsers();
+          fetchStats();
+        } catch (err: any) {
+          toast({ title: "Lỗi dọn dẹp", description: err.message, variant: "destructive" });
+        } finally {
+          setLoading(false);
+        }
+      },
+    });
+  };
+
+  // Handle Item Audit (Kiểm toán vật phẩm còn thiếu)
+  const handleAuditItems = async () => {
+    setAuditLoading(true);
+    try {
+      const res = await fetch("/api/admin/items/audit");
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error);
+      setAuditData(data);
+      setAuditModalOpen(true);
+      if (data.missingCount === 0) {
+        toast({
+          title: "Kiểm toán hoàn hảo",
+          description: `Toàn bộ ${data.totalRegistered} vật phẩm trong game đã được đồng bộ chuẩn xác!`,
+        });
+      } else {
+        toast({
+          title: `Phát hiện ${data.missingCount} vật phẩm thiếu`,
+          description: "Các vật phẩm này đã xuất hiện trong quái vật, nhiệm vụ hoặc hành trang nhưng chưa được ghi nhận vào catalog CSDL.",
+          variant: "destructive",
+        });
+      }
+    } catch (err: any) {
+      toast({ title: "Lỗi kiểm toán", description: err.message, variant: "destructive" });
+    } finally {
+      setAuditLoading(false);
+    }
+  };
+
+  // Handle Sync Missing Items (Tự động ghi nhận vật phẩm còn thiếu vào Supabase DB)
+  const handleSyncMissingItems = () => {
+    setConfirmDialog({
+      open: true,
+      title: "Ghi Nhận & Bổ Sung Vật Phẩm Còn Thiếu",
+      description: "Tự động tạo và ghi nhận toàn bộ vật phẩm đang thiếu vào danh mục cơ sở dữ liệu Supabase, đảm bảo người chơi nhận đủ dữ liệu và không bị lỗi thiếu item.",
+      confirmText: "⚡ Đồng Bộ & Ghi Nhận Ngay",
+      confirmVariant: "cyan",
+      onConfirm: async () => {
+        setSyncLoading(true);
+        try {
+          const res = await fetch("/api/admin/items/sync-missing", { method: "POST" });
+          const data = await res.json();
+          if (!res.ok) throw new Error(data.error);
+          toast({
+            title: "Đồng bộ thành công",
+            description: data.message,
+          });
+          fetchItems();
+          fetchStats();
+          // Re-audit after sync
+          const auditRes = await fetch("/api/admin/items/audit");
+          if (auditRes.ok) {
+            setAuditData(await auditRes.json());
+          }
+        } catch (err: any) {
+          toast({ title: "Lỗi đồng bộ", description: err.message, variant: "destructive" });
+        } finally {
+          setSyncLoading(false);
+        }
+      },
+    });
+  };
+
+  // Handle Admin Logout
+  const handleLogout = async () => {
+    try {
+      await fetch("/api/admin/logout", { method: "POST" });
+    } catch {
+      // ignore
+    }
+    sessionStorage.removeItem("admin_authenticated");
+    setIsAuthenticated(false);
+    toast({ title: "Đã đăng xuất", description: "Đã thoát phiên quản trị viên an toàn." });
+    setLocation("/admin/login");
   };
 
   // Fetch Characters
@@ -289,13 +444,19 @@ export default function AdminDashboardScreen() {
     if (!isAuthenticated) return;
     fetchStats();
     fetchTables();
-    if (activeTab === "users") fetchUsers();
+    if (activeTab === "users") fetchUsers(userTypeFilter);
     else if (activeTab === "characters") {
       fetchCharacters();
       fetchItems();
-    } else if (activeTab === "items") fetchItems();
-    else if (activeTab === "db") fetchTableRows(selectedTable);
-  }, [activeTab, isAuthenticated]);
+    } else if (activeTab === "items") {
+      fetchItems();
+      // Auto check audit in background
+      fetch("/api/admin/items/audit")
+        .then((r) => r.json())
+        .then((data) => setAuditData(data))
+        .catch(() => {});
+    } else if (activeTab === "db") fetchTableRows(selectedTable);
+  }, [activeTab, isAuthenticated, userTypeFilter]);
 
   // Handle Save User
   const handleSaveUser = async () => {
@@ -700,6 +861,14 @@ export default function AdminDashboardScreen() {
           >
             <Sword className="w-3.5 h-3.5" /> Vào Game
           </button>
+
+          <button
+            onClick={handleLogout}
+            className="px-4 py-2 rounded-full bg-rose-500/15 hover:bg-rose-500/30 border border-rose-500/40 text-rose-300 hover:text-white text-xs font-bold transition-all flex items-center gap-1.5 shadow-sm"
+            title="Thoát quyền quản trị viên"
+          >
+            <LogOut className="w-3.5 h-3.5" /> Đăng Xuất
+          </button>
         </div>
       </header>
 
@@ -920,6 +1089,66 @@ export default function AdminDashboardScreen() {
         {/* TAB 2: USERS MANAGEMENT */}
         {activeTab === "users" && (
           <div className="flex flex-col gap-4">
+            {/* Filter Pills & Purge Action Bar */}
+            <div className="flex flex-wrap items-center justify-between gap-3 p-3.5 rounded-2xl bg-[#342a2b] border border-[#5d4648]">
+              {/* Filter Pills */}
+              <div className="flex items-center gap-2 flex-wrap">
+                <span className="text-xs font-semibold text-[#8e7a7c] flex items-center gap-1 mr-1">
+                  <Filter className="w-3.5 h-3.5 text-[#28c3e1]" /> Bộ lọc:
+                </span>
+                <button
+                  onClick={() => {
+                    setUserTypeFilter("all");
+                    fetchUsers("all");
+                  }}
+                  className={`px-3.5 py-1.5 rounded-full text-xs font-bold transition-all flex items-center gap-1.5 ${
+                    userTypeFilter === "all"
+                      ? "bg-[#28c3e1] text-[#1c161a] shadow-[0_0_12px_rgba(40,195,225,0.4)]"
+                      : "bg-[#4a383a] text-gray-300 hover:text-white border border-[#5d4648]"
+                  }`}
+                >
+                  Tất Cả ({userCounts.total || users.length})
+                </button>
+                <button
+                  onClick={() => {
+                    setUserTypeFilter("real");
+                    fetchUsers("real");
+                  }}
+                  className={`px-3.5 py-1.5 rounded-full text-xs font-bold transition-all flex items-center gap-1.5 ${
+                    userTypeFilter === "real"
+                      ? "bg-emerald-500 text-gray-950 shadow-[0_0_12px_rgba(16,185,129,0.4)]"
+                      : "bg-[#4a383a] text-gray-300 hover:text-white border border-[#5d4648]"
+                  }`}
+                >
+                  <span className="w-2 h-2 rounded-full bg-emerald-400" />
+                  👤 Người Chơi Thật ({userCounts.real})
+                </button>
+                <button
+                  onClick={() => {
+                    setUserTypeFilter("dummy");
+                    fetchUsers("dummy");
+                  }}
+                  className={`px-3.5 py-1.5 rounded-full text-xs font-bold transition-all flex items-center gap-1.5 ${
+                    userTypeFilter === "dummy"
+                      ? "bg-amber-500 text-gray-950 shadow-[0_0_12px_rgba(245,158,11,0.4)]"
+                      : "bg-[#4a383a] text-gray-300 hover:text-white border border-[#5d4648]"
+                  }`}
+                >
+                  <span className="w-2 h-2 rounded-full bg-amber-400" />
+                  🤖 Tài Khoản Ảo / Test ({userCounts.dummy})
+                </button>
+              </div>
+
+              {/* Purge Button */}
+              <button
+                onClick={handlePurgeDummyUsers}
+                className="px-4 py-1.5 rounded-full bg-rose-500/15 hover:bg-rose-500/30 text-rose-300 hover:text-white border border-rose-500/40 text-xs font-bold transition-all flex items-center gap-1.5 shadow-sm"
+                title="Loại bỏ tài khoản ảo, giữ 100% tài khoản thật"
+              >
+                <Trash2 className="w-3.5 h-3.5" /> 🧹 Dọn Dẹp Tài Khoản Ảo ({userCounts.dummy})
+              </button>
+            </div>
+
             {/* Action Bar */}
             <div className="flex flex-wrap items-center justify-between gap-4">
               <div className="relative flex-1 min-w-[240px] max-w-md">
@@ -935,7 +1164,7 @@ export default function AdminDashboardScreen() {
 
               <div className="flex items-center gap-2">
                 <button
-                  onClick={fetchUsers}
+                  onClick={() => fetchUsers()}
                   className="px-4 py-2.5 rounded-full bg-[#4a383a] hover:bg-[#5d4648] border border-[#5d4648] text-xs font-bold text-white transition-all flex items-center gap-1.5"
                 >
                   <RefreshCw className="w-3.5 h-3.5" /> Làm Mới
@@ -965,6 +1194,7 @@ export default function AdminDashboardScreen() {
                     <tr>
                       <th className="py-3 px-4">ID</th>
                       <th className="py-3 px-4">Tài Khoản</th>
+                      <th className="py-3 px-4">Phân Loại</th>
                       <th className="py-3 px-4">Danh Hiệu</th>
                       <th className="py-3 px-4">Máy Chủ</th>
                       <th className="py-3 px-4">Nhân Vật</th>
@@ -975,8 +1205,8 @@ export default function AdminDashboardScreen() {
                   <tbody className="divide-y divide-[#5d4648]/60 text-gray-200">
                     {filteredUsers.length === 0 ? (
                       <tr>
-                        <td colSpan={7} className="py-8 text-center text-[#8e7a7c]">
-                          Không tìm thấy tài khoản người chơi nào phù hợp.
+                        <td colSpan={8} className="py-8 text-center text-[#8e7a7c]">
+                          Không tìm thấy tài khoản người chơi nào phù hợp với bộ lọc hiện tại.
                         </td>
                       </tr>
                     ) : (
@@ -984,8 +1214,25 @@ export default function AdminDashboardScreen() {
                         <tr key={u.id} className="hover:bg-[#4a383a]/40 transition-colors">
                           <td className="py-3 px-4 font-mono text-gray-400">#{u.id}</td>
                           <td className="py-3 px-4 font-bold text-white flex items-center gap-2">
-                            <span className="w-2 h-2 rounded-full bg-[#28c3e1]" />
+                            <span className={`w-2 h-2 rounded-full ${u.isDummy ? "bg-amber-400" : "bg-[#28c3e1]"}`} />
                             {u.username}
+                          </td>
+                          <td className="py-3 px-4">
+                            <div className="flex items-center gap-1.5 flex-wrap">
+                              {u.role === "admin" || u.username === "admin" ? (
+                                <span className="px-2 py-0.5 rounded text-[10px] font-black uppercase tracking-wider bg-cyan-500/20 text-[#28c3e1] border border-cyan-500/40">
+                                  GM ADMIN
+                                </span>
+                              ) : u.isDummy ? (
+                                <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-amber-500/20 text-amber-300 border border-amber-500/30">
+                                  Ảo / Test
+                                </span>
+                              ) : (
+                                <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-emerald-500/20 text-emerald-300 border border-emerald-500/30">
+                                  👤 Người Thật
+                                </span>
+                              )}
+                            </div>
                           </td>
                           <td className="py-3 px-4 text-gray-300">{u.forumTitle}</td>
                           <td className="py-3 px-4">
@@ -1186,6 +1433,70 @@ export default function AdminDashboardScreen() {
         {/* TAB 4: ITEMS MANAGEMENT */}
         {activeTab === "items" && (
           <div className="flex flex-col gap-4">
+            {/* ITEM AUDIT & SYNC MISSING STATUS BANNER */}
+            <div className="p-4 rounded-2xl bg-[#342a2b] border border-[#5d4648] flex flex-wrap items-center justify-between gap-4 shadow-lg">
+              <div className="flex items-center gap-3.5">
+                <div
+                  className={`w-11 h-11 rounded-2xl flex items-center justify-center border shadow-sm ${
+                    auditData?.missingCount && auditData.missingCount > 0
+                      ? "bg-amber-500/20 text-amber-400 border-amber-500/40"
+                      : "bg-[#28c3e1]/20 text-[#28c3e1] border-[#28c3e1]/40"
+                  }`}
+                >
+                  {auditData?.missingCount && auditData.missingCount > 0 ? (
+                    <AlertTriangle className="w-5 h-5 animate-pulse" />
+                  ) : (
+                    <CheckCircle2 className="w-5 h-5" />
+                  )}
+                </div>
+                <div>
+                  <h3 className="text-sm font-bold text-white flex items-center gap-2">
+                    Kiểm Toán Vật Phẩm Toàn Game (Database Integrity & Item Audit)
+                    {auditData && (
+                      <span
+                        className={`text-[11px] px-2.5 py-0.5 rounded-full font-bold ${
+                          auditData.missingCount > 0
+                            ? "bg-amber-500/20 text-amber-300 border border-amber-500/40"
+                            : "bg-emerald-500/20 text-emerald-300 border border-emerald-500/40"
+                        }`}
+                      >
+                        {auditData.missingCount > 0
+                          ? `Thiếu ${auditData.missingCount} Vật Phẩm`
+                          : "Đã Đồng Bộ 100% CSDL"}
+                      </span>
+                    )}
+                  </h3>
+                  <p className="text-xs text-[#8e7a7c]">
+                    Đối chiếu danh mục vật phẩm trong CSDL Supabase với quái vật rớt đồ, nhiệm vụ và hành trang người chơi.
+                  </p>
+                </div>
+              </div>
+
+              <div className="flex items-center gap-2.5 flex-wrap">
+                <button
+                  onClick={handleAuditItems}
+                  disabled={auditLoading}
+                  className="px-4 py-2 rounded-full bg-[#4a383a] hover:bg-[#5d4648] text-gray-200 hover:text-white border border-[#5d4648] text-xs font-bold transition-all flex items-center gap-1.5 disabled:opacity-50"
+                >
+                  <Search className="w-3.5 h-3.5 text-[#28c3e1]" />
+                  {auditLoading ? "Đang quét..." : "🔍 Quét & Kiểm Toán"}
+                </button>
+
+                <button
+                  onClick={handleSyncMissingItems}
+                  disabled={syncLoading}
+                  className={`px-4 py-2 rounded-full text-xs font-black uppercase tracking-wider transition-all flex items-center gap-1.5 shadow-md ${
+                    auditData && auditData.missingCount > 0
+                      ? "bg-amber-500 hover:brightness-110 text-gray-950 shadow-[0_0_15px_rgba(245,158,11,0.4)] animate-pulse"
+                      : "bg-[#28c3e1] hover:brightness-110 text-[#1c161a] shadow-[0_0_15px_rgba(40,195,225,0.4)]"
+                  }`}
+                >
+                  <Sparkles className="w-3.5 h-3.5" />
+                  {syncLoading ? "Đang nạp CSDL..." : "⚡ Ghi Nhận Dữ Liệu Còn Thiếu"}
+                </button>
+              </div>
+            </div>
+
             {/* Action Bar */}
             <div className="flex flex-wrap items-center justify-between gap-4">
               <div className="relative flex-1 min-w-[240px] max-w-md">

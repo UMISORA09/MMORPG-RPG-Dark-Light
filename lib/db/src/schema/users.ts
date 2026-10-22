@@ -1,4 +1,4 @@
-import { index, integer, pgTable, serial, text, timestamp } from "drizzle-orm/pg-core";
+import { boolean, index, integer, pgTable, serial, text, timestamp } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod/v4";
 
@@ -6,6 +6,8 @@ export const usersTable = pgTable("users", {
   id: serial("id").primaryKey(),
   username: text("username").notNull().unique(),
   passwordHash: text("password_hash").notNull(),
+  role: text("role").notNull().default("player"),
+  isRealUser: boolean("is_real_user").notNull().default(true),
   forumTitle: text("forum_title").notNull().default("Tân Thủ Long Tộc"),
   selectedRegion: text("selected_region").notNull().default("VN"),
   selectedServerId: text("selected_server_id").notNull().default("s1_long_vuong"),
