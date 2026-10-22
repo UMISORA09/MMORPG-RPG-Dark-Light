@@ -24,13 +24,25 @@ function Router() {
     <Switch>
       <Route path="/" component={AuthScreen} />
       <Route path="/login" component={AuthScreen} />
+      <Route path="/login/" component={AuthScreen} />
       <Route path="/register" component={AuthScreen} />
+      <Route path="/register/" component={AuthScreen} />
       <Route path="/characters" component={CharacterSelectScreen} />
+      <Route path="/characters/" component={CharacterSelectScreen} />
       <Route path="/select-class" component={CharacterSelectScreen} />
+      <Route path="/select-class/" component={CharacterSelectScreen} />
       <Route path="/portal" component={CommunityPortalScreen} />
+      <Route path="/portal/" component={CommunityPortalScreen} />
       <Route path="/game" component={GamePage} />
+      <Route path="/game/" component={GamePage} />
       <Route path="/admin/login" component={AdminLoginScreen} />
+      <Route path="/admin/login/" component={AdminLoginScreen} />
+      <Route path="/admin-login" component={AdminLoginScreen} />
+      <Route path="/admin-login/" component={AdminLoginScreen} />
       <Route path="/admin" component={AdminDashboardScreen} />
+      <Route path="/admin/" component={AdminDashboardScreen} />
+      <Route path="/admin/dashboard" component={AdminDashboardScreen} />
+      <Route path="/admin-dashboard" component={AdminDashboardScreen} />
       <Route component={NotFound} />
     </Switch>
   );
