@@ -58317,18 +58317,18 @@ async function pushAllLocalDataToSupabase() {
     }
     for (const m of memoryStore.monsters) {
       await pool.query(`
-        INSERT INTO monsters (id, name, zone_id, level, hp, max_hp, atk, def, exp_reward, gold_reward, drop_table_json)
-        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
+        INSERT INTO monsters (id, name, zone_id, level, hp, atk, def, exp_reward, gold_reward, drop_table_json)
+        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
         ON CONFLICT (id) DO NOTHING;
-      `, [m.id, m.name, m.zoneId || "SAFE_VILLAGE", m.level || 1, m.hp || 100, m.maxHp || 100, m.atk || 15, m.def || 5, m.expReward || 10, m.goldReward || 5, typeof m.dropTableJson === "string" ? m.dropTableJson : JSON.stringify(m.dropTableJson || [])]);
+      `, [m.id, m.name, m.zoneId || "SAFE_VILLAGE", m.level || 1, m.hp || 100, m.atk || 15, m.def || 5, m.expReward || 10, m.goldReward || 5, typeof m.dropTableJson === "string" ? m.dropTableJson : JSON.stringify(m.dropTableJson || [])]);
       monstersSynced++;
     }
     for (const q of memoryStore.quests) {
       await pool.query(`
-        INSERT INTO quests (id, title, description, chapter, min_level, type, target_count, reward_exp, reward_gold, reward_item_id)
-        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
+        INSERT INTO quests (id, title, description, type, objective_type, target_id, target_name, npc_id, npc_name, reward_exp, reward_gold, reward_item_id)
+        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)
         ON CONFLICT (id) DO NOTHING;
-      `, [q.id, q.title, q.description || "", q.chapter || 1, q.minLevel || 1, q.type || "KILL_MONSTER", q.targetCount || 1, q.rewardExp || 50, q.rewardGold || 50, q.rewardItemId || null]);
+      `, [q.id, q.title, q.description || "", q.type || "MAIN", q.objectiveType || "KILL_MONSTER", q.targetId || "slime_green", q.targetName || "Qu\xE1i V\u1EADt", q.npcId || "npc_truong_lang", q.npcName || "Tr\u01B0\u1EDFng L\xE0ng", q.rewardExp || 50, q.rewardGold || 50, q.rewardItemId || null]);
       questsSynced++;
     }
     return {
