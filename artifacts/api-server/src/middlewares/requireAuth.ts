@@ -44,7 +44,9 @@ export async function extractAuthUser(req: any): Promise<any | null> {
   if (!req.session) {
     req.session = {} as any;
   }
-  req.session.userId = user.id;
+  try {
+    req.session.userId = user.id;
+  } catch {}
   req.authUserId = user.id;
   req.authUser = user;
 
@@ -60,6 +62,14 @@ export async function requireAuth(req: any, res: any, next: any): Promise<void> 
     res.status(401).json({ error: "Chưa đăng nhập" });
     return;
   }
+  if (!req.session) {
+    req.session = {} as any;
+  }
+  try {
+    req.session.userId = user.id;
+  } catch {}
+  req.authUserId = user.id;
+  req.authUser = user;
   next();
 }
 

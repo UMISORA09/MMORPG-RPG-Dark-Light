@@ -15,11 +15,16 @@ import {
 
 const router = Router();
 
+function getAuthUserId(req: any): number {
+  const id = Number(req.session?.userId ?? req.authUserId ?? req.authUser?.id ?? 0);
+  return Number.isInteger(id) && id > 0 ? id : 0;
+}
+
 // Endpoint for client-side localStorage bulk restoration & synchronization (Chỉ khôi phục nếu chưa tồn tại)
 router.post("/characters/sync", requireAuth, async (req, res) => {
   const characters = Array.isArray(req.body.characters) ? req.body.characters : [];
   const restored: any[] = [];
-  const userId = req.session.userId!;
+  const userId = getAuthUserId(req);
 
   for (const c of characters) {
     if (!c || !c.name || !c.classId) continue;
@@ -72,7 +77,7 @@ router.post("/characters/sync", requireAuth, async (req, res) => {
 });
 
 router.get("/characters", requireAuth, async (req, res) => {
-  const userId = req.session.userId!;
+  const userId = getAuthUserId(req);
 
   // Phục hồi dữ liệu nếu là nhân vật của chính user
   if (req.headers["x-clb-client-characters"]) {
@@ -134,100 +139,120 @@ router.get("/characters", requireAuth, async (req, res) => {
 });
 
 router.post("/characters", requireAuth, async (req, res) => {
-  const parsed = CreateCharacterBody.safeParse(req.body);
-  if (!parsed.success) {
-    return res.status(400).json({ error: "Dữ liệu không hợp lệ" });
+  try {
+    const parsed = CreateCharacterBody.safeParse(req.body);
+    if (!parsed.success) {
+      return res.status(400).json({ error: "Dữ liệu không hợp lệ" });
+    }
+
+    const { name, classId } = parsed.data;
+    const gender = (req.body.gender === "female" ? "female" : "male") as "male" | "female";
+    const cls = CHARACTER_CLASSES.find((c) => c.id === classId);
+    if (!cls) {
+      return res.status(400).json({ error: "Chức nghiệp không hợp lệ" });
+    }
+
+    const userId = getAuthUserId(req);
+    if (!userId) {
+      return res.status(401).json({ error: "Chưa đăng nhập hoặc phiên làm việc đã hết hạn" });
+    }
+
+    const existingCharacters = await db.select({ id: charactersTable.id }).from(charactersTable)
+      .where(eq(charactersTable.userId, userId));
+    if (existingCharacters.length >= 4) {
+      return res.status(409).json({ error: "Tài khoản đã đạt giới hạn 4 nhân vật" });
+    }
+
+    const [user] = await db.select().from(usersTable).where(eq(usersTable.id, userId)).limit(1);
+    await ensureServerCatalog();
+    const selectedServerId = user?.selectedServerId ?? "s1_long_vuong";
+    let [server] = await db.select().from(serversTable).where(eq(serversTable.id, selectedServerId)).limit(1);
+    if (!server) {
+      [server] = await db.select().from(serversTable).limit(1);
+    }
+    const serverId = server?.id || selectedServerId || "s1_long_vuong";
+
+    const stats = getStatsForLevel(classId, 1);
+    await ensureItemCatalog();
+
+    const baseStr = (cls as any).baseStr || 8;
+    const baseDex = (cls as any).baseDex || 5;
+    const baseInt = (cls as any).baseInt || 5;
+    const baseLuk = (cls as any).baseLuk || 5;
+    const baseVit = (cls as any).baseVit || 5;
+    const combatPower = Math.floor(
+      stats.hp * 0.2 + stats.mp * 0.1 + stats.atk * 8 + 10 * 6 + stats.def * 10 + stats.spd * 15 + stats.critRate * 12
+    );
+
+    const hairStyle = typeof req.body.hairStyle === "string" ? req.body.hairStyle : "phong_van";
+    const hairColor = typeof req.body.hairColor === "string" ? req.body.hairColor : "#1e1e1e";
+    const outfitId = typeof req.body.outfitId === "string" ? req.body.outfitId : "basic";
+    const destinyRolled = Boolean(req.body.destinyRolled);
+    const talentIds = Array.isArray(req.body.talentIds) ? JSON.stringify(req.body.talentIds) : (typeof req.body.talentIds === "string" ? req.body.talentIds : "[]");
+    const auraIds = Array.isArray(req.body.auraIds) ? JSON.stringify(req.body.auraIds) : (typeof req.body.auraIds === "string" ? req.body.auraIds : "[]");
+
+    const [character] = await db
+      .insert(charactersTable)
+      .values({
+        userId,
+        serverId,
+        name,
+        classId,
+        className: cls.name,
+        gender,
+        hairStyle,
+        hairColor,
+        outfitId,
+        destinyRolled,
+        talentIds,
+        auraIds,
+        level: 1,
+        experience: 0,
+        hp: stats.hp,
+        maxHp: stats.hp,
+        mp: stats.mp,
+        maxMp: stats.mp,
+        str: baseStr,
+        dex: baseDex,
+        intel: baseInt,
+        luk: baseLuk,
+        vit: baseVit,
+        atk: stats.atk,
+        matk: 10,
+        def: stats.def,
+        spd: stats.spd,
+        critRate: stats.critRate,
+        evasion: stats.evasion,
+        gold: 100,
+        kills: 0,
+        deaths: 0,
+        unallocatedStatPoints: 5,
+        unlockedSlots: 15,
+        combatPower,
+        revision: 1,
+      })
+      .returning();
+
+    // Persist as last active character on user profile
+    await db.update(usersTable)
+      .set({ lastCharacterId: character.id })
+      .where(eq(usersTable.id, userId));
+
+    let charResponse: any;
+    try {
+      charResponse = await toCharacterResponse(character);
+    } catch {
+      charResponse = character;
+    }
+
+    return res.status(201).json({
+      ...charResponse,
+      experienceToNextLevel: getExpForLevel(1),
+    });
+  } catch (err: any) {
+    console.error("[Characters] POST /characters error:", err);
+    return res.status(500).json({ error: err.message || "Tạo nhân vật thất bại" });
   }
-
-  const { name, classId } = parsed.data;
-  const gender = (req.body.gender === "female" ? "female" : "male") as "male" | "female";
-  const cls = CHARACTER_CLASSES.find((c) => c.id === classId);
-  if (!cls) {
-    return res.status(400).json({ error: "Chức nghiệp không hợp lệ" });
-  }
-
-  const existingCharacters = await db.select({ id: charactersTable.id }).from(charactersTable)
-    .where(eq(charactersTable.userId, req.session.userId!));
-  if (existingCharacters.length >= 4) {
-    return res.status(409).json({ error: "Tài khoản đã đạt giới hạn 4 nhân vật" });
-  }
-
-  const [user] = await db.select().from(usersTable).where(eq(usersTable.id, req.session.userId!)).limit(1);
-  await ensureServerCatalog();
-  const selectedServerId = user?.selectedServerId ?? "s1_long_vuong";
-  const [server] = await db.select().from(serversTable).where(eq(serversTable.id, selectedServerId)).limit(1);
-  if (!server) return res.status(409).json({ error: "Máy chủ đã chọn không còn khả dụng" });
-
-  const stats = getStatsForLevel(classId, 1);
-  await ensureItemCatalog();
-
-  const baseStr = (cls as any).baseStr || 8;
-  const baseDex = (cls as any).baseDex || 5;
-  const baseInt = (cls as any).baseInt || 5;
-  const baseLuk = (cls as any).baseLuk || 5;
-  const baseVit = (cls as any).baseVit || 5;
-  const combatPower = Math.floor(
-    stats.hp * 0.2 + stats.mp * 0.1 + stats.atk * 8 + 10 * 6 + stats.def * 10 + stats.spd * 15 + stats.critRate * 12
-  );
-
-  const hairStyle = typeof req.body.hairStyle === "string" ? req.body.hairStyle : "phong_van";
-  const hairColor = typeof req.body.hairColor === "string" ? req.body.hairColor : "#1e1e1e";
-  const outfitId = typeof req.body.outfitId === "string" ? req.body.outfitId : "basic";
-  const destinyRolled = Boolean(req.body.destinyRolled);
-  const talentIds = Array.isArray(req.body.talentIds) ? JSON.stringify(req.body.talentIds) : (typeof req.body.talentIds === "string" ? req.body.talentIds : "[]");
-  const auraIds = Array.isArray(req.body.auraIds) ? JSON.stringify(req.body.auraIds) : (typeof req.body.auraIds === "string" ? req.body.auraIds : "[]");
-
-  const [character] = await db
-    .insert(charactersTable)
-    .values({
-      userId: req.session.userId!,
-      serverId: server.id,
-      name,
-      classId,
-      className: cls.name,
-      gender,
-      hairStyle,
-      hairColor,
-      outfitId,
-      destinyRolled,
-      talentIds,
-      auraIds,
-      level: 1,
-      experience: 0,
-      hp: stats.hp,
-      maxHp: stats.hp,
-      mp: stats.mp,
-      maxMp: stats.mp,
-      str: baseStr,
-      dex: baseDex,
-      intel: baseInt,
-      luk: baseLuk,
-      vit: baseVit,
-      atk: stats.atk,
-      matk: 10,
-      def: stats.def,
-      spd: stats.spd,
-      critRate: stats.critRate,
-      evasion: stats.evasion,
-      gold: 100,
-      kills: 0,
-      deaths: 0,
-      unallocatedStatPoints: 5,
-      unlockedSlots: 15,
-      combatPower,
-      revision: 1,
-    })
-    .returning();
-
-  // Persist as last active character on user profile
-  await db.update(usersTable)
-    .set({ lastCharacterId: character.id })
-    .where(eq(usersTable.id, req.session.userId!));
-
-  return res.status(201).json({
-    ...(await toCharacterResponse(character)),
-    experienceToNextLevel: getExpForLevel(1),
-  });
 });
 
 // Endpoint gacha Thiên Mệnh 1 lần duy nhất cho nhân vật
@@ -243,7 +268,7 @@ router.post("/characters/roll-destiny", requireAuth, async (req, res) => {
   if (!char) {
     return res.status(404).json({ error: "Không tìm thấy nhân vật" });
   }
-  if (char.userId !== req.session.userId) {
+  if (char.userId !== getAuthUserId(req)) {
     return res.status(403).json({ error: "Từ chối truy cập: Bạn không sở hữu nhân vật này" });
   }
   if (char.destinyRolled) {
@@ -275,7 +300,7 @@ router.post("/characters/:id/roll-destiny", requireAuth, async (req, res) => {
   if (!char) {
     return res.status(404).json({ error: "Không tìm thấy nhân vật" });
   }
-  if (char.userId !== req.session.userId) {
+  if (char.userId !== getAuthUserId(req)) {
     return res.status(403).json({ error: "Từ chối truy cập: Bạn không sở hữu nhân vật này" });
   }
   if (char.destinyRolled) {
@@ -315,7 +340,7 @@ router.get("/characters/:characterId", requireAuth, async (req, res) => {
   }
 
   // Bảo vệ Ownership: Tuyệt đối không cho phép xem hoặc chiếm đoạt nhân vật của người khác!
-  if (character.userId !== req.session.userId) {
+  if (character.userId !== getAuthUserId(req)) {
     return res.status(403).json({ error: "Từ chối truy cập: Bạn không phải chủ sở hữu của nhân vật này." });
   }
 
@@ -411,7 +436,7 @@ const handleCharacterAutoSave = async (req: any, res: any) => {
   // Ghi nhận nhân vật hoạt động gần nhất của người dùng
   await db.update(usersTable)
     .set({ lastCharacterId: characterId })
-    .where(eq(usersTable.id, req.session.userId!));
+    .where(eq(usersTable.id, getAuthUserId(req)));
 
   const [latestChar] = await db
     .select()
@@ -454,7 +479,7 @@ const handleAllocateStats = async (req: any, res: any) => {
   // Bảo vệ Ownership (Cho phép GM/Admin can thiệp)
   const authUser = (req as any).authUser;
   const userRole = (authUser?.role || "").toUpperCase();
-  if (userRole !== "ADMIN" && userRole !== "GM" && character.userId && character.userId !== req.session.userId) {
+  if (userRole !== "ADMIN" && userRole !== "GM" && character.userId && character.userId !== getAuthUserId(req)) {
     return res.status(403).json({ error: "Từ chối truy cập: Bạn không có quyền phân bổ chỉ số cho nhân vật này." });
   }
 
@@ -522,7 +547,7 @@ router.get("/characters/:characterId/battle-log", requireAuth, async (req, res) 
   const [character] = await db
     .select({ id: charactersTable.id })
     .from(charactersTable)
-    .where(and(eq(charactersTable.id, characterId), eq(charactersTable.userId, req.session.userId!)))
+    .where(and(eq(charactersTable.id, characterId), eq(charactersTable.userId, getAuthUserId(req))))
     .limit(1);
 
   if (!character) return res.status(404).json({ error: "Không tìm thấy nhân vật hoặc không có quyền truy cập" });
@@ -553,7 +578,7 @@ const handleFullSync = async (req: any, res: any) => {
 
   try {
     const result = await CharacterPersistenceService.fullSync(
-      req.session.userId!,
+      getAuthUserId(req),
       characterId,
       req.body
     );
@@ -577,7 +602,7 @@ router.get("/characters/:characterId/full-state", requireAuth, async (req, res) 
 
   try {
     const result = await CharacterPersistenceService.getFullState(
-      req.session.userId!,
+      getAuthUserId(req),
       characterId
     );
     return res.status(200).json(result);

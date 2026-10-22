@@ -64871,7 +64871,10 @@ async function extractAuthUser(req) {
   if (!req.session) {
     req.session = {};
   }
-  req.session.userId = user.id;
+  try {
+    req.session.userId = user.id;
+  } catch {
+  }
   req.authUserId = user.id;
   req.authUser = user;
   return user;
@@ -64885,6 +64888,15 @@ async function requireAuth(req, res, next) {
     res.status(401).json({ error: "Ch\u01B0a \u0111\u0103ng nh\u1EADp" });
     return;
   }
+  if (!req.session) {
+    req.session = {};
+  }
+  try {
+    req.session.userId = user.id;
+  } catch {
+  }
+  req.authUserId = user.id;
+  req.authUser = user;
   next();
 }
 async function requireGMOrAdmin(req, res, next) {
@@ -66881,10 +66893,14 @@ function rollFullDestiny() {
 
 // src/routes/characters.ts
 var router4 = (0, import_express4.Router)();
+function getAuthUserId(req) {
+  const id = Number(req.session?.userId ?? req.authUserId ?? req.authUser?.id ?? 0);
+  return Number.isInteger(id) && id > 0 ? id : 0;
+}
 router4.post("/characters/sync", requireAuth, async (req, res) => {
   const characters = Array.isArray(req.body.characters) ? req.body.characters : [];
   const restored = [];
-  const userId = req.session.userId;
+  const userId = getAuthUserId(req);
   for (const c of characters) {
     if (!c || !c.name || !c.classId) continue;
     const cleanName = String(c.name).trim().slice(0, 24);
@@ -66931,7 +66947,7 @@ router4.post("/characters/sync", requireAuth, async (req, res) => {
   return res.status(200).json({ success: true, count: restored.length, characters: restored });
 });
 router4.get("/characters", requireAuth, async (req, res) => {
-  const userId = req.session.userId;
+  const userId = getAuthUserId(req);
   if (req.headers["x-clb-client-characters"]) {
     try {
       const decoded = decodeURIComponent(req.headers["x-clb-client-characters"]);
@@ -66983,84 +66999,102 @@ router4.get("/characters", requireAuth, async (req, res) => {
   return res.status(200).json(expToNext);
 });
 router4.post("/characters", requireAuth, async (req, res) => {
-  const parsed = CreateCharacterBody.safeParse(req.body);
-  if (!parsed.success) {
-    return res.status(400).json({ error: "D\u1EEF li\u1EC7u kh\xF4ng h\u1EE3p l\u1EC7" });
+  try {
+    const parsed = CreateCharacterBody.safeParse(req.body);
+    if (!parsed.success) {
+      return res.status(400).json({ error: "D\u1EEF li\u1EC7u kh\xF4ng h\u1EE3p l\u1EC7" });
+    }
+    const { name, classId } = parsed.data;
+    const gender = req.body.gender === "female" ? "female" : "male";
+    const cls = CHARACTER_CLASSES.find((c) => c.id === classId);
+    if (!cls) {
+      return res.status(400).json({ error: "Ch\u1EE9c nghi\u1EC7p kh\xF4ng h\u1EE3p l\u1EC7" });
+    }
+    const userId = getAuthUserId(req);
+    if (!userId) {
+      return res.status(401).json({ error: "Ch\u01B0a \u0111\u0103ng nh\u1EADp ho\u1EB7c phi\xEAn l\xE0m vi\u1EC7c \u0111\xE3 h\u1EBFt h\u1EA1n" });
+    }
+    const existingCharacters = await db.select({ id: charactersTable.id }).from(charactersTable).where(eq(charactersTable.userId, userId));
+    if (existingCharacters.length >= 4) {
+      return res.status(409).json({ error: "T\xE0i kho\u1EA3n \u0111\xE3 \u0111\u1EA1t gi\u1EDBi h\u1EA1n 4 nh\xE2n v\u1EADt" });
+    }
+    const [user] = await db.select().from(usersTable).where(eq(usersTable.id, userId)).limit(1);
+    await ensureServerCatalog();
+    const selectedServerId = user?.selectedServerId ?? "s1_long_vuong";
+    let [server] = await db.select().from(serversTable).where(eq(serversTable.id, selectedServerId)).limit(1);
+    if (!server) {
+      [server] = await db.select().from(serversTable).limit(1);
+    }
+    const serverId = server?.id || selectedServerId || "s1_long_vuong";
+    const stats = getStatsForLevel(classId, 1);
+    await ensureItemCatalog();
+    const baseStr = cls.baseStr || 8;
+    const baseDex = cls.baseDex || 5;
+    const baseInt = cls.baseInt || 5;
+    const baseLuk = cls.baseLuk || 5;
+    const baseVit = cls.baseVit || 5;
+    const combatPower = Math.floor(
+      stats.hp * 0.2 + stats.mp * 0.1 + stats.atk * 8 + 10 * 6 + stats.def * 10 + stats.spd * 15 + stats.critRate * 12
+    );
+    const hairStyle = typeof req.body.hairStyle === "string" ? req.body.hairStyle : "phong_van";
+    const hairColor = typeof req.body.hairColor === "string" ? req.body.hairColor : "#1e1e1e";
+    const outfitId = typeof req.body.outfitId === "string" ? req.body.outfitId : "basic";
+    const destinyRolled = Boolean(req.body.destinyRolled);
+    const talentIds = Array.isArray(req.body.talentIds) ? JSON.stringify(req.body.talentIds) : typeof req.body.talentIds === "string" ? req.body.talentIds : "[]";
+    const auraIds = Array.isArray(req.body.auraIds) ? JSON.stringify(req.body.auraIds) : typeof req.body.auraIds === "string" ? req.body.auraIds : "[]";
+    const [character] = await db.insert(charactersTable).values({
+      userId,
+      serverId,
+      name,
+      classId,
+      className: cls.name,
+      gender,
+      hairStyle,
+      hairColor,
+      outfitId,
+      destinyRolled,
+      talentIds,
+      auraIds,
+      level: 1,
+      experience: 0,
+      hp: stats.hp,
+      maxHp: stats.hp,
+      mp: stats.mp,
+      maxMp: stats.mp,
+      str: baseStr,
+      dex: baseDex,
+      intel: baseInt,
+      luk: baseLuk,
+      vit: baseVit,
+      atk: stats.atk,
+      matk: 10,
+      def: stats.def,
+      spd: stats.spd,
+      critRate: stats.critRate,
+      evasion: stats.evasion,
+      gold: 100,
+      kills: 0,
+      deaths: 0,
+      unallocatedStatPoints: 5,
+      unlockedSlots: 15,
+      combatPower,
+      revision: 1
+    }).returning();
+    await db.update(usersTable).set({ lastCharacterId: character.id }).where(eq(usersTable.id, userId));
+    let charResponse;
+    try {
+      charResponse = await toCharacterResponse(character);
+    } catch {
+      charResponse = character;
+    }
+    return res.status(201).json({
+      ...charResponse,
+      experienceToNextLevel: getExpForLevel2(1)
+    });
+  } catch (err) {
+    console.error("[Characters] POST /characters error:", err);
+    return res.status(500).json({ error: err.message || "T\u1EA1o nh\xE2n v\u1EADt th\u1EA5t b\u1EA1i" });
   }
-  const { name, classId } = parsed.data;
-  const gender = req.body.gender === "female" ? "female" : "male";
-  const cls = CHARACTER_CLASSES.find((c) => c.id === classId);
-  if (!cls) {
-    return res.status(400).json({ error: "Ch\u1EE9c nghi\u1EC7p kh\xF4ng h\u1EE3p l\u1EC7" });
-  }
-  const existingCharacters = await db.select({ id: charactersTable.id }).from(charactersTable).where(eq(charactersTable.userId, req.session.userId));
-  if (existingCharacters.length >= 4) {
-    return res.status(409).json({ error: "T\xE0i kho\u1EA3n \u0111\xE3 \u0111\u1EA1t gi\u1EDBi h\u1EA1n 4 nh\xE2n v\u1EADt" });
-  }
-  const [user] = await db.select().from(usersTable).where(eq(usersTable.id, req.session.userId)).limit(1);
-  await ensureServerCatalog();
-  const selectedServerId = user?.selectedServerId ?? "s1_long_vuong";
-  const [server] = await db.select().from(serversTable).where(eq(serversTable.id, selectedServerId)).limit(1);
-  if (!server) return res.status(409).json({ error: "M\xE1y ch\u1EE7 \u0111\xE3 ch\u1ECDn kh\xF4ng c\xF2n kh\u1EA3 d\u1EE5ng" });
-  const stats = getStatsForLevel(classId, 1);
-  await ensureItemCatalog();
-  const baseStr = cls.baseStr || 8;
-  const baseDex = cls.baseDex || 5;
-  const baseInt = cls.baseInt || 5;
-  const baseLuk = cls.baseLuk || 5;
-  const baseVit = cls.baseVit || 5;
-  const combatPower = Math.floor(
-    stats.hp * 0.2 + stats.mp * 0.1 + stats.atk * 8 + 10 * 6 + stats.def * 10 + stats.spd * 15 + stats.critRate * 12
-  );
-  const hairStyle = typeof req.body.hairStyle === "string" ? req.body.hairStyle : "phong_van";
-  const hairColor = typeof req.body.hairColor === "string" ? req.body.hairColor : "#1e1e1e";
-  const outfitId = typeof req.body.outfitId === "string" ? req.body.outfitId : "basic";
-  const destinyRolled = Boolean(req.body.destinyRolled);
-  const talentIds = Array.isArray(req.body.talentIds) ? JSON.stringify(req.body.talentIds) : typeof req.body.talentIds === "string" ? req.body.talentIds : "[]";
-  const auraIds = Array.isArray(req.body.auraIds) ? JSON.stringify(req.body.auraIds) : typeof req.body.auraIds === "string" ? req.body.auraIds : "[]";
-  const [character] = await db.insert(charactersTable).values({
-    userId: req.session.userId,
-    serverId: server.id,
-    name,
-    classId,
-    className: cls.name,
-    gender,
-    hairStyle,
-    hairColor,
-    outfitId,
-    destinyRolled,
-    talentIds,
-    auraIds,
-    level: 1,
-    experience: 0,
-    hp: stats.hp,
-    maxHp: stats.hp,
-    mp: stats.mp,
-    maxMp: stats.mp,
-    str: baseStr,
-    dex: baseDex,
-    intel: baseInt,
-    luk: baseLuk,
-    vit: baseVit,
-    atk: stats.atk,
-    matk: 10,
-    def: stats.def,
-    spd: stats.spd,
-    critRate: stats.critRate,
-    evasion: stats.evasion,
-    gold: 100,
-    kills: 0,
-    deaths: 0,
-    unallocatedStatPoints: 5,
-    unlockedSlots: 15,
-    combatPower,
-    revision: 1
-  }).returning();
-  await db.update(usersTable).set({ lastCharacterId: character.id }).where(eq(usersTable.id, req.session.userId));
-  return res.status(201).json({
-    ...await toCharacterResponse(character),
-    experienceToNextLevel: getExpForLevel2(1)
-  });
 });
 router4.post("/characters/roll-destiny", requireAuth, async (req, res) => {
   const characterId = Number(req.body.characterId);
@@ -67072,7 +67106,7 @@ router4.post("/characters/roll-destiny", requireAuth, async (req, res) => {
   if (!char2) {
     return res.status(404).json({ error: "Kh\xF4ng t\xECm th\u1EA5y nh\xE2n v\u1EADt" });
   }
-  if (char2.userId !== req.session.userId) {
+  if (char2.userId !== getAuthUserId(req)) {
     return res.status(403).json({ error: "T\u1EEB ch\u1ED1i truy c\u1EADp: B\u1EA1n kh\xF4ng s\u1EDF h\u1EEFu nh\xE2n v\u1EADt n\xE0y" });
   }
   if (char2.destinyRolled) {
@@ -67101,7 +67135,7 @@ router4.post("/characters/:id/roll-destiny", requireAuth, async (req, res) => {
   if (!char2) {
     return res.status(404).json({ error: "Kh\xF4ng t\xECm th\u1EA5y nh\xE2n v\u1EADt" });
   }
-  if (char2.userId !== req.session.userId) {
+  if (char2.userId !== getAuthUserId(req)) {
     return res.status(403).json({ error: "T\u1EEB ch\u1ED1i truy c\u1EADp: B\u1EA1n kh\xF4ng s\u1EDF h\u1EEFu nh\xE2n v\u1EADt n\xE0y" });
   }
   if (char2.destinyRolled) {
@@ -67130,7 +67164,7 @@ router4.get("/characters/:characterId", requireAuth, async (req, res) => {
   if (!character) {
     return res.status(404).json({ error: "Kh\xF4ng t\xECm th\u1EA5y nh\xE2n v\u1EADt" });
   }
-  if (character.userId !== req.session.userId) {
+  if (character.userId !== getAuthUserId(req)) {
     return res.status(403).json({ error: "T\u1EEB ch\u1ED1i truy c\u1EADp: B\u1EA1n kh\xF4ng ph\u1EA3i ch\u1EE7 s\u1EDF h\u1EEFu c\u1EE7a nh\xE2n v\u1EADt n\xE0y." });
   }
   await ensureItemCatalog();
@@ -67190,7 +67224,7 @@ var handleCharacterAutoSave = async (req, res) => {
   if (Object.keys(updateData).length > 0) {
     await db.update(charactersTable).set(updateData).where(eq(charactersTable.id, characterId));
   }
-  await db.update(usersTable).set({ lastCharacterId: characterId }).where(eq(usersTable.id, req.session.userId));
+  await db.update(usersTable).set({ lastCharacterId: characterId }).where(eq(usersTable.id, getAuthUserId(req)));
   const [latestChar] = await db.select().from(charactersTable).where(eq(charactersTable.id, characterId)).limit(1);
   const updatedChar = await toCharacterResponse(latestChar || { ...character, ...updateData });
   return res.status(200).json({
@@ -67216,7 +67250,7 @@ var handleAllocateStats = async (req, res) => {
   }
   const authUser = req.authUser;
   const userRole = (authUser?.role || "").toUpperCase();
-  if (userRole !== "ADMIN" && userRole !== "GM" && character.userId && character.userId !== req.session.userId) {
+  if (userRole !== "ADMIN" && userRole !== "GM" && character.userId && character.userId !== getAuthUserId(req)) {
     return res.status(403).json({ error: "T\u1EEB ch\u1ED1i truy c\u1EADp: B\u1EA1n kh\xF4ng c\xF3 quy\u1EC1n ph\xE2n b\u1ED5 ch\u1EC9 s\u1ED1 cho nh\xE2n v\u1EADt n\xE0y." });
   }
   const body = req.body || {};
@@ -67269,7 +67303,7 @@ router4.get("/characters/:characterId/battle-log", requireAuth, async (req, res)
   if (isNaN(characterId)) {
     return res.status(400).json({ error: "ID kh\xF4ng h\u1EE3p l\u1EC7" });
   }
-  const [character] = await db.select({ id: charactersTable.id }).from(charactersTable).where(and(eq(charactersTable.id, characterId), eq(charactersTable.userId, req.session.userId))).limit(1);
+  const [character] = await db.select({ id: charactersTable.id }).from(charactersTable).where(and(eq(charactersTable.id, characterId), eq(charactersTable.userId, getAuthUserId(req)))).limit(1);
   if (!character) return res.status(404).json({ error: "Kh\xF4ng t\xECm th\u1EA5y nh\xE2n v\u1EADt ho\u1EB7c kh\xF4ng c\xF3 quy\u1EC1n truy c\u1EADp" });
   const logs = await db.select().from(battleLogsTable).where(eq(battleLogsTable.characterId, characterId)).orderBy(desc(battleLogsTable.createdAt)).limit(20);
   return res.status(200).json(logs);
@@ -67287,7 +67321,7 @@ var handleFullSync = async (req, res) => {
   }
   try {
     const result = await CharacterPersistenceService.fullSync(
-      req.session.userId,
+      getAuthUserId(req),
       characterId,
       req.body
     );
@@ -67308,7 +67342,7 @@ router4.get("/characters/:characterId/full-state", requireAuth, async (req, res)
   }
   try {
     const result = await CharacterPersistenceService.getFullState(
-      req.session.userId,
+      getAuthUserId(req),
       characterId
     );
     return res.status(200).json(result);
