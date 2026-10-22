@@ -105,4 +105,15 @@ if (staticDir) {
   });
 }
 
+// Global JSON Error Handler
+app.use((err: any, req: any, res: any, next: any) => {
+  logger.error({ err, path: req.path, method: req.method }, "Unhandled server error");
+  if (res.headersSent) {
+    return next(err);
+  }
+  res.status(err.status || err.statusCode || 500).json({
+    error: err.message || "Lỗi máy chủ nội bộ",
+  });
+});
+
 export default app;

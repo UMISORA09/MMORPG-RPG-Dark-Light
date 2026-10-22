@@ -127,8 +127,7 @@ export async function ensureBootstrapAdminUser(): Promise<void> {
   }
 }
 
-// Ensure master admin is bootstrapped on startup
-ensureBootstrapAdminUser().catch(() => {});
+// Master admin bootstrap is lazily invoked or called during DB initialization
 
 router.post("/auth/register", async (req, res) => {
   const clientIp = req.ip || req.socket.remoteAddress || "unknown";

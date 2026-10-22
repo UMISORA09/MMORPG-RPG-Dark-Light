@@ -708,6 +708,11 @@ export async function initDatabase() {
         ALTER TABLE characters ADD COLUMN IF NOT EXISTS talent_ids TEXT DEFAULT '[]' NOT NULL;
         ALTER TABLE characters ADD COLUMN IF NOT EXISTS aura_ids TEXT DEFAULT '[]' NOT NULL;
         ALTER TABLE characters ADD COLUMN IF NOT EXISTS unallocated_stat_points INTEGER DEFAULT 0 NOT NULL;
+        ALTER TABLE characters ADD COLUMN IF NOT EXISTS honor_points INTEGER DEFAULT 0 NOT NULL;
+        ALTER TABLE characters ADD COLUMN IF NOT EXISTS arena_rank TEXT DEFAULT 'Đồng IV' NOT NULL;
+        ALTER TABLE characters ADD COLUMN IF NOT EXISTS active_mount TEXT DEFAULT 'shadow_steed' NOT NULL;
+        ALTER TABLE characters ADD COLUMN IF NOT EXISTS active_pet TEXT DEFAULT 'fairy_spirit' NOT NULL;
+        ALTER TABLE characters ADD COLUMN IF NOT EXISTS codex_unlocked_json TEXT DEFAULT '[]' NOT NULL;
         ALTER TABLE characters ADD COLUMN IF NOT EXISTS auto_combat_settings_json TEXT DEFAULT '{"hpThreshold":45,"mpThreshold":30,"lootFilterMinRarity":"rare"}' NOT NULL;
 
         CREATE TABLE IF NOT EXISTS items (
