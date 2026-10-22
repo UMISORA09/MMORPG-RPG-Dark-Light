@@ -919,13 +919,25 @@ export async function initDatabase() {
         END $$;
       `);
 
-      // Auto-seed default catalog into PostgreSQL
-      for (const item of SEED_ALL_ITEMS) {
-        await pool.query(`
-          INSERT INTO items (id, name, type, description, rarity, hp_boost, atk_boost, def_boost, spd_boost, price, class_id, required_level, icon)
-          VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13)
-          ON CONFLICT (id) DO NOTHING;
-        `, [item.id, item.name, item.type || "weapon", item.description || "", item.rarity || "common", item.hpBoost || 0, item.atkBoost || 0, item.defBoost || 0, item.spdBoost || 0, item.price || 100, item.classId || null, item.requiredLevel || 1, item.icon || "◇"]);
+      // Check if catalog already seeded to avoid redundant network round trips
+      const itemCountCheck = await pool.query("SELECT count(*) FROM items;").then(r => Number(r.rows[0].count)).catch(() => 0);
+      if (itemCountCheck < 50) {
+        const chunkSize = 50;
+        for (let i = 0; i < SEED_ALL_ITEMS.length; i += chunkSize) {
+          const chunk = SEED_ALL_ITEMS.slice(i, i + chunkSize);
+          const values: any[] = [];
+          const placeholders: string[] = [];
+          chunk.forEach((item, idx) => {
+            const offset = idx * 13;
+            placeholders.push(`($${offset + 1}, $${offset + 2}, $${offset + 3}, $${offset + 4}, $${offset + 5}, $${offset + 6}, $${offset + 7}, $${offset + 8}, $${offset + 9}, $${offset + 10}, $${offset + 11}, $${offset + 12}, $${offset + 13})`);
+            values.push(item.id, item.name, item.type || "weapon", item.description || "", item.rarity || "common", item.hpBoost || 0, item.atkBoost || 0, item.defBoost || 0, item.spdBoost || 0, item.price || 100, item.classId || null, item.requiredLevel || 1, item.icon || "◇");
+          });
+          await pool.query(`
+            INSERT INTO items (id, name, type, description, rarity, hp_boost, atk_boost, def_boost, spd_boost, price, class_id, required_level, icon)
+            VALUES ${placeholders.join(", ")}
+            ON CONFLICT (id) DO NOTHING;
+          `, values);
+        }
       }
 
       // Check if users table is empty and auto-seed users & characters
