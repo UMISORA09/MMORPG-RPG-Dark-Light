@@ -8,6 +8,7 @@ import CommunityPortalScreen from '@/pages/CommunityPortalScreen';
 import GamePage from '@/pages/game';
 import AdminDashboardScreen from '@/pages/AdminDashboardScreen';
 import AdminLoginScreen from '@/pages/AdminLoginScreen';
+import { SessionDisplacedModal } from '@/components/SessionDisplacedModal';
 import { Route, Switch, Router as WouterRouter } from 'wouter';
 
 const queryClient = new QueryClient({
@@ -47,7 +48,6 @@ function Router() {
     </Switch>
   );
 }
-
 function App() {
   return (
     <QueryClientProvider client={queryClient}>
@@ -56,6 +56,7 @@ function App() {
           <Router />
         </WouterRouter>
         <Toaster />
+        <SessionDisplacedModal />
       </TooltipProvider>
     </QueryClientProvider>
   );

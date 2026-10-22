@@ -18973,14 +18973,14 @@ var require_etag = __commonJS({
   "../../node_modules/.pnpm/etag@1.8.1/node_modules/etag/index.js"(exports, module) {
     "use strict";
     module.exports = etag;
-    var crypto5 = __require("crypto");
+    var crypto6 = __require("crypto");
     var Stats = __require("fs").Stats;
     var toString = Object.prototype.toString;
     function entitytag(entity) {
       if (entity.length === 0) {
         return '"0-2jmj7l5rSw0yVb/vlWAYkK/YBwk"';
       }
-      var hash2 = crypto5.createHash("sha1").update(entity, "utf8").digest("base64").substring(0, 27);
+      var hash2 = crypto6.createHash("sha1").update(entity, "utf8").digest("base64").substring(0, 27);
       var len = typeof entity === "string" ? Buffer.byteLength(entity, "utf8") : entity.length;
       return '"' + len.toString(16) + "-" + hash2 + '"';
     }
@@ -22467,17 +22467,17 @@ var require_content_disposition = __commonJS({
 // ../../node_modules/.pnpm/cookie-signature@1.2.2/node_modules/cookie-signature/index.js
 var require_cookie_signature = __commonJS({
   "../../node_modules/.pnpm/cookie-signature@1.2.2/node_modules/cookie-signature/index.js"(exports) {
-    var crypto5 = __require("crypto");
+    var crypto6 = __require("crypto");
     exports.sign = function(val, secret) {
       if ("string" != typeof val) throw new TypeError("Cookie value must be provided as a string.");
       if (null == secret) throw new TypeError("Secret key must be provided.");
-      return val + "." + crypto5.createHmac("sha256", secret).update(val).digest("base64").replace(/\=+$/, "");
+      return val + "." + crypto6.createHmac("sha256", secret).update(val).digest("base64").replace(/\=+$/, "");
     };
     exports.unsign = function(input, secret) {
       if ("string" != typeof input) throw new TypeError("Signed cookie string must be provided.");
       if (null == secret) throw new TypeError("Secret key must be provided.");
       var tentativeValue = input.slice(0, input.lastIndexOf(".")), expectedInput = exports.sign(tentativeValue, secret), expectedBuffer = Buffer.from(expectedInput), inputBuffer = Buffer.from(input);
-      return expectedBuffer.length === inputBuffer.length && crypto5.timingSafeEqual(expectedBuffer, inputBuffer) ? tentativeValue : false;
+      return expectedBuffer.length === inputBuffer.length && crypto6.timingSafeEqual(expectedBuffer, inputBuffer) ? tentativeValue : false;
     };
   }
 });
@@ -29250,11 +29250,11 @@ var require_on_headers = __commonJS({
 // ../../node_modules/.pnpm/cookie-signature@1.0.7/node_modules/cookie-signature/index.js
 var require_cookie_signature2 = __commonJS({
   "../../node_modules/.pnpm/cookie-signature@1.0.7/node_modules/cookie-signature/index.js"(exports) {
-    var crypto5 = __require("crypto");
+    var crypto6 = __require("crypto");
     exports.sign = function(val, secret) {
       if ("string" !== typeof val) throw new TypeError("Cookie value must be provided as a string.");
       if (null == secret) throw new TypeError("Secret key must be provided.");
-      return val + "." + crypto5.createHmac("sha256", secret).update(val).digest("base64").replace(/\=+$/, "");
+      return val + "." + crypto6.createHmac("sha256", secret).update(val).digest("base64").replace(/\=+$/, "");
     };
     exports.unsign = function(val, secret) {
       if ("string" !== typeof val) throw new TypeError("Signed cookie string must be provided.");
@@ -29263,7 +29263,7 @@ var require_cookie_signature2 = __commonJS({
       return sha1(mac) == sha1(val) ? str : false;
     };
     function sha1(str) {
-      return crypto5.createHash("sha1").update(str).digest("hex");
+      return crypto6.createHash("sha1").update(str).digest("hex");
     }
   }
 });
@@ -29272,8 +29272,8 @@ var require_cookie_signature2 = __commonJS({
 var require_random_bytes = __commonJS({
   "../../node_modules/.pnpm/random-bytes@1.0.0/node_modules/random-bytes/index.js"(exports, module) {
     "use strict";
-    var crypto5 = __require("crypto");
-    var generateAttempts = crypto5.randomBytes === crypto5.pseudoRandomBytes ? 1 : 3;
+    var crypto6 = __require("crypto");
+    var generateAttempts = crypto6.randomBytes === crypto6.pseudoRandomBytes ? 1 : 3;
     module.exports = randomBytes2;
     module.exports.sync = randomBytesSync;
     function randomBytes2(size, callback) {
@@ -29297,7 +29297,7 @@ var require_random_bytes = __commonJS({
       var err = null;
       for (var i = 0; i < generateAttempts; i++) {
         try {
-          return crypto5.randomBytes(size);
+          return crypto6.randomBytes(size);
         } catch (e) {
           err = e;
         }
@@ -29305,7 +29305,7 @@ var require_random_bytes = __commonJS({
       throw err;
     }
     function generateRandomBytes(size, attempts, callback) {
-      crypto5.randomBytes(size, function onRandomBytes(err, buf) {
+      crypto6.randomBytes(size, function onRandomBytes(err, buf) {
         if (!err) return callback(null, buf);
         if (!--attempts) return callback(err);
         setTimeout(generateRandomBytes.bind(null, size, attempts, callback), 10);
@@ -29647,7 +29647,7 @@ var require_express_session = __commonJS({
     "use strict";
     var Buffer2 = require_safe_buffer().Buffer;
     var cookie = require_cookie();
-    var crypto5 = __require("crypto");
+    var crypto6 = __require("crypto");
     var debug = require_src2()("express-session");
     var deprecate = require_depd()("express-session");
     var onHeaders = require_on_headers();
@@ -30020,7 +30020,7 @@ var require_express_session = __commonJS({
         }
         return val;
       });
-      return crypto5.createHash("sha1").update(str, "utf8").digest("hex");
+      return crypto6.createHash("sha1").update(str, "utf8").digest("hex");
     }
     function issecure(req, trustProxy) {
       if (req.connection && req.connection.encrypted) {
@@ -30060,11 +30060,11 @@ var require_express_session = __commonJS({
 // ../../node_modules/.pnpm/cookie-signature@1.0.6/node_modules/cookie-signature/index.js
 var require_cookie_signature3 = __commonJS({
   "../../node_modules/.pnpm/cookie-signature@1.0.6/node_modules/cookie-signature/index.js"(exports) {
-    var crypto5 = __require("crypto");
+    var crypto6 = __require("crypto");
     exports.sign = function(val, secret) {
       if ("string" != typeof val) throw new TypeError("Cookie value must be provided as a string.");
       if ("string" != typeof secret) throw new TypeError("Secret string must be provided.");
-      return val + "." + crypto5.createHmac("sha256", secret).update(val).digest("base64").replace(/\=+$/, "");
+      return val + "." + crypto6.createHmac("sha256", secret).update(val).digest("base64").replace(/\=+$/, "");
     };
     exports.unsign = function(val, secret) {
       if ("string" != typeof val) throw new TypeError("Signed cookie string must be provided.");
@@ -30073,7 +30073,7 @@ var require_cookie_signature3 = __commonJS({
       return sha1(mac) == sha1(val) ? str : false;
     };
     function sha1(str) {
-      return crypto5.createHash("sha1").update(str).digest("hex");
+      return crypto6.createHash("sha1").update(str).digest("hex");
     }
   }
 });
@@ -31487,7 +31487,7 @@ var require_cert_signatures = __commonJS({
 var require_sasl = __commonJS({
   "../../node_modules/.pnpm/pg@8.22.0/node_modules/pg/lib/crypto/sasl.js"(exports, module) {
     "use strict";
-    var crypto5 = require_utils5();
+    var crypto6 = require_utils5();
     var { signatureAlgorithmHashFromCertificate } = require_cert_signatures();
     function saslprep(password) {
       const nonAsciiSpace = /[\u00A0\u1680\u2000-\u200B\u202F\u205F\u3000]/g;
@@ -31505,7 +31505,7 @@ var require_sasl = __commonJS({
       if (mechanism === "SCRAM-SHA-256-PLUS" && typeof stream.getPeerCertificate !== "function") {
         throw new Error("SASL: Mechanism SCRAM-SHA-256-PLUS requires a certificate");
       }
-      const clientNonce = crypto5.randomBytes(18).toString("base64");
+      const clientNonce = crypto6.randomBytes(18).toString("base64");
       const gs2Header = mechanism === "SCRAM-SHA-256-PLUS" ? "p=tls-server-end-point" : stream ? "y" : "n";
       return {
         mechanism,
@@ -31547,20 +31547,20 @@ var require_sasl = __commonJS({
         const peerCert = stream.getPeerCertificate().raw;
         let hashName = signatureAlgorithmHashFromCertificate(peerCert);
         if (hashName === "MD5" || hashName === "SHA-1") hashName = "SHA-256";
-        const certHash = await crypto5.hashByName(hashName, peerCert);
+        const certHash = await crypto6.hashByName(hashName, peerCert);
         const bindingData = Buffer.concat([Buffer.from("p=tls-server-end-point,,"), Buffer.from(certHash)]);
         channelBinding = bindingData.toString("base64");
       }
       const clientFinalMessageWithoutProof = "c=" + channelBinding + ",r=" + sv.nonce;
       const authMessage = clientFirstMessageBare + "," + serverFirstMessage + "," + clientFinalMessageWithoutProof;
       const saltBytes = Buffer.from(sv.salt, "base64");
-      const saltedPassword = await crypto5.deriveKey(saslprep(password), saltBytes, sv.iteration);
-      const clientKey = await crypto5.hmacSha256(saltedPassword, "Client Key");
-      const storedKey = await crypto5.sha256(clientKey);
-      const clientSignature = await crypto5.hmacSha256(storedKey, authMessage);
+      const saltedPassword = await crypto6.deriveKey(saslprep(password), saltBytes, sv.iteration);
+      const clientKey = await crypto6.hmacSha256(saltedPassword, "Client Key");
+      const storedKey = await crypto6.sha256(clientKey);
+      const clientSignature = await crypto6.hmacSha256(storedKey, authMessage);
       const clientProof = xorBuffers(Buffer.from(clientKey), Buffer.from(clientSignature)).toString("base64");
-      const serverKey = await crypto5.hmacSha256(saltedPassword, "Server Key");
-      const serverSignatureBytes = await crypto5.hmacSha256(serverKey, authMessage);
+      const serverKey = await crypto6.hmacSha256(saltedPassword, "Server Key");
+      const serverSignatureBytes = await crypto6.hmacSha256(serverKey, authMessage);
       session2.message = "SASLResponse";
       session2.serverSignature = Buffer.from(serverSignatureBytes).toString("base64");
       session2.response = clientFinalMessageWithoutProof + ",p=" + clientProof;
@@ -33790,7 +33790,7 @@ var require_client = __commonJS({
     var Query2 = require_query();
     var defaults2 = require_defaults();
     var Connection2 = require_connection();
-    var crypto5 = require_utils5();
+    var crypto6 = require_utils5();
     var activeQueryDeprecationNotice = nodeUtils.deprecate(
       () => {
       },
@@ -34041,7 +34041,7 @@ var require_client = __commonJS({
       _handleAuthMD5Password(msg) {
         this._getPassword(async () => {
           try {
-            const hashedPassword = await crypto5.postgresMd5PasswordHash(this.user, this.password, msg.salt);
+            const hashedPassword = await crypto6.postgresMd5PasswordHash(this.user, this.password, msg.salt);
             this.connection.password(hashedPassword);
           } catch (e) {
             this.emit("error", e);
@@ -64883,6 +64883,7 @@ async function extractAuthUser(req) {
   }
   req.authUserId = user.id;
   req.authUser = user;
+  req.authSessionId = tokenData?.sessionId || req.headers?.["x-session-id"] || null;
   return user;
 }
 function getAuthUserId(req) {
@@ -65974,6 +65975,109 @@ async function ensureServerCatalog() {
   serverCatalogReady = true;
 }
 
+// src/lib/sessionTracker.ts
+import crypto3 from "node:crypto";
+var characterSessions = /* @__PURE__ */ new Map();
+var userSessions = /* @__PURE__ */ new Map();
+var userLatestLoginSessions = /* @__PURE__ */ new Map();
+function registerLoginSession(userId, explicitSessionId) {
+  const sessionId = explicitSessionId || `login_${Date.now()}_${crypto3.randomUUID()}`;
+  userLatestLoginSessions.set(userId, sessionId);
+  return sessionId;
+}
+function isLatestLoginSession(userId, sessionId) {
+  if (!sessionId) return true;
+  const latest = userLatestLoginSessions.get(userId);
+  if (!latest) return true;
+  return latest === sessionId;
+}
+function claimGameplaySession(characterId, userId, sessionId) {
+  if (!characterId || !sessionId) return { success: false };
+  const now = Date.now();
+  const existingForChar = characterSessions.get(characterId);
+  const existingForUser = userSessions.get(userId);
+  const displacedSessionId = (existingForChar && existingForChar.sessionId !== sessionId ? existingForChar.sessionId : null) || (existingForUser && existingForUser.sessionId !== sessionId ? existingForUser.sessionId : null) || void 0;
+  const record2 = {
+    sessionId,
+    userId,
+    characterId,
+    claimedAt: now,
+    lastHeartbeat: now
+  };
+  characterSessions.set(characterId, record2);
+  userSessions.set(userId, record2);
+  return { success: true, displacedSessionId };
+}
+function verifyGameplaySession(characterId, userId, sessionId) {
+  if (!characterId) return { valid: true };
+  const currentForChar = characterSessions.get(characterId);
+  const currentForUser = userId ? userSessions.get(userId) : null;
+  if (!currentForChar && !currentForUser) {
+    return { valid: true };
+  }
+  if (!sessionId) {
+    const active = currentForChar || currentForUser;
+    if (active && Date.now() - active.lastHeartbeat < 3e4) {
+      return {
+        valid: false,
+        activeSessionId: active.sessionId,
+        reason: "Y\xEAu c\u1EA7u thi\u1EBFu m\xE3 phi\xEAn l\xE0m vi\u1EC7c ho\u1EB7c phi\xEAn \u0111\xE3 b\u1ECB thay th\u1EBF."
+      };
+    }
+    return { valid: true };
+  }
+  if (currentForChar && currentForChar.sessionId !== sessionId) {
+    if (Date.now() - currentForChar.lastHeartbeat < 6e4) {
+      return {
+        valid: false,
+        activeSessionId: currentForChar.sessionId,
+        reason: "T\xE0i kho\u1EA3n ho\u1EB7c nh\xE2n v\u1EADt n\xE0y \u0111\xE3 \u0111\u01B0\u1EE3c \u0111\u0103ng nh\u1EADp t\u1EEB m\u1ED9t c\u1EEDa s\u1ED5 ho\u1EB7c thi\u1EBFt b\u1ECB kh\xE1c."
+      };
+    }
+  }
+  if (currentForUser && currentForUser.sessionId !== sessionId) {
+    if (Date.now() - currentForUser.lastHeartbeat < 6e4) {
+      return {
+        valid: false,
+        activeSessionId: currentForUser.sessionId,
+        reason: "T\xE0i kho\u1EA3n c\u1EE7a b\u1EA1n \u0111ang \u0111\u01B0\u1EE3c s\u1EED d\u1EE5ng \u1EDF m\u1ED9t phi\xEAn \u0111\u0103ng nh\u1EADp kh\xE1c."
+      };
+    }
+  }
+  if (currentForChar && currentForChar.sessionId === sessionId) {
+    currentForChar.lastHeartbeat = Date.now();
+  }
+  if (currentForUser && currentForUser.sessionId === sessionId) {
+    currentForUser.lastHeartbeat = Date.now();
+  }
+  return { valid: true };
+}
+function releaseGameplaySession(characterId, sessionId) {
+  const current = characterSessions.get(characterId);
+  if (!sessionId || current && current.sessionId === sessionId) {
+    characterSessions.delete(characterId);
+    if (current?.userId) {
+      const userActive = userSessions.get(current.userId);
+      if (!sessionId || userActive && userActive.sessionId === sessionId) {
+        userSessions.delete(current.userId);
+      }
+    }
+  }
+}
+setInterval(() => {
+  const now = Date.now();
+  for (const [charId, record2] of characterSessions.entries()) {
+    if (now - record2.lastHeartbeat > 12e4) {
+      characterSessions.delete(charId);
+    }
+  }
+  for (const [userId, record2] of userSessions.entries()) {
+    if (now - record2.lastHeartbeat > 12e4) {
+      userSessions.delete(userId);
+    }
+  }
+}, 3e4).unref();
+
 // src/routes/auth.ts
 var router2 = (0, import_express2.Router)();
 var authRateLimits = /* @__PURE__ */ new Map();
@@ -66106,13 +66210,15 @@ router2.post("/auth/register", async (req, res) => {
   if (req.session) {
     req.session.userId = user.id;
   }
+  const loginSessionId = registerLoginSession(user.id);
   const token = signToken({
     id: user.id,
     username: user.username,
     role: user.role || "player",
     isAdmin: user.role === "admin" || user.role === "ADMIN",
     selectedRegion: user.selectedRegion || "VN",
-    selectedServerId: user.selectedServerId || "s1_long_vuong"
+    selectedServerId: user.selectedServerId || "s1_long_vuong",
+    sessionId: loginSessionId
   });
   res.cookie("clb_token", token, {
     httpOnly: true,
@@ -66123,6 +66229,7 @@ router2.post("/auth/register", async (req, res) => {
   });
   return res.status(201).json({
     token,
+    sessionId: loginSessionId,
     user: {
       id: user.id,
       username: user.username,
@@ -66160,13 +66267,15 @@ router2.post("/auth/login", async (req, res) => {
   if (req.session) {
     req.session.userId = user.id;
   }
+  const loginSessionId = registerLoginSession(user.id);
   const token = signToken({
     id: user.id,
     username: user.username,
     role: user.role || "player",
     isAdmin: user.role === "admin",
     selectedRegion: user.selectedRegion || "VN",
-    selectedServerId: user.selectedServerId || "s1_long_vuong"
+    selectedServerId: user.selectedServerId || "s1_long_vuong",
+    sessionId: loginSessionId
   });
   res.cookie("clb_token", token, {
     httpOnly: true,
@@ -66177,6 +66286,7 @@ router2.post("/auth/login", async (req, res) => {
   });
   return res.status(200).json({
     token,
+    sessionId: loginSessionId,
     user: {
       id: user.id,
       username: user.username,
@@ -66190,6 +66300,13 @@ router2.post("/auth/login", async (req, res) => {
   });
 });
 router2.post("/auth/logout", (req, res) => {
+  const userId = getAuthUserId(req);
+  if (userId) {
+    const charId = req.body?.characterId || req.authUser?.lastCharacterId;
+    if (charId) {
+      releaseGameplaySession(charId);
+    }
+  }
   if (req.session?.destroy) {
     req.session.destroy(() => {
     });
@@ -66201,6 +66318,14 @@ var handleGetMe = async (req, res) => {
   const user = await extractAuthUser(req);
   if (!user) {
     return res.status(401).json({ error: "Ch\u01B0a \u0111\u0103ng nh\u1EADp" });
+  }
+  const tokenSessionId = req.authSessionId;
+  if (tokenSessionId && !isLatestLoginSession(user.id, tokenSessionId)) {
+    return res.status(401).json({
+      error: "DUPLICATE_SESSION",
+      displaced: true,
+      message: "T\xE0i kho\u1EA3n c\u1EE7a b\u1EA1n \u0111\xE3 \u0111\u01B0\u1EE3c \u0111\u0103ng nh\u1EADp t\u1EEB m\u1ED9t thi\u1EBFt b\u1ECB ho\u1EB7c phi\xEAn kh\xE1c. Phi\xEAn n\xE0y \u0111\xE3 t\u1EF1 \u0111\u1ED9ng \u0111\u0103ng xu\u1EA5t."
+    });
   }
   return res.status(200).json({
     id: user.id,
@@ -66215,6 +66340,22 @@ var handleGetMe = async (req, res) => {
 router2.get("/auth/me", handleGetMe);
 router2.get("/users/me", handleGetMe);
 router2.get("/api/users/me", handleGetMe);
+router2.post("/session/claim", requireAuth, (req, res) => {
+  const userId = getAuthUserId(req);
+  const { characterId, sessionId } = req.body || {};
+  if (!characterId || !sessionId) {
+    return res.status(400).json({ error: "Thi\u1EBFu characterId ho\u1EB7c sessionId" });
+  }
+  const result = claimGameplaySession(Number(characterId), userId, String(sessionId));
+  return res.status(200).json({ ...result });
+});
+router2.post("/session/release", requireAuth, (req, res) => {
+  const { characterId, sessionId } = req.body || {};
+  if (characterId) {
+    releaseGameplaySession(Number(characterId), sessionId ? String(sessionId) : void 0);
+  }
+  return res.status(200).json({ success: true });
+});
 var handleResetAllAccounts = async (req, res) => {
   const isProduction2 = process.env.NODE_ENV === "production" || Boolean(process.env.VERCEL);
   if (isProduction2) {
@@ -67206,6 +67347,17 @@ var handleCharacterAutoSave = async (req, res) => {
   if (character.userId && character.userId !== getAuthUserId2(req) && req.authUser?.role !== "ADMIN") {
     return res.status(403).json({ error: "T\u1EEB ch\u1ED1i truy c\u1EADp: B\u1EA1n kh\xF4ng c\xF3 quy\u1EC1n l\u01B0u d\u1EEF li\u1EC7u cho nh\xE2n v\u1EADt n\xE0y." });
   }
+  const sessionId = req.headers["x-session-id"] || req.body?.sessionId || null;
+  if (sessionId) {
+    const sessionCheck = verifyGameplaySession(characterId, getAuthUserId2(req), sessionId);
+    if (!sessionCheck.valid) {
+      return res.status(409).json({
+        kick: true,
+        error: "DUPLICATE_SESSION",
+        message: sessionCheck.reason || "Phi\xEAn l\u01B0u t\u1EF1 \u0111\u1ED9ng \u0111\xE3 b\u1ECB t\u1EEB ch\u1ED1i do c\xF3 phi\xEAn \u0111\u0103ng nh\u1EADp m\u1EDBi h\u01A1n tr\xEAn t\xE0i kho\u1EA3n/nh\xE2n v\u1EADt n\xE0y."
+      });
+    }
+  }
   const body = req.body || {};
   const updateData = {};
   if (typeof body.hp === "number" && !isNaN(body.hp)) {
@@ -67387,7 +67539,7 @@ init_drizzle_orm();
 // src/services/CombatService.ts
 init_drizzle_orm();
 init_src();
-import crypto3 from "node:crypto";
+import crypto4 from "node:crypto";
 
 // src/rules/combatRules.ts
 function calculateDamage(attackerAtk, defenderDef, options) {
@@ -67717,6 +67869,25 @@ router5.post("/multiplayer/sync", async (req, res) => {
   }
   const charNumId = Number(characterId);
   const now = Date.now();
+  const authUser = await extractAuthUser(req);
+  const authUserId = authUser?.id || getAuthUserId(req);
+  const clientSessionId = req.headers["x-session-id"] || req.body?.sessionId || null;
+  const isClaim = Boolean(req.body?.claimSession);
+  if (isClaim && clientSessionId && authUserId) {
+    claimGameplaySession(charNumId, authUserId, clientSessionId);
+  } else if (clientSessionId) {
+    const sessionCheck = verifyGameplaySession(charNumId, authUserId, clientSessionId);
+    if (!sessionCheck.valid) {
+      res.status(200).json({
+        kick: true,
+        error: "DUPLICATE_SESSION",
+        reason: sessionCheck.reason || "T\xE0i kho\u1EA3n ho\u1EB7c nh\xE2n v\u1EADt \u0111\xE3 \u0111\u01B0\u1EE3c m\u1EDF \u1EDF m\u1ED9t tab ho\u1EB7c thi\u1EBFt b\u1ECB kh\xE1c.",
+        activeSessionId: sessionCheck.activeSessionId,
+        players: []
+      });
+      return;
+    }
+  }
   const existing = activePlayers.get(charNumId);
   const updatedBubble = chatBubble ?? (existing?.chatBubble && now - (existing.chatTime || 0) < 6e3 ? existing.chatBubble : null);
   activePlayers.set(charNumId, {
@@ -67802,9 +67973,11 @@ router5.post("/multiplayer/sync", async (req, res) => {
   });
 });
 router5.post("/multiplayer/disconnect", async (req, res) => {
-  const { characterId } = req.body;
+  const { characterId, sessionId } = req.body;
+  const clientSessionId = req.headers["x-session-id"] || sessionId;
   if (characterId) {
     const numId = Number(characterId);
+    releaseGameplaySession(numId, clientSessionId);
     activePlayers.delete(numId);
     cachedDbPlayers = cachedDbPlayers.filter((p) => p.characterId !== numId);
     try {
@@ -68052,7 +68225,7 @@ var CombatService = class {
               const takenSlots = new Set(existingItems.map((i) => i.slotIndex));
               const maxSlots = character.unlockedSlots || 18;
               for (const drop of dropTable) {
-                if (crypto3.randomInt(0, 1e4) / 100 < drop.chancePercent) {
+                if (crypto4.randomInt(0, 1e4) / 100 < drop.chancePercent) {
                   let freeSlot = null;
                   for (let s = 0; s < maxSlots; s++) {
                     if (!takenSlots.has(s)) {
@@ -68304,7 +68477,7 @@ var import_express7 = __toESM(require_express2(), 1);
 // src/encounters/encounterService.ts
 init_src();
 init_drizzle_orm();
-import crypto4 from "node:crypto";
+import crypto5 from "node:crypto";
 
 // src/encounters/encounterEngine.ts
 var EncounterEngine = class {
@@ -68659,7 +68832,7 @@ var EncounterService = class {
         throw err;
       }
     }
-    const encounterId = crypto4.randomUUID();
+    const encounterId = crypto5.randomUUID();
     const expiresAt = new Date(Date.now() + 5 * 60 * 1e3);
     const engine = new EncounterEngine({
       encounterId,

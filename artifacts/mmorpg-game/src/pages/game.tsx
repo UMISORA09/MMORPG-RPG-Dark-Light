@@ -25,6 +25,11 @@ import { useCharacterAutoSave, triggerGlobalAutoSave } from "@/hooks/useCharacte
 import { AutoSaveIndicator } from "@/components/AutoSaveIndicator";
 import { playCombatSFX } from "@/audio/CombatSoundSynth";
 import { PersistenceManager, usePersistenceStore } from "@/persistence/PersistenceManager";
+import {
+  claimActiveTabSession,
+  setupSessionGuardListeners,
+} from "@/lib/sessionGuard";
+import { SessionDisplacedModal } from "@/components/SessionDisplacedModal";
 
 export default function GamePage() {
   const [, setLocation] = useLocation();
@@ -96,6 +101,10 @@ export default function GamePage() {
   useEffect(() => {
     if (!activeCharacter?.id) return;
 
+    // ── 🛡️ Single-Session Enforcement & Instant Duplicate Guard ──
+    claimActiveTabSession(activeCharacter.id, user?.id);
+    const cleanupSessionGuard = setupSessionGuardListeners(activeCharacter.id, user?.id);
+
     useGameStore.getState().syncFromCharacter(activeCharacter);
     useGameWorldStore.getState().syncFromBackendCharacter(activeCharacter);
 
@@ -140,7 +149,11 @@ export default function GamePage() {
       .catch((err) => {
         console.warn("[Hydration] Fetch full-state notice:", err);
       });
-  }, [activeCharacter?.id]);
+
+    return () => {
+      cleanupSessionGuard();
+    };
+  }, [activeCharacter?.id, user?.id]);
 
   // Store latest character detail in a ref to avoid stale closure in callbacks
   const charRef = useRef<Character | null>(null);
@@ -296,6 +309,9 @@ export default function GamePage() {
 
       {/* ── Real-Time Character & Server Auto-Save Status Indicator ── */}
       <AutoSaveIndicator show={showIndicator} time={lastSavedTime} />
+
+      {/* ── Single-Session Displaced & Duplicate Modal ── */}
+      <SessionDisplacedModal />
     </main>
   );
 }

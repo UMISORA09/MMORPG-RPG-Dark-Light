@@ -30,6 +30,8 @@ import {
   Globe2,
 } from "lucide-react";
 import { REGIONS, SERVERS, useCommunityPortalStore } from "@/stores/useCommunityPortalStore";
+import { claimActiveTabSession } from "@/lib/sessionGuard";
+import { SessionDisplacedModal } from "@/components/SessionDisplacedModal";
 
 const CLASS_CONFIG: Record<string, { name: string; color: string; border: string; glow: string; icon: any }> = {
   tank: {
@@ -132,6 +134,7 @@ export default function CharacterSelectScreen() {
   // Action: Enter game with specific character
   const handleSelectCharacter = (char: Character) => {
     assignCharacterToRealm(char.id);
+    claimActiveTabSession(char.id, user?.id);
     if (typeof window !== "undefined") {
       localStorage.setItem("selectedCharacterId", String(char.id));
       localStorage.setItem("clb_selected_character", JSON.stringify(char));
@@ -481,6 +484,9 @@ export default function CharacterSelectScreen() {
           }
         }}
       />
+
+      {/* ── Single-Session Displaced & Duplicate Modal ── */}
+      <SessionDisplacedModal />
     </div>
   );
 }

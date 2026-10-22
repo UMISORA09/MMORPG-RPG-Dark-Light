@@ -9,6 +9,7 @@ export interface TokenPayload {
   isAdmin?: boolean;
   selectedRegion?: string;
   selectedServerId?: string;
+  sessionId?: string;
   exp?: number;
 }
 

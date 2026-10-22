@@ -1,7 +1,12 @@
 import { Router } from "express";
-import { requireAuth, getAuthUserId } from "../middlewares/requireAuth";
+import { requireAuth, getAuthUserId, extractAuthUser } from "../middlewares/requireAuth";
 import { db, charactersTable } from "@workspace/db";
 import { eq, and, gte } from "drizzle-orm";
+import {
+  claimGameplaySession,
+  verifyGameplaySession,
+  releaseGameplaySession,
+} from "../lib/sessionTracker";
 
 const router = Router();
 
@@ -302,6 +307,29 @@ router.post("/multiplayer/sync", async (req, res): Promise<void> => {
 
   const charNumId = Number(characterId);
   const now = Date.now();
+
+  // 🛡️ Single-Session & Duplicate Account Enforcement
+  const authUser = await extractAuthUser(req);
+  const authUserId = authUser?.id || getAuthUserId(req);
+  const clientSessionId = (req.headers["x-session-id"] as string) || req.body?.sessionId || null;
+  const isClaim = Boolean(req.body?.claimSession);
+
+  if (isClaim && clientSessionId && authUserId) {
+    claimGameplaySession(charNumId, authUserId, clientSessionId);
+  } else if (clientSessionId) {
+    const sessionCheck = verifyGameplaySession(charNumId, authUserId, clientSessionId);
+    if (!sessionCheck.valid) {
+      res.status(200).json({
+        kick: true,
+        error: "DUPLICATE_SESSION",
+        reason: sessionCheck.reason || "Tài khoản hoặc nhân vật đã được mở ở một tab hoặc thiết bị khác.",
+        activeSessionId: sessionCheck.activeSessionId,
+        players: [],
+      });
+      return;
+    }
+  }
+
   const existing = activePlayers.get(charNumId);
   const updatedBubble = chatBubble ?? (existing?.chatBubble && now - (existing.chatTime || 0) < 6000 ? existing.chatBubble : null);
 
@@ -408,9 +436,11 @@ router.post("/multiplayer/sync", async (req, res): Promise<void> => {
 });
 
 router.post("/multiplayer/disconnect", async (req, res): Promise<void> => {
-  const { characterId } = req.body;
+  const { characterId, sessionId } = req.body;
+  const clientSessionId = (req.headers["x-session-id"] as string) || sessionId;
   if (characterId) {
     const numId = Number(characterId);
+    releaseGameplaySession(numId, clientSessionId);
     activePlayers.delete(numId);
     cachedDbPlayers = cachedDbPlayers.filter((p) => p.characterId !== numId);
     try {

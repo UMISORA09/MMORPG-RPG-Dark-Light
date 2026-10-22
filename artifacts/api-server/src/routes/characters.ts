@@ -12,6 +12,7 @@ import {
   ensureServerCatalog,
   toCharacterResponse,
 } from "../lib/inventory";
+import { verifyGameplaySession } from "../lib/sessionTracker";
 
 const router = Router();
 
@@ -382,6 +383,20 @@ const handleCharacterAutoSave = async (req: any, res: any) => {
   // Bảo vệ Ownership: Không cho phép lưu trạng thái vào nhân vật của người khác!
   if (character.userId && character.userId !== getAuthUserId(req) && (req as any).authUser?.role !== "ADMIN") {
     return res.status(403).json({ error: "Từ chối truy cập: Bạn không có quyền lưu dữ liệu cho nhân vật này." });
+  }
+
+  // 🛡️ BẢO VỆ SINGLE-SESSION:
+  // Nếu phiên làm việc đã bị thay thế bởi tab mới / thiết bị mới, từ chối lưu dữ liệu cũ!
+  const sessionId = (req.headers["x-session-id"] as string) || req.body?.sessionId || null;
+  if (sessionId) {
+    const sessionCheck = verifyGameplaySession(characterId, getAuthUserId(req), sessionId);
+    if (!sessionCheck.valid) {
+      return res.status(409).json({
+        kick: true,
+        error: "DUPLICATE_SESSION",
+        message: sessionCheck.reason || "Phiên lưu tự động đã bị từ chối do có phiên đăng nhập mới hơn trên tài khoản/nhân vật này.",
+      });
+    }
   }
 
   const body = req.body || {};

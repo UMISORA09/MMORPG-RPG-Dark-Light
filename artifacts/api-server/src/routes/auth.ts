@@ -6,6 +6,12 @@ import { RegisterBody, LoginBody, SetServerBody } from "@workspace/api-zod";
 import { requireAuth, extractAuthUser, getAuthUserId } from "../middlewares/requireAuth";
 import { ensureServerCatalog } from "../lib/inventory";
 import { signToken } from "../lib/token";
+import {
+  registerLoginSession,
+  isLatestLoginSession,
+  claimGameplaySession,
+  releaseGameplaySession,
+} from "../lib/sessionTracker";
 
 declare module "express-session" {
   interface SessionData {
@@ -182,6 +188,8 @@ router.post("/auth/register", async (req, res) => {
     req.session.userId = user.id;
   }
 
+  const loginSessionId = registerLoginSession(user.id);
+
   const token = signToken({
     id: user.id,
     username: user.username,
@@ -189,6 +197,7 @@ router.post("/auth/register", async (req, res) => {
     isAdmin: user.role === "admin" || user.role === "ADMIN",
     selectedRegion: user.selectedRegion || "VN",
     selectedServerId: user.selectedServerId || "s1_long_vuong",
+    sessionId: loginSessionId,
   });
 
   res.cookie("clb_token", token, {
@@ -201,6 +210,7 @@ router.post("/auth/register", async (req, res) => {
 
   return res.status(201).json({
     token,
+    sessionId: loginSessionId,
     user: {
       id: user.id,
       username: user.username,
@@ -250,6 +260,8 @@ router.post("/auth/login", async (req, res) => {
     req.session.userId = user.id;
   }
 
+  const loginSessionId = registerLoginSession(user.id);
+
   const token = signToken({
     id: user.id,
     username: user.username,
@@ -257,6 +269,7 @@ router.post("/auth/login", async (req, res) => {
     isAdmin: user.role === "admin",
     selectedRegion: user.selectedRegion || "VN",
     selectedServerId: user.selectedServerId || "s1_long_vuong",
+    sessionId: loginSessionId,
   });
 
   res.cookie("clb_token", token, {
@@ -269,6 +282,7 @@ router.post("/auth/login", async (req, res) => {
 
   return res.status(200).json({
     token,
+    sessionId: loginSessionId,
     user: {
       id: user.id,
       username: user.username,
@@ -283,6 +297,14 @@ router.post("/auth/login", async (req, res) => {
 });
 
 router.post("/auth/logout", (req, res) => {
+  const userId = getAuthUserId(req);
+  if (userId) {
+    // Release any active character session on logout
+    const charId = (req.body?.characterId as number) || ((req as any).authUser?.lastCharacterId as number);
+    if (charId) {
+      releaseGameplaySession(charId);
+    }
+  }
   if (req.session?.destroy) {
     req.session.destroy(() => {});
   }
@@ -294,6 +316,16 @@ const handleGetMe = async (req: any, res: any) => {
   const user = await extractAuthUser(req);
   if (!user) {
     return res.status(401).json({ error: "Chưa đăng nhập" });
+  }
+
+  // Cross-device login check: if token's sessionId has been replaced by a newer login, flag as displaced
+  const tokenSessionId = req.authSessionId;
+  if (tokenSessionId && !isLatestLoginSession(user.id, tokenSessionId)) {
+    return res.status(401).json({
+      error: "DUPLICATE_SESSION",
+      displaced: true,
+      message: "Tài khoản của bạn đã được đăng nhập từ một thiết bị hoặc phiên khác. Phiên này đã tự động đăng xuất.",
+    });
   }
 
   return res.status(200).json({
@@ -310,6 +342,25 @@ const handleGetMe = async (req: any, res: any) => {
 router.get("/auth/me", handleGetMe);
 router.get("/users/me", handleGetMe);
 router.get("/api/users/me", handleGetMe);
+
+// ── Explicit Gameplay Session Claim & Release Endpoints ──
+router.post("/session/claim", requireAuth, (req, res) => {
+  const userId = getAuthUserId(req);
+  const { characterId, sessionId } = req.body || {};
+  if (!characterId || !sessionId) {
+    return res.status(400).json({ error: "Thiếu characterId hoặc sessionId" });
+  }
+  const result = claimGameplaySession(Number(characterId), userId, String(sessionId));
+  return res.status(200).json({ ...result });
+});
+
+router.post("/session/release", requireAuth, (req, res) => {
+  const { characterId, sessionId } = req.body || {};
+  if (characterId) {
+    releaseGameplaySession(Number(characterId), sessionId ? String(sessionId) : undefined);
+  }
+  return res.status(200).json({ success: true });
+});
 
 /**
  * Endpoint nguy hiểm: Xóa toàn bộ database và tài khoản

@@ -1,6 +1,7 @@
 import { memo, useEffect, useRef } from "react";
 import { useGameWorldStore } from "@/stores/useGameWorldStore";
 import { RemotePlayerEntity25D } from "../entities/RemotePlayerEntity25D";
+import { getTabSessionId, useSessionDisplacementStore } from "@/lib/sessionGuard";
 
 export const MultiplayerSyncManager = memo(function MultiplayerSyncManager() {
   const playerPosition = useGameWorldStore((s) => s.playerPosition);
@@ -21,6 +22,7 @@ export const MultiplayerSyncManager = memo(function MultiplayerSyncManager() {
 
   const lastSyncTime = useRef(0);
   const channelRef = useRef<BroadcastChannel | null>(null);
+  const hasClaimedRef = useRef(false);
 
   // ── 0.00001s Ultra-Low Latency Inter-Client Broadcast Channel ──
   useEffect(() => {
@@ -29,18 +31,35 @@ export const MultiplayerSyncManager = memo(function MultiplayerSyncManager() {
     channelRef.current = channel;
 
     channel.onmessage = (event) => {
-      const { type, player, characterId } = event.data || {};
+      const { type, player, characterId, sessionId } = event.data || {};
       const currentId = useGameWorldStore.getState().activeCharacterId || Number(localStorage.getItem("selectedCharacterId")) || 0;
+      const mySessionId = getTabSessionId();
       
-      if (type === "SYNC_PLAYER" && player && player.characterId !== currentId) {
-        const prev = useGameWorldStore.getState().remotePlayers || [];
-        const idx = prev.findIndex((p: any) => p.characterId === player.characterId);
-        if (idx >= 0) {
-          const next = [...prev];
-          next[idx] = { ...next[idx], ...player };
-          setRemotePlayers(next);
-        } else {
-          setRemotePlayers([...prev, player]);
+      // 🛡️ Instant Duplicate Detection across tabs
+      if (type === "SESSION_TAKEOVER") {
+        if (Number(characterId) === currentId && sessionId && sessionId !== mySessionId) {
+          useSessionDisplacementStore.getState().triggerDisplacement("Nhân vật của bạn vừa được mở trên một cửa sổ tab khác.");
+          return;
+        }
+      }
+
+      if (type === "SYNC_PLAYER" && player) {
+        // If another tab broadcasts state for the EXACT same character with different session ID
+        if (player.characterId === currentId && player.sessionId && player.sessionId !== mySessionId) {
+          useSessionDisplacementStore.getState().triggerDisplacement("Phát hiện nhân vật đang được điều khiển ở một tab khác.");
+          return;
+        }
+
+        if (player.characterId !== currentId) {
+          const prev = useGameWorldStore.getState().remotePlayers || [];
+          const idx = prev.findIndex((p: any) => p.characterId === player.characterId);
+          if (idx >= 0) {
+            const next = [...prev];
+            next[idx] = { ...next[idx], ...player };
+            setRemotePlayers(next);
+          } else {
+            setRemotePlayers([...prev, player]);
+          }
         }
       } else if (type === "DISCONNECT_PLAYER" && characterId) {
         const prev = useGameWorldStore.getState().remotePlayers || [];
@@ -59,6 +78,7 @@ export const MultiplayerSyncManager = memo(function MultiplayerSyncManager() {
 
     const syncTick = async () => {
       if (typeof window === "undefined" || isCancelled) return;
+      if (useSessionDisplacementStore.getState().isDisplaced) return;
 
       const now = Date.now();
       const isMoving = playerAnimState === "run";
@@ -71,9 +91,17 @@ export const MultiplayerSyncManager = memo(function MultiplayerSyncManager() {
 
       const store = useGameWorldStore.getState();
       const token = typeof window !== "undefined" ? (localStorage.getItem("clb_token") || localStorage.getItem("token")) : null;
+      const mySessionId = getTabSessionId();
+
+      const isFirstClaim = !hasClaimedRef.current;
+      if (isFirstClaim) {
+        hasClaimedRef.current = true;
+      }
 
       const localPayload = {
         characterId: targetId,
+        sessionId: mySessionId,
+        claimSession: isFirstClaim,
         name: playerName,
         classId: playerClassId,
         level: playerLevel,
@@ -109,6 +137,7 @@ export const MultiplayerSyncManager = memo(function MultiplayerSyncManager() {
           method: "POST",
           headers: {
             "Content-Type": "application/json",
+            "x-session-id": mySessionId,
             ...(token ? { Authorization: `Bearer ${token}` } : {}),
           },
           body: JSON.stringify(localPayload),
@@ -116,6 +145,12 @@ export const MultiplayerSyncManager = memo(function MultiplayerSyncManager() {
 
         if (res.ok && !isCancelled) {
           const data = await res.json();
+          if (data?.kick) {
+            useSessionDisplacementStore.getState().triggerDisplacement(
+              data.reason || "Phiên kết nối của bạn đã bị ngắt do có phiên đăng nhập mới."
+            );
+            return;
+          }
           if (Array.isArray(data.players)) {
             setRemotePlayers(data.players);
           }
@@ -132,19 +167,25 @@ export const MultiplayerSyncManager = memo(function MultiplayerSyncManager() {
       clearInterval(interval);
       const targetId = activeCharacterId || (typeof window !== "undefined" ? Number(localStorage.getItem("selectedCharacterId")) : 0);
       const token = typeof window !== "undefined" ? (localStorage.getItem("clb_token") || localStorage.getItem("token")) : null;
+      const mySessionId = getTabSessionId();
 
       if (channelRef.current && targetId) {
-        channelRef.current.postMessage({ type: "DISCONNECT_PLAYER", characterId: targetId });
+        channelRef.current.postMessage({
+          type: "DISCONNECT_PLAYER",
+          characterId: targetId,
+          sessionId: mySessionId,
+        });
       }
 
-      if (targetId && targetId > 0) {
+      if (targetId && targetId > 0 && !useSessionDisplacementStore.getState().isDisplaced) {
         fetch("/api/multiplayer/disconnect", {
           method: "POST",
           headers: {
             "Content-Type": "application/json",
+            "x-session-id": mySessionId,
             ...(token ? { Authorization: `Bearer ${token}` } : {}),
           },
-          body: JSON.stringify({ characterId: targetId }),
+          body: JSON.stringify({ characterId: targetId, sessionId: mySessionId }),
           keepalive: true,
         }).catch(() => {});
       }

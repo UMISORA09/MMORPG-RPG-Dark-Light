@@ -1,6 +1,7 @@
 import { usePersistenceStore } from "@/persistence/PersistenceManager";
 import { useEffect, useRef, useState, useCallback } from "react";
 import { useGameWorldStore } from "@/stores/useGameWorldStore";
+import { getTabSessionId, useSessionDisplacementStore } from "@/lib/sessionGuard";
 
 export interface AutoSavePayload {
   hp: number;
@@ -72,6 +73,11 @@ export function useCharacterAutoSave(characterIdOverride?: number) {
 
   const executeSave = useCallback(
     async (isBeaconOrUnload = false) => {
+      // 🛡️ DỪNG NGAY NẾU PHIÊN ĐÃ BỊ THAY THẾ (DISPLACED) ĐỂ TRÁNH GHI ĐÈ DỮ LIỆU
+      if (useSessionDisplacementStore.getState().isDisplaced) {
+        return;
+      }
+
       const target = getPayload();
       if (!target) return;
       const { characterId, payload } = target;
@@ -81,6 +87,8 @@ export function useCharacterAutoSave(characterIdOverride?: number) {
       if (!isBeaconOrUnload && snapshot === lastSnapshotRef.current) {
         return;
       }
+
+      const mySessionId = getTabSessionId();
 
       // Synchronously update local storage for bulletproof client-side preservation
       if (typeof window !== "undefined") {
@@ -110,6 +118,7 @@ export function useCharacterAutoSave(characterIdOverride?: number) {
         const token = typeof window !== "undefined" ? (localStorage.getItem("clb_token") || localStorage.getItem("token")) : null;
         const authHeaders = {
           "Content-Type": "application/json",
+          "x-session-id": mySessionId,
           ...(token ? { Authorization: `Bearer ${token}` } : {}),
         };
 
@@ -150,6 +159,7 @@ export function useCharacterAutoSave(characterIdOverride?: number) {
           method: "PUT",
           headers: {
             "Content-Type": "application/json",
+            "x-session-id": mySessionId,
             ...(token ? { Authorization: `Bearer ${token}` } : {}),
           },
           body: snapshot,
@@ -166,6 +176,15 @@ export function useCharacterAutoSave(characterIdOverride?: number) {
           indicatorTimerRef.current = setTimeout(() => {
             setShowIndicator(false);
           }, 2200);
+        } else if (res.status === 409) {
+          // 🛡️ PHIÊN ĐÃ BỊ THAY THẾ BỞI THIẾT BỊ HOẶC CỬA SỔ KHÁC
+          const errData = await res.json().catch(() => null);
+          console.warn("[AutoSave] Phiên đã bị thay thế (409 Conflict):", errData);
+          setShowIndicator(false);
+          useSessionDisplacementStore.getState().triggerDisplacement(
+            errData?.message || "Tài khoản hoặc nhân vật của bạn đang được mở ở một phiên khác."
+          );
+          return;
         } else {
           console.warn("[AutoSave] Máy chủ từ chối lưu tự động:", res.status);
           setShowIndicator(false);

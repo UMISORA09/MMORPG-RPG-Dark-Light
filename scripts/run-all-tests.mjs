@@ -73,6 +73,12 @@ const TEST_SUITES = [
     script: "scripts/test-admin-security.mjs",
     description: "RBAC deny-by-default, 401 unauth, 403 player block, zero passwordHash leak",
   },
+  {
+    id: 9,
+    name: "Single-Session & Duplicate Displacement",
+    script: "scripts/test-duplicate-session-kickout.mjs",
+    description: "1 account 1 character enforcement, instant duplicate session kickout, 409 stale save defense",
+  },
 ];
 
 function runProcess(cmd, args, options = {}) {

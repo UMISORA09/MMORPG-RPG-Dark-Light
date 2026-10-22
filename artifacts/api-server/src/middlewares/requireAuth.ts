@@ -49,12 +49,23 @@ export async function extractAuthUser(req: any): Promise<any | null> {
   } catch {}
   req.authUserId = user.id;
   req.authUser = user;
+  req.authSessionId = tokenData?.sessionId || (req.headers?.["x-session-id"] as string) || null;
 
   return user;
 }
 
 export function getAuthUserId(req: any): number {
   return Number(req.authUserId || req.authUser?.id || req.session?.userId || 0);
+}
+
+export function getAuthSessionId(req: any): string | null {
+  return (
+    (req.headers?.["x-session-id"] as string) ||
+    req.authSessionId ||
+    (req.query?.sessionId as string) ||
+    (req.body?.sessionId as string) ||
+    null
+  );
 }
 
 export async function requireAuth(req: any, res: any, next: any): Promise<void> {
