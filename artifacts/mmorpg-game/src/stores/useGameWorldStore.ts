@@ -282,6 +282,8 @@ export interface GameWorldState {
   // --- Real-time Multiplayer & Party ---
   remotePlayers: any[];
   setRemotePlayers: (players: any[]) => void;
+  selectedPlayerTarget: any | null;
+  setSelectedPlayerTarget: (player: any | null) => void;
   overheadChatBubble: string | null;
   overheadChatTimer: number;
   triggerOverheadChat: (msg: string) => void;
@@ -925,6 +927,8 @@ export const useGameWorldStore = create<GameWorldState>((set, get) => ({
   // Real-time Multiplayer & Party
   remotePlayers: [],
   setRemotePlayers: (players) => set({ remotePlayers: players }),
+  selectedPlayerTarget: null,
+  setSelectedPlayerTarget: (player) => set({ selectedPlayerTarget: player }),
   overheadChatBubble: null,
   overheadChatTimer: 0,
   triggerOverheadChat: (msg) => set({ overheadChatBubble: msg, overheadChatTimer: 5.0 }),

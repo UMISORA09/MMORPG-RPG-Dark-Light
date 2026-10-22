@@ -164,17 +164,39 @@ setInterval(() => {
   AI_ADVENTURERS[2].posZ = -14 + Math.cos(t * 0.6) * 3;
 }, 3000);
 
+const OPEN_WORLD_ZONES = new Set([
+  "SAFE_VILLAGE",
+  "WILDERNESS",
+  "DEAD_MARSH",
+  "BOSS_ALTAR",
+  "DRAGON_VALLEY",
+  "FOREST",
+  "FROST_PEAK",
+]);
+
+function areInSameRealm(z1?: string, z2?: string): boolean {
+  if (!z1 || !z2) return true;
+  if (z1 === z2) return true;
+  if (OPEN_WORLD_ZONES.has(z1) && OPEN_WORLD_ZONES.has(z2)) return true;
+  return false;
+}
+
+function matchesServer(s1?: string, s2?: string): boolean {
+  if (!s1 || !s2) return true;
+  return s1 === s2;
+}
+
 // Helper: Query online players from Supabase with 1.5s caching
 async function getOnlinePlayersFromSupabase(serverId: string, currentZoneId: string, currentCharacterId: number): Promise<RemotePlayerState[]> {
   const now = Date.now();
   if (now - lastDbQueryTime < 1500 && cachedDbPlayers.length > 0) {
     return cachedDbPlayers.filter(
-      (p) => p.characterId !== currentCharacterId && p.serverId === serverId && p.zoneId === currentZoneId
+      (p) => p.characterId !== currentCharacterId && matchesServer(p.serverId, serverId) && areInSameRealm(p.zoneId, currentZoneId)
     );
   }
 
   try {
-    const activeCutoff = new Date(now - 60000); // Online in the last 60 seconds
+    const activeCutoff = new Date(now - 120000); // Online in the last 120 seconds
     const rows = await db
       .select({
         id: charactersTable.id,
@@ -237,7 +259,7 @@ async function getOnlinePlayersFromSupabase(serverId: string, currentZoneId: str
     }));
 
     return cachedDbPlayers.filter(
-      (p) => p.characterId !== currentCharacterId && p.serverId === serverId && p.zoneId === currentZoneId
+      (p) => p.characterId !== currentCharacterId && matchesServer(p.serverId, serverId) && areInSameRealm(p.zoneId, currentZoneId)
     );
   } catch (err) {
     console.warn("[Multiplayer] Supabase query fallback to in-memory:", err);
@@ -349,7 +371,7 @@ router.post("/multiplayer/sync", async (req, res): Promise<void> => {
 
   // B. Thêm/Ghi đè bằng người chơi In-Memory (có animState, chatBubble tức thời)
   for (const [id, other] of activePlayers.entries()) {
-    if (id !== charNumId && other.serverId === serverId && other.zoneId === zoneId) {
+    if (id !== charNumId && matchesServer(other.serverId, serverId) && areInSameRealm(other.zoneId, zoneId)) {
       mergedMap.set(id, other);
     }
   }
@@ -368,7 +390,7 @@ router.post("/multiplayer/sync", async (req, res): Promise<void> => {
 
   // 5. Thêm AI Adventurers cùng server và zone trong AOI để thế giới luôn sống động
   for (const bot of AI_ADVENTURERS) {
-    if (bot.zoneId === zoneId) {
+    if (areInSameRealm(bot.zoneId, zoneId)) {
       const dx = (bot.posX || 0) - (posX || 0);
       const dz = (bot.posZ || 0) - (posZ || 0);
       if (dx * dx + dz * dz <= MAX_AOI_DIST_SQ) {

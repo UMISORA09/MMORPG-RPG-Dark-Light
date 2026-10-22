@@ -67594,15 +67594,34 @@ setInterval(() => {
   AI_ADVENTURERS[2].posX = -25 + Math.sin(t * 0.6) * 4;
   AI_ADVENTURERS[2].posZ = -14 + Math.cos(t * 0.6) * 3;
 }, 3e3);
+var OPEN_WORLD_ZONES = /* @__PURE__ */ new Set([
+  "SAFE_VILLAGE",
+  "WILDERNESS",
+  "DEAD_MARSH",
+  "BOSS_ALTAR",
+  "DRAGON_VALLEY",
+  "FOREST",
+  "FROST_PEAK"
+]);
+function areInSameRealm(z1, z2) {
+  if (!z1 || !z2) return true;
+  if (z1 === z2) return true;
+  if (OPEN_WORLD_ZONES.has(z1) && OPEN_WORLD_ZONES.has(z2)) return true;
+  return false;
+}
+function matchesServer(s1, s2) {
+  if (!s1 || !s2) return true;
+  return s1 === s2;
+}
 async function getOnlinePlayersFromSupabase(serverId, currentZoneId, currentCharacterId) {
   const now = Date.now();
   if (now - lastDbQueryTime < 1500 && cachedDbPlayers.length > 0) {
     return cachedDbPlayers.filter(
-      (p) => p.characterId !== currentCharacterId && p.serverId === serverId && p.zoneId === currentZoneId
+      (p) => p.characterId !== currentCharacterId && matchesServer(p.serverId, serverId) && areInSameRealm(p.zoneId, currentZoneId)
     );
   }
   try {
-    const activeCutoff = new Date(now - 6e4);
+    const activeCutoff = new Date(now - 12e4);
     const rows = await db.select({
       id: charactersTable.id,
       name: charactersTable.name,
@@ -67659,7 +67678,7 @@ async function getOnlinePlayersFromSupabase(serverId, currentZoneId, currentChar
       isBot: false
     }));
     return cachedDbPlayers.filter(
-      (p) => p.characterId !== currentCharacterId && p.serverId === serverId && p.zoneId === currentZoneId
+      (p) => p.characterId !== currentCharacterId && matchesServer(p.serverId, serverId) && areInSameRealm(p.zoneId, currentZoneId)
     );
   } catch (err) {
     console.warn("[Multiplayer] Supabase query fallback to in-memory:", err);
@@ -67753,7 +67772,7 @@ router5.post("/multiplayer/sync", async (req, res) => {
     mergedMap.set(dbPlayer.characterId, dbPlayer);
   }
   for (const [id, other] of activePlayers.entries()) {
-    if (id !== charNumId && other.serverId === serverId && other.zoneId === zoneId) {
+    if (id !== charNumId && matchesServer(other.serverId, serverId) && areInSameRealm(other.zoneId, zoneId)) {
       mergedMap.set(id, other);
     }
   }
@@ -67767,7 +67786,7 @@ router5.post("/multiplayer/sync", async (req, res) => {
     }
   }
   for (const bot of AI_ADVENTURERS) {
-    if (bot.zoneId === zoneId) {
+    if (areInSameRealm(bot.zoneId, zoneId)) {
       const dx = (bot.posX || 0) - (posX || 0);
       const dz = (bot.posZ || 0) - (posZ || 0);
       if (dx * dx + dz * dz <= MAX_AOI_DIST_SQ) {

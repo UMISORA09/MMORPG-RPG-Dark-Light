@@ -17,6 +17,7 @@ import { RightEdgeQuickDock } from "./RightEdgeQuickDock";
 import { SymmetricalActionHUD } from "./SymmetricalActionHUD";
 import { PixelEnemyHealthBars } from "./PixelEnemyHealthBars";
 import { TargetHealthBar } from "./TargetHealthBar";
+import { PlayerTargetHUD } from "./PlayerTargetHUD";
 import { LevelUpAndLootFlashOverlay } from "./LevelUpAndLootFlashOverlay";
 import { ChestInteractionAndLootHUD } from "./ChestInteractionAndLootHUD";
 import { playButtonClick } from "@/audio/CombatSoundSynth";
@@ -403,6 +404,12 @@ export const UnifiedGameHUD = memo(function UnifiedGameHUD({
 
       {/* ── Chest Proximity Prompt & Opened Loot Modal ── */}
       <ChestInteractionAndLootHUD />
+
+      {/* ── Target Health Bar for Selected Enemy Monster ── */}
+      <TargetHealthBar />
+
+      {/* ── Player Target HUD & Real-time Interactive Action Frame ── */}
+      <PlayerTargetHUD />
 
       {/* ── Cinematic Level-Up Banner & High-Tier Loot Screen Flash ── */}
       <LevelUpAndLootFlashOverlay />

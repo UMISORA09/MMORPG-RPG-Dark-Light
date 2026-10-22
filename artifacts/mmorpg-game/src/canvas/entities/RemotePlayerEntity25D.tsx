@@ -5,6 +5,7 @@ import { SpriteBillboard25D } from "../sprites/SpriteBillboard25D";
 import { OverheadChatBubble } from "./OverheadChatBubble";
 import { WeaponEnhanceAura } from "./WeaponEnhanceAura";
 import { MountVisual25D } from "./MountVisual25D";
+import { useGameWorldStore } from "@/stores/useGameWorldStore";
 
 export interface RemotePlayerProps {
   player: {
@@ -39,16 +40,26 @@ export const RemotePlayerEntity25D = memo(function RemotePlayerEntity25D({ playe
   const groupRef = useRef<THREE.Group>(null);
   const currentPos = useRef(new THREE.Vector3(player.posX, 0, player.posZ));
   const targetPos = useRef(new THREE.Vector3(player.posX, 0, player.posZ));
+  const selectedPlayerTarget = useGameWorldStore((s) => s.selectedPlayerTarget);
+  const isSelected = selectedPlayerTarget?.characterId === player.characterId;
 
   useFrame((_, delta) => {
     targetPos.current.set(player.posX, 0, player.posZ);
+
+    // ── DEAD RECKONING (Extrapolate movement smoothly with zero perceived delay) ──
+    if (player.animState === "run") {
+      const moveSpeed = player.isMounted ? 9.5 : 6.2;
+      const dirX = player.facingLeft ? -1 : 1;
+      targetPos.current.x += dirX * moveSpeed * delta * 0.4;
+    }
+
     const distSq = currentPos.current.distanceToSquared(targetPos.current);
-    if (distSq > 400) {
-      // Khoảng cách lớn hơn 20 units: Người chơi vừa dịch chuyển map -> Snap vị trí tức thời chống trượt
+    if (distSq > 300) {
+      // Dịch chuyển khoảng cách lớn -> Snap tức thời chống trượt
       currentPos.current.copy(targetPos.current);
     } else {
-      // Nội suy mượt mà chống giật lag
-      currentPos.current.lerp(targetPos.current, Math.min(delta * 12.0, 1.0));
+      // Nội suy tốc độ cao (20.0) cho trải nghiệm chuyển động mượt mà tức thì
+      currentPos.current.lerp(targetPos.current, Math.min(delta * 20.0, 1.0));
     }
     if (groupRef.current) {
       groupRef.current.position.copy(currentPos.current);
@@ -74,7 +85,34 @@ export const RemotePlayerEntity25D = memo(function RemotePlayerEntity25D({ playe
   }[player.classId] || "#00f2ff";
 
   return (
-    <group ref={groupRef} position={[player.posX, 0, player.posZ]}>
+    <group
+      ref={groupRef}
+      position={[player.posX, 0, player.posZ]}
+      onClick={(e) => {
+        e.stopPropagation();
+        useGameWorldStore.getState().setSelectedPlayerTarget(player);
+      }}
+      onPointerOver={(e) => {
+        e.stopPropagation();
+        document.body.style.cursor = "pointer";
+      }}
+      onPointerOut={() => {
+        document.body.style.cursor = "default";
+      }}
+    >
+      {/* ── Luminous Selection Decal Ring Under Target Feet ── */}
+      {isSelected && (
+        <mesh position={[0, 0.04, 0]} rotation={[-Math.PI / 2, 0, 0]}>
+          <ringGeometry args={[0.85, 1.2, 32]} />
+          <meshBasicMaterial
+            color="#00f2ff"
+            transparent
+            opacity={0.8}
+            depthWrite={false}
+          />
+        </mesh>
+      )}
+
       {/* ── Mount Visual if mounted ── */}
       {player.isMounted && (
         <MountVisual25D
