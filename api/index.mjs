@@ -57881,7 +57881,13 @@ async function initDatabase() {
         ALTER TABLE characters ADD COLUMN IF NOT EXISTS ui_preferences_json TEXT DEFAULT '' NOT NULL;
         ALTER TABLE characters ADD COLUMN IF NOT EXISTS awakening_tier INTEGER DEFAULT 0 NOT NULL;
         ALTER TABLE characters ADD COLUMN IF NOT EXISTS talents_json TEXT DEFAULT '{}' NOT NULL;
-        ALTER TABLE characters ADD COLUMN IF NOT EXISTS codex_unlocked_json TEXT DEFAULT '[]' NOT NULL;
+        ALTER TABLE characters ADD COLUMN IF NOT EXISTS hair_style TEXT DEFAULT 'phong_van' NOT NULL;
+        ALTER TABLE characters ADD COLUMN IF NOT EXISTS hair_color TEXT DEFAULT '#1e1e1e' NOT NULL;
+        ALTER TABLE characters ADD COLUMN IF NOT EXISTS outfit_id TEXT DEFAULT 'basic' NOT NULL;
+        ALTER TABLE characters ADD COLUMN IF NOT EXISTS destiny_rolled BOOLEAN DEFAULT FALSE NOT NULL;
+        ALTER TABLE characters ADD COLUMN IF NOT EXISTS talent_ids TEXT DEFAULT '[]' NOT NULL;
+        ALTER TABLE characters ADD COLUMN IF NOT EXISTS aura_ids TEXT DEFAULT '[]' NOT NULL;
+        ALTER TABLE characters ADD COLUMN IF NOT EXISTS unallocated_stat_points INTEGER DEFAULT 0 NOT NULL;
         ALTER TABLE characters ADD COLUMN IF NOT EXISTS auto_combat_settings_json TEXT DEFAULT '{"hpThreshold":45,"mpThreshold":30,"lootFilterMinRarity":"rare"}' NOT NULL;
 
         CREATE TABLE IF NOT EXISTS items (
@@ -65608,14 +65614,8 @@ var CharacterInventoryService = class {
 
 // src/lib/inventory.ts
 var itemCatalogReady = false;
-var monsterCatalogReady = false;
 var serverCatalogReady = false;
 async function ensureItemCatalog() {
-  if (itemCatalogReady) return;
-  for (const item of ITEM_CATALOG) {
-    const { id, ...updates } = item;
-    await db.insert(itemsTable).values(item).onConflictDoUpdate({ target: itemsTable.id, set: updates });
-  }
   itemCatalogReady = true;
 }
 async function toCharacterResponse(character) {
@@ -65932,16 +65932,7 @@ async function getCatalogItems() {
     icon: it.icon || "\u25C7"
   }));
 }
-async function ensureMonsterCatalog() {
-  if (monsterCatalogReady) return;
-  for (const monster of SEED_WORLD_MONSTERS) {
-    const { sortOrder: _sortOrder, ...row } = monster;
-    await db.insert(monstersTable).values(row).onConflictDoUpdate({ target: monstersTable.id, set: row });
-  }
-  monsterCatalogReady = true;
-}
 async function getMonster(monsterId) {
-  await ensureMonsterCatalog();
   const aliasMap = {
     slime_swamp: "slime",
     wolf_wild: "wolf",
@@ -65953,16 +65944,10 @@ async function getMonster(monsterId) {
   return monster;
 }
 async function getCatalogMonsters() {
-  await ensureMonsterCatalog();
   const monsters = await db.select().from(monstersTable);
   return monsters.sort((left, right) => left.level - right.level);
 }
 async function ensureServerCatalog() {
-  if (serverCatalogReady) return;
-  for (const server of SEED_SERVERS) {
-    const { id, ...updates } = server;
-    await db.insert(serversTable).values(server).onConflictDoUpdate({ target: serversTable.id, set: updates });
-  }
   serverCatalogReady = true;
 }
 

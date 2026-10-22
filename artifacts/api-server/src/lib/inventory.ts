@@ -19,12 +19,7 @@ let monsterCatalogReady = false;
 let serverCatalogReady = false;
 
 export async function ensureItemCatalog(): Promise<void> {
-  if (itemCatalogReady) return;
-  for (const item of ITEM_CATALOG) {
-    const { id, ...updates } = item;
-    await db.insert(itemsTable).values(item)
-      .onConflictDoUpdate({ target: itemsTable.id, set: updates });
-  }
+  // Catalog items are already persistently seeded in Supabase database & memoryStore
   itemCatalogReady = true;
 }
 
@@ -416,17 +411,11 @@ export async function getCatalogItems(): Promise<Item[]> {
 }
 
 export async function ensureMonsterCatalog(): Promise<void> {
-  if (monsterCatalogReady) return;
-  for (const monster of SEED_WORLD_MONSTERS) {
-    const { sortOrder: _sortOrder, ...row } = monster;
-    await db.insert(monstersTable).values(row)
-      .onConflictDoUpdate({ target: monstersTable.id, set: row });
-  }
+  // Monsters are already persistently seeded in database
   monsterCatalogReady = true;
 }
 
 export async function getMonster(monsterId: string) {
-  await ensureMonsterCatalog();
   const aliasMap: Record<string, string> = {
     slime_swamp: "slime",
     wolf_wild: "wolf",
@@ -440,17 +429,11 @@ export async function getMonster(monsterId: string) {
 }
 
 export async function getCatalogMonsters() {
-  await ensureMonsterCatalog();
   const monsters = await db.select().from(monstersTable);
   return monsters.sort((left: any, right: any) => left.level - right.level);
 }
 
 export async function ensureServerCatalog(): Promise<void> {
-  if (serverCatalogReady) return;
-  for (const server of SEED_SERVERS) {
-    const { id, ...updates } = server;
-    await db.insert(serversTable).values(server)
-      .onConflictDoUpdate({ target: serversTable.id, set: updates });
-  }
+  // Servers are already persistently seeded in database
   serverCatalogReady = true;
 }

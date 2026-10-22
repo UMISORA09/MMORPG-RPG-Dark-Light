@@ -701,7 +701,13 @@ export async function initDatabase() {
         ALTER TABLE characters ADD COLUMN IF NOT EXISTS ui_preferences_json TEXT DEFAULT '' NOT NULL;
         ALTER TABLE characters ADD COLUMN IF NOT EXISTS awakening_tier INTEGER DEFAULT 0 NOT NULL;
         ALTER TABLE characters ADD COLUMN IF NOT EXISTS talents_json TEXT DEFAULT '{}' NOT NULL;
-        ALTER TABLE characters ADD COLUMN IF NOT EXISTS codex_unlocked_json TEXT DEFAULT '[]' NOT NULL;
+        ALTER TABLE characters ADD COLUMN IF NOT EXISTS hair_style TEXT DEFAULT 'phong_van' NOT NULL;
+        ALTER TABLE characters ADD COLUMN IF NOT EXISTS hair_color TEXT DEFAULT '#1e1e1e' NOT NULL;
+        ALTER TABLE characters ADD COLUMN IF NOT EXISTS outfit_id TEXT DEFAULT 'basic' NOT NULL;
+        ALTER TABLE characters ADD COLUMN IF NOT EXISTS destiny_rolled BOOLEAN DEFAULT FALSE NOT NULL;
+        ALTER TABLE characters ADD COLUMN IF NOT EXISTS talent_ids TEXT DEFAULT '[]' NOT NULL;
+        ALTER TABLE characters ADD COLUMN IF NOT EXISTS aura_ids TEXT DEFAULT '[]' NOT NULL;
+        ALTER TABLE characters ADD COLUMN IF NOT EXISTS unallocated_stat_points INTEGER DEFAULT 0 NOT NULL;
         ALTER TABLE characters ADD COLUMN IF NOT EXISTS auto_combat_settings_json TEXT DEFAULT '{"hpThreshold":45,"mpThreshold":30,"lootFilterMinRarity":"rare"}' NOT NULL;
 
         CREATE TABLE IF NOT EXISTS items (
