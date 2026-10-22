@@ -32,6 +32,10 @@ import {
   Filter,
   Check,
   AlertTriangle,
+  Radio,
+  Zap,
+  Link2,
+  Globe,
 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 
@@ -229,6 +233,66 @@ export default function AdminDashboardScreen() {
   const [tables, setTables] = useState<TableInfo[]>([]);
   const [selectedTable, setSelectedTable] = useState("users");
   const [tableRows, setTableRows] = useState<any[]>([]);
+
+  // Supabase Continuous Live Sync state
+  const [supabaseStatus, setSupabaseStatus] = useState<any>(null);
+  const [supabaseLoading, setSupabaseLoading] = useState(false);
+  const [supabaseUrlInput, setSupabaseUrlInput] = useState("");
+  const [supabaseConnectOpen, setSupabaseConnectOpen] = useState(false);
+
+  const fetchSupabaseStatus = async () => {
+    try {
+      const res = await fetch("/api/admin/supabase/status");
+      if (res.ok) {
+        const data = await res.json();
+        setSupabaseStatus(data);
+      }
+    } catch {}
+  };
+
+  const handleConnectSupabase = async () => {
+    if (!supabaseUrlInput.trim()) {
+      toast({ title: "Thiếu URL kết nối", description: "Vui lòng nhập chuỗi kết nối PostgreSQL Supabase (postgres://...)", variant: "destructive" });
+      return;
+    }
+    setSupabaseLoading(true);
+    try {
+      const res = await fetch("/api/admin/supabase/connect", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ databaseUrl: supabaseUrlInput.trim() }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || "Không thể kết nối Supabase");
+      toast({ title: "Kết nối thành công", description: data.message });
+      setSupabaseConnectOpen(false);
+      setSupabaseUrlInput("");
+      fetchSupabaseStatus();
+      fetchTables();
+      fetchStats();
+    } catch (err: any) {
+      toast({ title: "Lỗi kết nối Supabase", description: err.message, variant: "destructive" });
+    } finally {
+      setSupabaseLoading(false);
+    }
+  };
+
+  const handleSyncAllToSupabase = async () => {
+    setSupabaseLoading(true);
+    try {
+      const res = await fetch("/api/admin/supabase/sync-all", { method: "POST" });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || "Lỗi đồng bộ lên Supabase");
+      toast({ title: "Đồng bộ thành công", description: data.message });
+      fetchSupabaseStatus();
+      fetchTables();
+      fetchStats();
+    } catch (err: any) {
+      toast({ title: "Lỗi đồng bộ Supabase", description: err.message, variant: "destructive" });
+    } finally {
+      setSupabaseLoading(false);
+    }
+  };
 
   // Fetch Stats
   const fetchStats = async () => {
@@ -455,7 +519,10 @@ export default function AdminDashboardScreen() {
         .then((r) => r.json())
         .then((data) => setAuditData(data))
         .catch(() => {});
-    } else if (activeTab === "db") fetchTableRows(selectedTable);
+    } else if (activeTab === "db") {
+      fetchTableRows(selectedTable);
+      fetchSupabaseStatus();
+    }
   }, [activeTab, isAuthenticated, userTypeFilter]);
 
   // Handle Save User
@@ -1617,9 +1684,146 @@ export default function AdminDashboardScreen() {
           </div>
         )}
 
-        {/* TAB 5: RAW DATABASE INSPECTOR */}
+        {/* TAB 5: RAW DATABASE INSPECTOR & LIVE SUPABASE SYNC */}
         {activeTab === "db" && (
           <div className="flex flex-col gap-6">
+            {/* Supabase Continuous Live Sync Panel */}
+            <div className="p-5 sm:p-6 rounded-[24px] bg-[linear-gradient(135deg,#241c22_0%,#342a2b_100%)] border border-[#5d4648] shadow-2xl relative overflow-hidden">
+              <div className="absolute top-0 right-0 w-96 h-96 bg-[#28c3e1]/5 rounded-full blur-3xl pointer-events-none" />
+              
+              <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4 border-b border-[#5d4648]/80 pb-5">
+                <div className="flex items-center gap-3.5">
+                  <div className="w-12 h-12 rounded-2xl bg-[#4a383a] border border-[#5d4648] flex items-center justify-center text-[#28c3e1] shadow-inner">
+                    <Database className="w-6 h-6 animate-pulse" />
+                  </div>
+                  <div>
+                    <div className="flex items-center gap-2.5 flex-wrap">
+                      <h2 className="text-base sm:text-lg font-bold text-white tracking-wide">
+                        TRUNG TÂM TRAO ĐỔI & ĐỒNG BỘ DỮ LIỆU SUPABASE
+                      </h2>
+                      {supabaseStatus?.isPostgres ? (
+                        <span className="px-3 py-1 rounded-full text-[11px] font-black uppercase tracking-wider bg-emerald-500/20 text-emerald-400 border border-emerald-500/40 flex items-center gap-1.5 shadow-[0_0_15px_rgba(52,211,153,0.3)]">
+                          <span className="w-2 h-2 rounded-full bg-emerald-400 animate-ping" />
+                          <span>Đang Kết Nối Supabase Cloud ({supabaseStatus?.pingMs ?? 15}ms)</span>
+                        </span>
+                      ) : (
+                        <span className="px-3 py-1 rounded-full text-[11px] font-black uppercase tracking-wider bg-amber-500/20 text-amber-400 border border-amber-500/40 flex items-center gap-1.5">
+                          <span className="w-2 h-2 rounded-full bg-amber-400" />
+                          <span>Chế Độ Nội Bộ (Chờ kết nối Supabase)</span>
+                        </span>
+                      )}
+                    </div>
+                    <p className="text-xs text-[#8e7a7c] mt-1 leading-relaxed">
+                      Toàn bộ tài khoản, nhân vật, hành trang, trận đấu và thao tác quản trị được lưu trữ và trao đổi trực tiếp với PostgreSQL Supabase.
+                    </p>
+                  </div>
+                </div>
+
+                <div className="flex items-center gap-2.5 flex-wrap">
+                  <button
+                    onClick={() => setSupabaseConnectOpen(!supabaseConnectOpen)}
+                    className="px-4 py-2.5 rounded-full bg-[#4a383a] hover:bg-[#5d4648] border border-[#5d4648] text-xs font-bold text-white transition-all flex items-center gap-2"
+                  >
+                    <Link2 className="w-4 h-4 text-[#28c3e1]" />
+                    <span>Cấu Hình Kết Nối Supabase</span>
+                  </button>
+
+                  <button
+                    onClick={handleSyncAllToSupabase}
+                    disabled={supabaseLoading || !supabaseStatus?.isPostgres}
+                    className="px-5 py-2.5 rounded-full bg-[#28c3e1] hover:brightness-110 disabled:opacity-50 text-[#1c161a] text-xs font-black uppercase tracking-wider transition-all flex items-center gap-2 shadow-[0_0_20px_rgba(40,195,225,0.4)]"
+                  >
+                    <Zap className="w-4 h-4" />
+                    <span>{supabaseLoading ? "Đang Đồng Bộ..." : "⚡ Đẩy Toàn Bộ Dữ Liệu Lên Supabase (Sync Now)"}</span>
+                  </button>
+                </div>
+              </div>
+
+              {/* Expandable Connect Form */}
+              {supabaseConnectOpen && (
+                <div className="mt-5 p-4 rounded-2xl bg-[#271f20] border border-[#5d4648] flex flex-col gap-3">
+                  <div className="flex items-center justify-between">
+                    <span className="text-xs font-bold text-white flex items-center gap-2">
+                      <Globe className="w-4 h-4 text-[#28c3e1]" />
+                      Nhập Chuỗi Kết Nối Supabase PostgreSQL (URI)
+                    </span>
+                    <button
+                      onClick={() => setSupabaseConnectOpen(false)}
+                      className="text-[#8e7a7c] hover:text-white text-xs"
+                    >
+                      <X className="w-4 h-4" />
+                    </button>
+                  </div>
+
+                  <p className="text-[11px] text-[#8e7a7c]">
+                    Lấy chuỗi URI tại Supabase Dashboard: <strong>Project Settings → Database → Connection String (URI)</strong> (sử dụng cổng 5432 hoặc pooler 6543).
+                  </p>
+
+                  <div className="flex flex-col sm:flex-row gap-2">
+                    <input
+                      type="text"
+                      placeholder="postgres://postgres.[PROJECT_REF]:[PASSWORD]@aws-0-ap-southeast-1.pooler.supabase.com:6543/postgres"
+                      value={supabaseUrlInput}
+                      onChange={(e) => setSupabaseUrlInput(e.target.value)}
+                      className="flex-1 h-11 px-3.5 rounded-xl bg-[#342a2b] border border-[#5d4648] text-white text-xs font-mono outline-none focus:ring-2 focus:ring-[#28c3e1]"
+                    />
+                    <button
+                      onClick={handleConnectSupabase}
+                      disabled={supabaseLoading}
+                      className="px-6 h-11 rounded-xl bg-[#28c3e1] hover:brightness-110 text-[#1c161a] text-xs font-black uppercase tracking-wider flex items-center justify-center gap-2 shrink-0"
+                    >
+                      {supabaseLoading ? "Đang Kiểm Tra..." : "Kết Nối Ngay"}
+                    </button>
+                  </div>
+                </div>
+              )}
+
+              {/* Realtime Live Counts Grid */}
+              <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3.5 mt-5">
+                <div className="p-3.5 rounded-xl bg-[#271f20]/80 border border-[#5d4648]/60">
+                  <span className="text-[11px] text-[#8e7a7c] block">Host Supabase</span>
+                  <strong className="text-xs text-white font-mono truncate block mt-0.5" title={supabaseStatus?.host}>
+                    {supabaseStatus?.host || "cuhzhzfzvutldgsfmoyw"}
+                  </strong>
+                </div>
+
+                <div className="p-3.5 rounded-xl bg-[#271f20]/80 border border-[#5d4648]/60">
+                  <span className="text-[11px] text-[#8e7a7c] block">Tài Khoản (Users)</span>
+                  <strong className="text-base font-black text-[#28c3e1] block mt-0.5">
+                    {supabaseStatus?.counts?.users ?? stats?.counts?.users ?? 0}
+                  </strong>
+                </div>
+
+                <div className="p-3.5 rounded-xl bg-[#271f20]/80 border border-[#5d4648]/60">
+                  <span className="text-[11px] text-[#8e7a7c] block">Nhân Vật (Chars)</span>
+                  <strong className="text-base font-black text-amber-400 block mt-0.5">
+                    {supabaseStatus?.counts?.characters ?? stats?.counts?.characters ?? 0}
+                  </strong>
+                </div>
+
+                <div className="p-3.5 rounded-xl bg-[#271f20]/80 border border-[#5d4648]/60">
+                  <span className="text-[11px] text-[#8e7a7c] block">Vật Phẩm (Items)</span>
+                  <strong className="text-base font-black text-purple-400 block mt-0.5">
+                    {supabaseStatus?.counts?.items ?? stats?.counts?.items ?? 0}
+                  </strong>
+                </div>
+
+                <div className="p-3.5 rounded-xl bg-[#271f20]/80 border border-[#5d4648]/60">
+                  <span className="text-[11px] text-[#8e7a7c] block">Hành Trang (Bag)</span>
+                  <strong className="text-base font-black text-emerald-400 block mt-0.5">
+                    {supabaseStatus?.counts?.characterItems ?? stats?.counts?.characterItems ?? 0}
+                  </strong>
+                </div>
+
+                <div className="p-3.5 rounded-xl bg-[#271f20]/80 border border-[#5d4648]/60">
+                  <span className="text-[11px] text-[#8e7a7c] block">Nhiệm Vụ (Quests)</span>
+                  <strong className="text-base font-black text-rose-400 block mt-0.5">
+                    {supabaseStatus?.counts?.quests ?? stats?.counts?.quests ?? 0}
+                  </strong>
+                </div>
+              </div>
+            </div>
+
             {/* Table Selector Pills */}
             <div className="flex items-center gap-2 flex-wrap">
               {tables.map((t) => (

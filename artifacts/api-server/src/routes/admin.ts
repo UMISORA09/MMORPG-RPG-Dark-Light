@@ -17,6 +17,9 @@ import {
   SEED_ALL_ITEMS,
   SEED_WORLD_MONSTERS,
   SEED_QUESTS,
+  getDatabaseConnectionStatus,
+  switchDatabaseConnection,
+  pushAllLocalDataToSupabase,
 } from "@workspace/db";
 import { eq, desc, sql, and } from "drizzle-orm";
 import { getDeterministicUserId } from "./auth";
@@ -961,6 +964,48 @@ router.post("/admin/db/reset-seed", async (_req, res) => {
     return res.json({ message: "Đã nạp lại toàn bộ dữ liệu mẫu (Items, Monsters, Servers, Quests) thành công!" });
   } catch (err: any) {
     return res.status(500).json({ error: "Lỗi nạp seed: " + err.message });
+  }
+});
+
+// ==========================================
+// 6. LIVE SUPABASE DIRECT CONNECTION & CONTINUOUS SYNC
+// ==========================================
+router.get("/admin/supabase/status", async (_req, res) => {
+  try {
+    const status = await getDatabaseConnectionStatus();
+    return res.json(status);
+  } catch (err: any) {
+    return res.status(500).json({ error: "Lỗi kiểm tra trạng thái Supabase: " + err.message });
+  }
+});
+
+router.post("/admin/supabase/connect", async (req, res) => {
+  try {
+    const { databaseUrl } = req.body || {};
+    if (!databaseUrl || typeof databaseUrl !== "string") {
+      return res.status(400).json({ error: "Thiếu chuỗi kết nối databaseUrl (postgres://...)" });
+    }
+
+    const result = await switchDatabaseConnection(databaseUrl);
+    if (!result.success) {
+      return res.status(400).json({ error: result.message });
+    }
+
+    return res.json(result);
+  } catch (err: any) {
+    return res.status(500).json({ error: "Lỗi chuyển đổi kết nối: " + err.message });
+  }
+});
+
+router.post("/admin/supabase/sync-all", async (_req, res) => {
+  try {
+    const result = await pushAllLocalDataToSupabase();
+    if (!result.success) {
+      return res.status(400).json({ error: result.message });
+    }
+    return res.json(result);
+  } catch (err: any) {
+    return res.status(500).json({ error: "Lỗi đồng bộ Supabase: " + err.message });
   }
 });
 

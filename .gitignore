@@ -51,3 +51,4 @@ Dragon-Game-Studio/
 Heroic-Battleground/
 bonfire-develop/
 .vercel
+.env*

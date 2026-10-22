@@ -464,7 +464,29 @@ function getPoolConfig(rawUrl: string) {
   };
 }
 
+export function loadEnvFilesSafely() {
+  if (typeof process !== "undefined" && typeof (process as any).loadEnvFile === "function") {
+    const candidates = [
+      path.resolve(process.cwd(), ".env.local"),
+      path.resolve(process.cwd(), ".env"),
+      path.resolve(process.cwd(), ".env.production.local"),
+      path.resolve(process.cwd(), "../../.env.local"),
+      path.resolve(process.cwd(), "../../.env"),
+      path.resolve(process.cwd(), "../../.env.production.local"),
+    ];
+    for (const p of candidates) {
+      if (fs.existsSync(p)) {
+        try {
+          (process as any).loadEnvFile(p);
+        } catch {}
+      }
+    }
+  }
+}
+
 export function resolveDatabaseUrl(): string | null {
+  loadEnvFilesSafely();
+
   const candidates = [
     process.env.DATABASE_URL,
     process.env.POSTGRES_URL,
@@ -892,6 +914,249 @@ if (initialDbUrl) {
 } else {
   db = createMemoryDb();
   isPostgres = false;
+}
+
+export async function getDatabaseConnectionStatus() {
+  const currentUrl = resolveDatabaseUrl();
+  let pingMs: number | null = null;
+  let connectionError: string | null = null;
+  let pgInfo: any = null;
+
+  if (isPostgres && pool) {
+    try {
+      const t0 = Date.now();
+      const client = await pool.connect();
+      const res = await client.query("SELECT current_database() as db, current_user as usr, version() as ver;");
+      client.release();
+      pingMs = Date.now() - t0;
+      pgInfo = res.rows[0];
+    } catch (err: any) {
+      connectionError = err.message;
+    }
+  }
+
+  let counts: Record<string, number> = {};
+  try {
+    if (isPostgres && pool && !connectionError) {
+      const [u, c, i, m, q, ci] = await Promise.all([
+        pool.query("SELECT count(*) FROM users;").then(r => Number(r.rows[0].count)).catch(() => 0),
+        pool.query("SELECT count(*) FROM characters;").then(r => Number(r.rows[0].count)).catch(() => 0),
+        pool.query("SELECT count(*) FROM items;").then(r => Number(r.rows[0].count)).catch(() => 0),
+        pool.query("SELECT count(*) FROM monsters;").then(r => Number(r.rows[0].count)).catch(() => 0),
+        pool.query("SELECT count(*) FROM quests;").then(r => Number(r.rows[0].count)).catch(() => 0),
+        pool.query("SELECT count(*) FROM character_items;").then(r => Number(r.rows[0].count)).catch(() => 0),
+      ]);
+      counts = { users: u, characters: c, items: i, monsters: m, quests: q, characterItems: ci };
+    } else {
+      counts = {
+        users: memoryStore.users.length,
+        characters: memoryStore.characters.length,
+        items: memoryStore.items.length,
+        monsters: memoryStore.monsters.length,
+        quests: memoryStore.quests.length,
+        characterItems: memoryStore.character_items.length,
+      };
+    }
+  } catch {}
+
+  let maskedHost = "Local Memory / Standalone";
+  if (currentUrl) {
+    try {
+      const parsed = new URL(currentUrl.replace("postgres://", "http://").replace("postgresql://", "http://"));
+      maskedHost = parsed.hostname;
+    } catch {
+      maskedHost = "PostgreSQL (Configured)";
+    }
+  }
+
+  return {
+    isPostgres: Boolean(isPostgres && !connectionError),
+    dbMode: isPostgres && !connectionError ? "PostgreSQL (Supabase Cloud)" : "In-Memory / Standalone Fallback",
+    host: maskedHost,
+    pingMs,
+    connectionError,
+    pgInfo,
+    counts,
+    hasConfiguredUrl: Boolean(currentUrl),
+  };
+}
+
+export async function switchDatabaseConnection(newDbUrl: string): Promise<{ success: boolean; message: string; host?: string; pingMs?: number }> {
+  const cleanUrl = newDbUrl.trim();
+  if (!cleanUrl || (!cleanUrl.startsWith("postgres://") && !cleanUrl.startsWith("postgresql://"))) {
+    return { success: false, message: "URL kết nối không hợp lệ. Phải bắt đầu bằng postgres:// hoặc postgresql://" };
+  }
+
+  try {
+    const t0 = Date.now();
+    const testPool = new Pool(getPoolConfig(cleanUrl));
+    const client = await testPool.connect();
+    const res = await client.query("SELECT current_database() as db, current_user as usr, version() as ver;");
+    client.release();
+    const pingMs = Date.now() - t0;
+
+    if (pool) {
+      try {
+        await pool.end();
+      } catch {}
+    }
+
+    pool = testPool;
+    pool.on("error", (err) => {
+      console.warn("[DB:Pool] Background connection warning:", err.message);
+    });
+
+    db = drizzle(pool, { schema });
+    isPostgres = true;
+
+    // Run migrations and create tables if missing
+    await initDatabase();
+
+    // Persist to .env.local
+    try {
+      const envPath = path.resolve(process.cwd(), ".env.local");
+      let content = fs.existsSync(envPath) ? fs.readFileSync(envPath, "utf8") : "";
+      if (content.includes("DATABASE_URL=")) {
+        content = content.replace(/DATABASE_URL=.*/, `DATABASE_URL="${cleanUrl}"`);
+      } else {
+        content += `\nDATABASE_URL="${cleanUrl}"\n`;
+      }
+      fs.writeFileSync(envPath, content, "utf8");
+      process.env.DATABASE_URL = cleanUrl;
+    } catch {}
+
+    const parsed = new URL(cleanUrl.replace("postgres://", "http://").replace("postgresql://", "http://"));
+    return {
+      success: true,
+      message: `Kết nối Supabase PostgreSQL thành công! Host: ${parsed.hostname} (${pingMs}ms). Dữ liệu hiện đang được đồng bộ và lưu trữ trực tiếp liên tục.`,
+      host: parsed.hostname,
+      pingMs,
+    };
+  } catch (err: any) {
+    return {
+      success: false,
+      message: "Lỗi kết nối Supabase: " + (err.message || String(err)),
+    };
+  }
+}
+
+export async function pushAllLocalDataToSupabase(): Promise<{ success: boolean; message: string; syncedCounts: Record<string, number> }> {
+  if (!isPostgres || !pool) {
+    return {
+      success: false,
+      message: "Chưa kết nối Supabase PostgreSQL. Vui lòng cấu hình kết nối trước khi đẩy dữ liệu.",
+      syncedCounts: {},
+    };
+  }
+
+  let usersSynced = 0;
+  let charsSynced = 0;
+  let itemsSynced = 0;
+  let monstersSynced = 0;
+  let questsSynced = 0;
+  let charItemsSynced = 0;
+
+  try {
+    // 1. Sync users
+    for (const u of memoryStore.users) {
+      await pool.query(`
+        INSERT INTO users (id, username, password_hash, role, is_real_user, forum_title, selected_region, selected_server_id)
+        VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+        ON CONFLICT (id) DO UPDATE SET
+          username = EXCLUDED.username,
+          role = EXCLUDED.role,
+          is_real_user = EXCLUDED.is_real_user,
+          forum_title = EXCLUDED.forum_title;
+      `, [u.id, u.username, u.passwordHash, u.role || "player", u.isRealUser ?? true, u.forumTitle || "Tân Thủ Long Tộc", u.selectedRegion || "VN", u.selectedServerId || "s1_long_vuong"]);
+      usersSynced++;
+    }
+
+    // 2. Sync characters
+    for (const c of memoryStore.characters) {
+      await pool.query(`
+        INSERT INTO characters (id, user_id, server_id, name, class_id, class_name, gender, level, experience, hp, max_hp, mp, max_mp, atk, def, spd, gold, combat_power)
+        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18)
+        ON CONFLICT (id) DO UPDATE SET
+          level = EXCLUDED.level,
+          experience = EXCLUDED.experience,
+          hp = EXCLUDED.hp,
+          mp = EXCLUDED.mp,
+          gold = EXCLUDED.gold,
+          combat_power = EXCLUDED.combat_power;
+      `, [c.id, c.userId, c.serverId || "s1_long_vuong", c.name, c.classId, c.className || c.classId, c.gender || "male", c.level || 1, c.experience || 0, c.hp || 100, c.maxHp || 100, c.mp || 100, c.maxMp || 100, c.atk || 20, c.def || 10, c.spd || 10, c.gold || 100, c.combatPower || 500]);
+      charsSynced++;
+    }
+
+    // 3. Sync items
+    for (const item of memoryStore.items) {
+      await pool.query(`
+        INSERT INTO items (id, name, category, type, equip_slot, description, rarity, hp_boost, atk_boost, def_boost, spd_boost, price, required_level, icon)
+        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14)
+        ON CONFLICT (id) DO NOTHING;
+      `, [item.id, item.name, item.category || "equipment", item.type || "weapon", item.equipSlot || "none", item.description || "", item.rarity || "common", item.hpBoost || 0, item.atkBoost || 0, item.defBoost || 0, item.spdBoost || 0, item.price || 100, item.requiredLevel || 1, item.icon || "◇"]);
+      itemsSynced++;
+    }
+
+    // 4. Sync character items
+    for (const ci of memoryStore.character_items) {
+      await pool.query(`
+        INSERT INTO character_items (id, character_id, item_id, equipped, equipped_slot, slot_index, quantity, enhance_level, rarity)
+        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
+        ON CONFLICT (id) DO UPDATE SET
+          equipped = EXCLUDED.equipped,
+          equipped_slot = EXCLUDED.equipped_slot,
+          quantity = EXCLUDED.quantity,
+          enhance_level = EXCLUDED.enhance_level;
+      `, [ci.id, ci.characterId, ci.itemId, ci.equipped || false, ci.equippedSlot || null, ci.slotIndex || 0, ci.quantity || 1, ci.enhanceLevel || 0, ci.rarity || "common"]);
+      charItemsSynced++;
+    }
+
+    // 5. Sync monsters
+    for (const m of memoryStore.monsters) {
+      await pool.query(`
+        INSERT INTO monsters (id, name, zone_id, level, hp, max_hp, atk, def, exp_reward, gold_reward, drop_table_json)
+        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
+        ON CONFLICT (id) DO NOTHING;
+      `, [m.id, m.name, m.zoneId || "SAFE_VILLAGE", m.level || 1, m.hp || 100, m.maxHp || 100, m.atk || 15, m.def || 5, m.expReward || 10, m.goldReward || 5, typeof m.dropTableJson === "string" ? m.dropTableJson : JSON.stringify(m.dropTableJson || [])]);
+      monstersSynced++;
+    }
+
+    // 6. Sync quests
+    for (const q of memoryStore.quests) {
+      await pool.query(`
+        INSERT INTO quests (id, title, description, chapter, min_level, type, target_count, reward_exp, reward_gold, reward_item_id)
+        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
+        ON CONFLICT (id) DO NOTHING;
+      `, [q.id, q.title, q.description || "", q.chapter || 1, q.minLevel || 1, q.type || "KILL_MONSTER", q.targetCount || 1, q.rewardExp || 50, q.rewardGold || 50, q.rewardItemId || null]);
+      questsSynced++;
+    }
+
+    return {
+      success: true,
+      message: `Đã đẩy toàn bộ dữ liệu lên Supabase thành công! (${usersSynced} users, ${charsSynced} nhân vật, ${itemsSynced} vật phẩm, ${charItemsSynced} đồ hành trang, ${monstersSynced} quái vật, ${questsSynced} nhiệm vụ).`,
+      syncedCounts: {
+        users: usersSynced,
+        characters: charsSynced,
+        items: itemsSynced,
+        characterItems: charItemsSynced,
+        monsters: monstersSynced,
+        quests: questsSynced,
+      },
+    };
+  } catch (err: any) {
+    return {
+      success: false,
+      message: "Lỗi đồng bộ dữ liệu lên Supabase: " + err.message,
+      syncedCounts: {
+        users: usersSynced,
+        characters: charsSynced,
+        items: itemsSynced,
+        characterItems: charItemsSynced,
+        monsters: monstersSynced,
+        quests: questsSynced,
+      },
+    };
+  }
 }
 
 export * from "./schema";
