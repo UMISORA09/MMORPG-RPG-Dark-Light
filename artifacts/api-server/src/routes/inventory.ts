@@ -27,7 +27,7 @@ import {
   toCharacterResponse,
 } from "../lib/inventory";
 import { getExpForLevel } from "../data/classes";
-import { requireAuth } from "../middlewares/requireAuth";
+import { requireAuth, getAuthUserId } from "../middlewares/requireAuth";
 import { CharacterInventoryService, InventoryRuleError } from "../services/CharacterInventoryService";
 import { LootService } from "../services/LootService";
 
@@ -42,7 +42,7 @@ function withExperienceToNextLevel(character: Awaited<ReturnType<typeof toCharac
 
 // Lấy danh sách vật phẩm trong túi đồ của nhân vật
 router.get("/characters/:characterId/inventory", requireAuth, async (req, res): Promise<void> => {
-  const userId = req.session.userId!;
+  const userId = getAuthUserId(req);
   const params = GetInventoryParams.safeParse(req.params);
   if (!params.success) {
     res.status(400).json({ error: "ID không hợp lệ" });
@@ -63,7 +63,7 @@ router.get("/characters/:characterId/inventory", requireAuth, async (req, res): 
 
 // Trang bị vật phẩm vào người
 router.post("/characters/:characterId/inventory/:itemId/equip", requireAuth, async (req, res): Promise<void> => {
-  const userId = req.session.userId!;
+  const userId = getAuthUserId(req);
   const params = EquipItemParams.safeParse(req.params);
   if (!params.success) {
     res.status(400).json({ error: "Tham số không hợp lệ" });
@@ -122,7 +122,7 @@ router.post("/characters/:characterId/inventory/:itemId/equip", requireAuth, asy
 
 // Tháo trang bị về túi đồ (kiểm tra dung lượng túi đồ unlockedSlots)
 router.post("/characters/:characterId/inventory/:itemId/unequip", requireAuth, async (req, res): Promise<void> => {
-  const userId = req.session.userId!;
+  const userId = getAuthUserId(req);
   const params = UnequipItemParams.safeParse(req.params);
   if (!params.success) {
     res.status(400).json({ error: "Tham số không hợp lệ" });
@@ -178,7 +178,7 @@ router.post("/characters/:characterId/inventory/:itemId/unequip", requireAuth, a
 
 // Mở khóa thêm ô Hành trang (tối đa 30 ô) với giá 500 Vàng
 router.post("/characters/:characterId/inventory/unlock-slot", requireAuth, async (req, res): Promise<void> => {
-  const userId = req.session.userId!;
+  const userId = getAuthUserId(req);
   const characterId = parseInt(req.params.characterId);
   if (isNaN(characterId)) {
     res.status(400).json({ error: "ID không hợp lệ" });
@@ -227,7 +227,7 @@ router.post("/characters/:characterId/inventory/unlock-slot", requireAuth, async
 
 // Sắp xếp tự động Túi Đồ (Auto-Sort & Stack)
 router.post("/characters/:characterId/inventory/sort", requireAuth, async (req, res): Promise<void> => {
-  const userId = req.session.userId!;
+  const userId = getAuthUserId(req);
   const characterId = parseInt(req.params.characterId);
   if (isNaN(characterId)) {
     res.status(400).json({ error: "ID không hợp lệ" });
@@ -326,7 +326,7 @@ router.post("/characters/:characterId/inventory/sort", requireAuth, async (req, 
 
 // Bán vật phẩm trong túi đồ lấy Vàng
 router.post("/characters/:characterId/inventory/:itemId/sell", requireAuth, async (req, res): Promise<void> => {
-  const userId = req.session.userId!;
+  const userId = getAuthUserId(req);
   const characterId = parseInt(req.params.characterId);
   const itemId = req.params.itemId;
 
@@ -407,7 +407,7 @@ router.post("/characters/:characterId/inventory/:ownershipId/enhance", requireAu
 
   try {
     const result = await CharacterInventoryService.enhance(
-      req.session.userId!, params.data.characterId, params.data.ownershipId,
+      getAuthUserId(req), params.data.characterId, params.data.ownershipId,
     );
     const character = await toCharacterResponse(result.character);
     res.status(200).json(EnhanceItemResponse.parse({
@@ -437,7 +437,7 @@ router.post("/characters/:characterId/inventory/:ownershipId/use", requireAuth, 
 
   try {
     const result = await CharacterInventoryService.use(
-      req.session.userId!, params.data.characterId, params.data.ownershipId,
+      getAuthUserId(req), params.data.characterId, params.data.ownershipId,
     );
     res.status(200).json(UseItemResponse.parse({
       character: {
@@ -459,7 +459,7 @@ router.post("/characters/:characterId/inventory/:ownershipId/use", requireAuth, 
 });
 // ── NHẶT ĐỒ CHÍNH XÁC (Looting API) ───────────────────────────────────────────
 router.post("/characters/:characterId/loot", requireAuth, async (req, res): Promise<void> => {
-  const userId = req.session.userId!;
+  const userId = getAuthUserId(req);
   const characterId = parseInt(req.params.characterId);
   if (isNaN(characterId)) {
     res.status(400).json({ error: "ID nhân vật không hợp lệ" });
@@ -522,7 +522,7 @@ router.post("/characters/:characterId/loot", requireAuth, async (req, res): Prom
 });
 
 router.post("/characters/:characterId/loot/:dropId", requireAuth, async (req, res): Promise<void> => {
-  const userId = req.session.userId!;
+  const userId = getAuthUserId(req);
   const characterId = parseInt(req.params.characterId);
   const dropId = req.params.dropId;
   if (isNaN(characterId) || !dropId) {
@@ -581,7 +581,7 @@ router.post("/characters/:characterId/loot/:dropId", requireAuth, async (req, re
 
 // ── MỞ RƯƠNG KHO BÁU TỰ SINH (Dynamic Respawing Treasure Chest) ────────────────
 router.post("/characters/:characterId/open-chest", requireAuth, async (req, res): Promise<void> => {
-  const userId = req.session.userId!;
+  const userId = getAuthUserId(req);
   const characterId = parseInt(req.params.characterId);
   if (isNaN(characterId)) {
     res.status(400).json({ error: "ID nhân vật không hợp lệ" });
@@ -630,7 +630,7 @@ router.post("/characters/:characterId/open-chest", requireAuth, async (req, res)
 
 // ── ĐỔI VỊ TRÍ Ô ĐỒ / DRAG-AND-DROP (Swap Slots) ──────────────────────────────
 router.post("/characters/:characterId/inventory/swap-slots", requireAuth, async (req, res): Promise<void> => {
-  const userId = req.session.userId!;
+  const userId = getAuthUserId(req);
   const characterId = parseInt(req.params.characterId);
   const { fromSlot, toSlot } = req.body;
 

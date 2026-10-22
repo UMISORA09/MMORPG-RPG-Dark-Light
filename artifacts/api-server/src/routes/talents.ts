@@ -1,7 +1,7 @@
 import { Router } from "express";
 import { and, eq } from "drizzle-orm";
 import { db, charactersTable } from "@workspace/db";
-import { requireAuth } from "../middlewares/requireAuth";
+import { requireAuth, getAuthUserId } from "../middlewares/requireAuth";
 import { recalculateCharacterStats } from "../services/CharacterInventoryService";
 
 const router = Router();
@@ -22,7 +22,7 @@ export function getAwakeningTitle(classId: string, tier: number): string {
 // ── 1. ĐỘT PHÁ THỨC TỈNH CHUYỂN CHỨC ──
 router.post("/characters/:characterId/awakening/upgrade", requireAuth, async (req, res): Promise<void> => {
   const characterId = Number(req.params.characterId);
-  const userId = req.session.userId!;
+  const userId = getAuthUserId(req);
 
   const [char] = await db
     .select()
@@ -78,7 +78,7 @@ router.post("/characters/:characterId/awakening/upgrade", requireAuth, async (re
 // ── 2. CỘNG ĐIỂM CÂY THIÊN PHÚ ──
 router.post("/characters/:characterId/talents/allocate", requireAuth, async (req, res): Promise<void> => {
   const characterId = Number(req.params.characterId);
-  const userId = req.session.userId!;
+  const userId = getAuthUserId(req);
   const { talentKey } = req.body;
 
   if (!talentKey) {
@@ -140,7 +140,7 @@ router.post("/characters/:characterId/talents/allocate", requireAuth, async (req
 // ── 3. TẨY ĐIỂM CÂY THIÊN PHÚ ──
 router.post("/characters/:characterId/talents/reset", requireAuth, async (req, res): Promise<void> => {
   const characterId = Number(req.params.characterId);
-  const userId = req.session.userId!;
+  const userId = getAuthUserId(req);
 
   const [char] = await db
     .select()

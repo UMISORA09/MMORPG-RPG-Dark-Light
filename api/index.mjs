@@ -57127,7 +57127,7 @@ __export(seed_exports, {
 async function upsertById(table, idColumn, row) {
   const id = row.id;
   const { id: _id, ...updates } = row;
-  if (isPostgres2) {
+  if (isPostgres) {
     await db.insert(table).values(row).onConflictDoUpdate({ target: idColumn, set: updates });
     return;
   }
@@ -57140,7 +57140,7 @@ async function upsertById(table, idColumn, row) {
 }
 async function batchInsertOrIgnore(table, idColumn, rows, chunkSize = 50) {
   if (!rows || rows.length === 0) return;
-  if (isPostgres2) {
+  if (isPostgres) {
     for (let i = 0; i < rows.length; i += chunkSize) {
       const chunk = rows.slice(i, i + chunkSize);
       await db.insert(table).values(chunk).onConflictDoNothing();
@@ -57393,7 +57393,7 @@ async function wipeAllAccountsAndUserData() {
   } catch {
   }
   persistMemoryStore();
-  if (isPostgres2 && pool) {
+  if (isPostgres && pool) {
     try {
       await pool.query(`
         TRUNCATE TABLE 
@@ -57790,7 +57790,7 @@ async function initDatabase() {
       const client = await pool.connect();
       client.release();
       db = drizzle(pool, { schema: schema_exports });
-      isPostgres2 = true;
+      isPostgres = true;
       await pool.query(`
         CREATE TABLE IF NOT EXISTS users (
           id SERIAL PRIMARY KEY,
@@ -58176,14 +58176,14 @@ async function initDatabase() {
   console.log("[DB] Running in Standalone / In-Memory Mode with zero external dependencies.");
   restoreMemoryStore();
   db = createMemoryDb();
-  isPostgres2 = false;
+  isPostgres = false;
 }
 async function getDatabaseConnectionStatus() {
   const currentUrl = resolveDatabaseUrl();
   let pingMs = null;
   let connectionError = null;
   let pgInfo = null;
-  if (isPostgres2 && pool) {
+  if (isPostgres && pool) {
     try {
       const t0 = Date.now();
       const client = await pool.connect();
@@ -58197,7 +58197,7 @@ async function getDatabaseConnectionStatus() {
   }
   let counts = {};
   try {
-    if (isPostgres2 && pool && !connectionError) {
+    if (isPostgres && pool && !connectionError) {
       const [u, c, i, m, q, ci] = await Promise.all([
         pool.query("SELECT count(*) FROM users;").then((r) => Number(r.rows[0].count)).catch(() => 0),
         pool.query("SELECT count(*) FROM characters;").then((r) => Number(r.rows[0].count)).catch(() => 0),
@@ -58229,8 +58229,8 @@ async function getDatabaseConnectionStatus() {
     }
   }
   return {
-    isPostgres: Boolean(isPostgres2 && !connectionError),
-    dbMode: isPostgres2 && !connectionError ? "PostgreSQL (Supabase Cloud)" : "In-Memory / Standalone Fallback",
+    isPostgres: Boolean(isPostgres && !connectionError),
+    dbMode: isPostgres && !connectionError ? "PostgreSQL (Supabase Cloud)" : "In-Memory / Standalone Fallback",
     host: maskedHost,
     pingMs,
     connectionError,
@@ -58262,7 +58262,7 @@ async function switchDatabaseConnection(newDbUrl) {
       console.warn("[DB:Pool] Background connection warning:", err.message);
     });
     db = drizzle(pool, { schema: schema_exports });
-    isPostgres2 = true;
+    isPostgres = true;
     await initDatabase();
     try {
       const envPath = path.resolve(process.cwd(), ".env.local");
@@ -58293,7 +58293,7 @@ DATABASE_URL="${cleanUrl}"
   }
 }
 async function pushAllLocalDataToSupabase() {
-  if (!isPostgres2 || !pool) {
+  if (!isPostgres || !pool) {
     return {
       success: false,
       message: "Ch\u01B0a k\u1EBFt n\u1ED1i Supabase PostgreSQL. Vui l\xF2ng c\u1EA5u h\xECnh k\u1EBFt n\u1ED1i tr\u01B0\u1EDBc khi \u0111\u1EA9y d\u1EEF li\u1EC7u.",
@@ -58419,7 +58419,7 @@ async function pushAllLocalDataToSupabase() {
     };
   }
 }
-var Pool3, pool, db, isPostgres2, DEFAULT_SEED_PASSWORD_HASH, DEFAULT_USERS, DEFAULT_CHARACTERS, DEFAULT_INVENTORY, memoryStore, autoIncrement, STORE_FILE, initialDbUrl;
+var Pool3, pool, db, isPostgres, DEFAULT_SEED_PASSWORD_HASH, DEFAULT_USERS, DEFAULT_CHARACTERS, DEFAULT_INVENTORY, memoryStore, autoIncrement, STORE_FILE, initialDbUrl;
 var init_src = __esm({
   "../../lib/db/src/index.ts"() {
     "use strict";
@@ -58436,7 +58436,7 @@ var init_src = __esm({
     ({ Pool: Pool3 } = esm_default);
     pool = null;
     db = null;
-    isPostgres2 = false;
+    isPostgres = false;
     DEFAULT_SEED_PASSWORD_HASH = "$2a$10$7EqJtq98hPqEX7fNZaFWoO.8/kR1Qp4Rkh3vJ8N7M7L5Y.7Z0c6Ky";
     DEFAULT_USERS = [
       { id: 1, username: "admin", passwordHash: DEFAULT_SEED_PASSWORD_HASH, role: "admin", isRealUser: true, forumTitle: "\u0110\u1EA1i S\u1EE9 Qu\u1EA3n Tr\u1ECB GM", selectedRegion: "VN", selectedServerId: "s1_long_vuong" },
@@ -58496,14 +58496,14 @@ var init_src = __esm({
       try {
         pool = new Pool3(getPoolConfig(initialDbUrl));
         db = drizzle(pool, { schema: schema_exports });
-        isPostgres2 = true;
+        isPostgres = true;
       } catch {
         db = createMemoryDb();
-        isPostgres2 = false;
+        isPostgres = false;
       }
     } else {
       db = createMemoryDb();
-      isPostgres2 = false;
+      isPostgres = false;
     }
   }
 });
@@ -64885,6 +64885,9 @@ async function extractAuthUser(req) {
   req.authUser = user;
   return user;
 }
+function getAuthUserId(req) {
+  return Number(req.authUserId || req.authUser?.id || req.session?.userId || 0);
+}
 async function requireAuth(req, res, next) {
   const user = await extractAuthUser(req);
   if (!user) {
@@ -65886,20 +65889,22 @@ async function getItem(itemId) {
 }
 async function getCharacterForUser(characterId, userId, authUser) {
   const cId = Number(characterId);
-  const uId = Number(userId);
-  if (!isNaN(cId) && !isNaN(uId)) {
-    const [character] = await db.select().from(charactersTable).where(and(eq(charactersTable.id, cId), eq(charactersTable.userId, uId))).limit(1);
-    if (character) return character;
-  }
-  const role = (authUser?.role || "").toUpperCase();
-  if (role === "ADMIN" || role === "GM" || !uId || uId <= 0) {
-    const [character] = await db.select().from(charactersTable).where(eq(charactersTable.id, cId)).limit(1);
-    if (character) return character;
-  }
-  const [fallbackChar] = await db.select().from(charactersTable).where(eq(charactersTable.id, cId)).limit(1);
-  if (fallbackChar) {
-    if (!fallbackChar.userId || fallbackChar.userId === 0 || fallbackChar.userId === uId || uId > 0) {
-      return fallbackChar;
+  const uId = Number(userId || authUser?.id || 0);
+  if (!isNaN(cId) && cId > 0) {
+    if (!isNaN(uId) && uId > 0) {
+      const [character] = await db.select().from(charactersTable).where(and(eq(charactersTable.id, cId), eq(charactersTable.userId, uId))).limit(1);
+      if (character) return character;
+    }
+    const role = (authUser?.role || "").toUpperCase();
+    if (role === "ADMIN" || role === "GM") {
+      const [character] = await db.select().from(charactersTable).where(eq(charactersTable.id, cId)).limit(1);
+      if (character) return character;
+    }
+    const [fallbackChar] = await db.select().from(charactersTable).where(eq(charactersTable.id, cId)).limit(1);
+    if (fallbackChar) {
+      if (!fallbackChar.userId || fallbackChar.userId === 0 || fallbackChar.userId === uId || !uId && fallbackChar) {
+        return fallbackChar;
+      }
     }
   }
   return void 0;
@@ -66003,7 +66008,8 @@ var handleSetServer = async (req, res) => {
   if (parsed.data.lastCharacterId) {
     updateData.lastCharacterId = parsed.data.lastCharacterId;
   }
-  const [user] = await db.update(usersTable).set(updateData).where(eq(usersTable.id, req.session.userId)).returning();
+  const userId = getAuthUserId(req);
+  const [user] = await db.update(usersTable).set(updateData).where(eq(usersTable.id, userId)).returning();
   if (!user) return res.status(401).json({ error: "T\xE0i kho\u1EA3n kh\xF4ng c\xF2n t\u1ED3n t\u1EA1i" });
   return res.status(200).json({
     selectedRegion: user.selectedRegion,
@@ -66897,14 +66903,14 @@ function rollFullDestiny() {
 
 // src/routes/characters.ts
 var router4 = (0, import_express4.Router)();
-function getAuthUserId(req) {
+function getAuthUserId2(req) {
   const id = Number(req.session?.userId ?? req.authUserId ?? req.authUser?.id ?? 0);
   return Number.isInteger(id) && id > 0 ? id : 0;
 }
 router4.post("/characters/sync", requireAuth, async (req, res) => {
   const characters = Array.isArray(req.body.characters) ? req.body.characters : [];
   const restored = [];
-  const userId = getAuthUserId(req);
+  const userId = getAuthUserId2(req);
   for (const c of characters) {
     if (!c || !c.name || !c.classId) continue;
     const cleanName = String(c.name).trim().slice(0, 24);
@@ -66952,7 +66958,7 @@ router4.post("/characters/sync", requireAuth, async (req, res) => {
 });
 router4.get("/characters", requireAuth, async (req, res) => {
   try {
-    const userId = getAuthUserId(req);
+    const userId = getAuthUserId2(req);
     if (req.headers["x-clb-client-characters"]) {
       try {
         const decoded = decodeURIComponent(req.headers["x-clb-client-characters"]);
@@ -67025,7 +67031,7 @@ router4.post("/characters", requireAuth, async (req, res) => {
     if (!cls) {
       return res.status(400).json({ error: "Ch\u1EE9c nghi\u1EC7p kh\xF4ng h\u1EE3p l\u1EC7" });
     }
-    const userId = getAuthUserId(req);
+    const userId = getAuthUserId2(req);
     if (!userId) {
       return res.status(401).json({ error: "Ch\u01B0a \u0111\u0103ng nh\u1EADp ho\u1EB7c phi\xEAn l\xE0m vi\u1EC7c \u0111\xE3 h\u1EBFt h\u1EA1n" });
     }
@@ -67121,7 +67127,7 @@ router4.post("/characters/roll-destiny", requireAuth, async (req, res) => {
   if (!char2) {
     return res.status(404).json({ error: "Kh\xF4ng t\xECm th\u1EA5y nh\xE2n v\u1EADt" });
   }
-  if (char2.userId !== getAuthUserId(req)) {
+  if (char2.userId !== getAuthUserId2(req)) {
     return res.status(403).json({ error: "T\u1EEB ch\u1ED1i truy c\u1EADp: B\u1EA1n kh\xF4ng s\u1EDF h\u1EEFu nh\xE2n v\u1EADt n\xE0y" });
   }
   if (char2.destinyRolled) {
@@ -67150,7 +67156,7 @@ router4.post("/characters/:id/roll-destiny", requireAuth, async (req, res) => {
   if (!char2) {
     return res.status(404).json({ error: "Kh\xF4ng t\xECm th\u1EA5y nh\xE2n v\u1EADt" });
   }
-  if (char2.userId !== getAuthUserId(req)) {
+  if (char2.userId !== getAuthUserId2(req)) {
     return res.status(403).json({ error: "T\u1EEB ch\u1ED1i truy c\u1EADp: B\u1EA1n kh\xF4ng s\u1EDF h\u1EEFu nh\xE2n v\u1EADt n\xE0y" });
   }
   if (char2.destinyRolled) {
@@ -67179,7 +67185,7 @@ router4.get("/characters/:characterId", requireAuth, async (req, res) => {
   if (!character) {
     return res.status(404).json({ error: "Kh\xF4ng t\xECm th\u1EA5y nh\xE2n v\u1EADt" });
   }
-  if (character.userId !== getAuthUserId(req)) {
+  if (character.userId !== getAuthUserId2(req)) {
     return res.status(403).json({ error: "T\u1EEB ch\u1ED1i truy c\u1EADp: B\u1EA1n kh\xF4ng ph\u1EA3i ch\u1EE7 s\u1EDF h\u1EEFu c\u1EE7a nh\xE2n v\u1EADt n\xE0y." });
   }
   await ensureItemCatalog();
@@ -67197,7 +67203,7 @@ var handleCharacterAutoSave = async (req, res) => {
   if (!character) {
     return res.status(404).json({ error: "Kh\xF4ng t\xECm th\u1EA5y nh\xE2n v\u1EADt \u0111\u1EC3 l\u01B0u" });
   }
-  if (character.userId !== req.session.userId) {
+  if (character.userId && character.userId !== getAuthUserId2(req) && req.authUser?.role !== "ADMIN") {
     return res.status(403).json({ error: "T\u1EEB ch\u1ED1i truy c\u1EADp: B\u1EA1n kh\xF4ng c\xF3 quy\u1EC1n l\u01B0u d\u1EEF li\u1EC7u cho nh\xE2n v\u1EADt n\xE0y." });
   }
   const body = req.body || {};
@@ -67239,7 +67245,7 @@ var handleCharacterAutoSave = async (req, res) => {
   if (Object.keys(updateData).length > 0) {
     await db.update(charactersTable).set(updateData).where(eq(charactersTable.id, characterId));
   }
-  await db.update(usersTable).set({ lastCharacterId: characterId }).where(eq(usersTable.id, getAuthUserId(req)));
+  await db.update(usersTable).set({ lastCharacterId: characterId }).where(eq(usersTable.id, getAuthUserId2(req)));
   const [latestChar] = await db.select().from(charactersTable).where(eq(charactersTable.id, characterId)).limit(1);
   const updatedChar = await toCharacterResponse(latestChar || { ...character, ...updateData });
   return res.status(200).json({
@@ -67265,7 +67271,7 @@ var handleAllocateStats = async (req, res) => {
   }
   const authUser = req.authUser;
   const userRole = (authUser?.role || "").toUpperCase();
-  if (userRole !== "ADMIN" && userRole !== "GM" && character.userId && character.userId !== getAuthUserId(req)) {
+  if (userRole !== "ADMIN" && userRole !== "GM" && character.userId && character.userId !== getAuthUserId2(req)) {
     return res.status(403).json({ error: "T\u1EEB ch\u1ED1i truy c\u1EADp: B\u1EA1n kh\xF4ng c\xF3 quy\u1EC1n ph\xE2n b\u1ED5 ch\u1EC9 s\u1ED1 cho nh\xE2n v\u1EADt n\xE0y." });
   }
   const body = req.body || {};
@@ -67297,7 +67303,8 @@ var handleAllocateStats = async (req, res) => {
     intel: newInt,
     luk: newLuk,
     vit: newVit,
-    unallocatedStatPoints: newStatPoints
+    unallocatedStatPoints: newStatPoints,
+    statPoints: newStatPoints
   }).where(eq(charactersTable.id, characterId));
   const updatedChar = await recalculateCharacterStats(characterId);
   return res.status(200).json({
@@ -67318,7 +67325,7 @@ router4.get("/characters/:characterId/battle-log", requireAuth, async (req, res)
   if (isNaN(characterId)) {
     return res.status(400).json({ error: "ID kh\xF4ng h\u1EE3p l\u1EC7" });
   }
-  const [character] = await db.select({ id: charactersTable.id }).from(charactersTable).where(and(eq(charactersTable.id, characterId), eq(charactersTable.userId, getAuthUserId(req)))).limit(1);
+  const [character] = await db.select({ id: charactersTable.id }).from(charactersTable).where(and(eq(charactersTable.id, characterId), eq(charactersTable.userId, getAuthUserId2(req)))).limit(1);
   if (!character) return res.status(404).json({ error: "Kh\xF4ng t\xECm th\u1EA5y nh\xE2n v\u1EADt ho\u1EB7c kh\xF4ng c\xF3 quy\u1EC1n truy c\u1EADp" });
   const logs = await db.select().from(battleLogsTable).where(eq(battleLogsTable.characterId, characterId)).orderBy(desc(battleLogsTable.createdAt)).limit(20);
   return res.status(200).json(logs);
@@ -67336,7 +67343,7 @@ var handleFullSync = async (req, res) => {
   }
   try {
     const result = await CharacterPersistenceService.fullSync(
-      getAuthUserId(req),
+      getAuthUserId2(req),
       characterId,
       req.body
     );
@@ -67357,7 +67364,7 @@ router4.get("/characters/:characterId/full-state", requireAuth, async (req, res)
   }
   try {
     const result = await CharacterPersistenceService.getFullState(
-      getAuthUserId(req),
+      getAuthUserId2(req),
       characterId
     );
     return res.status(200).json(result);
@@ -67697,7 +67704,7 @@ router5.post("/party/create", requireAuth, async (req, res) => {
     res.status(400).json({ error: "Thi\u1EBFu characterId" });
     return;
   }
-  if (!await verifyCharacterOwnership(Number(characterId), req.session.userId)) {
+  if (!await verifyCharacterOwnership(Number(characterId), getAuthUserId(req))) {
     res.status(403).json({ error: "Kh\xF4ng c\xF3 quy\u1EC1n thao t\xE1c tr\xEAn nh\xE2n v\u1EADt n\xE0y" });
     return;
   }
@@ -67734,7 +67741,7 @@ router5.post("/party/create", requireAuth, async (req, res) => {
 });
 router5.post("/party/invite-bot", requireAuth, async (req, res) => {
   const { characterId, botType = "tank" } = req.body;
-  if (!await verifyCharacterOwnership(Number(characterId), req.session.userId)) {
+  if (!await verifyCharacterOwnership(Number(characterId), getAuthUserId(req))) {
     res.status(403).json({ error: "Kh\xF4ng c\xF3 quy\u1EC1n thao t\xE1c tr\xEAn nh\xE2n v\u1EADt n\xE0y" });
     return;
   }
@@ -67777,7 +67784,7 @@ router5.post("/party/invite-player", requireAuth, async (req, res) => {
       res.status(400).json({ error: "Thi\u1EBFu characterId ho\u1EB7c targetCharacterId h\u1EE3p l\u1EC7" });
       return;
     }
-    if (!await verifyCharacterOwnership(characterId, req.session.userId)) {
+    if (!await verifyCharacterOwnership(characterId, getAuthUserId(req))) {
       res.status(403).json({ error: "Kh\xF4ng c\xF3 quy\u1EC1n thao t\xE1c tr\xEAn nh\xE2n v\u1EADt n\xE0y" });
       return;
     }
@@ -67835,7 +67842,7 @@ router5.post("/party/leave", requireAuth, async (req, res) => {
       res.status(400).json({ error: "Thi\u1EBFu characterId" });
       return;
     }
-    if (!await verifyCharacterOwnership(characterId, req.session.userId)) {
+    if (!await verifyCharacterOwnership(characterId, getAuthUserId(req))) {
       res.status(403).json({ error: "Kh\xF4ng c\xF3 quy\u1EC1n thao t\xE1c tr\xEAn nh\xE2n v\u1EADt n\xE0y" });
       return;
     }
@@ -68038,7 +68045,8 @@ router6.post("/characters/:characterId/battle", requireAuth, async (req, res) =>
   }
   const { monsterId } = parsed.data;
   const [character] = await db.select().from(charactersTable).where(eq(charactersTable.id, characterId)).limit(1);
-  if (!character || character.userId !== req.session.userId) {
+  const userId = getAuthUserId(req);
+  if (!character || character.userId && character.userId !== userId && req.authUser?.role !== "ADMIN") {
     return res.status(404).json({ error: "Kh\xF4ng t\xECm th\u1EA5y nh\xE2n v\u1EADt" });
   }
   if (character.hp <= 0) {
@@ -68135,7 +68143,7 @@ router6.post("/characters/:characterId/battle", requireAuth, async (req, res) =>
     finalPlayerHp = 0;
   }
   const savedResult = await CombatService.persistBattleResult({
-    userId: req.session.userId,
+    userId: getAuthUserId(req),
     characterId,
     monsterId,
     monsterName: monsterReward.name,
@@ -68713,7 +68721,7 @@ router7.post("/characters/:characterId/encounters", requireAuth, async (req, res
   }
   try {
     const result = await EncounterService.createEncounter({
-      userId: req.session.userId,
+      userId: getAuthUserId(req),
       characterId,
       monsterId,
       spawnId,
@@ -68986,7 +68994,7 @@ function withExperienceToNextLevel(character) {
   };
 }
 router9.get("/characters/:characterId/inventory", requireAuth, async (req, res) => {
-  const userId = req.session.userId;
+  const userId = getAuthUserId(req);
   const params = GetInventoryParams.safeParse(req.params);
   if (!params.success) {
     res.status(400).json({ error: "ID kh\xF4ng h\u1EE3p l\u1EC7" });
@@ -69003,7 +69011,7 @@ router9.get("/characters/:characterId/inventory", requireAuth, async (req, res) 
   res.status(200).json(parsed.success ? parsed.data : rawList);
 });
 router9.post("/characters/:characterId/inventory/:itemId/equip", requireAuth, async (req, res) => {
-  const userId = req.session.userId;
+  const userId = getAuthUserId(req);
   const params = EquipItemParams.safeParse(req.params);
   if (!params.success) {
     res.status(400).json({ error: "Tham s\u1ED1 kh\xF4ng h\u1EE3p l\u1EC7" });
@@ -69043,7 +69051,7 @@ router9.post("/characters/:characterId/inventory/:itemId/equip", requireAuth, as
   );
 });
 router9.post("/characters/:characterId/inventory/:itemId/unequip", requireAuth, async (req, res) => {
-  const userId = req.session.userId;
+  const userId = getAuthUserId(req);
   const params = UnequipItemParams.safeParse(req.params);
   if (!params.success) {
     res.status(400).json({ error: "Tham s\u1ED1 kh\xF4ng h\u1EE3p l\u1EC7" });
@@ -69081,7 +69089,7 @@ router9.post("/characters/:characterId/inventory/:itemId/unequip", requireAuth, 
   );
 });
 router9.post("/characters/:characterId/inventory/unlock-slot", requireAuth, async (req, res) => {
-  const userId = req.session.userId;
+  const userId = getAuthUserId(req);
   const characterId = parseInt(req.params.characterId);
   if (isNaN(characterId)) {
     res.status(400).json({ error: "ID kh\xF4ng h\u1EE3p l\u1EC7" });
@@ -69118,7 +69126,7 @@ router9.post("/characters/:characterId/inventory/unlock-slot", requireAuth, asyn
   });
 });
 router9.post("/characters/:characterId/inventory/sort", requireAuth, async (req, res) => {
-  const userId = req.session.userId;
+  const userId = getAuthUserId(req);
   const characterId = parseInt(req.params.characterId);
   if (isNaN(characterId)) {
     res.status(400).json({ error: "ID kh\xF4ng h\u1EE3p l\u1EC7" });
@@ -69193,7 +69201,7 @@ router9.post("/characters/:characterId/inventory/sort", requireAuth, async (req,
   res.status(200).json(rawList);
 });
 router9.post("/characters/:characterId/inventory/:itemId/sell", requireAuth, async (req, res) => {
-  const userId = req.session.userId;
+  const userId = getAuthUserId(req);
   const characterId = parseInt(req.params.characterId);
   const itemId = req.params.itemId;
   if (isNaN(characterId) || !itemId) {
@@ -69253,7 +69261,7 @@ router9.post("/characters/:characterId/inventory/:ownershipId/enhance", requireA
   }
   try {
     const result = await CharacterInventoryService.enhance(
-      req.session.userId,
+      getAuthUserId(req),
       params.data.characterId,
       params.data.ownershipId
     );
@@ -69283,7 +69291,7 @@ router9.post("/characters/:characterId/inventory/:ownershipId/use", requireAuth,
   }
   try {
     const result = await CharacterInventoryService.use(
-      req.session.userId,
+      getAuthUserId(req),
       params.data.characterId,
       params.data.ownershipId
     );
@@ -69306,7 +69314,7 @@ router9.post("/characters/:characterId/inventory/:ownershipId/use", requireAuth,
   }
 });
 router9.post("/characters/:characterId/loot", requireAuth, async (req, res) => {
-  const userId = req.session.userId;
+  const userId = getAuthUserId(req);
   const characterId = parseInt(req.params.characterId);
   if (isNaN(characterId)) {
     res.status(400).json({ error: "ID nh\xE2n v\u1EADt kh\xF4ng h\u1EE3p l\u1EC7" });
@@ -69365,7 +69373,7 @@ router9.post("/characters/:characterId/loot", requireAuth, async (req, res) => {
   }
 });
 router9.post("/characters/:characterId/loot/:dropId", requireAuth, async (req, res) => {
-  const userId = req.session.userId;
+  const userId = getAuthUserId(req);
   const characterId = parseInt(req.params.characterId);
   const dropId = req.params.dropId;
   if (isNaN(characterId) || !dropId) {
@@ -69420,7 +69428,7 @@ router9.post("/characters/:characterId/loot/:dropId", requireAuth, async (req, r
   }
 });
 router9.post("/characters/:characterId/open-chest", requireAuth, async (req, res) => {
-  const userId = req.session.userId;
+  const userId = getAuthUserId(req);
   const characterId = parseInt(req.params.characterId);
   if (isNaN(characterId)) {
     res.status(400).json({ error: "ID nh\xE2n v\u1EADt kh\xF4ng h\u1EE3p l\u1EC7" });
@@ -69455,7 +69463,7 @@ router9.post("/characters/:characterId/open-chest", requireAuth, async (req, res
   });
 });
 router9.post("/characters/:characterId/inventory/swap-slots", requireAuth, async (req, res) => {
-  const userId = req.session.userId;
+  const userId = getAuthUserId(req);
   const characterId = parseInt(req.params.characterId);
   const { fromSlot, toSlot } = req.body;
   if (isNaN(characterId) || typeof fromSlot !== "number" || typeof toSlot !== "number") {
@@ -69520,7 +69528,7 @@ router10.get("/shop/items", async (_req, res) => {
   res.status(200).json(GetItemsResponse.parse(items));
 });
 router10.post("/characters/:characterId/inventory/:itemId/buy", requireAuth, async (req, res) => {
-  const userId = req.session.userId;
+  const userId = getAuthUserId(req);
   const params = BuyItemParams.safeParse(req.params);
   if (!params.success) {
     res.status(400).json({ error: "Tham s\u1ED1 kh\xF4ng h\u1EE3p l\u1EC7" });
@@ -69615,7 +69623,7 @@ router11.get("/community/posts", requireAuth, async (req, res) => {
 router11.post("/community/posts", requireAuth, async (req, res) => {
   const parsed = CreateForumPostBody.safeParse(req.body);
   if (!parsed.success) return res.status(400).json({ error: "N\u1ED9i dung b\xE0i vi\u1EBFt kh\xF4ng h\u1EE3p l\u1EC7" });
-  const userId = req.session.userId;
+  const userId = getAuthUserId(req);
   const serverId = parsed.data.serverId;
   const server = await validateServer(serverId);
   if (!server) return res.status(400).json({ error: "M\xE1y ch\u1EE7 kh\xF4ng t\u1ED3n t\u1EA1i" });
@@ -69639,7 +69647,7 @@ router11.post("/community/posts/:postId/like", requireAuth, async (req, res) => 
   const [post] = await db.select().from(forumPostsTable).where(eq(forumPostsTable.id, params.data.postId)).limit(1);
   if (!post) return res.status(404).json({ error: "Kh\xF4ng t\xECm th\u1EA5y b\xE0i vi\u1EBFt" });
   const likes = Array.isArray(post.likes) ? post.likes.map((like2) => Number(like2)) : [];
-  const userId = req.session.userId;
+  const userId = getAuthUserId(req);
   const nextLikes = body.data.liked ? likes.includes(userId) ? likes : [...likes, userId] : likes.filter((id) => id !== userId);
   const [updated] = await db.update(forumPostsTable).set({ likes: nextLikes, updatedAt: /* @__PURE__ */ new Date() }).where(eq(forumPostsTable.id, post.id)).returning();
   return res.status(200).json({ postId: post.id, liked: body.data.liked, likesCount: nextLikes.length, post: updated });
@@ -69660,7 +69668,7 @@ router11.post("/community/posts/:postId/comments", requireAuth, async (req, res)
   if (!post) return res.status(404).json({ error: "Kh\xF4ng t\xECm th\u1EA5y b\xE0i vi\u1EBFt" });
   const [comment] = await db.insert(forumCommentsTable).values({
     postId: post.id,
-    userId: req.session.userId,
+    userId: getAuthUserId(req),
     comment: body.data.comment
   }).returning();
   return res.status(201).json(comment);
@@ -69678,7 +69686,7 @@ router11.get("/community/chats", requireAuth, async (req, res) => {
 router11.post("/community/chats", requireAuth, async (req, res) => {
   const parsed = CreateWorldChatBody.safeParse(req.body);
   if (!parsed.success) return res.status(400).json({ error: "Tin nh\u1EAFn kh\xF4ng h\u1EE3p l\u1EC7" });
-  const userId = req.session.userId;
+  const userId = getAuthUserId(req);
   const [user] = await db.select({ selectedServerId: usersTable.selectedServerId }).from(usersTable).where(eq(usersTable.id, userId)).limit(1);
   const serverId = parsed.data.serverId ?? user?.selectedServerId ?? "s1_long_vuong";
   const server = await validateServer(serverId);
@@ -69703,7 +69711,7 @@ init_src();
 var router12 = (0, import_express12.Router)();
 router12.get("/characters/:characterId/quests", requireAuth, async (req, res) => {
   const characterId = Number(req.params.characterId);
-  const userId = req.session.userId;
+  const userId = getAuthUserId(req);
   const [character] = await db.select().from(charactersTable).where(and(eq(charactersTable.id, characterId), eq(charactersTable.userId, userId))).limit(1);
   if (!character) {
     res.status(404).json({ error: "Kh\xF4ng t\xECm th\u1EA5y nh\xE2n v\u1EADt" });
@@ -69742,7 +69750,7 @@ router12.get("/characters/:characterId/quests", requireAuth, async (req, res) =>
 router12.post("/characters/:characterId/quests/:questId/accept", requireAuth, async (req, res) => {
   const characterId = Number(req.params.characterId);
   const questId = req.params.questId;
-  const userId = req.session.userId;
+  const userId = getAuthUserId(req);
   const [character] = await db.select().from(charactersTable).where(and(eq(charactersTable.id, characterId), eq(charactersTable.userId, userId))).limit(1);
   if (!character) {
     res.status(404).json({ error: "Kh\xF4ng t\xECm th\u1EA5y nh\xE2n v\u1EADt" });
@@ -69784,7 +69792,7 @@ router12.post("/characters/:characterId/quests/:questId/accept", requireAuth, as
 });
 router12.post("/characters/:characterId/quests/progress", requireAuth, async (req, res) => {
   const characterId = Number(req.params.characterId);
-  const userId = req.session.userId;
+  const userId = getAuthUserId(req);
   const { objectiveType, targetId, count = 1 } = req.body;
   const [character] = await db.select().from(charactersTable).where(and(eq(charactersTable.id, characterId), eq(charactersTable.userId, userId))).limit(1);
   if (!character) {
@@ -69835,7 +69843,7 @@ router12.post("/characters/:characterId/quests/progress", requireAuth, async (re
 router12.post("/characters/:characterId/quests/:questId/claim", requireAuth, async (req, res) => {
   const characterId = Number(req.params.characterId);
   const questId = req.params.questId;
-  const userId = req.session.userId;
+  const userId = getAuthUserId(req);
   const [character] = await db.select().from(charactersTable).where(and(eq(charactersTable.id, characterId), eq(charactersTable.userId, userId))).limit(1);
   if (!character) {
     res.status(404).json({ error: "Kh\xF4ng t\xECm th\u1EA5y nh\xE2n v\u1EADt" });
@@ -69962,7 +69970,7 @@ function getEnhanceStonesCost(currentLevel) {
 }
 router13.post("/characters/:characterId/blacksmith/enhance", requireAuth, async (req, res) => {
   const characterId = Number(req.params.characterId);
-  const userId = req.session.userId;
+  const userId = getAuthUserId(req);
   const { ownershipId, useProtection = false } = req.body;
   const [character] = await db.select().from(charactersTable).where(and(eq(charactersTable.id, characterId), eq(charactersTable.userId, userId))).limit(1);
   if (!character) {
@@ -70107,7 +70115,7 @@ router13.post("/characters/:characterId/blacksmith/enhance", requireAuth, async 
 });
 router13.post("/characters/:characterId/blacksmith/dismantle", requireAuth, async (req, res) => {
   const characterId = Number(req.params.characterId);
-  const userId = req.session.userId;
+  const userId = getAuthUserId(req);
   const { ownershipIds } = req.body;
   if (!Array.isArray(ownershipIds) || ownershipIds.length === 0) {
     res.status(400).json({ error: "Ch\u01B0a ch\u1ECDn trang b\u1ECB \u0111\u1EC3 ph\xE2n gi\u1EA3i" });
@@ -70270,7 +70278,7 @@ router13.get("/blacksmith/recipes", (_req, res) => {
 });
 router13.post("/characters/:characterId/blacksmith/craft", requireAuth, async (req, res) => {
   const characterId = Number(req.params.characterId);
-  const userId = req.session.userId;
+  const userId = getAuthUserId(req);
   const { recipeId } = req.body;
   const [character] = await db.select().from(charactersTable).where(and(eq(charactersTable.id, characterId), eq(charactersTable.userId, userId))).limit(1);
   if (!character) {
@@ -70363,7 +70371,7 @@ router13.post("/characters/:characterId/blacksmith/craft", requireAuth, async (r
 });
 router13.post("/characters/:characterId/blacksmith/socket", requireAuth, async (req, res) => {
   const characterId = Number(req.params.characterId);
-  const userId = req.session.userId;
+  const userId = getAuthUserId(req);
   const { ownershipId, socketIndex, gemOwnershipId } = req.body;
   const [character] = await db.select().from(charactersTable).where(and(eq(charactersTable.id, characterId), eq(charactersTable.userId, userId))).limit(1);
   if (!character) {
@@ -70436,7 +70444,7 @@ router13.post("/characters/:characterId/blacksmith/socket", requireAuth, async (
 });
 router13.post("/characters/:characterId/blacksmith/unsocket", requireAuth, async (req, res) => {
   const characterId = Number(req.params.characterId);
-  const userId = req.session.userId;
+  const userId = getAuthUserId(req);
   const { ownershipId, socketIndex } = req.body;
   const [character] = await db.select().from(charactersTable).where(and(eq(charactersTable.id, characterId), eq(charactersTable.userId, userId))).limit(1);
   if (!character) {
@@ -70478,7 +70486,7 @@ router13.post("/characters/:characterId/blacksmith/unsocket", requireAuth, async
 });
 router13.post("/characters/:characterId/blacksmith/fuse-gems", requireAuth, async (req, res) => {
   const characterId = Number(req.params.characterId);
-  const userId = req.session.userId;
+  const userId = getAuthUserId(req);
   const { gemType, fromLevel } = req.body;
   const levelNum = Number(fromLevel);
   if (levelNum < 1 || levelNum >= 5) {
@@ -70531,7 +70539,7 @@ router13.post("/characters/:characterId/blacksmith/fuse-gems", requireAuth, asyn
 });
 router13.post("/characters/:characterId/blacksmith/reforge", requireAuth, async (req, res) => {
   const characterId = Number(req.params.characterId);
-  const userId = req.session.userId;
+  const userId = getAuthUserId(req);
   const { ownershipId, lockedIndexes = [] } = req.body;
   const [character] = await db.select().from(charactersTable).where(and(eq(charactersTable.id, characterId), eq(charactersTable.userId, userId))).limit(1);
   if (!character) {
@@ -70631,7 +70639,7 @@ init_src();
 var router14 = (0, import_express14.Router)();
 router14.post("/characters/:characterId/allocate-stats", requireAuth, async (req, res) => {
   const characterId = Number(req.params.characterId);
-  const userId = req.session.userId;
+  const userId = getAuthUserId(req);
   const { str = 0, dex = 0, intel = 0, luk = 0, vit = 0 } = req.body;
   const totalPointsToSpend = Number(str) + Number(dex) + Number(intel) + Number(luk) + Number(vit);
   if (totalPointsToSpend <= 0) {
@@ -70668,7 +70676,8 @@ router14.post("/characters/:characterId/allocate-stats", requireAuth, async (req
     intel: newIntel,
     luk: newLuk,
     vit: newVit,
-    unallocatedStatPoints: remainingPoints
+    unallocatedStatPoints: remainingPoints,
+    statPoints: remainingPoints
   }).where(eq(charactersTable.id, characterId));
   const updatedChar = await recalculateCharacterStats(characterId);
   res.status(200).json({
@@ -70747,7 +70756,7 @@ function calculateEloRatingChange(playerRating, opponentRating, victory) {
 }
 var pvpMatchRateLimits = /* @__PURE__ */ new Map();
 async function handlePvPMatchRequest(req, res, characterId) {
-  const userId = req.session.userId;
+  const userId = getAuthUserId(req);
   const { opponentId, opponentName, victory = true } = req.body;
   if (!characterId || isNaN(characterId)) {
     res.status(400).json({ error: "Thi\u1EBFu m\xE3 nh\xE2n v\u1EADt (characterId)" });
@@ -70906,7 +70915,7 @@ router14.get("/endgame/pvp/leaderboard", handlePvPLeaderboardRequest);
 router14.get("/pvp/leaderboard", handlePvPLeaderboardRequest);
 router14.post("/characters/:characterId/gm/action", requireAuth, requireGMOrAdmin, async (req, res) => {
   const characterId = Number(req.params.characterId);
-  const userId = req.session.userId;
+  const userId = getAuthUserId(req);
   const { action } = req.body;
   const [character] = await db.select().from(charactersTable).where(and(eq(charactersTable.id, characterId), eq(charactersTable.userId, userId))).limit(1);
   if (!character) {
@@ -71213,7 +71222,7 @@ router15.get("/market/listings", async (req, res) => {
 });
 router15.post("/market/buy/:id", requireAuth, async (req, res) => {
   const listingId = Number(req.params.id);
-  const userId = req.session.userId;
+  const userId = getAuthUserId(req);
   const buyerCharacterId = req.body.buyerCharacterId || req.body.characterId;
   if (!buyerCharacterId) {
     res.status(400).json({ error: "Thi\u1EBFu buyerCharacterId" });
@@ -71283,7 +71292,7 @@ router15.post("/market/buy/:id", requireAuth, async (req, res) => {
   }
 });
 router15.post("/market/sell", requireAuth, async (req, res) => {
-  const userId = req.session.userId;
+  const userId = getAuthUserId(req);
   const { characterId, ownershipId, priceGold } = req.body;
   const price = Math.floor(Number(priceGold));
   if (isNaN(price) || price < 10 || price > 99999999) {
@@ -71342,7 +71351,7 @@ router15.post("/market/sell", requireAuth, async (req, res) => {
 });
 router15.get("/market/my-listings/:characterId", requireAuth, async (req, res) => {
   const characterId = Number(req.params.characterId);
-  const userId = req.session.userId;
+  const userId = getAuthUserId(req);
   const [char2] = await db.select().from(charactersTable).where(and(eq(charactersTable.id, characterId), eq(charactersTable.userId, userId))).limit(1);
   if (!char2) {
     res.status(404).json({ error: "Kh\xF4ng t\xECm th\u1EA5y nh\xE2n v\u1EADt" });
@@ -71353,7 +71362,7 @@ router15.get("/market/my-listings/:characterId", requireAuth, async (req, res) =
 });
 router15.post("/market/cancel/:id", requireAuth, async (req, res) => {
   const listingId = Number(req.params.id);
-  const userId = req.session.userId;
+  const userId = getAuthUserId(req);
   const { characterId } = req.body;
   try {
     const result = await db.transaction(async (tx) => {
@@ -71408,7 +71417,7 @@ function getAwakeningTitle(classId, tier) {
 }
 router16.post("/characters/:characterId/awakening/upgrade", requireAuth, async (req, res) => {
   const characterId = Number(req.params.characterId);
-  const userId = req.session.userId;
+  const userId = getAuthUserId(req);
   const [char2] = await db.select().from(charactersTable).where(and(eq(charactersTable.id, characterId), eq(charactersTable.userId, userId))).limit(1);
   if (!char2) {
     res.status(404).json({ error: "Kh\xF4ng t\xECm th\u1EA5y nh\xE2n v\u1EADt" });
@@ -71447,7 +71456,7 @@ router16.post("/characters/:characterId/awakening/upgrade", requireAuth, async (
 });
 router16.post("/characters/:characterId/talents/allocate", requireAuth, async (req, res) => {
   const characterId = Number(req.params.characterId);
-  const userId = req.session.userId;
+  const userId = getAuthUserId(req);
   const { talentKey } = req.body;
   if (!talentKey) {
     res.status(400).json({ error: "Thi\u1EBFu talentKey" });
@@ -71490,7 +71499,7 @@ router16.post("/characters/:characterId/talents/allocate", requireAuth, async (r
 });
 router16.post("/characters/:characterId/talents/reset", requireAuth, async (req, res) => {
   const characterId = Number(req.params.characterId);
-  const userId = req.session.userId;
+  const userId = getAuthUserId(req);
   const [char2] = await db.select().from(charactersTable).where(and(eq(charactersTable.id, characterId), eq(charactersTable.userId, userId))).limit(1);
   if (!char2) {
     res.status(404).json({ error: "Kh\xF4ng t\xECm th\u1EA5y nh\xE2n v\u1EADt" });
@@ -71535,7 +71544,7 @@ init_src();
 var router17 = (0, import_express17.Router)();
 router17.get("/characters/:characterId/codex", requireAuth, async (req, res) => {
   const characterId = Number(req.params.characterId);
-  const userId = req.session.userId;
+  const userId = getAuthUserId(req);
   const [char2] = await db.select().from(charactersTable).where(and(eq(charactersTable.id, characterId), eq(charactersTable.userId, userId))).limit(1);
   if (!char2) {
     res.status(404).json({ error: "Kh\xF4ng t\xECm th\u1EA5y nh\xE2n v\u1EADt" });
@@ -71554,7 +71563,7 @@ router17.get("/characters/:characterId/codex", requireAuth, async (req, res) => 
 });
 router17.post("/characters/:characterId/codex/claim", requireAuth, async (req, res) => {
   const characterId = Number(req.params.characterId);
-  const userId = req.session.userId;
+  const userId = getAuthUserId(req);
   const { codexEntryId } = req.body;
   if (!codexEntryId) {
     res.status(400).json({ error: "Thi\u1EBFu codexEntryId" });
@@ -72059,8 +72068,8 @@ router19.get("/admin/stats", async (_req, res) => {
       db.select({ count: sql`count(*)` }).from(characterItemsTable).then((r) => Number(r[0]?.count ?? r[0]?.c ?? r.length ?? 0)).catch(() => memoryStore.character_items.length)
     ]);
     return res.json({
-      dbMode: isPostgres2 ? "PostgreSQL (Supabase Cloud)" : "In-Memory / Standalone Fallback",
-      isPostgres: isPostgres2,
+      dbMode: isPostgres ? "PostgreSQL (Supabase Cloud)" : "In-Memory / Standalone Fallback",
+      isPostgres,
       nodeEnv: process.env.NODE_ENV || "production",
       uptimeSeconds: Math.floor(process.uptime()),
       memoryUsage: process.memoryUsage(),
@@ -72153,7 +72162,7 @@ router19.post("/admin/users/purge-dummy", async (_req, res) => {
       await db.delete(charactersTable).where(eq(charactersTable.userId, userId));
       await db.delete(usersTable).where(eq(usersTable.id, userId));
     }
-    if (!isPostgres2 && memoryStore) {
+    if (!isPostgres && memoryStore) {
       const idSet = new Set(dummyUserIds);
       memoryStore.users = memoryStore.users.filter((u) => !idSet.has(u.id));
       const removedCharIds = new Set(
@@ -72672,7 +72681,7 @@ router19.post("/admin/items/sync-missing", async (_req, res) => {
       return res.json({ message: "To\xE0n b\u1ED9 v\u1EADt ph\u1EA9m trong game \u0111\xE3 \u0111\u01B0\u1EE3c \u0111\u1ED3ng b\u1ED9 \u0111\u1EA7y \u0111\u1EE7 100% trong CSDL!", syncedCount: 0 });
     }
     for (const item of missingToInsert) {
-      if (isPostgres2) {
+      if (isPostgres) {
         await db.insert(itemsTable).values(item).onConflictDoNothing();
       } else {
         await db.insert(itemsTable).values(item);
@@ -72882,7 +72891,7 @@ app.use(import_express21.default.json());
 app.use(import_express21.default.urlencoded({ extended: true }));
 app.use((0, import_cookie_parser.default)());
 var sessionStore;
-if (isPostgres2 && pool) {
+if (isPostgres && pool) {
   try {
     const PgSession2 = (0, import_connect_pg_simple.default)(import_express_session.default);
     sessionStore = new PgSession2({

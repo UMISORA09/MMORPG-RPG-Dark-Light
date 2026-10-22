@@ -380,7 +380,7 @@ const handleCharacterAutoSave = async (req: any, res: any) => {
   }
 
   // Bảo vệ Ownership: Không cho phép lưu trạng thái vào nhân vật của người khác!
-  if (character.userId !== req.session.userId) {
+  if (character.userId && character.userId !== getAuthUserId(req) && (req as any).authUser?.role !== "ADMIN") {
     return res.status(403).json({ error: "Từ chối truy cập: Bạn không có quyền lưu dữ liệu cho nhân vật này." });
   }
 
@@ -529,6 +529,7 @@ const handleAllocateStats = async (req: any, res: any) => {
       luk: newLuk,
       vit: newVit,
       unallocatedStatPoints: newStatPoints,
+      statPoints: newStatPoints,
     })
     .where(eq(charactersTable.id, characterId));
 

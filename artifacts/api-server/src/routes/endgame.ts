@@ -7,7 +7,7 @@ import {
   gmAuditLogsTable,
   usersTable,
 } from "@workspace/db";
-import { requireAuth, requireGMOrAdmin } from "../middlewares/requireAuth";
+import { requireAuth, requireGMOrAdmin, getAuthUserId } from "../middlewares/requireAuth";
 import { recalculateCharacterStats } from "../services/CharacterInventoryService";
 
 const router = Router();
@@ -17,7 +17,7 @@ const router = Router();
 // ==============================================================================
 router.post("/characters/:characterId/allocate-stats", requireAuth, async (req, res): Promise<void> => {
   const characterId = Number(req.params.characterId);
-  const userId = req.session.userId!;
+  const userId = getAuthUserId(req);
   const { str = 0, dex = 0, intel = 0, luk = 0, vit = 0 } = req.body;
 
   const totalPointsToSpend = Number(str) + Number(dex) + Number(intel) + Number(luk) + Number(vit);
@@ -74,6 +74,7 @@ router.post("/characters/:characterId/allocate-stats", requireAuth, async (req, 
       luk: newLuk,
       vit: newVit,
       unallocatedStatPoints: remainingPoints,
+      statPoints: remainingPoints,
     })
     .where(eq(charactersTable.id, characterId));
 
@@ -177,7 +178,7 @@ export function calculateEloRatingChange(
 const pvpMatchRateLimits = new Map<number, { count: number; resetAt: number }>();
 
 async function handlePvPMatchRequest(req: any, res: any, characterId: number): Promise<void> {
-  const userId = req.session.userId!;
+  const userId = getAuthUserId(req);
   const { opponentId, opponentName, victory = true } = req.body;
 
   if (!characterId || isNaN(characterId)) {
@@ -390,7 +391,7 @@ router.get("/pvp/leaderboard", handlePvPLeaderboardRequest);
 // ==============================================================================
 router.post("/characters/:characterId/gm/action", requireAuth, requireGMOrAdmin, async (req, res): Promise<void> => {
   const characterId = Number(req.params.characterId);
-  const userId = req.session.userId!;
+  const userId = getAuthUserId(req);
   const { action } = req.body;
 
   const [character] = await db

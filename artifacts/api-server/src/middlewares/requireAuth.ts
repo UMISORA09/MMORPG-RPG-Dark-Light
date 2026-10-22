@@ -53,6 +53,10 @@ export async function extractAuthUser(req: any): Promise<any | null> {
   return user;
 }
 
+export function getAuthUserId(req: any): number {
+  return Number(req.authUserId || req.authUser?.id || req.session?.userId || 0);
+}
+
 export async function requireAuth(req: any, res: any, next: any): Promise<void> {
   const user = await extractAuthUser(req);
   if (!user) {

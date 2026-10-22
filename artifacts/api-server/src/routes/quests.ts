@@ -8,7 +8,7 @@ import {
   characterItemsTable,
   itemsTable,
 } from "@workspace/db";
-import { requireAuth } from "../middlewares/requireAuth";
+import { requireAuth, getAuthUserId } from "../middlewares/requireAuth";
 import { getExpForLevel } from "../data/classes";
 import { recalculateCharacterStats } from "../services/CharacterInventoryService";
 
@@ -17,7 +17,7 @@ const router = Router();
 // ── GET: Lấy toàn bộ danh sách nhiệm vụ và trạng thái của nhân vật ──
 router.get("/characters/:characterId/quests", requireAuth, async (req, res): Promise<void> => {
   const characterId = Number(req.params.characterId);
-  const userId = req.session.userId!;
+  const userId = getAuthUserId(req);
 
   const [character] = await db
     .select()
@@ -80,7 +80,7 @@ router.get("/characters/:characterId/quests", requireAuth, async (req, res): Pro
 router.post("/characters/:characterId/quests/:questId/accept", requireAuth, async (req, res): Promise<void> => {
   const characterId = Number(req.params.characterId);
   const questId = req.params.questId;
-  const userId = req.session.userId!;
+  const userId = getAuthUserId(req);
 
   const [character] = await db
     .select()
@@ -146,7 +146,7 @@ router.post("/characters/:characterId/quests/:questId/accept", requireAuth, asyn
 // ── POST: Cập nhật tiến độ nhiệm vụ (Đánh quái, Nhặt đồ, Cường hóa, Chế tạo) ──
 router.post("/characters/:characterId/quests/progress", requireAuth, async (req, res): Promise<void> => {
   const characterId = Number(req.params.characterId);
-  const userId = req.session.userId!;
+  const userId = getAuthUserId(req);
   const { objectiveType, targetId, count = 1 } = req.body;
 
   const [character] = await db
@@ -221,7 +221,7 @@ router.post("/characters/:characterId/quests/progress", requireAuth, async (req,
 router.post("/characters/:characterId/quests/:questId/claim", requireAuth, async (req, res): Promise<void> => {
   const characterId = Number(req.params.characterId);
   const questId = req.params.questId;
-  const userId = req.session.userId!;
+  const userId = getAuthUserId(req);
 
   const [character] = await db
     .select()

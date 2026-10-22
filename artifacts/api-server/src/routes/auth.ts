@@ -1,9 +1,9 @@
 import { Router } from "express";
 import bcrypt from "bcryptjs";
-import { db, usersTable, serversTable, wipeAllAccountsAndUserData } from "@workspace/db";
+import { db, usersTable, serversTable, wipeAllAccountsAndUserData, isPostgres } from "@workspace/db";
 import { eq } from "drizzle-orm";
 import { RegisterBody, LoginBody, SetServerBody } from "@workspace/api-zod";
-import { requireAuth, extractAuthUser } from "../middlewares/requireAuth";
+import { requireAuth, extractAuthUser, getAuthUserId } from "../middlewares/requireAuth";
 import { ensureServerCatalog } from "../lib/inventory";
 import { signToken } from "../lib/token";
 
@@ -58,7 +58,8 @@ const handleSetServer = async (req: any, res: any) => {
     updateData.lastCharacterId = parsed.data.lastCharacterId;
   }
 
-  const [user] = await db.update(usersTable).set(updateData).where(eq(usersTable.id, req.session.userId!)).returning();
+  const userId = getAuthUserId(req);
+  const [user] = await db.update(usersTable).set(updateData).where(eq(usersTable.id, userId)).returning();
   if (!user) return res.status(401).json({ error: "Tài khoản không còn tồn tại" });
 
   return res.status(200).json({

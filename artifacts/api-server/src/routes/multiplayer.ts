@@ -1,5 +1,5 @@
 import { Router } from "express";
-import { requireAuth } from "../middlewares/requireAuth";
+import { requireAuth, getAuthUserId } from "../middlewares/requireAuth";
 import { db, charactersTable } from "@workspace/db";
 import { eq, and } from "drizzle-orm";
 
@@ -311,7 +311,7 @@ router.post("/party/create", requireAuth, async (req, res): Promise<void> => {
     return;
   }
 
-  if (!(await verifyCharacterOwnership(Number(characterId), req.session.userId))) {
+  if (!(await verifyCharacterOwnership(Number(characterId), getAuthUserId(req)))) {
     res.status(403).json({ error: "Không có quyền thao tác trên nhân vật này" });
     return;
   }
@@ -356,7 +356,7 @@ router.post("/party/create", requireAuth, async (req, res): Promise<void> => {
 router.post("/party/invite-bot", requireAuth, async (req, res): Promise<void> => {
   const { characterId, botType = "tank" } = req.body;
 
-  if (!(await verifyCharacterOwnership(Number(characterId), req.session.userId))) {
+  if (!(await verifyCharacterOwnership(Number(characterId), getAuthUserId(req)))) {
     res.status(403).json({ error: "Không có quyền thao tác trên nhân vật này" });
     return;
   }
@@ -409,7 +409,7 @@ router.post("/party/invite-player", requireAuth, async (req, res): Promise<void>
       return;
     }
 
-    if (!(await verifyCharacterOwnership(characterId, req.session.userId))) {
+    if (!(await verifyCharacterOwnership(characterId, getAuthUserId(req)))) {
       res.status(403).json({ error: "Không có quyền thao tác trên nhân vật này" });
       return;
     }
@@ -481,7 +481,7 @@ router.post("/party/leave", requireAuth, async (req, res): Promise<void> => {
       return;
     }
 
-    if (!(await verifyCharacterOwnership(characterId, req.session.userId))) {
+    if (!(await verifyCharacterOwnership(characterId, getAuthUserId(req)))) {
       res.status(403).json({ error: "Không có quyền thao tác trên nhân vật này" });
       return;
     }

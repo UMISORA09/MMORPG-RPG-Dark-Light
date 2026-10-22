@@ -8,7 +8,7 @@ import {
   characterQuestsTable,
   questsTable,
 } from "@workspace/db";
-import { requireAuth } from "../middlewares/requireAuth";
+import { requireAuth, getAuthUserId } from "../middlewares/requireAuth";
 import { recalculateCharacterStats } from "../services/CharacterInventoryService";
 import { listInventory } from "../lib/inventory";
 
@@ -39,7 +39,7 @@ function getEnhanceStonesCost(currentLevel: number): number {
 // ── 1. CƯỜNG HÓA TRANG BỊ (+0 -> +15) ──
 router.post("/characters/:characterId/blacksmith/enhance", requireAuth, async (req, res): Promise<void> => {
   const characterId = Number(req.params.characterId);
-  const userId = req.session.userId!;
+  const userId = getAuthUserId(req);
   const { ownershipId, useProtection = false } = req.body;
 
   const [character] = await db
@@ -258,7 +258,7 @@ router.post("/characters/:characterId/blacksmith/enhance", requireAuth, async (r
 // ── 2. PHÂN GIẢI ĐỒ THỪA (DISMANTLE / SALVAGE) ──
 router.post("/characters/:characterId/blacksmith/dismantle", requireAuth, async (req, res): Promise<void> => {
   const characterId = Number(req.params.characterId);
-  const userId = req.session.userId!;
+  const userId = getAuthUserId(req);
   const { ownershipIds } = req.body;
 
   if (!Array.isArray(ownershipIds) || ownershipIds.length === 0) {
@@ -460,7 +460,7 @@ router.get("/blacksmith/recipes", (_req, res) => {
 
 router.post("/characters/:characterId/blacksmith/craft", requireAuth, async (req, res): Promise<void> => {
   const characterId = Number(req.params.characterId);
-  const userId = req.session.userId!;
+  const userId = getAuthUserId(req);
   const { recipeId } = req.body;
 
   const [character] = await db
@@ -608,7 +608,7 @@ router.post("/characters/:characterId/blacksmith/craft", requireAuth, async (req
 // ── 4. KHẢM BẢO THẠCH VÀO TRANG BỊ (GEM SOCKETING) ──
 router.post("/characters/:characterId/blacksmith/socket", requireAuth, async (req, res): Promise<void> => {
   const characterId = Number(req.params.characterId);
-  const userId = req.session.userId!;
+  const userId = getAuthUserId(req);
   const { ownershipId, socketIndex, gemOwnershipId } = req.body;
 
   const [character] = await db
@@ -722,7 +722,7 @@ router.post("/characters/:characterId/blacksmith/socket", requireAuth, async (re
 // ── 5. THÁO BẢO THẠCH KHỎI TRANG BỊ (UNSOCKET) ──
 router.post("/characters/:characterId/blacksmith/unsocket", requireAuth, async (req, res): Promise<void> => {
   const characterId = Number(req.params.characterId);
-  const userId = req.session.userId!;
+  const userId = getAuthUserId(req);
   const { ownershipId, socketIndex } = req.body;
 
   const [character] = await db
@@ -789,7 +789,7 @@ router.post("/characters/:characterId/blacksmith/unsocket", requireAuth, async (
 // ── 6. GHÉP BẢO THẠCH CẤP CAO (FUSE GEMS: 3 GEM LV.N -> 1 GEM LV.N+1) ──
 router.post("/characters/:characterId/blacksmith/fuse-gems", requireAuth, async (req, res): Promise<void> => {
   const characterId = Number(req.params.characterId);
-  const userId = req.session.userId!;
+  const userId = getAuthUserId(req);
   const { gemType, fromLevel } = req.body;
 
   const levelNum = Number(fromLevel);
@@ -872,7 +872,7 @@ router.post("/characters/:characterId/blacksmith/fuse-gems", requireAuth, async 
 // ── 7. TẨY LUYỆN DÒNG CHỈ SỐ PHỤ (SUB-STAT REFORGING) ──
 router.post("/characters/:characterId/blacksmith/reforge", requireAuth, async (req, res): Promise<void> => {
   const characterId = Number(req.params.characterId);
-  const userId = req.session.userId!;
+  const userId = getAuthUserId(req);
   const { ownershipId, lockedIndexes = [] } = req.body;
 
   const [character] = await db

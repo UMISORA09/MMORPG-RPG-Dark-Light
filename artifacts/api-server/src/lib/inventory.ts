@@ -324,38 +324,40 @@ export async function getCharacterForUser(
   authUser?: any,
 ): Promise<Character | undefined> {
   const cId = Number(characterId);
-  const uId = Number(userId);
+  const uId = Number(userId || authUser?.id || 0);
 
-  if (!isNaN(cId) && !isNaN(uId)) {
-    const [character] = await db
-      .select()
-      .from(charactersTable)
-      .where(and(eq(charactersTable.id, cId), eq(charactersTable.userId, uId)))
-      .limit(1);
-    if (character) return character;
-  }
+  if (!isNaN(cId) && cId > 0) {
+    if (!isNaN(uId) && uId > 0) {
+      const [character] = await db
+        .select()
+        .from(charactersTable)
+        .where(and(eq(charactersTable.id, cId), eq(charactersTable.userId, uId)))
+        .limit(1);
+      if (character) return character;
+    }
 
-  // Nếu là GM hoặc Admin, cho phép quản lý nhân vật theo characterId
-  const role = (authUser?.role || "").toUpperCase();
-  if (role === "ADMIN" || role === "GM" || !uId || uId <= 0) {
-    const [character] = await db
+    // Nếu là GM hoặc Admin, cho phép quản lý nhân vật theo characterId
+    const role = (authUser?.role || "").toUpperCase();
+    if (role === "ADMIN" || role === "GM") {
+      const [character] = await db
+        .select()
+        .from(charactersTable)
+        .where(eq(charactersTable.id, cId))
+        .limit(1);
+      if (character) return character;
+    }
+
+    // Fallback an toàn nếu character có tồn tại trong database
+    const [fallbackChar] = await db
       .select()
       .from(charactersTable)
       .where(eq(charactersTable.id, cId))
       .limit(1);
-    if (character) return character;
-  }
 
-  // Fallback an toàn: nếu character có tồn tại trong database
-  const [fallbackChar] = await db
-    .select()
-    .from(charactersTable)
-    .where(eq(charactersTable.id, cId))
-    .limit(1);
-
-  if (fallbackChar) {
-    if (!fallbackChar.userId || fallbackChar.userId === 0 || fallbackChar.userId === uId || uId > 0) {
-      return fallbackChar;
+    if (fallbackChar) {
+      if (!fallbackChar.userId || fallbackChar.userId === 0 || fallbackChar.userId === uId || (!uId && fallbackChar)) {
+        return fallbackChar;
+      }
     }
   }
 

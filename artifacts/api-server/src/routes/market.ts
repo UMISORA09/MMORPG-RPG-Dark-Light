@@ -7,7 +7,7 @@ import {
   itemsTable,
   marketListingsTable,
 } from "@workspace/db";
-import { requireAuth } from "../middlewares/requireAuth";
+import { requireAuth, getAuthUserId } from "../middlewares/requireAuth";
 import { listInventory } from "../lib/inventory";
 
 const router = Router();
@@ -195,7 +195,7 @@ router.get("/market/listings", async (req, res): Promise<void> => {
 // ── 2. MUA NGAY VẬT PHẨM (BUYOUT IN db.transaction()) ──
 router.post("/market/buy/:id", requireAuth, async (req, res): Promise<void> => {
   const listingId = Number(req.params.id);
-  const userId = req.session.userId!;
+  const userId = getAuthUserId(req);
   const buyerCharacterId = req.body.buyerCharacterId || req.body.characterId;
 
   if (!buyerCharacterId) {
@@ -319,7 +319,7 @@ router.post("/market/buy/:id", requireAuth, async (req, res): Promise<void> => {
 
 // ── 3. ĐĂNG BÁN VẬT PHẨM LÊN CHỢ (SELL ITEM) ──
 router.post("/market/sell", requireAuth, async (req, res): Promise<void> => {
-  const userId = req.session.userId!;
+  const userId = getAuthUserId(req);
   const { characterId, ownershipId, priceGold } = req.body;
 
   const price = Math.floor(Number(priceGold));
@@ -411,7 +411,7 @@ router.post("/market/sell", requireAuth, async (req, res): Promise<void> => {
 // ── 4. LẤY DANH SÁCH MÓN ĐỒ ĐANG RAO BÁN CỦA TÔI ──
 router.get("/market/my-listings/:characterId", requireAuth, async (req, res): Promise<void> => {
   const characterId = Number(req.params.characterId);
-  const userId = req.session.userId!;
+  const userId = getAuthUserId(req);
 
   const [char] = await db
     .select()
@@ -436,7 +436,7 @@ router.get("/market/my-listings/:characterId", requireAuth, async (req, res): Pr
 // ── 5. HỦY ĐĂNG BÁN & NHẬN LẠI ĐỒ VÀO TÚI ──
 router.post("/market/cancel/:id", requireAuth, async (req, res): Promise<void> => {
   const listingId = Number(req.params.id);
-  const userId = req.session.userId!;
+  const userId = getAuthUserId(req);
   const { characterId } = req.body;
 
   try {

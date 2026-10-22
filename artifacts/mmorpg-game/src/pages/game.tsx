@@ -177,6 +177,7 @@ export default function GamePage() {
               level: result.character.level,
               hp: safeHp,
               maxHp: result.character.maxHp,
+              unallocatedStatPoints: (result.character as any).unallocatedStatPoints,
             });
             useGameStore.getState().updatePlayerStatsAfterBattle({
               exp: result.character.experience,
@@ -184,6 +185,7 @@ export default function GamePage() {
               level: result.character.level,
               hp: safeHp,
               maxHp: result.character.maxHp,
+              unallocatedStatPoints: (result.character as any).unallocatedStatPoints,
             });
 
             // Show celebratory notification for Level Up

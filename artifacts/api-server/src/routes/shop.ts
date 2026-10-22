@@ -20,7 +20,7 @@ import {
   toCharacterResponse,
 } from "../lib/inventory";
 import { getExpForLevel } from "../data/classes";
-import { requireAuth } from "../middlewares/requireAuth";
+import { requireAuth, getAuthUserId } from "../middlewares/requireAuth";
 
 const router = Router();
 
@@ -44,7 +44,7 @@ router.get("/shop/items", async (_req, res): Promise<void> => {
 
 // Mua vật phẩm từ Cửa Hàng
 router.post("/characters/:characterId/inventory/:itemId/buy", requireAuth, async (req, res): Promise<void> => {
-  const userId = req.session.userId!;
+  const userId = getAuthUserId(req);
   const params = BuyItemParams.safeParse(req.params);
   if (!params.success) {
     res.status(400).json({ error: "Tham số không hợp lệ" });

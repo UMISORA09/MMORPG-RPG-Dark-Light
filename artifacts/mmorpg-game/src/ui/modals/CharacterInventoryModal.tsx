@@ -68,6 +68,10 @@ export type ItemRarity = "common" | "rare" | "epic" | "legendary" | "mythic" | "
 
 export interface UnifiedItem {
   id: string;
+  ownershipId?: number;
+  equipSlot?: string;
+  equippedSlot?: string | null;
+  slotIndex?: number;
   name: string;
   category: ItemCategory;
   type: string;
@@ -219,6 +223,7 @@ export interface EquipmentSlotConfig {
   column: "left" | "right";
   icon: () => ReactElement;
   matchedTypes: string[];
+  matchedSlots?: string[];
 }
 
 const EQUIPMENT_SLOTS: EquipmentSlotConfig[] = [
@@ -229,6 +234,7 @@ const EQUIPMENT_SLOTS: EquipmentSlotConfig[] = [
     column: "left",
     icon: WeaponSvg,
     matchedTypes: ["weapon", "sword", "dagger", "bow", "hammer", "blaster"],
+    matchedSlots: ["main_weapon", "weapon"],
   },
   {
     id: 2,
@@ -237,6 +243,7 @@ const EQUIPMENT_SLOTS: EquipmentSlotConfig[] = [
     column: "left",
     icon: HelmetSvg,
     matchedTypes: ["helmet", "helm", "crown", "cap"],
+    matchedSlots: ["helmet", "head", "cap"],
   },
   {
     id: 3,
@@ -245,6 +252,7 @@ const EQUIPMENT_SLOTS: EquipmentSlotConfig[] = [
     column: "left",
     icon: ArmorSvg,
     matchedTypes: ["armor", "chest", "robe", "plate"],
+    matchedSlots: ["armor", "chest", "robe"],
   },
   {
     id: 4,
@@ -253,6 +261,7 @@ const EQUIPMENT_SLOTS: EquipmentSlotConfig[] = [
     column: "left",
     icon: GlovesSvg,
     matchedTypes: ["gloves", "gauntlet", "bracer"],
+    matchedSlots: ["gloves", "hands", "bracer"],
   },
   {
     id: 5,
@@ -261,6 +270,7 @@ const EQUIPMENT_SLOTS: EquipmentSlotConfig[] = [
     column: "left",
     icon: PantsSvg,
     matchedTypes: ["pants", "legs", "greaves"],
+    matchedSlots: ["pants", "legs"],
   },
   {
     id: 6,
@@ -269,6 +279,7 @@ const EQUIPMENT_SLOTS: EquipmentSlotConfig[] = [
     column: "left",
     icon: BootsSvg,
     matchedTypes: ["boots", "shoes"],
+    matchedSlots: ["boots", "feet", "shoes"],
   },
   {
     id: 7,
@@ -277,6 +288,7 @@ const EQUIPMENT_SLOTS: EquipmentSlotConfig[] = [
     column: "right",
     icon: ShieldSvg,
     matchedTypes: ["shield", "offhand", "dagger_off"],
+    matchedSlots: ["off_hand", "shield", "offhand"],
   },
   {
     id: 8,
@@ -285,6 +297,7 @@ const EQUIPMENT_SLOTS: EquipmentSlotConfig[] = [
     column: "right",
     icon: NecklaceSvg,
     matchedTypes: ["necklace", "amulet", "pendant"],
+    matchedSlots: ["necklace", "amulet", "pendant"],
   },
   {
     id: 9,
@@ -293,6 +306,7 @@ const EQUIPMENT_SLOTS: EquipmentSlotConfig[] = [
     column: "right",
     icon: EarringSvg,
     matchedTypes: ["earring"],
+    matchedSlots: ["earring_1", "earring_2", "earring"],
   },
   {
     id: 10,
@@ -301,6 +315,7 @@ const EQUIPMENT_SLOTS: EquipmentSlotConfig[] = [
     column: "right",
     icon: RingSvg,
     matchedTypes: ["ring1", "ring"],
+    matchedSlots: ["ring_1", "ring1", "ring"],
   },
   {
     id: 11,
@@ -309,6 +324,7 @@ const EQUIPMENT_SLOTS: EquipmentSlotConfig[] = [
     column: "right",
     icon: RingSvg,
     matchedTypes: ["ring2", "ring"],
+    matchedSlots: ["ring_2", "ring2", "ring"],
   },
   {
     id: 12,
@@ -317,6 +333,7 @@ const EQUIPMENT_SLOTS: EquipmentSlotConfig[] = [
     column: "right",
     icon: BeltSvg,
     matchedTypes: ["belt", "sash"],
+    matchedSlots: ["belt", "sash"],
   },
 ];
 
@@ -834,6 +851,22 @@ function getEquipmentSlotName(slotType: string): string {
   return "Vật Phẩm";
 }
 
+function inferEquipSlotKey(str: string): string {
+  const t = (str || "").toLowerCase();
+  if (t.includes("weapon") || t.includes("sword") || t.includes("dagger") || t.includes("bow") || t.includes("hammer") || t.includes("blaster") || t.includes("staff") || t.includes("gun")) return "main_weapon";
+  if (t.includes("shield") || t.includes("offhand") || t.includes("sub_weapon")) return "off_hand";
+  if (t.includes("helm") || t.includes("cap") || t.includes("crown") || t.includes("hat")) return "helmet";
+  if (t.includes("armor") || t.includes("chest") || t.includes("robe") || t.includes("mail") || t.includes("plate")) return "armor";
+  if (t.includes("gloves") || t.includes("gauntlet") || t.includes("bracer")) return "gloves";
+  if (t.includes("pants") || t.includes("legs") || t.includes("greaves") || t.includes("trouser")) return "pants";
+  if (t.includes("boots") || t.includes("shoes") || t.includes("boot")) return "boots";
+  if (t.includes("belt") || t.includes("sash")) return "belt";
+  if (t.includes("necklace") || t.includes("amulet") || t.includes("pendant")) return "necklace";
+  if (t.includes("earring")) return "earring_1";
+  if (t.includes("ring")) return "ring_1";
+  return "main_weapon";
+}
+
 function mapBackendItemToUnified(it: any): UnifiedItem {
   let parsedRunes: ItemRune[] = [];
   if (Array.isArray(it.runes)) {
@@ -846,11 +879,20 @@ function mapBackendItemToUnified(it: any): UnifiedItem {
     }
   }
 
+  const rawSlot = it.equippedSlot || it.equipSlot || (it as any).equip_slot || (it as any).equipped_slot || "";
+  const inferredSlot = (!rawSlot || rawSlot === "none") ? inferEquipSlotKey(`${it.type || ""} ${it.name || ""} ${it.id || ""}`) : rawSlot;
+  const effectiveSlot = inferredSlot || "main_weapon";
+  const itemType = (it.type && it.type !== "armor" && it.type !== "accessory" && it.type !== "equipment") ? it.type : effectiveSlot;
+
   return {
     id: String(it.ownershipId || it.id),
+    ownershipId: it.ownershipId ?? (typeof it.id === "number" ? it.id : undefined),
+    equipSlot: effectiveSlot,
+    equippedSlot: it.equipped ? (it.equippedSlot || effectiveSlot) : null,
+    slotIndex: it.slotIndex !== undefined ? it.slotIndex : 0,
     name: it.name || "Vật phẩm",
-    category: it.category || (it.type === "weapon" || it.type === "armor" || it.type === "accessory" ? "equipment" : "consumable"),
-    type: it.type || (it.equipSlot ? it.equipSlot : "weapon"),
+    category: it.category || (["weapon", "armor", "accessory", "equipment"].includes(it.type) || effectiveSlot ? "equipment" : "consumable"),
+    type: itemType,
     rarity: (it.rarity as ItemRarity) || "common",
     equipped: Boolean(it.equipped),
     icon: it.icon || (it.category === "consumable" ? "🧪" : "⚔️"),
@@ -1417,11 +1459,32 @@ export const CharacterInventoryModal = memo(function CharacterInventoryModal({
   // 12 Slots Equipped Map (Null if nothing equipped)
   const slotEquippedMap = useMemo(() => {
     const map: Record<string, UnifiedItem | null> = {};
+    const assignedIds = new Set<string>();
+
     EQUIPMENT_SLOTS.forEach((slot) => {
-      const found = items.find(
-        (it) => it.equipped && slot.matchedTypes.some((t) => it.type.toLowerCase().includes(t))
-      );
-      map[slot.key] = found || null;
+      const found = items.find((it) => {
+        if (!it.equipped || assignedIds.has(it.id)) return false;
+        const eSlot = ((it as any).equippedSlot || (it as any).equipSlot || "").toLowerCase();
+        const itType = (it.type || "").toLowerCase();
+        const itName = (it.name || "").toLowerCase();
+        const itId = (it.id || "").toLowerCase();
+
+        // 1. Direct slot match
+        if (slot.matchedSlots && slot.matchedSlots.some(s => eSlot === s || eSlot.includes(s))) return true;
+        if (eSlot === slot.key.toLowerCase()) return true;
+
+        // 2. Type and Name matching
+        if (slot.matchedTypes.some(t => itType.includes(t) || itName.includes(t) || itId.includes(t))) return true;
+
+        return false;
+      });
+
+      if (found) {
+        assignedIds.add(found.id);
+        map[slot.key] = found;
+      } else {
+        map[slot.key] = null;
+      }
     });
     return map;
   }, [items]);
@@ -1556,10 +1619,13 @@ export const CharacterInventoryModal = memo(function CharacterInventoryModal({
       } else {
         try {
           const charId = propChar?.id || useGameWorldStore.getState().activeCharacterId;
+          const token = typeof window !== "undefined" ? (localStorage.getItem("clb_token") || localStorage.getItem("token")) : null;
+          const headers: any = { "Content-Type": "application/json" };
+          if (token) headers["Authorization"] = `Bearer ${token}`;
           if (charId) {
             await fetch(`/api/characters/${charId}/inventory/${target.id}/unequip`, {
               method: "POST",
-              headers: { "Content-Type": "application/json" },
+              headers,
             });
           }
         } catch (err) {
@@ -1569,14 +1635,16 @@ export const CharacterInventoryModal = memo(function CharacterInventoryModal({
       triggerGlobalAutoSave("unequip");
     } else {
       // Equipping
+      const targetSlot = (target as any).equippedSlot || (target as any).equipSlot || target.type;
       setItems((prev) => {
         const next = prev.map((it) => {
           if (it.id === target.id) {
-            return { ...it, equipped: true, slotIndex: -1 };
+            return { ...it, equipped: true, slotIndex: -1, equippedSlot: targetSlot };
           }
-          // If equipping, unequip conflicting item in same slot type into bag
-          if (it.type === target.type && it.equipped) {
-            return { ...it, equipped: false, slotIndex: (target as any).slotIndex >= 0 ? (target as any).slotIndex : 0 };
+          // If equipping, unequip conflicting item in same slot into bag
+          const itSlot = (it as any).equippedSlot || (it as any).equipSlot || it.type;
+          if (it.equipped && itSlot === targetSlot) {
+            return { ...it, equipped: false, slotIndex: (target as any).slotIndex >= 0 ? (target as any).slotIndex : 0, equippedSlot: null };
           }
           return it;
         });
@@ -1595,11 +1663,14 @@ export const CharacterInventoryModal = memo(function CharacterInventoryModal({
       } else {
         try {
           const charId = propChar?.id || useGameWorldStore.getState().activeCharacterId;
+          const token = typeof window !== "undefined" ? (localStorage.getItem("clb_token") || localStorage.getItem("token")) : null;
+          const headers: any = { "Content-Type": "application/json" };
+          if (token) headers["Authorization"] = `Bearer ${token}`;
           if (charId) {
             await fetch(`/api/characters/${charId}/inventory/${target.id}/equip`, {
               method: "POST",
-              headers: { "Content-Type": "application/json" },
-              body: JSON.stringify({ slot: target.type }),
+              headers,
+              body: JSON.stringify({ slot: targetSlot }),
             });
           }
         } catch (err) {

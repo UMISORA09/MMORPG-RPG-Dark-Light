@@ -80,7 +80,7 @@ interface GameStore {
 
   // Sync data from API Backend
   syncFromCharacter: (char: any) => void;
-  updatePlayerStatsAfterBattle: (rewards: { exp: number; gold: number; level: number; hp?: number; maxHp?: number }) => void;
+  updatePlayerStatsAfterBattle: (rewards: { exp: number; gold: number; level: number; hp?: number; maxHp?: number; unallocatedStatPoints?: number }) => void;
 
   // Compatibility helpers
   setMenuOpen: (open: boolean) => void;
@@ -337,17 +337,27 @@ export const useGameStore = create<GameStore>((set, get) => ({
   },
 
   updatePlayerStatsAfterBattle: (rewards) => {
-    set((state) => ({
-      player: {
-        ...state.player,
-        exp: rewards.exp,
-        gold: rewards.gold,
-        level: rewards.level,
-        kills: state.player.kills + 1,
-        health: rewards.hp !== undefined ? rewards.hp : state.player.health,
-        maxHealth: rewards.maxHp !== undefined ? rewards.maxHp : state.player.maxHealth,
-      },
-    }));
+    set((state) => {
+      const levelDiff = Math.max(0, rewards.level - state.player.level);
+      const bonusPoints = levelDiff * 5;
+      const currentStats = (state.player as any).statPoints || 0;
+      const nextStatPoints = rewards.unallocatedStatPoints !== undefined
+        ? Math.max(rewards.unallocatedStatPoints, currentStats + bonusPoints)
+        : (currentStats + bonusPoints);
+
+      return {
+        player: {
+          ...state.player,
+          exp: rewards.exp,
+          gold: rewards.gold,
+          level: rewards.level,
+          statPoints: nextStatPoints,
+          kills: state.player.kills + 1,
+          health: rewards.hp !== undefined ? rewards.hp : state.player.health,
+          maxHealth: rewards.maxHp !== undefined ? rewards.maxHp : state.player.maxHealth,
+        },
+      };
+    });
   },
 
   triggerSkill: (skillIndex: number) => {

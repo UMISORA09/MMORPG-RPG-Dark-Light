@@ -16,7 +16,7 @@ import {
   ForumLikeBody,
   ForumPostParams,
 } from "@workspace/api-zod";
-import { requireAuth } from "../middlewares/requireAuth";
+import { requireAuth, getAuthUserId } from "../middlewares/requireAuth";
 import { ensureServerCatalog, getCharacterForUser } from "../lib/inventory";
 
 const router = Router();
@@ -49,7 +49,7 @@ router.get("/community/posts", requireAuth, async (req, res) => {
 router.post("/community/posts", requireAuth, async (req, res) => {
   const parsed = CreateForumPostBody.safeParse(req.body);
   if (!parsed.success) return res.status(400).json({ error: "Nội dung bài viết không hợp lệ" });
-  const userId = req.session.userId!;
+  const userId = getAuthUserId(req);
   const serverId = parsed.data.serverId;
   const server = await validateServer(serverId);
   if (!server) return res.status(400).json({ error: "Máy chủ không tồn tại" });
@@ -75,7 +75,7 @@ router.post("/community/posts/:postId/like", requireAuth, async (req, res) => {
   const [post] = await db.select().from(forumPostsTable).where(eq(forumPostsTable.id, params.data.postId)).limit(1);
   if (!post) return res.status(404).json({ error: "Không tìm thấy bài viết" });
   const likes: number[] = Array.isArray(post.likes) ? post.likes.map((like: unknown) => Number(like)) : [];
-  const userId = req.session.userId!;
+  const userId = getAuthUserId(req);
   const nextLikes = body.data.liked
     ? (likes.includes(userId) ? likes : [...likes, userId])
     : likes.filter((id) => id !== userId);
@@ -104,7 +104,7 @@ router.post("/community/posts/:postId/comments", requireAuth, async (req, res) =
   if (!post) return res.status(404).json({ error: "Không tìm thấy bài viết" });
   const [comment] = await db.insert(forumCommentsTable).values({
     postId: post.id,
-    userId: req.session.userId!,
+    userId: getAuthUserId(req),
     comment: body.data.comment,
   }).returning();
   return res.status(201).json(comment);
@@ -125,7 +125,7 @@ router.get("/community/chats", requireAuth, async (req, res) => {
 router.post("/community/chats", requireAuth, async (req, res) => {
   const parsed = CreateWorldChatBody.safeParse(req.body);
   if (!parsed.success) return res.status(400).json({ error: "Tin nhắn không hợp lệ" });
-  const userId = req.session.userId!;
+  const userId = getAuthUserId(req);
 
   const [user] = await db.select({ selectedServerId: usersTable.selectedServerId }).from(usersTable)
     .where(eq(usersTable.id, userId)).limit(1);

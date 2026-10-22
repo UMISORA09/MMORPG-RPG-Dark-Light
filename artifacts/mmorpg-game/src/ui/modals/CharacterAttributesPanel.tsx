@@ -73,9 +73,13 @@ export const CharacterAttributesPanel = memo(function CharacterAttributesPanel()
     const charId = activeCharacterId;
 
     try {
+      const token = typeof window !== "undefined" ? (localStorage.getItem("clb_token") || localStorage.getItem("token")) : null;
+      const headers: Record<string, string> = { "Content-Type": "application/json" };
+      if (token) headers["Authorization"] = `Bearer ${token}`;
+
       const res = await fetch(`/api/characters/${charId}/stats`, {
         method: "PUT",
-        headers: { "Content-Type": "application/json" },
+        headers,
         body: JSON.stringify({
           str: spentStr,
           dex: spentDex,

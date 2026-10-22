@@ -7,7 +7,7 @@ import {
   getMonster,
   toCharacterResponse,
 } from "../lib/inventory";
-import { requireAuth } from "../middlewares/requireAuth";
+import { requireAuth, getAuthUserId } from "../middlewares/requireAuth";
 import { CombatService } from "../services/CombatService";
 import { calculateDamage } from "../rules/combatRules";
 
@@ -101,7 +101,8 @@ router.post("/characters/:characterId/battle", requireAuth, async (req, res) => 
     .where(eq(charactersTable.id, characterId))
     .limit(1);
 
-  if (!character || character.userId !== req.session.userId) {
+  const userId = getAuthUserId(req);
+  if (!character || (character.userId && character.userId !== userId && (req as any).authUser?.role !== "ADMIN")) {
     return res.status(404).json({ error: "Không tìm thấy nhân vật" });
   }
 
@@ -218,7 +219,7 @@ router.post("/characters/:characterId/battle", requireAuth, async (req, res) => 
   }
 
   const savedResult = await CombatService.persistBattleResult({
-    userId: req.session.userId!,
+    userId: getAuthUserId(req),
     characterId,
     monsterId,
     monsterName: monsterReward.name,

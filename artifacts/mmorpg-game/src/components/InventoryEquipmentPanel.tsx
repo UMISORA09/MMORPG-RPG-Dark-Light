@@ -238,20 +238,40 @@ export const InventoryEquipmentPanel = memo(function InventoryEquipmentPanel({
   // Map equipped items to the 12 slots
   const slotEquippedMap = useMemo(() => {
     const map: Record<string, InventoryItem | null> = {};
+    const assignedIds = new Set<string>();
+
     for (const slot of EQUIPMENT_SLOTS) {
-      // Find matching equipped item
       const item = equippedItems.find((it) => {
-        const type = it.type.toLowerCase();
-        const name = it.name.toLowerCase();
-        if (slot.key === "weapon" && type === "weapon" && !name.includes("khiên")) return true;
-        if (slot.key === "shield" && (name.includes("khiên") || type === "shield")) return true;
-        if (slot.key === "armor" && type === "armor") return true;
-        if (slot.key === "necklace" && (type === "necklace" || type === "accessory")) return true;
-        if (slot.key === "ring" && (type === "ring" || name.includes("nhẫn"))) return true;
-        if (slot.matchedTypes.includes(type)) return true;
+        if (assignedIds.has(it.id)) return false;
+        const eSlot = ((it as any).equippedSlot || it.equipSlot || "").toLowerCase();
+        const type = (it.type || "").toLowerCase();
+        const name = (it.name || "").toLowerCase();
+        const id = (it.id || "").toLowerCase();
+
+        // 1. Direct slot match
+        if (eSlot === slot.key || eSlot.includes(slot.key)) return true;
+        if (slot.key === "weapon" && (eSlot === "main_weapon" || (type === "weapon" && !name.includes("khiên")))) return true;
+        if (slot.key === "shield" && (eSlot === "off_hand" || name.includes("khiên") || type === "shield")) return true;
+        if (slot.key === "helmet" && (eSlot === "helmet" || name.includes("mũ") || name.includes("nón") || type === "helmet")) return true;
+        if (slot.key === "armor" && (eSlot === "armor" || (name.includes("áo") || name.includes("giáp")) && !name.includes("quần") && !name.includes("găng") && !name.includes("giày"))) return true;
+        if (slot.key === "gloves" && (eSlot === "gloves" || name.includes("găng") || type === "gloves")) return true;
+        if (slot.key === "pants" && (eSlot === "pants" || name.includes("quần") || type === "pants")) return true;
+        if (slot.key === "boots" && (eSlot === "boots" || name.includes("giày") || name.includes("bốt") || type === "boots")) return true;
+        if (slot.key === "belt" && (eSlot === "belt" || name.includes("thắt lưng") || type === "belt")) return true;
+        if (slot.key === "necklace" && (eSlot === "necklace" || name.includes("dây chuyền") || type === "necklace")) return true;
+        if (slot.key === "earring" && (eSlot.includes("earring") || name.includes("hoa tai") || type === "earring")) return true;
+        if (slot.key === "ring" && (eSlot.includes("ring") || name.includes("nhẫn") || type === "ring")) return true;
+
+        if (slot.matchedTypes.some((t) => type.includes(t) || id.includes(t))) return true;
         return false;
       });
-      map[slot.key] = item || null;
+
+      if (item) {
+        assignedIds.add(item.id);
+        map[slot.key] = item;
+      } else {
+        map[slot.key] = null;
+      }
     }
     return map;
   }, [equippedItems]);

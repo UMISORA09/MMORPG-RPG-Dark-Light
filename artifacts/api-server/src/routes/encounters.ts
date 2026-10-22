@@ -4,7 +4,7 @@
 
 import { Router } from "express";
 import { EncounterService } from "../encounters/encounterService";
-import { requireAuth } from "../middlewares/requireAuth";
+import { requireAuth, getAuthUserId } from "../middlewares/requireAuth";
 
 const router = Router();
 
@@ -27,7 +27,7 @@ router.post("/characters/:characterId/encounters", requireAuth, async (req, res)
 
   try {
     const result = await EncounterService.createEncounter({
-      userId: req.session.userId!,
+      userId: getAuthUserId(req),
       characterId,
       monsterId,
       spawnId,

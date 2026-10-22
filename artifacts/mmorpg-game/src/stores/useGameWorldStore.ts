@@ -511,6 +511,8 @@ export interface GameWorldState {
     level: number;
     hp?: number;
     maxHp?: number;
+    unallocatedStatPoints?: number;
+    statPoints?: number;
   }) => void;
   addGold: (amount: number) => void;
   applyPlayerDebuff: (debuff: {
@@ -2489,14 +2491,24 @@ export const useGameWorldStore = create<GameWorldState>((set, get) => ({
   },
 
   updateAfterBattle: (rewards) => {
-    set((s) => ({
-      playerExp: rewards.exp,
-      playerGold: rewards.gold,
-      playerLevel: rewards.level,
-      playerKills: s.playerKills + 1,
-      playerHealth: rewards.hp !== undefined ? rewards.hp : s.playerHealth,
-      playerMaxHealth: rewards.maxHp !== undefined ? rewards.maxHp : s.playerMaxHealth,
-    }));
+    set((s) => {
+      const levelDiff = Math.max(0, rewards.level - s.playerLevel);
+      const bonusPoints = levelDiff * 5;
+      const currentPoints = s.unallocatedStatPoints ?? 0;
+      const nextPoints = rewards.unallocatedStatPoints !== undefined
+        ? Math.max(rewards.unallocatedStatPoints, currentPoints + bonusPoints)
+        : (currentPoints + bonusPoints);
+
+      return {
+        playerExp: rewards.exp,
+        playerGold: rewards.gold,
+        playerLevel: rewards.level,
+        playerKills: s.playerKills + 1,
+        playerHealth: rewards.hp !== undefined ? rewards.hp : s.playerHealth,
+        playerMaxHealth: rewards.maxHp !== undefined ? rewards.maxHp : s.playerMaxHealth,
+        unallocatedStatPoints: nextPoints,
+      };
+    });
   },
 
   addGold: (amount) => {
