@@ -1,0 +1,58 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "version": "1.0.0",
+  "defaultPreset": "full_body",
+  "presets": {
+    "full_body": {
+      "id": "full_body",
+      "name": "Toàn Thân (Full Body)",
+      "description": "Góc nhìn bao quát toàn bộ chiều cao nhân vật từ đỉnh đầu đến mũi chân và hiệu ứng bục đỡ.",
+      "position": [0.0, 1.25, 3.6],
+      "target": [0.0, 0.95, 0.0],
+      "fov": 42,
+      "minDistance": 1.2,
+      "maxDistance": 6.5
+    },
+    "portrait": {
+      "id": "portrait",
+      "name": "Chân Dung Cận Cảnh (Portrait Headshot)",
+      "description": "Cận cảnh gương mặt sắc sảo anime, chi tiết mái tóc gai và ánh mắt thần thái.",
+      "position": [0.0, 1.55, 1.5],
+      "target": [0.0, 1.48, 0.0],
+      "fov": 32,
+      "minDistance": 0.8,
+      "maxDistance": 3.0
+    },
+    "three_quarter_action": {
+      "id": "three_quarter_action",
+      "name": "Góc Hành Động 3/4 (Heroic Stance)",
+      "description": "Góc nghiêng 3/4 kinh điển của game nhập vai hành động, tôn vinh vũ khí và tư thế thủ thế.",
+      "position": [2.2, 1.35, 2.8],
+      "target": [0.0, 0.95, 0.0],
+      "fov": 40,
+      "minDistance": 1.2,
+      "maxDistance": 6.0
+    },
+    "weapon_inspect": {
+      "id": "weapon_inspect",
+      "name": "Soi Chi Tiết Vũ Khí (Weapon Inspect)",
+      "description": "Cận cảnh vũ khí cầm tay, chuôi kiếm, khiên thánh hoặc súng nòng ray plasma.",
+      "position": [0.95, 1.05, 1.4],
+      "target": [0.35, 0.95, 0.0],
+      "fov": 36,
+      "minDistance": 0.6,
+      "maxDistance": 3.0
+    },
+    "back_profile": {
+      "id": "back_profile",
+      "name": "Góc Sau Lưng (Cloak & Wings)",
+      "description": "Góc nhìn từ phía sau kiểm tra áo choàng rực lửa, cánh năng lượng và socket lưng.",
+      "position": [0.0, 1.35, -3.4],
+      "target": [0.0, 0.95, 0.0],
+      "fov": 42,
+      "minDistance": 1.2,
+      "maxDistance": 6.0
+    }
+  }
+}
+

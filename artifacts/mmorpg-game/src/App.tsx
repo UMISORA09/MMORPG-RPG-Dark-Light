@@ -8,6 +8,7 @@ import CommunityPortalScreen from '@/pages/CommunityPortalScreen';
 import GamePage from '@/pages/game';
 import AdminDashboardScreen from '@/pages/AdminDashboardScreen';
 import AdminLoginScreen from '@/pages/AdminLoginScreen';
+import CharacterEnvironmentPage from '@/pages/CharacterEnvironmentPage';
 import { SessionDisplacedModal } from '@/components/SessionDisplacedModal';
 import { Route, Switch, Router as WouterRouter } from 'wouter';
 
@@ -36,6 +37,13 @@ function Router() {
       <Route path="/portal/" component={CommunityPortalScreen} />
       <Route path="/game" component={GamePage} />
       <Route path="/game/" component={GamePage} />
+      <Route path="/character-environment" component={CharacterEnvironmentPage} />
+      <Route path="/character-environment/" component={CharacterEnvironmentPage} />
+      <Route path="/character-studio" component={CharacterEnvironmentPage} />
+      <Route path="/character-studio/" component={CharacterEnvironmentPage} />
+      <Route path="/character-showroom" component={CharacterEnvironmentPage} />
+      <Route path="/character-showroom/" component={CharacterEnvironmentPage} />
+      <Route path="/models" component={CharacterEnvironmentPage} />
       <Route path="/admin/login" component={AdminLoginScreen} />
       <Route path="/admin/login/" component={AdminLoginScreen} />
       <Route path="/admin-login" component={AdminLoginScreen} />
@@ -48,6 +56,7 @@ function Router() {
     </Switch>
   );
 }
+
 function App() {
   return (
     <QueryClientProvider client={queryClient}>

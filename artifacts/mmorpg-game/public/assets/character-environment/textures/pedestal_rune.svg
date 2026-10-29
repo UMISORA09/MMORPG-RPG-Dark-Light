@@ -1,0 +1,27 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512">
+  <defs>
+    <radialGradient id="runeGlow" cx="50%" cy="50%" r="50%">
+      <stop offset="0%" stop-color="#ff4444" stop-opacity="0.8"/>
+      <stop offset="70%" stop-color="#ff1111" stop-opacity="0.4"/>
+      <stop offset="100%" stop-color="#000000" stop-opacity="0"/>
+    </radialGradient>
+  </defs>
+  <circle cx="256" cy="256" r="240" fill="none" stroke="#ff4444" stroke-width="4" stroke-dasharray="8 6"/>
+  <circle cx="256" cy="256" r="220" fill="none" stroke="#ff2222" stroke-width="2"/>
+  <circle cx="256" cy="256" r="180" fill="none" stroke="#ff6666" stroke-width="3" stroke-dasharray="16 8"/>
+  <circle cx="256" cy="256" r="130" fill="url(#runeGlow)"/>
+  <circle cx="256" cy="256" r="120" fill="none" stroke="#ffaa44" stroke-width="2"/>
+  
+  <!-- 8 Cardinal Runic Symbols -->
+  <g stroke="#ff7744" stroke-width="3" fill="none" stroke-linecap="round">
+    <path d="M256,36 L256,76 M244,56 L268,56"/>
+    <path d="M256,436 L256,476 M244,456 L268,456"/>
+    <path d="M36,256 L76,256 M56,244 L56,268"/>
+    <path d="M436,256 L476,256 M456,244 L456,268"/>
+    <path d="M100,100 L128,128 M102,126 L126,102"/>
+    <path d="M384,384 L412,412 M386,410 L410,386"/>
+    <path d="M384,128 L412,100 M386,102 L410,126"/>
+    <path d="M100,412 L128,384 M102,386 L126,410"/>
+  </g>
+</svg>
+

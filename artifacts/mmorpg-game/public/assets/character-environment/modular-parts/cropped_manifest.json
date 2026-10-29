@@ -1,0 +1,386 @@
+{
+  "abs": {
+    "file": "part_abs_cropped.png",
+    "origBbox": [
+      140,
+      175,
+      220,
+      225
+    ],
+    "widthPx": 80,
+    "heightPx": 50,
+    "centerPx": [
+      180.0,
+      200.0
+    ],
+    "scale3D": [
+      0.4444444444444444,
+      0.2777777777777778
+    ],
+    "pos3D": [
+      0.0,
+      0.8888888888888888,
+      0.0
+    ]
+  },
+  "arm_left_forearm": {
+    "file": "part_arm_left_forearm_cropped.png",
+    "origBbox": [
+      70,
+      185,
+      125,
+      250
+    ],
+    "widthPx": 55,
+    "heightPx": 65,
+    "centerPx": [
+      97.5,
+      217.5
+    ],
+    "scale3D": [
+      0.3055555555555556,
+      0.3611111111111111
+    ],
+    "pos3D": [
+      -0.4583333333333333,
+      0.7916666666666666,
+      0.0
+    ]
+  },
+  "arm_left_upper": {
+    "file": "part_arm_left_upper_cropped.png",
+    "origBbox": [
+      85,
+      140,
+      135,
+      195
+    ],
+    "widthPx": 50,
+    "heightPx": 55,
+    "centerPx": [
+      110.0,
+      167.5
+    ],
+    "scale3D": [
+      0.2777777777777778,
+      0.3055555555555556
+    ],
+    "pos3D": [
+      -0.3888888888888889,
+      1.0694444444444444,
+      0.0
+    ]
+  },
+  "arm_right_forearm": {
+    "file": "part_arm_right_forearm_cropped.png",
+    "origBbox": [
+      235,
+      185,
+      244,
+      250
+    ],
+    "widthPx": 9,
+    "heightPx": 65,
+    "centerPx": [
+      239.5,
+      217.5
+    ],
+    "scale3D": [
+      0.05,
+      0.3611111111111111
+    ],
+    "pos3D": [
+      0.33055555555555555,
+      0.7916666666666666,
+      0.0
+    ]
+  },
+  "arm_right_upper": {
+    "file": "part_arm_right_upper_cropped.png",
+    "origBbox": [
+      225,
+      140,
+      275,
+      187
+    ],
+    "widthPx": 50,
+    "heightPx": 47,
+    "centerPx": [
+      250.0,
+      163.5
+    ],
+    "scale3D": [
+      0.2777777777777778,
+      0.2611111111111111
+    ],
+    "pos3D": [
+      0.3888888888888889,
+      1.0916666666666666,
+      0.0
+    ]
+  },
+  "hair_spikes": {
+    "file": "part_hair_spikes_cropped.png",
+    "origBbox": [
+      115,
+      42,
+      245,
+      125
+    ],
+    "widthPx": 130,
+    "heightPx": 83,
+    "centerPx": [
+      180.0,
+      83.5
+    ],
+    "scale3D": [
+      0.7222222222222222,
+      0.46111111111111114
+    ],
+    "pos3D": [
+      0.0,
+      1.5361111111111112,
+      0.0
+    ]
+  },
+  "head": {
+    "file": "part_head_cropped.png",
+    "origBbox": [
+      135,
+      75,
+      225,
+      145
+    ],
+    "widthPx": 90,
+    "heightPx": 70,
+    "centerPx": [
+      180.0,
+      110.0
+    ],
+    "scale3D": [
+      0.5,
+      0.3888888888888889
+    ],
+    "pos3D": [
+      0.0,
+      1.3888888888888888,
+      0.0
+    ]
+  },
+  "hips": {
+    "file": "part_hips_cropped.png",
+    "origBbox": [
+      130,
+      210,
+      230,
+      255
+    ],
+    "widthPx": 100,
+    "heightPx": 45,
+    "centerPx": [
+      180.0,
+      232.5
+    ],
+    "scale3D": [
+      0.5555555555555556,
+      0.25
+    ],
+    "pos3D": [
+      0.0,
+      0.7083333333333334,
+      0.0
+    ]
+  },
+  "leg_left_foot": {
+    "file": "part_leg_left_foot_cropped.png",
+    "origBbox": [
+      130,
+      285,
+      178,
+      318
+    ],
+    "widthPx": 48,
+    "heightPx": 33,
+    "centerPx": [
+      154.0,
+      301.5
+    ],
+    "scale3D": [
+      0.26666666666666666,
+      0.18333333333333332
+    ],
+    "pos3D": [
+      -0.14444444444444443,
+      0.325,
+      0.0
+    ]
+  },
+  "leg_left_thigh": {
+    "file": "part_leg_left_thigh_cropped.png",
+    "origBbox": [
+      135,
+      245,
+      180,
+      295
+    ],
+    "widthPx": 45,
+    "heightPx": 50,
+    "centerPx": [
+      157.5,
+      270.0
+    ],
+    "scale3D": [
+      0.25,
+      0.2777777777777778
+    ],
+    "pos3D": [
+      -0.125,
+      0.5,
+      0.0
+    ]
+  },
+  "leg_right_foot": {
+    "file": "part_leg_right_foot_cropped.png",
+    "origBbox": [
+      186,
+      285,
+      230,
+      326
+    ],
+    "widthPx": 44,
+    "heightPx": 41,
+    "centerPx": [
+      208.0,
+      305.5
+    ],
+    "scale3D": [
+      0.24444444444444444,
+      0.22777777777777777
+    ],
+    "pos3D": [
+      0.15555555555555556,
+      0.30277777777777776,
+      0.0
+    ]
+  },
+  "leg_right_thigh": {
+    "file": "part_leg_right_thigh_cropped.png",
+    "origBbox": [
+      180,
+      245,
+      225,
+      295
+    ],
+    "widthPx": 45,
+    "heightPx": 50,
+    "centerPx": [
+      202.5,
+      270.0
+    ],
+    "scale3D": [
+      0.25,
+      0.2777777777777778
+    ],
+    "pos3D": [
+      0.125,
+      0.5,
+      0.0
+    ]
+  },
+  "main_weapon": {
+    "file": "part_main_weapon_cropped.png",
+    "origBbox": [
+      245,
+      50,
+      345,
+      185
+    ],
+    "widthPx": 100,
+    "heightPx": 135,
+    "centerPx": [
+      295.0,
+      117.5
+    ],
+    "scale3D": [
+      0.5555555555555556,
+      0.75
+    ],
+    "pos3D": [
+      0.6388888888888888,
+      1.3472222222222223,
+      0.0
+    ]
+  },
+  "offhand_weapon": {
+    "file": "part_offhand_weapon_cropped.png",
+    "origBbox": [
+      58,
+      170,
+      120,
+      275
+    ],
+    "widthPx": 62,
+    "heightPx": 105,
+    "centerPx": [
+      89.0,
+      222.5
+    ],
+    "scale3D": [
+      0.34444444444444444,
+      0.5833333333333334
+    ],
+    "pos3D": [
+      -0.5055555555555555,
+      0.7638888888888888,
+      0.0
+    ]
+  },
+  "scarf": {
+    "file": "part_scarf_cropped.png",
+    "origBbox": [
+      140,
+      130,
+      220,
+      220
+    ],
+    "widthPx": 80,
+    "heightPx": 90,
+    "centerPx": [
+      180.0,
+      175.0
+    ],
+    "scale3D": [
+      0.4444444444444444,
+      0.5
+    ],
+    "pos3D": [
+      0.0,
+      1.0277777777777777,
+      0.0
+    ]
+  },
+  "torso": {
+    "file": "part_torso_cropped.png",
+    "origBbox": [
+      120,
+      140,
+      240,
+      215
+    ],
+    "widthPx": 120,
+    "heightPx": 75,
+    "centerPx": [
+      180.0,
+      177.5
+    ],
+    "scale3D": [
+      0.6666666666666666,
+      0.4166666666666667
+    ],
+    "pos3D": [
+      0.0,
+      1.0138888888888888,
+      0.0
+    ]
+  }
+}

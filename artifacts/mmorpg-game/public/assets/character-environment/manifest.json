@@ -1,0 +1,146 @@
+{
+  "system": "ChienLongBa-Virtual-Character-Model-Environment",
+  "version": "1.0.0",
+  "author": "Antigravity Engineering",
+  "description": "Hệ thống cấu hình môi trường 3D studio, bục đỡ, ánh sáng và kiểm định mô hình nhân vật ảo.",
+  "pedestals": {
+    "dark_fantasy_runic": {
+      "id": "dark_fantasy_runic",
+      "name": "Bục Cổ Ngữ Long Hồn",
+      "radius": 1.4,
+      "height": 0.18,
+      "baseColor": "#14111d",
+      "runeGlowColor": "#ef4444",
+      "outerRingColor": "#ffaa22",
+      "particles": {
+        "color": "#ef4444",
+        "count": 24,
+        "speed": 0.4
+      }
+    },
+    "cyberpunk_hologram": {
+      "id": "cyberpunk_hologram",
+      "name": "Bục Hologram Lượng Tử",
+      "radius": 1.35,
+      "height": 0.12,
+      "baseColor": "#0b192c",
+      "runeGlowColor": "#00f2ff",
+      "outerRingColor": "#38bdf8",
+      "particles": {
+        "color": "#00f2ff",
+        "count": 30,
+        "speed": 0.6
+      }
+    },
+    "celestial_altar": {
+      "id": "celestial_altar",
+      "name": "Tế Đàn Hoàng Kim",
+      "radius": 1.45,
+      "height": 0.22,
+      "baseColor": "#1f1d16",
+      "runeGlowColor": "#fbbf24",
+      "outerRingColor": "#fef08a",
+      "particles": {
+        "color": "#ffd700",
+        "count": 20,
+        "speed": 0.35
+      }
+    },
+    "minimal_studio": {
+      "id": "minimal_studio",
+      "name": "Sàn Studio Tối Giản",
+      "radius": 1.5,
+      "height": 0.05,
+      "baseColor": "#1e293b",
+      "runeGlowColor": "#64748b",
+      "outerRingColor": "#94a3b8",
+      "particles": {
+        "color": "#94a3b8",
+        "count": 0,
+        "speed": 0.0
+      }
+    }
+  },
+  "supportedModels": [
+    {
+      "id": "fighter",
+      "name": "Cuồng Long Chiến Binh",
+      "genderVariants": ["male", "female"],
+      "modelPath": "/assets/models/characters/fighter.glb",
+      "fallbackColor": "#ff3366",
+      "defaultWeapon": "weapon_sword",
+      "baseHeight": 1.85,
+      "scale": [1, 1, 1]
+    },
+    {
+      "id": "tank",
+      "name": "Huyết Kỵ Hộ Vệ",
+      "genderVariants": ["male", "female"],
+      "modelPath": "/assets/models/characters/tank.glb",
+      "fallbackColor": "#ffd700",
+      "defaultWeapon": "weapon_shield",
+      "baseHeight": 1.95,
+      "scale": [1.05, 1.05, 1.05]
+    },
+    {
+      "id": "assassin",
+      "name": "Ảnh Vũ Sát Thủ",
+      "genderVariants": ["male", "female"],
+      "modelPath": "/assets/models/characters/assassin.glb",
+      "fallbackColor": "#9d4edd",
+      "defaultWeapon": "weapon_daggers",
+      "baseHeight": 1.75,
+      "scale": [0.95, 0.95, 0.95]
+    },
+    {
+      "id": "gunner",
+      "name": "Lượng Tử Xạ Thủ",
+      "genderVariants": ["male", "female"],
+      "modelPath": "/assets/models/characters/gunner.glb",
+      "fallbackColor": "#00f2ff",
+      "defaultWeapon": "weapon_blaster",
+      "baseHeight": 1.8,
+      "scale": [1, 1, 1]
+    },
+    {
+      "id": "hero_base",
+      "name": "Khung Xương Mẫu (Base Rig)",
+      "genderVariants": ["male"],
+      "modelPath": "/assets/models/characters/hero_base.glb",
+      "fallbackColor": "#94a3b8",
+      "defaultWeapon": "weapon_sword",
+      "baseHeight": 1.8,
+      "scale": [1, 1, 1]
+    }
+  ],
+  "requiredAnimationClips": [
+    "idle",
+    "run",
+    "attack_slash",
+    "skill_cast",
+    "death"
+  ],
+  "standardBoneSockets": {
+    "weapon_slot": {
+      "parentBone": "RightHand",
+      "positionOffset": [0.0, 0.05, 0.0],
+      "rotationOffset": [0, 0, 0]
+    },
+    "shield_slot": {
+      "parentBone": "LeftForeArm",
+      "positionOffset": [0.0, 0.1, 0.0],
+      "rotationOffset": [0, 1.57, 0]
+    },
+    "head_socket": {
+      "parentBone": "Head",
+      "positionOffset": [0.0, 0.15, 0.0],
+      "rotationOffset": [0, 0, 0]
+    },
+    "back_socket": {
+      "parentBone": "Spine2",
+      "positionOffset": [0.0, 0.0, -0.15],
+      "rotationOffset": [0, 3.1415, 0]
+    }
+  }
+}
+

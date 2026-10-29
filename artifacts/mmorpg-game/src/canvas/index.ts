@@ -35,3 +35,6 @@ export { ShockwaveRingShader } from "./vfx/ShockwaveRingShader";
 export { CyberProjectileVFX } from "./vfx/CyberProjectileVFX";
 export { HolyShieldDomeVFX } from "./vfx/HolyShieldDomeVFX";
 export { CanvasErrorBoundary } from "./CanvasErrorBoundary";
+
+// Virtual Character Model Environment (3D Studio & Showroom)
+export * from "./character-environment";

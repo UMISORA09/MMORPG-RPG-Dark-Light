@@ -233,6 +233,16 @@ export default function CharacterSelectScreen() {
 
           <button
             type="button"
+            onClick={() => setLocation("/character-environment")}
+            className="font-sans flex items-center gap-1.5 px-3 py-2 rounded-full bg-slate-800/90 hover:bg-slate-700 border border-cyan-500/40 text-cyan-300 text-xs font-bold tracking-wider transition-all hover:scale-105 active:scale-95 shadow-[0_0_15px_rgba(40,195,225,0.25)]"
+            title="Mở phòng mô hình nhân vật ảo 3D"
+          >
+            <Sparkles className="w-4 h-4 text-cyan-400" />
+            <span className="hidden md:inline">Phòng 3D Studio</span>
+          </button>
+
+          <button
+            type="button"
             onClick={() => setIsModalOpen(true)}
             className="font-sans flex items-center gap-1.5 px-4 py-2 rounded-full bg-[#28c3e1] hover:brightness-110 text-[#1c161a] text-xs font-black tracking-wider uppercase shadow-[0_0_20px_rgba(40,195,225,0.4)] transition-all hover:scale-105 active:scale-95"
           >
