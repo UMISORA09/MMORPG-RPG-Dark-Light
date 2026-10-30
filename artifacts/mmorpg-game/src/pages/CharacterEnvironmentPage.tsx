@@ -13,6 +13,7 @@ import {
   type CharacterDisplayMode,
   PixelArtAnimationTutorialModal,
   ProceduralCharacterCreatorModal,
+  BlenderIntegrationModal,
 } from "@/canvas/character-environment";
 import {
   Swords,
@@ -81,6 +82,7 @@ const CLASS_CONFIGS: Array<{
 ];
 
 const LIGHTING_OPTIONS: Array<{ id: StudioLightingPresetId; name: string }> = [
+  { id: "cosmic_nebula", name: "Tinh Vân Không Gian" },
   { id: "cinematic_dark_fantasy", name: "Hắc Ám Kỳ Ảo" },
   { id: "cyberpunk_neon", name: "Lượng Tử Cyberpunk" },
   { id: "celestial_gold", name: "Hoàng Kim Thần Thánh" },
@@ -88,6 +90,7 @@ const LIGHTING_OPTIONS: Array<{ id: StudioLightingPresetId; name: string }> = [
 ];
 
 const PEDESTAL_OPTIONS: Array<{ id: PedestalThemeId; name: string }> = [
+  { id: "cosmic_void", name: "Bục Tinh Thể Không Gian" },
   { id: "dark_fantasy_runic", name: "Bục Cổ Ngữ Long Hồn" },
   { id: "cyberpunk_hologram", name: "Bục Hologram Lượng Tử" },
   { id: "celestial_altar", name: "Tế Đàn Hoàng Kim" },
@@ -141,10 +144,13 @@ export default function CharacterEnvironmentPage() {
   const setShowParticles = useCharacterStudioStore((s) => s.setShowParticles);
   const isCustomActive = useCharacterStudioStore((s) => s.isCustomActive);
   const setIsCustomActive = useCharacterStudioStore((s) => s.setIsCustomActive);
+  const cosmicEnvironmentActive = useCharacterStudioStore((s) => s.cosmicEnvironmentActive);
+  const setCosmicEnvironmentActive = useCharacterStudioStore((s) => s.setCosmicEnvironmentActive);
 
   const [activeTab, setActiveTab] = useState<"class" | "animation" | "rig_pose" | "environment" | "camera">("rig_pose");
   const [isTutorialOpen, setIsTutorialOpen] = useState(false);
   const [isCreatorOpen, setIsCreatorOpen] = useState(false);
+  const [isBlenderModalOpen, setIsBlenderModalOpen] = useState(false);
   const [isFooterCollapsed, setIsFooterCollapsed] = useState(false);
 
   const activeClassConfig = CLASS_CONFIGS.find((c) => c.id === selectedClass) || CLASS_CONFIGS[0];
@@ -226,7 +232,45 @@ export default function CharacterEnvironmentPage() {
               <Box className="w-3.5 h-3.5" />
               <span>Voxel 3D</span>
             </button>
+
+            {/* 3D Blender GLTF Model Mode */}
+            <button
+              onClick={() => {
+                setDisplayMode("blender_3d");
+                setCosmicEnvironmentActive(true);
+              }}
+              className={`flex items-center gap-1 px-2.5 py-1 rounded-lg text-xs font-bold transition-all cursor-pointer ${
+                displayMode === "blender_3d"
+                  ? "bg-gradient-to-r from-orange-500 to-amber-500 text-slate-950 shadow-md font-black"
+                  : "text-orange-400/80 hover:text-orange-300"
+              }`}
+              title="Mô hình 3D thực tế xuất từ Blender (.glb)"
+            >
+              <Box className="w-3.5 h-3.5 text-orange-400" />
+              <span>3D Blender</span>
+            </button>
           </div>
+
+          {/* Quick Cosmic Space Environment Toggle */}
+          <button
+            onClick={() => {
+              const nextState = !cosmicEnvironmentActive;
+              setCosmicEnvironmentActive(nextState);
+              if (nextState) {
+                setPedestalTheme("cosmic_void");
+                setLightingPreset("cosmic_nebula");
+              }
+            }}
+            className={`p-2 rounded-xl flex items-center gap-1.5 text-xs font-medium transition-all cursor-pointer ${
+              cosmicEnvironmentActive
+                ? "bg-indigo-600/30 text-indigo-300 border border-indigo-400/50 shadow-sm shadow-indigo-500/20"
+                : "bg-slate-800 text-slate-400 hover:text-white border border-transparent"
+            }`}
+            title="Bật/Tắt Không Gian Vũ Trụ & Tinh Vân (Cosmic Space)"
+          >
+            <Sparkles className="w-4 h-4 text-cyan-400" />
+            <span className="hidden lg:inline">Không Gian</span>
+          </button>
 
           <button
             onClick={() => setIsAutoRotating(!isAutoRotating)}
@@ -251,6 +295,19 @@ export default function CharacterEnvironmentPage() {
             title="Bật/Tắt hiệu ứng hạt ma pháp"
           >
             <Sparkles className="w-4 h-4" />
+          </button>
+
+          {/* Blender Integration Hub Button */}
+          <button
+            onClick={() => setIsBlenderModalOpen(true)}
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-gradient-to-r from-orange-500 via-amber-500 to-yellow-500 text-slate-950 font-black text-xs tracking-wider shadow-lg shadow-orange-500/25 hover:scale-105 active:scale-95 transition-all cursor-pointer border border-orange-300 ml-1"
+            title="Mở Trung Tâm Tích Hợp Blender 3D & Không Gian Nhân Vật"
+          >
+            <Box className="w-4 h-4 fill-slate-950" />
+            <span className="hidden sm:inline">Kết Hợp Blender</span>
+            <span className="px-1.5 py-0.2 rounded-md text-[9px] bg-slate-950 text-orange-400 font-black uppercase">
+              3D Rig
+            </span>
           </button>
 
           {/* Custom Character Creator Button (Tự Tạo Nhân Vật) */}
@@ -879,6 +936,12 @@ export default function CharacterEnvironmentPage() {
       <ProceduralCharacterCreatorModal
         isOpen={isCreatorOpen}
         onClose={() => setIsCreatorOpen(false)}
+      />
+
+      {/* ── Blender 3D Character Pipeline & Space Environment Integration Modal ── */}
+      <BlenderIntegrationModal
+        isOpen={isBlenderModalOpen}
+        onClose={() => setIsBlenderModalOpen(false)}
       />
     </div>
   );

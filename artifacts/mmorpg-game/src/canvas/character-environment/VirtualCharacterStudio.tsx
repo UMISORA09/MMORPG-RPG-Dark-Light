@@ -4,11 +4,13 @@ import { useFrame } from "@react-three/fiber";
 import { StudioLighting } from "./StudioLighting";
 import { CharacterPedestal } from "./CharacterPedestal";
 import { AtmosphericEffects } from "./AtmosphericEffects";
+import { CosmicSpaceEnvironment } from "./CosmicSpaceEnvironment";
 import { CharacterCameraRig } from "./CharacterCameraRig";
 import { ModularPixelCharacterRig } from "./ModularPixelCharacterRig";
 import { PixelArtCharacter25D } from "./PixelArtCharacter25D";
 import { CombatSpriteCharacter } from "./CombatSpriteCharacter";
 import { VoxelPixelCharacter3D } from "./VoxelPixelCharacter3D";
+import { BlenderCharacterModel3D } from "./BlenderCharacterModel3D";
 import { useCharacterStudioStore } from "./useCharacterStudioStore";
 import type {
   CharacterClassId,
@@ -64,7 +66,9 @@ export const VirtualCharacterStudio = memo(function VirtualCharacterStudio({
         pedestalGroupRef.current.rotation.y += delta * store.rotationSpeed;
       }
       if (
-        (displayMode === "modular_pixel_rig" || displayMode === "3d_voxel_pixel") &&
+        (displayMode === "modular_pixel_rig" ||
+          displayMode === "3d_voxel_pixel" ||
+          displayMode === "blender_3d") &&
         characterGroupRef.current
       ) {
         characterGroupRef.current.rotation.y += delta * store.rotationSpeed;
@@ -72,10 +76,18 @@ export const VirtualCharacterStudio = memo(function VirtualCharacterStudio({
     }
   });
 
+  const isCosmicSpace =
+    store.cosmicEnvironmentActive ||
+    pedestalTheme === "cosmic_void" ||
+    lightingPreset === "cosmic_nebula";
+
   return (
     <group name="virtual-character-studio-root">
       {/* ── Environment Lighting ── */}
       <StudioLighting presetId={lightingPreset} />
+
+      {/* ── Cosmic Deep Space & Nebula Environment (Starfield, Celestial Planet, Space Dust) ── */}
+      <CosmicSpaceEnvironment enabled={isCosmicSpace} />
 
       {/* ── Interactive Pedestal (Rotates smoothly on turntable) ── */}
       <group ref={pedestalGroupRef}>
@@ -85,8 +97,21 @@ export const VirtualCharacterStudio = memo(function VirtualCharacterStudio({
       {/* ── Atmospheric Motes & Particles ── */}
       <AtmosphericEffects themeId={pedestalTheme} enabled={store.showParticles} />
 
-      {/* ── Center Stage: Modular Pixel Character Rig / Pixel Art Modes ── */}
+      {/* ── Center Stage: Modular Pixel Character Rig / Pixel Art Modes / 3D Blender ── */}
       <group ref={characterGroupRef} position={[0, 0.16, 0]}>
+        {displayMode === "blender_3d" && (
+          /* 0. Real 3D Blender GLTF/GLB Character Model with Skeletal Animations & Sockets */
+          <BlenderCharacterModel3D
+            classId={classId}
+            modelUrl={store.blenderModelUrl || undefined}
+            animState={animState}
+            showWeapon={showWeapon}
+            showSkeleton={store.showSkeletonHelper}
+            showWireframe={store.showWireframe}
+            onStatsExtracted={store.setBlenderModelStats}
+          />
+        )}
+
         {displayMode === "modular_pixel_rig" && (
           /* 1. Modular Pixel Character Rig (Tách từng bộ phận khớp xương để dễ tạo hoạt ảnh) */
           <ModularPixelCharacterRig

@@ -238,7 +238,8 @@ export default function CharacterSelectScreen() {
             title="Mở phòng mô hình nhân vật ảo 3D"
           >
             <Sparkles className="w-4 h-4 text-cyan-400" />
-            <span className="hidden md:inline">Phòng 3D Studio</span>
+            <span className="hidden md:inline">Không Gian 3D & Blender</span>
+            <span className="md:hidden">3D Studio</span>
           </button>
 
           <button

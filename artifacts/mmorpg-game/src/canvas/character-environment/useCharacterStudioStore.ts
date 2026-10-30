@@ -9,6 +9,7 @@ import type {
   CharacterDisplayMode,
   BodyPartId,
   ModularRigPose,
+  BlenderModelStats,
 } from "./types";
 import {
   type CustomCharacterConfig,
@@ -21,6 +22,14 @@ interface CharacterStudioState {
   gender: CharacterGender;
   animationState: CharacterAnimationState;
   displayMode: CharacterDisplayMode;
+
+  // Blender 3D Model Integration State
+  blenderModelUrl: string | null;
+  blenderCustomFile: File | null;
+  blenderModelStats: BlenderModelStats | null;
+  showWireframe: boolean;
+  showSkeletonHelper: boolean;
+  cosmicEnvironmentActive: boolean;
 
   // Custom Character Creator & Procedural State
   customConfig: CustomCharacterConfig;
@@ -73,6 +82,12 @@ interface CharacterStudioState {
   setShowParticles: (show: boolean) => void;
   setShowAura: (show: boolean) => void;
   setTurntableAngle: (angle: number) => void;
+  setBlenderModelUrl: (url: string | null) => void;
+  setBlenderCustomFile: (file: File | null) => void;
+  setBlenderModelStats: (stats: BlenderModelStats | null) => void;
+  setShowWireframe: (show: boolean) => void;
+  setShowSkeletonHelper: (show: boolean) => void;
+  setCosmicEnvironmentActive: (active: boolean) => void;
   resetStudio: () => void;
 }
 
@@ -100,6 +115,12 @@ const DEFAULT_STATE = {
   gender: "male" as CharacterGender,
   animationState: "idle" as CharacterAnimationState,
   displayMode: "modular_pixel_rig" as CharacterDisplayMode, // MẶC ĐỊNH: Tách từng bộ phận khớp xương để dễ tạo hoạt ảnh!
+  blenderModelUrl: null as string | null,
+  blenderCustomFile: null as File | null,
+  blenderModelStats: null as BlenderModelStats | null,
+  showWireframe: false,
+  showSkeletonHelper: false,
+  cosmicEnvironmentActive: true,
   customConfig: { ...PRESET_CUSTOM_CHARACTERS[0] },
   customStandeeUrl: null as string | null,
   customPartsUrls: null as Record<string, string> | null,
@@ -108,9 +129,9 @@ const DEFAULT_STATE = {
   showBoneGizmos: true,
   selectedBodyPart: null as BodyPartId | null,
   customPose: { ...DEFAULT_POSE },
-  lightingPreset: "cinematic_dark_fantasy" as StudioLightingPresetId,
+  lightingPreset: "cosmic_nebula" as StudioLightingPresetId,
   cameraPreset: "full_body" as StudioCameraPresetId,
-  pedestalTheme: "dark_fantasy_runic" as PedestalThemeId,
+  pedestalTheme: "cosmic_void" as PedestalThemeId,
   isAutoRotating: false, // Dừng xoay để người dùng dễ thao tác khớp xương
   rotationSpeed: 0.5,
   showWeapon: true,
@@ -126,6 +147,12 @@ export const useCharacterStudioStore = create<CharacterStudioState>((set) => ({
   setGender: (gender) => set({ gender }),
   setAnimationState: (animationState) => set({ animationState }),
   setDisplayMode: (displayMode) => set({ displayMode }),
+  setBlenderModelUrl: (blenderModelUrl) => set({ blenderModelUrl, displayMode: "blender_3d" }),
+  setBlenderCustomFile: (blenderCustomFile) => set({ blenderCustomFile, displayMode: "blender_3d" }),
+  setBlenderModelStats: (blenderModelStats) => set({ blenderModelStats }),
+  setShowWireframe: (showWireframe) => set({ showWireframe }),
+  setShowSkeletonHelper: (showSkeletonHelper) => set({ showSkeletonHelper }),
+  setCosmicEnvironmentActive: (cosmicEnvironmentActive) => set({ cosmicEnvironmentActive }),
   setCustomConfig: (cfg) =>
     set((state) => ({
       customConfig: { ...state.customConfig, ...cfg },

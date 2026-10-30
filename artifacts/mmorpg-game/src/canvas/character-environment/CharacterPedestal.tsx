@@ -46,6 +46,20 @@ export const PEDESTAL_CONFIGS: Record<PedestalThemeId, PedestalConfig> = {
       speed: 0.35,
     },
   },
+  cosmic_void: {
+    id: "cosmic_void",
+    name: "Bục Tinh Thể Không Gian Hư Không",
+    radius: 1.5,
+    height: 0.18,
+    baseColor: "#050515",
+    runeGlowColor: "#00f2ff",
+    outerRingColor: "#c084fc",
+    particles: {
+      color: "#38bdf8",
+      count: 45,
+      speed: 0.5,
+    },
+  },
   minimal_studio: {
     id: "minimal_studio",
     name: "Sàn Studio Tối Giản",
@@ -74,6 +88,9 @@ export const CharacterPedestal = memo(function CharacterPedestal({
   const innerRuneRingRef = useRef<THREE.Mesh>(null);
   const outerPulseRingRef = useRef<THREE.Mesh>(null);
   const glowLightRef = useRef<THREE.PointLight>(null);
+  const cosmicRing1Ref = useRef<THREE.Group>(null);
+  const cosmicRing2Ref = useRef<THREE.Group>(null);
+  const cosmicRing3Ref = useRef<THREE.Group>(null);
 
   useFrame((state, delta) => {
     const time = state.clock.getElapsedTime();
@@ -92,6 +109,22 @@ export const CharacterPedestal = memo(function CharacterPedestal({
     // Light breathing effect
     if (glowLightRef.current) {
       glowLightRef.current.intensity = 1.2 + Math.sin(time * 2.5) * 0.4;
+    }
+
+    // Gyroscopic Cosmic Orbital Rings
+    if (themeId === "cosmic_void") {
+      if (cosmicRing1Ref.current) {
+        cosmicRing1Ref.current.rotation.z += delta * 0.45;
+        cosmicRing1Ref.current.rotation.y += delta * 0.2;
+      }
+      if (cosmicRing2Ref.current) {
+        cosmicRing2Ref.current.rotation.z -= delta * 0.35;
+        cosmicRing2Ref.current.rotation.x += delta * 0.25;
+      }
+      if (cosmicRing3Ref.current) {
+        cosmicRing3Ref.current.rotation.y += delta * 0.5;
+        cosmicRing3Ref.current.rotation.z += delta * 0.15;
+      }
     }
   });
 
@@ -165,6 +198,71 @@ export const CharacterPedestal = memo(function CharacterPedestal({
         <planeGeometry args={[config.radius * 3.2, config.radius * 3.2]} />
         <shadowMaterial opacity={0.5} />
       </mesh>
+
+      {/* ── Cosmic Void Gyroscopic Planetary Rings & Orbs ── */}
+      {themeId === "cosmic_void" && (
+        <group position={[0, config.height + 0.8, 0]}>
+          {/* Ring 1 (Tilted 35 deg with glowing sapphire satellite) */}
+          <group ref={cosmicRing1Ref} rotation={[0.6, 0, 0.4]}>
+            <mesh rotation={[-Math.PI / 2, 0, 0]}>
+              <torusGeometry args={[config.radius * 1.35, 0.018, 16, 64]} />
+              <meshStandardMaterial
+                color="#00f2ff"
+                emissive="#00f2ff"
+                emissiveIntensity={0.8}
+                metalness={0.9}
+                roughness={0.1}
+              />
+            </mesh>
+            {/* Satellite Moon 1 */}
+            <mesh position={[config.radius * 1.35, 0, 0]}>
+              <sphereGeometry args={[0.07, 16, 16]} />
+              <meshStandardMaterial
+                color="#38bdf8"
+                emissive="#00f2ff"
+                emissiveIntensity={1.2}
+              />
+            </mesh>
+          </group>
+
+          {/* Ring 2 (Tilted -45 deg with glowing astral purple satellite) */}
+          <group ref={cosmicRing2Ref} rotation={[-0.8, 0.5, -0.2]}>
+            <mesh rotation={[-Math.PI / 2, 0, 0]}>
+              <torusGeometry args={[config.radius * 1.6, 0.015, 16, 64]} />
+              <meshStandardMaterial
+                color="#c084fc"
+                emissive="#a855f7"
+                emissiveIntensity={0.9}
+                metalness={0.9}
+                roughness={0.1}
+              />
+            </mesh>
+            {/* Satellite Moon 2 */}
+            <mesh position={[-config.radius * 1.6, 0, 0]}>
+              <sphereGeometry args={[0.06, 16, 16]} />
+              <meshStandardMaterial
+                color="#e879f9"
+                emissive="#c084fc"
+                emissiveIntensity={1.2}
+              />
+            </mesh>
+          </group>
+
+          {/* Ring 3 (Outer Horizon Ring) */}
+          <group ref={cosmicRing3Ref} rotation={[0.2, -0.7, 0.9]}>
+            <mesh rotation={[-Math.PI / 2, 0, 0]}>
+              <torusGeometry args={[config.radius * 1.85, 0.012, 16, 64]} />
+              <meshStandardMaterial
+                color="#f43f5e"
+                emissive="#f43f5e"
+                emissiveIntensity={0.6}
+                metalness={0.9}
+                roughness={0.2}
+              />
+            </mesh>
+          </group>
+        </group>
+      )}
     </group>
   );
 });

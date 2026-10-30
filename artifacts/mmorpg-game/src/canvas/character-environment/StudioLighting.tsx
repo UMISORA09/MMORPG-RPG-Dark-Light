@@ -106,6 +106,40 @@ export const STUDIO_LIGHTING_PRESETS: Record<StudioLightingPresetId, LightingCon
       far: 20.0,
     },
   },
+  cosmic_nebula: {
+    id: "cosmic_nebula",
+    name: "Tinh Vân Vũ Trụ",
+    description: "Không gian vũ trụ sâu thẳm với ánh sáng sao băng cyan rực rỡ và phản quang tinh vân tím huyền ảo.",
+    ambient: {
+      color: "#08081c",
+      intensity: 0.85,
+    },
+    keyLight: {
+      color: "#e0f2fe",
+      intensity: 2.6,
+      position: [3.5, 6.0, 3.5],
+      castShadow: true,
+    },
+    fillLight: {
+      color: "#8b5cf6",
+      intensity: 1.3,
+      position: [-4.0, 2.8, -2.0],
+    },
+    rimLight: {
+      color: "#00f2ff",
+      intensity: 4.2,
+      position: [0.0, 4.5, -4.5],
+    },
+    groundBounce: {
+      color: "#3b0764",
+      intensity: 0.7,
+    },
+    fog: {
+      color: "#020208",
+      near: 9.0,
+      far: 30.0,
+    },
+  },
   neutral_studio: {
     id: "neutral_studio",
     name: "Studio Tiêu Chuẩn 5500K",

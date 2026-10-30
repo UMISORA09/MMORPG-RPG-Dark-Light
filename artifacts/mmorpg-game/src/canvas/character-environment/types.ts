@@ -2,6 +2,7 @@ export type StudioLightingPresetId =
   | "cinematic_dark_fantasy"
   | "cyberpunk_neon"
   | "celestial_gold"
+  | "cosmic_nebula"
   | "neutral_studio";
 
 export type StudioCameraPresetId =
@@ -15,6 +16,7 @@ export type PedestalThemeId =
   | "dark_fantasy_runic"
   | "cyberpunk_hologram"
   | "celestial_altar"
+  | "cosmic_void"
   | "minimal_studio";
 
 export type CharacterClassId =
@@ -39,6 +41,7 @@ export type CharacterDisplayMode =
   | "2d_pixel_hd"        // Chân dung pixel HD gốc
   | "2d_combat_anim"     // Ảnh động combat 9 hàng
   | "3d_voxel_pixel"     // Voxel 3D pixel cubes
+  | "blender_3d"         // Mô hình 3D thực tế xuất từ Blender (.glb / .gltf)
   | "custom_creator";    // Phòng tự tạo & thiết kế nhân vật pixel trực tiếp
 
 export type BodyPartId =
@@ -139,4 +142,29 @@ export interface PedestalConfig {
     count: number;
     speed: number;
   };
+}
+
+export interface BlenderModelStats {
+  fileName: string;
+  fileSizeBytes?: number;
+  triangles: number;
+  vertices: number;
+  meshesCount: number;
+  animations: string[];
+  bones: string[];
+  hasWeaponSocket: boolean;
+  hasShieldSocket: boolean;
+  hasHeadSocket: boolean;
+  hasBackSocket: boolean;
+  budgetStatus: "pass" | "warn" | "fail";
+}
+
+export interface BuiltinBlenderModel {
+  id: string;
+  classId: CharacterClassId;
+  name: string;
+  description: string;
+  url: string;
+  defaultWeaponUrl?: string;
+  polycount: number;
 }
